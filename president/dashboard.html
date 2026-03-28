@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>President Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #fffaf3;
+      color: #333;
+      font-family: Arial, sans-serif;
+    }
+
+    .card {
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1px solid #ffb84d;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      color: #222;
+    }
+
+    .sidebar-orange {
+      background: #fff;
+      color: #ff9900;
+      border-right: 1px solid #ffe0b2;
+      box-shadow: 2px 0 8px rgba(255, 153, 0, 0.04);
+    }
+
+    .sidebar-orange .nav-link {
+      color: #cc7a00 !important;
+      border-radius: 8px;
+      margin-bottom: 2px;
+      transition: 0.2s;
+      font-weight: 500;
+      padding: 10px 18px;
+    }
+
+    .sidebar-orange .nav-link.active,
+    .sidebar-orange .nav-link:hover {
+      background: linear-gradient(90deg, #ff9900 60%, #ff8800 100%);
+      color: #fff !important;
+    }
+
+    .summary-card {
+      background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
+      border: 1px solid #ffb84d;
+      color: #cc7a00;
+    }
+  </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel">
+
+const { useState, useEffect } = React;
+
+
+// Chart.js CDN
+const chartJsScript = document.createElement('script');
+chartJsScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+document.head.appendChild(chartJsScript);
+
+function useDepartmentPerformance() {
+  // Accepts a filter argument
+  const [data, setData] = useState([]);
+  return [data, setData];
+}
+
+function DepartmentBarChart({ filter, dateLabel }) {
+  const [data, setData] = useState([]);
+  const chartRef = React.useRef(null);
+  useEffect(() => {
+    fetch('php/get_department_performance_filtered.php?filter=' + encodeURIComponent(filter))
+      .then(res => res.json())
+      .then(res => setData(res.departments || []))
+      .catch(() => setData([]));
+  }, [filter]);
+  useEffect(() => {
+    if (!window.Chart || !data.length || !chartRef.current) return;
+    const ctx = chartRef.current.getContext('2d');
+    if (window.deptBarChartInstance) {
+      window.deptBarChartInstance.destroy();
+    }
+    window.deptBarChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(d => d.department),
+        datasets: [
+          {
+            label: 'Total Tasks',
+            data: data.map(d => d.total_tasks),
+            backgroundColor: '#ffd27f',
+            borderColor: '#ffb84d',
+            borderWidth: 1
+          },
+          {
+            label: 'Completed',
+            data: data.map(d => d.completed),
+            backgroundColor: '#b6e388',
+            borderColor: '#7ed957',
+            borderWidth: 1
+          },
+          {
+            label: 'Ongoing',
+            data: data.map(d => d.ongoing),
+            backgroundColor: '#ffe066',
+            borderColor: '#ffd700',
+            borderWidth: 1
+          },
+          {
+            label: 'Overdue',
+            data: data.map(d => d.overdue),
+            backgroundColor: '#ffb3b3',
+            borderColor: '#ff4d4d',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' },
+          title: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }, [data]);
+  return (
+    <div className="card p-3 mb-4">
+      <div className="d-flex justify-content-between align-items-center">
+        <h5 className="mb-0">Department Performance</h5>
+        <span className="text-muted small">{dateLabel}</span>
+      </div>
+      <canvas ref={chartRef} height="300"></canvas>
+    </div>
+  );
+}
+
+function Dashboard() {
+  // Executive filter options
+  const FILTERS = [
+    { label: 'Today', value: 'daily' },
+    { label: 'This Week', value: 'weekly' },
+    { label: 'This Month', value: 'monthly' },
+    { label: 'This Quarter', value: 'quarterly' },
+    { label: 'This Year', value: 'annually' }
+  ];
+  const [filter, setFilter] = useState('monthly');
+  const [showFilter, setShowFilter] = useState(false);
+
+  const [stats, setStats] = useState({
+    total_departments: '-',
+    total_tasks: '-',
+    completed_tasks: '-',
+    completion_rate: '-'
+  });
+
+  const [departments, setDepartments] = useState([]);
+  const [dateLabel, setDateLabel] = useState('');
+
+  useEffect(() => {
+    fetch('php/get_dashboard_stats.php?filter=' + encodeURIComponent(filter))
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(() => {});
+    fetch('php/get_department_performance_filtered.php?filter=' + encodeURIComponent(filter))
+      .then(res => res.json())
+      .then(data => {
+        setDepartments(Array.isArray(data.departments) ? data.departments : []);
+        setDateLabel(data.date_label || '');
+      })
+      .catch(() => {
+        setDepartments([]);
+        setDateLabel('');
+      });
+  }, [filter]);
+
+  // Find the max overdue count
+  const filtered = departments.filter(d => Number(d.overdue) > 0);
+  let topOverdue = [];
+  if (filtered.length > 0) {
+    const maxOverdue = Math.max(...filtered.map(d => Number(d.overdue)));
+    topOverdue = filtered.filter(d => Number(d.overdue) === maxOverdue);
+  }
+
+  // Close filter dropdown on outside click
+  useEffect(() => {
+    if (!showFilter) return;
+    const handler = (e) => {
+      if (!e.target.closest('.filter-dropdown')) setShowFilter(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showFilter]);
+
+  return (
+    <div className="container-fluid py-4">
+      <div className="row">
+        {/* SIDEBAR */}
+        <nav className="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
+          <div className="sidebar-orange d-flex flex-column p-3 gap-2 min-vh-100">
+            {[
+              { label: "Dashboard", file: "dashboard.html" },
+              { label: "Reports" },
+              { label: "Daily", file: "daily-reports.html" },
+              { label: "Weekly", file: "weekly-reports.html" },
+              { label: "Monthly", file: "monthly-reports.html" },
+              { label: "Quarterly", file: "quarterly-reports.html" },
+              { label: "Annually", file: "annual-reports.html" },
+              { label: "Profile", file: "profile.html" }
+
+
+            ].map((item, i) => (
+              <a
+                key={i}
+                href={item.file}
+                className="nav-link fw-semibold"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </nav>
+        {/* MAIN */}
+        <main className="col-md-10 ms-sm-auto px-4">
+          {/* HEADER */}
+          <div className="mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+              <h3>President Dashboard</h3>
+              <p className="text-muted mb-0">Department Performance Overview</p>
+            </div>
+            {/* MODERN FILTER BUTTON */}
+            <div className="position-relative filter-dropdown">
+              <button
+                className="btn btn-outline-warning fw-semibold px-4 py-2 rounded-pill shadow-sm"
+                style={{ minWidth: 160 }}
+                onClick={() => setShowFilter((v) => !v)}
+                aria-haspopup="listbox"
+                aria-expanded={showFilter}
+              >
+                <span className="me-2">
+                  {FILTERS.find(f => f.value === filter)?.label || 'Filter'}
+                </span>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#ff9900" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+              {showFilter && (
+                <ul
+                  className="dropdown-menu show mt-2 shadow rounded-3 border-0 w-100"
+                  style={{ minWidth: 160, zIndex: 1000 }}
+                  tabIndex={-1}
+                  role="listbox"
+                >
+                  {FILTERS.map(opt => (
+                    <li key={opt.value}>
+                      <button
+                        className={`dropdown-item py-2${filter === opt.value ? ' fw-bold' : ''}`}
+                        style={{
+                          borderRadius: 8,
+                          backgroundColor: filter === opt.value ? 'rgba(255, 165, 0, 0.15)' : 'transparent',
+                          color: filter === opt.value ? '#cc8400' : 'inherit'
+                        }}
+                        onClick={() => { setFilter(opt.value); setShowFilter(false); }}
+                        role="option"
+                        aria-selected={filter === opt.value}
+                      >
+                        {opt.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          {/* SUMMARY */}
+          <div className="row mb-4">
+            <div className="col-md-3">
+              <div className="card summary-card text-center p-3">
+                <h6>Total Departments</h6>
+                <h3>{stats.total_departments}</h3>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card summary-card text-center p-3">
+                <h6>Total Tasks</h6>
+                <h3>{stats.total_tasks}</h3>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card summary-card text-center p-3">
+                <h6>Completed</h6>
+                <h3>{stats.completed_tasks}</h3>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card summary-card text-center p-3">
+                <h6>Completion Rate</h6>
+                <h3>{stats.completion_rate}</h3>
+              </div>
+            </div>
+          </div>
+          {/* BAR CHART */}
+          <DepartmentBarChart filter={filter} dateLabel={dateLabel} />
+          {/* OVERDUE */}
+          <div className="card p-3 mb-4">
+            <h5>Department/s with Most Overdue Tasks</h5>
+            <ul>
+              {topOverdue.length === 0 ? (
+                <li>No overdue tasks found</li>
+              ) : (
+                topOverdue.map((dept, idx) => (
+                  <li key={dept.department + idx}>
+                    {dept.department} - {dept.overdue} overdue task{dept.overdue > 1 ? 's' : ''}
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+          {/* TABLE VERSION OF PERFORMANCE */}
+          <div className="card p-3">
+            <h5>Department Performance Table <span className="text-muted small">{dateLabel}</span></h5>
+            <div className="table-responsive">
+              <table className="table table-bordered table-hover align-middle">
+                <thead className="table-light">
+                  <tr>
+                    <th>Department</th>
+                    <th>Total Tasks</th>
+                    <th>Completed</th>
+                    <th>Ongoing</th>
+                    <th>Overdue</th>
+                    <th>Completion %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {departments.length === 0 ? (
+                    <tr><td colSpan="6" className="text-center">No data available</td></tr>
+                  ) : (
+                    departments.map((dept, idx) => (
+                      <tr key={dept.department + idx}>
+                        <td>{dept.department}</td>
+                        <td>{dept.total_tasks}</td>
+                        <td>{dept.completed}</td>
+                        <td>{dept.ongoing}</td>
+                        <td>{dept.overdue}</td>
+                        <td>
+                          <div className="d-flex align-items-center gap-2">
+                            <span style={{minWidth: 32}}>{dept.completion_percent}%</span>
+                            <div className="progress flex-grow-1" style={{height: '18px', minWidth: 80}}>
+                              <div
+                                className="progress-bar bg-success"
+                                role="progressbar"
+                                style={{width: `${dept.completion_percent}%`}}
+                                aria-valuenow={dept.completion_percent}
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                              >
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+chartJsScript.onload = () => {
+  ReactDOM.createRoot(document.getElementById('root')).render(<Dashboard />);
+};
+</script>
+
+</body>
+</html>

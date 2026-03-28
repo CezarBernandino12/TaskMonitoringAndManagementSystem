@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Supervisor Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+      <!-- React, ReactDOM, Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body {
+        background-color: #fffaf3;
+        color: #333; /* slightly darker for better contrast */
+        font-family: Arial, sans-serif;
+    }
+
+    .card {
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #ffb84d; /* slightly darker border */
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* subtle shadow for readability */
+        color: #222; /* dark text for contrast */
+    }
+
+    .overdue {
+        background-color: #fff0b3 !important; /* darker yellow for readability */
+        color: #665200; /* darker text on yellow */
+    }
+
+    .bg-white {
+        background-color: #fff !important;
+        color: #222;
+                color: #ffc560;
+        color: #4cff6a;
+        color: #ff6a6a;
+        color: #a0c4ff;
+        color: #d4a7ff;
+
+
+    }
+
+        .sidebar-orange {
+            background: #fff;
+            color: #ff9900;
+            border-right: 1px solid #ffe0b2;
+            box-shadow: 2px 0 8px rgba(255, 153, 0, 0.04);
+        }
+
+        .sidebar-orange .nav-link {
+            color: #cc7a00 !important;
+            border-radius: 8px;
+            margin-bottom: 2px;
+            transition: background 0.2s, color 0.2s;
+            font-weight: 500;
+            padding: 10px 18px;
+            font-size: 1.08rem;
+            letter-spacing: 0.01em;
+        }
+
+        .sidebar-orange .nav-link.active,
+        .sidebar-orange .nav-link:hover {
+            background: linear-gradient(90deg, #ff9900 60%, #ff8800 100%);
+            color: #fff !important;
+            box-shadow: 0 2px 8px rgba(255, 153, 0, 0.10);
+        }
+
+
+    .btn-primary {
+        background-color: #ff9900;
+        border-color: #ff9900;
+  
+    }
+
+    .btn-primary:hover, .btn-primary:focus {
+        background-color: #ffb84d;
+        border-color: #ffb84d;
+        color: #333; /* darker text for readability */
+    }
+
+    .table thead {
+        background: #ffe7b3; /* darker yellow header */
+    }
+
+    .table th {
+        color: #cc7a00; /* darker orange text for readability */
+    }
+
+    .table-hover tbody tr:hover {
+        background: #fff0b3;
+    }
+
+    .form-control:focus {
+        border-color: #ffb84d;
+        box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
+    }
+
+    h3, h5, h6 {
+        color: #cc7a00; /* darker headings */
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
+        border: 1px solid #ffb84d;
+        color: #cc7a00;
+    }
+</style>
+</head>
+<body>
+
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- SIDEBAR -->
+        <nav class="col-md-2 d-none d-md-block sidebar-orange min-vh-100 p-0">
+            <div class="d-flex flex-column align-items-start p-3 gap-2">
+                <a href="dashboard.html" class="nav-link fw-semibold active">Dashboard</a>
+                <a href="task-monitoring.html" class="nav-link fw-semibold">Task Monitoring</a>
+                <a href="calendar.html" class="nav-link fw-semibold">Calendar</a>
+                <a href="gantt-chart.html" class="nav-link fw-semibold">Gantt Chart</a>
+                <a href="staff-performance.html" class="nav-link fw-semibold">Staff Performance</a>
+                <a href="manage-staffs.html" class="nav-link fw-semibold">Manage Staffs</a>
+                <a href="reports.html" class="nav-link fw-semibold">Reports</a>
+                <a href="profile.html" class="nav-link fw-semibold">Profile</a>
+            </div>
+        </nav>
+        <!-- MAIN CONTENT -->
+        <main class="col-md-10 ms-sm-auto px-4">
+
+
+    <!-- HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Supervisor Dashboard</h3>
+    </div>
+
+  <div id="supervisor-dashboard-root"></div>
+
+ 
+
+
+</div>
+
+    </main>
+  </div>
+
+
+
+  <script type="text/babel">
+/* ---------------- Supervisor Dashboard ---------------- */
+function SupervisorDashboard() {
+    const [tasks, setTasks] = React.useState([]);
+    const [staffData, setStaffData] = React.useState([]);
+    const [search, setSearch] = React.useState("");
+
+
+        const statusColorMap = {
+        'Ongoing': '#ffbd59',   // sunny golden yellow
+        'Completed': '#7ed957', // vibrant fresh green
+        'Overdue': '#ff6969',   // lively red
+        'Other': '#ffe082',     // soft buttery yellow
+        'Extra': '#fff8e1'      // pale warm near-white
+
+
+
+
+    };
+
+    /* ---------- Fetch Department Tasks ---------- */
+    const fetchTasks = async () => {
+        try {
+            const res = await fetch("http://localhost/taskmanagement/supervisor/php/get_department_tasks.php");
+            const data = await res.json();
+            setTasks(data);
+        } catch (err) {
+            console.error("Failed to load tasks", err);
+        }
+    };
+
+    /* ---------- Fetch Staff Performance ---------- */
+ const fetchStaffPerformance = async () => {
+    try {
+        const res = await fetch("http://localhost/taskmanagement/supervisor/php/get_staff_performance.php");
+        const data = await res.json();
+        setStaffData(data);
+    } catch (err) {
+        console.error("Failed to load staff performance", err);
+    }
+};
+
+React.useEffect(() => {
+    fetchTasks();
+    fetchStaffPerformance();
+}, []);
+
+// Pie Chart Effect
+React.useEffect(() => {
+    if (!tasks.length) return;
+
+    // Count status occurrences
+    const statusCounts = {};
+    tasks.forEach(t => {
+        const status = t.status?.trim();
+        if (!status) return;
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+
+
+    const labels = Object.keys(statusCounts);
+    const data = Object.values(statusCounts);
+
+    // Map colors safely
+    const backgroundColors = labels.map(label => {
+        const normalized = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+        return statusColorMap[normalized] || '#e0e0e0'; // fallback
+    });
+
+    const ctx = document.getElementById('taskStatusPieChart');
+
+    if (ctx) {
+        // Destroy previous chart if exists
+        if (window.taskStatusPieChartInstance) {
+            window.taskStatusPieChartInstance.destroy();
+        }
+
+        window.taskStatusPieChartInstance = new window.Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderColor: '#fffaf3', // matches your theme
+                    borderWidth: 3,
+                    hoverOffset: 6
+                }],
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#a67c52', // softer text color
+                            font: { size: 13 }
+                        }
+                    }
+                },
+                layout: {
+                    padding: 10
+                }
+            }
+        });
+    }
+}, [tasks]);
+
+    // Gantt Chart Effect
+    React.useEffect(() => {
+        if (!tasks.length) return;
+        const ctx = document.getElementById('ganttChartCanvas');
+        if (!ctx) return;
+        // Destroy previous chart if exists
+        if (window.ganttChartInstance) {
+            window.ganttChartInstance.destroy();
+        }
+        // Prepare data for Gantt chart
+        // Sort tasks by start date
+        const sortedTasks = [...tasks].sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+        const labels = sortedTasks.map(t => t.title);
+        const startDates = sortedTasks.map(t => new Date(t.start_date));
+        const endDates = sortedTasks.map(t => new Date(t.deadline));
+        // Calculate durations in days
+        const minDate = Math.min(...startDates.map(d => d.getTime()));
+        const maxDate = Math.max(...endDates.map(d => d.getTime()));
+        const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
+        // Each bar starts at (start - minDate), length = (end - start)
+        const data = sortedTasks.map(t => {
+            const start = new Date(t.start_date).getTime();
+            const end = new Date(t.deadline).getTime();
+            return {
+                x: (start - minDate) / (1000 * 60 * 60 * 24),
+                x2: (end - minDate) / (1000 * 60 * 60 * 24),
+                y: t.title,
+                status: t.status
+            };
+        });
+        // Color by status
+        const statusColorMap = {
+
+        'Ongoing': '#ffbd59',   // sunny golden yellow
+        'Completed': '#7ed957', // vibrant fresh green
+        'Overdue': '#ff6969',   // lively red
+        'Other': '#ffe082',     // soft buttery yellow
+        'Extra': '#fff8e1'      // pale warm near-white
+
+
+
+        };
+        // Chart.js v3+ bar chart with custom barStart/barEnd plugin
+        window.ganttChartInstance = new window.Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Task Duration',
+                    data: data.map(d => ({ x: d.x, x2: d.x2, y: d.y, status: d.status })),
+                    backgroundColor: data.map(d => statusColorMap[d.status] || '#e0e0e0'),
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    barPercentage: 0.8,
+                    categoryPercentage: 0.9,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const d = context.raw;
+                                const start = new Date(minDate + d.x * 24 * 60 * 60 * 1000);
+                                const end = new Date(minDate + d.x2 * 24 * 60 * 60 * 1000);
+                                return `${d.y}: ${start.toLocaleDateString()} - ${end.toLocaleDateString()} (${d.status})`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        min: 0,
+                        max: totalDays,
+                        title: { display: true, text: 'Timeline (days)' },
+                        ticks: {
+                            callback: function(value) {
+                                const date = new Date(minDate + value * 24 * 60 * 60 * 1000);
+                                return date.toLocaleDateString();
+                            },
+                            autoSkip: true,
+                            maxTicksLimit: 10
+                        },
+                        grid: { color: '#ffe7b3' }
+                    },
+                    y: {
+                        title: { display: false },
+                        grid: { color: '#ffe7b3' }
+                    }
+                }
+            },
+            plugins: [{
+                // Custom plugin to draw bars from x to x2
+                id: 'ganttBar',
+                beforeDatasetsDraw(chart) {
+                    const { ctx, data, chartArea, scales } = chart;
+                    if (!data.datasets.length) return;
+                    ctx.save();
+                    data.datasets[0].data.forEach((d, i) => {
+                        const y = scales.y.getPixelForValue(d.y);
+                        const xStart = scales.x.getPixelForValue(d.x);
+                        const xEnd = scales.x.getPixelForValue(d.x2);
+                        ctx.beginPath();
+                        ctx.fillStyle = data.datasets[0].backgroundColor[i];
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.roundRect(xStart, y - 12, xEnd - xStart, 24, 6);
+                        ctx.fill();
+                        ctx.stroke();
+                    });
+                    ctx.restore();
+                }
+            }]
+        });
+    }, [tasks]);
+
+    /* ---------- Filter Tasks for Search ---------- */
+    const filteredTasks = tasks.filter(t => 
+        t.title.toLowerCase().includes(search.toLowerCase()) ||
+        t.assigned_name.toLowerCase().includes(search.toLowerCase())
+    );
+
+    /* ---------- Calculate Summary Card Counts ---------- */
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === "Completed").length;
+    const ongoingTasks = tasks.filter(t => t.status !== "Completed").length;
+    const overdueTasks = tasks.filter(t => t.is_overdue).length;
+
+    /* ---------- Helper: Task Row ---------- */
+  const renderTaskRow = (task) => (
+    <tr key={task.id}>
+      <td>{task.title}</td>
+      <td>{task.assigned_name}</td>
+      <td>{formatDate(task.start_date)}</td>
+       <td>{formatDate(task.deadline)}</td>
+      <td
+        style={{
+          backgroundColor: statusColorMap[task.status] || '#ffffff',
+          color: '#000',
+          textAlign: 'center',
+          padding: '4px 8px',
+          borderRadius: '4px'
+        }}
+      >
+        {task.status}
+      </td>
+      <td>{task.priority}</td>
+    </tr>
+  );
+
+
+    /* ---------- Render ---------- */
+    return (
+        <div className="container-fluid py-4">
+            
+            {/* ---------------- Summary Cards ---------------- */}
+            <div className="row mb-4">
+                <div className="col-md-3">
+                    <div className="card summary-card text-center p-3">
+                        <h6>Total Tasks</h6>
+                        <h3>{totalTasks}</h3>
+                    </div>
+                </div>
+                <div className="col-md-3">
+                    <div className="card summary-card text-center p-3">
+                        <h6>Ongoing</h6>
+                        <h3>{ongoingTasks}</h3>
+                    </div>
+                </div>
+                <div className="col-md-3">
+                    <div className="card summary-card text-center p-3">
+                        <h6>Completed</h6>
+                        <h3>{completedTasks}</h3>
+                    </div>
+                </div>
+                <div className="col-md-3">
+                    <div className="card summary-card text-center p-3">
+                        <h6>Overdue</h6>
+                        <h3>{overdueTasks}</h3>
+                    </div>
+                </div>
+            </div>
+
+            {/* ---------------- Task Status Pie Chart & Gantt Chart Row ---------------- */}
+            <div className="row mb-4 justify-content-center align-items-start">
+                <div className="col-md-5">
+                    <div className="card p-3 mb-4" style={{ maxWidth: '420px', margin: '0 auto' }}>
+                        <h5>Task Status Distribution</h5>
+                        <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                            <canvas id="taskStatusPieChart" width="200" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-md-7">
+                    <div className="card p-3 mb-4" style={{ minHeight: '260px', overflowX: 'auto' }}>
+                        <h5>Gantt Chart</h5>
+                        <canvas id="ganttChartCanvas" height="380"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            {/* ---------------- Department Tasks Table ---------------- */}
+            <div className="card p-3 mb-4">
+                <div className="d-flex justify-content-between mb-2">
+                    <h5>All Department Tasks</h5>
+                    <input 
+                        type="text" 
+                        className="form-control w-25" 
+                        placeholder="Search..." 
+                        value={search} 
+                        onChange={e => setSearch(e.target.value)}
+                    />
+                </div>
+
+                <table className="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Task</th>
+                            <th>Assigned To</th>
+                            <th>Start</th>
+                            <th>Due</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredTasks.length === 0 ? (
+                            <tr>
+                                <td colSpan="6">No tasks found</td>
+                            </tr>
+                        ) : (
+                            filteredTasks.map(renderTaskRow)
+                        )}
+                    </tbody>
+
+                    
+                </table>
+            </div>
+
+            {/* ---------------- Staff Performance Table ---------------- */}
+            <div className="card p-3 mb-4">
+                <h5>Staff Performance</h5>
+                <table className="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Staff Name</th>
+                            <th>Total Tasks</th>
+                            <th>Completed</th>
+                            <th>Ongoing</th>
+                            <th>Overdue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {staffData.length === 0 ? (
+                            <tr>
+                                <td colSpan="5">No staff found</td>
+                            </tr>
+                        ) : (
+                            staffData.map((s, idx) => (
+                                <tr key={idx}>
+                                    <td>{s.name}</td>
+                                    <td>{s.total}</td>
+                                    <td>{s.completed}</td>
+                                    <td>{s.ongoing}</td>
+                                    <td>{s.overdue}</td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+
+
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+/* ---------------- Render the Dashboard ---------------- */
+ReactDOM.createRoot(document.getElementById('supervisor-dashboard-root')).render(<SupervisorDashboard />);
+</script>
+
+</body>
+</html>
