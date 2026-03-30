@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Profile</title>
+    <title>Staff Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- Bootstrap -->
+    <link rel="icon" type="image/png" href="../imgs/psi.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- React, ReactDOM, Babel -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="css/sidebar.css">
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -31,49 +30,6 @@
     .overdue {
         background-color: #fff0b3 !important; /* darker yellow for readability */
         color: #665200; /* darker text on yellow */
-    }
-
-    .sidebar-orange {
-        background: #fff;
-        color: #ff9900;
-        border-right: 1px solid #ffe0b2;
-        box-shadow: 2px 0 8px rgba(255, 153, 0, 0.04);
-    }
-
-    .sidebar-orange .nav-link {
-        color: #cc7a00 !important;
-        border-radius: 8px;
-        margin-bottom: 2px;
-        transition: background 0.2s, color 0.2s;
-        font-weight: 500;
-        padding: 10px 18px;
-        font-size: 1.08rem;
-        letter-spacing: 0.01em;
-    }
-
-    .sidebar-orange .nav-link.active, 
-    .sidebar-orange .nav-link:hover {
-        background: linear-gradient(90deg, #ff9900 60%, #ff8800 100%);
-        color: #fff !important;
-        box-shadow: 0 2px 8px rgba(255, 153, 0, 0.10);
-    }
-
-    .sidebar-orange {
-        background: linear-gradient(180deg, #ff9900 0%, #ff8800 100%);
-        color: #fff;
-    }
-
-    .sidebar-orange .nav-link {
-        color: #fff !important;
-        border-radius: 8px;
-        margin-bottom: 2px;
-        transition: background 0.2s;
-    }
-
-    .sidebar-orange .nav-link.active, 
-    .sidebar-orange .nav-link:hover {
-        background: #ffe7b3; /* darker hover background */
-        color: #ff8000 !important; /* darker orange for contrast */
     }
 
     .btn-primary {
@@ -121,17 +77,59 @@
 
 <div class="container-fluid py-4">
     <div class="row">
-        <!-- SIDEBAR -->
-        <nav class="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
-            <div class="sidebar-orange d-flex flex-column align-items-start p-3 gap-2 min-vh-100">
-                <a href="dashboard.html" class="nav-link fw-semibold">Dashboard</a>
-                <a href="my-tasks.html" class="nav-link fw-semibold">My Tasks</a>
-                <a href="calendar.html" class="nav-link fw-semibold">Calendar</a>
-                <a href="profile.html" class="nav-link fw-semibold active">Profile</a>
-            </div>
-        </nav>
-        <!-- MAIN CONTENT -->
-        <main class="col-md-10 ms-sm-auto px-4">
+        <aside class="col-12 col-md-4 col-lg-3 col-xl-2">
+            <nav class="dashboard-sidebar">
+                <div class="sidebar-profile">
+                    <img
+                        src="https://ui-avatars.com/api/?name=Andrew+Smith&background=f7c4d4&color=222&size=80"
+                        alt="Profile"
+                        class="sidebar-avatar"
+                    >
+                    <div>
+                        <div class="sidebar-role">Staff</div>
+                        <div class="sidebar-name">Andrew Smith</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-divider"></div>
+
+                <div class="sidebar-section-label">MAIN</div>
+
+                <a href="dashboard.html" class="sidebar-link">
+                    <span class="sidebar-icon"><i class="bi bi-house-door"></i></span>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="my-tasks.html" class="sidebar-link">
+                    <span class="sidebar-icon"><i class="bi bi-list-check"></i></span>
+                    <span>My Tasks</span>
+                </a>
+
+                <a href="calendar.html" class="sidebar-link">
+                    <span class="sidebar-icon"><i class="bi bi-calendar3"></i></span>
+                    <span>Calendar</span>
+                </a>
+
+                <div class="sidebar-divider mt-3"></div>
+
+                <div class="sidebar-section-label">SETTINGS</div>
+
+                <a href="profile.html" class="sidebar-link active">
+                    <span class="sidebar-icon"><i class="bi bi-gear"></i></span>
+                    <span>Account Settings</span>
+                </a>
+
+                <div class="sidebar-bottom">
+
+                    <a href="#" class="sidebar-link logout-link">
+                        <span class="sidebar-icon"><i class="bi bi-box-arrow-right"></i></span>
+                        <span>Logout Account</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+    
+    <main class="col-md-10 ms-sm-auto px-4">
 
     <!-- HEADER -->
     <div class="d-flex justify-content-between align-items-center mb-4">
