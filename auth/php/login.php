@@ -2,7 +2,6 @@
 session_start();
 require_once '../../config/db.php';
 
-// Remove connection success/failure echo from db.php
 ob_start();
 include '../../config/db.php';
 ob_end_clean();
