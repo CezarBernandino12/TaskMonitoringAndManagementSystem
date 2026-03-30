@@ -7,7 +7,6 @@
         'Other': '#ffe082',     
         'Extra': '#fff8e1'      
     };
-
     
 function App() {
     const [tasks, setTasks] = React.useState([]);

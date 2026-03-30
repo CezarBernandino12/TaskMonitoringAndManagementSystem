@@ -1,6 +1,3 @@
-
-
-
 function Profile() {
     const [profile, setProfile] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
