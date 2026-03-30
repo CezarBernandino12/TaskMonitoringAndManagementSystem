@@ -1,6 +1,4 @@
 
-
-
         const statusColorMap = {
         'Ongoing': '#ffe066',   
         'Completed': '#b6e388', 
