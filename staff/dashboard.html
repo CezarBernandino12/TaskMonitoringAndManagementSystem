@@ -4,191 +4,76 @@
     <meta charset="UTF-8">
     <title>Staff Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="../imgs/psi.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="css/sidebar.css">
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-<style>
-body {
-    background: #fffaf3;
-    color: #333;
-    font-family: Arial, sans-serif;
-}
-
-/* cards / existing */
-.card {
-    border-radius: 16px;
-    background: #ffffff;
-    border: 1px solid #ffddb0;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-    color: #222;
-}
-
-.overdue {
-    background-color: #fff0b3 !important;
-    color: #665200;
-}
-
-.btn-primary {
-    background-color: #ff9900;
-    border-color: #ff9900;
-    color: #fff;
-}
-
-.btn-primary:hover,
-.btn-primary:focus {
-    background-color: #ffb84d;
-    border-color: #ffb84d;
-    color: #333;
-}
-
-.table thead {
-    background: #ffe7b3;
-}
-
-.table th {
-    color: #cc7a00;
-}
-
-.table-hover tbody tr:hover {
-    background: #fff0b3;
-}
-
-.form-control:focus,
-.form-select:focus {
-    border-color: #ffb84d;
-    box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
-}
-
-h3, h5, h6 {
-    color: #cc7a00;
-}
-
-.summary-card {
-    background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
-    border: 1px solid #ffb84d;
-    color: #cc7a00;
-}
-
-/* SIDEBAR */
-.dashboard-sidebar {
-    position: sticky;
-    top: 16px;
-    height: calc(100vh - 32px);
-    display: flex;
-    flex-direction: column;
-    padding: 22px 16px;
-    background: #ffffff;
-    border: 1px solid #ececec;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-    overflow-y: auto;
-}
-
-.sidebar-profile {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
-}
-
-.sidebar-avatar {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-}
-
-.sidebar-role {
-    font-size: 11px;
-    color: #999;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    line-height: 1.2;
-}
-
-.sidebar-name {
-    font-size: 18px;
-    font-weight: 600;
-    color: #222;
-    line-height: 1.2;
-}
-
-.sidebar-divider {
-    height: 1px;
-    background: #efefef;
-    margin: 12px 0 18px;
-}
-
-.sidebar-section-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: #9a9a9a;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-}
-
-.sidebar-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    text-decoration: none;
-    color: #666;
-    padding: 12px 12px;
-    border-radius: 12px;
-    margin-bottom: 6px;
-    transition: all 0.2s ease;
-    font-size: 15px;
-    font-weight: 500;
-}
-
-.sidebar-link:hover {
-    background: #f5f5f5;
-    color: #222;
-}
-
-.sidebar-link.active {
-    background: #f2f2f2;
-    color: #111;
-    font-weight: 600;
-}
-
-.sidebar-icon {
-    width: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    color: inherit;
-    flex-shrink: 0;
-}
-
-.sidebar-bottom {
-    margin-top: auto;
-    padding-top: 20px;
-}
-
-.logout-link {
-    color: #f05a4f;
-}
-
-.logout-link:hover {
-    background: #fff1ef;
-    color: #e0493f;
-}
-
-@media (max-width: 767.98px) {
-    .dashboard-sidebar {
-        position: static;
-        height: auto;
-        margin-bottom: 16px;
+    <style>
+    body {
+        background: #fffaf3;
+        color: #333;
+        font-family: Arial, sans-serif;
     }
-}
-</style>
+
+    /* cards / existing */
+    .card {
+        border-radius: 16px;
+        background: #ffffff;
+        border: 1px solid #ffddb0;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+        color: #222;
+    }
+
+    .overdue {
+        background-color: #fff0b3 !important;
+        color: #665200;
+    }
+
+    .btn-primary {
+        background-color: #ff9900;
+        border-color: #ff9900;
+        color: #fff;
+    }
+
+    .btn-primary:hover,
+    .btn-primary:focus {
+        background-color: #ffb84d;
+        border-color: #ffb84d;
+        color: #333;
+    }
+
+    .table thead {
+        background: #ffe7b3;
+    }
+
+    .table th {
+        color: #cc7a00;
+    }
+
+    .table-hover tbody tr:hover {
+        background: #fff0b3;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #ffb84d;
+        box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
+    }
+
+    h3, h5, h6 {
+        color: #cc7a00;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
+        border: 1px solid #ffb84d;
+        color: #cc7a00;
+    }
+    </style>
 </head>
 <body>
 
@@ -205,7 +90,7 @@ h3, h5, h6 {
                         class="sidebar-avatar"
                     >
                     <div>
-                        <div class="sidebar-role">PRODUCT MANAGER</div>
+                        <div class="sidebar-role">Staff</div>
                         <div class="sidebar-name">Andrew Smith</div>
                     </div>
                 </div>
