@@ -1,5 +1,5 @@
 /* STICKY SIDEBAR COLUMN */
-.supervisor-sidebar-col {
+.staff-sidebar-col {
     position: sticky;
     top: 16px;
     align-self: flex-start;
@@ -711,7 +711,7 @@
 }
 
 /* ---------- RESPONSIVE LAYOUT HELPERS ---------- */
-.supervisor-sidebar-col {
+.staff-sidebar-col {
     position: sticky;
     top: 16px;
     align-self: flex-start;
@@ -946,7 +946,7 @@ body.sidebar-mobile-open {
 
 /* ---------- TABLET ---------- */
 @media (min-width: 768px) and (max-width: 991.98px) {
-    .supervisor-sidebar-col {
+    .staff-sidebar-col {
         position: sticky;
         top: 12px;
         height: calc(100vh - 24px);
@@ -975,7 +975,7 @@ body.sidebar-mobile-open {
 
 /* ---------- MOBILE ---------- */
 @media (max-width: 767.98px) {
-    .supervisor-sidebar-col {
+    .staff-sidebar-col {
         position: static;
         top: auto;
         height: auto;
@@ -1207,7 +1207,7 @@ body.sidebar-mobile-open {
 }
 
 @media (max-width: 576px) {
-    .supervisor-sidebar-col {
+    .staff-sidebar-col {
         position: static;
         top: auto;
         height: auto;
@@ -1235,5 +1235,25 @@ body.sidebar-mobile-open {
 
     .logout-btn {
         width: 100%;
+    }
+}
+/* DESKTOP / TABLET: sidebar should not have its own scroll */
+@media (min-width: 768px) {
+    .staff-sidebar-col {
+        position: sticky;
+        top: 16px;
+        align-self: flex-start;
+        height: calc(100vh - 32px);
+        overflow: visible;
+    }
+
+    .dashboard-sidebar {
+        height: 100%;
+        overflow: visible;
+    }
+
+    .sidebar-inner {
+        height: 100%;
+        overflow: visible;
     }
 }
