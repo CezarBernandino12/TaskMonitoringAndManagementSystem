@@ -38,15 +38,17 @@ if (mountNode) {
 	const root = ReactDOM.createRoot(mountNode);
 	root.render(<PasswordToggle />);
 }
-
-
 (function () {
-	const track  = document.getElementById('carouselTrack');
+	const track = document.getElementById('carouselTrack');
 	const slides = Array.from(track.querySelectorAll('.carousel-slide'));
 	const dotsContainer = document.getElementById('carouselDots');
 
 	let current = 0;
 	let timer;
+	const total = slides.length;
+
+	track.style.setProperty('--slide-count', total);
+	track.style.transform = 'translateX(0%)';
 
 	slides.forEach((_, i) => {
 		const dot = document.createElement('button');
@@ -64,13 +66,15 @@ if (mountNode) {
 
 		slides[current].classList.add('is-active');
 		dotsContainer.children[current].classList.add('is-active');
-		track.style.transform = `translateX(-${current * 100}%)`;
+
+		const movePercent = (100 / total) * current;
+		track.style.transform = `translateX(-${movePercent}%)`;
 
 		resetTimer();
 	}
 
 	function next() {
-		goTo((current + 1) % slides.length);
+		goTo((current + 1) % total);
 	}
 
 	function resetTimer() {
