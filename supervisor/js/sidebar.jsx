@@ -2,7 +2,7 @@ const STORAGE_KEY = "sidebar-collapsed";
 
 function getCurrentPage() {
     const fileName = window.location.pathname.split("/").pop() || "";
-    return fileName.toLowerCase();
+    return fileName.split("?")[0].split("#")[0].toLowerCase();
 }
 
 function SidebarLink({ href, icon, label, isActive, extraClass = "", onClick }) {
@@ -107,6 +107,17 @@ function SupervisorSidebar() {
     const [showLogoutModal, setShowLogoutModal] = React.useState(false);
     const currentPage = getCurrentPage();
 
+    const managementPages = [
+        "staff-performance.html",
+        "manage-staffs.html",
+        "reports.html"
+    ];
+
+    const isActivePage = (fileName) => currentPage === fileName.toLowerCase();
+    const isManagementActive = managementPages.some(isActivePage);
+
+    const [managementOpen, setManagementOpen] = React.useState(isManagementActive);
+
     React.useEffect(() => {
         localStorage.setItem(STORAGE_KEY, String(collapsed));
     }, [collapsed]);
@@ -115,8 +126,18 @@ function SupervisorSidebar() {
         document.documentElement.classList.remove("sidebar-collapsed-init");
     }, []);
 
+    React.useEffect(() => {
+        if (isManagementActive) {
+            setManagementOpen(true);
+        }
+    }, [isManagementActive]);
+
     const toggleSidebar = () => {
         setCollapsed((prev) => !prev);
+    };
+
+    const toggleManagement = () => {
+        setManagementOpen((prev) => !prev);
     };
 
     const openLogoutModal = (e) => {
@@ -131,8 +152,6 @@ function SupervisorSidebar() {
     const confirmLogout = () => {
         window.location.href = "../auth/login.html";
     };
-
-    const isActivePage = (fileName) => currentPage === fileName.toLowerCase();
 
     return (
         <>
@@ -195,28 +214,55 @@ function SupervisorSidebar() {
                     />
 
                     <div className="sidebar-divider mt-3"></div>
-                    <div className="sidebar-section-label">MANAGEMENT</div>
 
-                    <SidebarLink
-                        href="staff-performance.html"
-                        icon="bi-graph-up-arrow"
-                        label="Staff Performance"
-                        isActive={isActivePage("staff-performance.html")}
-                    />
+                    <div className="sidebar-management-wrap">
+                        <button
+                            type="button"
+                            className={`sidebar-section-label-toggle management-toggle ${managementOpen ? "open" : ""} ${isManagementActive ? "active" : ""}`}
+                            onClick={toggleManagement}
+                            aria-expanded={managementOpen}
+                            aria-controls="managementSubmenu"
+                        >
+                            <span className="management-toggle-icon">
+                                <i className="bi bi-folder2-open"></i>
+                            </span>
 
-                    <SidebarLink
-                        href="manage-staffs.html"
-                        icon="bi-people"
-                        label="Manage Staffs"
-                        isActive={isActivePage("manage-staffs.html")}
-                    />
+                            <span className="sidebar-section-label-text">MANAGEMENT</span>
 
-                    <SidebarLink
-                        href="reports.html"
-                        icon="bi-file-earmark-text"
-                        label="Reports"
-                        isActive={isActivePage("reports.html")}
-                    />
+                            <span className="sidebar-section-label-chevron">
+                                <i className="bi bi-chevron-down"></i>
+                            </span>
+                        </button>
+
+                        <div
+                            id="managementSubmenu"
+                            className={`sidebar-submenu ${managementOpen ? "open" : ""} ${collapsed ? "collapsed-popout" : ""}`}
+                        >
+                            <SidebarLink
+                                href="staff-performance.html"
+                                icon="bi-graph-up-arrow"
+                                label="Staff Performance"
+                                isActive={isActivePage("staff-performance.html")}
+                                extraClass="sidebar-sublink"
+                            />
+
+                            <SidebarLink
+                                href="manage-staffs.html"
+                                icon="bi-people"
+                                label="Manage Staffs"
+                                isActive={isActivePage("manage-staffs.html")}
+                                extraClass="sidebar-sublink"
+                            />
+
+                            <SidebarLink
+                                href="reports.html"
+                                icon="bi-file-earmark-text"
+                                label="Reports"
+                                isActive={isActivePage("reports.html")}
+                                extraClass="sidebar-sublink"
+                            />
+                        </div>
+                    </div>
 
                     <div className="sidebar-divider mt-3"></div>
                     <div className="sidebar-section-label">SETTINGS</div>

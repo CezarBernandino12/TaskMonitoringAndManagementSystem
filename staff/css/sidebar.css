@@ -1,8 +1,18 @@
-/* OUTER SIDEBAR */
-.dashboard-sidebar {
+/* sticky wrapper stays on the column */
+.supervisor-sidebar-col {
     position: sticky;
     top: 16px;
+    align-self: flex-start;
     height: calc(100vh - 32px);
+}
+
+/* sidebar itself should NOT clip the toggle button */
+.dashboard-sidebar {
+    position: relative;
+    top: auto;
+    height: 100%;
+    width: 250px;
+    min-width: 250px;
     display: flex;
     flex-direction: column;
     padding: 24px 18px 22px;
@@ -10,11 +20,8 @@
     border: 1px solid #ececec;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-    width: 250px;
-    min-width: 250px;
-    transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
-    overflow: visible; 
-    z-index: 5;            
+    overflow: visible;   /* important */
+    z-index: 5;
 }
 
 .dashboard-sidebar.collapsed {
@@ -23,20 +30,15 @@
     padding: 24px 14px 22px;
 }
 
+/* no internal sidebar scrolling */
 .sidebar-inner {
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow-y: auto;
-    overflow-x: visible;
-
-    scrollbar-width: none;      
-    -ms-overflow-style: none;   
+    overflow: visible;   /* important */
 }
 
-.sidebar-inner::-webkit-scrollbar {
-    display: none;             
-}
+/* keep toggle above everything */
 .sidebar-toggle {
     position: absolute;
     top: 52px;
@@ -53,8 +55,12 @@
     justify-content: center;
     color: #222;
     cursor: pointer;
-    z-index: 30;
+    z-index: 50;       
     transition: all 0.25s ease;
+}
+
+.sidebar-inner::-webkit-scrollbar {
+    display: none;             
 }
 
 .sidebar-toggle:hover {
