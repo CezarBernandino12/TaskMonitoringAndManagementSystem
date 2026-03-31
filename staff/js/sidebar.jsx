@@ -1,9 +1,29 @@
 const STORAGE_KEY = "sidebar-collapsed";
 const MOBILE_BREAKPOINT = 768;
+const SIDEBAR_USER_API = "php/sidebar.php";
 
 function getCurrentPage() {
     const fileName = window.location.pathname.split("/").pop() || "";
     return fileName.split("?")[0].split("#")[0].toLowerCase();
+}
+
+function formatRoleLabel(role) {
+    if (!role) return "";
+    return role
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function buildInitials(name) {
+    if (!name) return "U";
+
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "U";
+
+    return parts
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join("");
 }
 
 function SidebarLink({
@@ -117,11 +137,24 @@ function Sidebar() {
     const [collapsed, setCollapsed] = React.useState(() => {
         return localStorage.getItem(STORAGE_KEY) === "true";
     });
+
     const [isMobile, setIsMobile] = React.useState(
         () => window.innerWidth < MOBILE_BREAKPOINT
     );
+
     const [mobileOpen, setMobileOpen] = React.useState(false);
     const [showLogoutModal, setShowLogoutModal] = React.useState(false);
+
+    const [user, setUser] = React.useState({
+        name: "",
+        role: "",
+        role_label: "",
+        department_name: "",
+        dashboard_title: "",
+        initials: ""
+    });
+
+    const [userLoaded, setUserLoaded] = React.useState(false);
 
     const currentPage = getCurrentPage();
 
@@ -158,6 +191,72 @@ function Sidebar() {
             document.body.classList.remove("sidebar-mobile-open");
         };
     }, [isMobile, mobileOpen]);
+
+    React.useEffect(() => {
+        let active = true;
+
+        async function loadSidebarUser() {
+            try {
+                const response = await fetch(SIDEBAR_USER_API, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json"
+                    }
+                });
+
+                const rawText = await response.text();
+                let data = null;
+
+                try {
+                    data = JSON.parse(rawText);
+                } catch (parseError) {
+                    console.error("Invalid sidebar JSON response:", rawText);
+                    return;
+                }
+
+                if (!active) return;
+
+                if (!response.ok || !data || data.error) {
+                    console.error("Sidebar API error:", data?.error || response.status);
+                    setUserLoaded(true);
+                    return;
+                }
+
+                const name = data.name || "User";
+                const role = data.role || "";
+                const roleLabel = data.role_label || formatRoleLabel(role);
+                const departmentName = data.department_name || "";
+                const dashboardTitle =
+                    data.dashboard_title ||
+                    (departmentName && roleLabel
+                        ? `${departmentName} - ${roleLabel} Dashboard`
+                        : "Dashboard");
+
+                setUser({
+                    name,
+                    role,
+                    role_label: roleLabel,
+                    department_name: departmentName,
+                    dashboard_title: dashboardTitle,
+                    initials: data.initials || buildInitials(name)
+                });
+
+                setUserLoaded(true);
+            } catch (error) {
+                console.error("Failed to load sidebar user data:", error);
+                if (active) {
+                    setUserLoaded(true);
+                }
+            }
+        }
+
+        loadSidebarUser();
+
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const toggleSidebar = () => {
         if (isMobile) {
@@ -206,6 +305,18 @@ function Sidebar() {
         .filter(Boolean)
         .join(" ");
 
+    const displayName = userLoaded ? user.name : "";
+    const displayDepartment = userLoaded ? user.department_name : "";
+    const displayRole = userLoaded ? (user.role_label || formatRoleLabel(user.role)) : "";
+    const displayTitle = userLoaded ? user.dashboard_title : "";
+    const displayInitials = userLoaded ? (user.initials || buildInitials(user.name)) : "";
+
+    const avatarUrl = displayName
+        ? `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              displayName
+          )}&background=f7c4d4&color=222&size=80`
+        : "";
+
     return (
         <>
             {isMobile && (
@@ -243,7 +354,9 @@ function Sidebar() {
 
                 {isMobile && (
                     <div className="sidebar-mobile-topbar">
-                        <div className="sidebar-mobile-title">Staff Menu</div>
+                        <div className="sidebar-mobile-title">
+                            {displayTitle || "Dashboard"}
+                        </div>
                         <button
                             type="button"
                             className="sidebar-mobile-close"
@@ -256,15 +369,39 @@ function Sidebar() {
                 )}
 
                 <div className="sidebar-inner">
+                    <div className="sidebar-header-block">
+                        {displayDepartment ? (
+                            <div className="sidebar-department-label">
+                                {displayDepartment}
+                            </div>
+                        ) : null}
+
+                        {displayTitle ? (
+                            <div className="sidebar-dashboard-title">
+                                {displayTitle}
+                            </div>
+                        ) : null}
+                    </div>
+
                     <div className="sidebar-profile">
-                        <img
-                            src="https://ui-avatars.com/api/?name=Andrew+Smith&background=f7c4d4&color=222&size=80"
-                            alt="Profile"
-                            className="sidebar-avatar"
-                        />
+                        {avatarUrl ? (
+                            <img
+                                src={avatarUrl}
+                                alt={`${displayName} Profile`}
+                                className="sidebar-avatar"
+                            />
+                        ) : (
+                            <div className="sidebar-avatar sidebar-avatar-fallback"></div>
+                        )}
+
                         <div className="sidebar-profile-info">
-                            <div className="sidebar-role">Staff</div>
-                            <div className="sidebar-name">Andrew Smith</div>
+                            {displayRole ? (
+                                <div className="sidebar-role">{displayRole}</div>
+                            ) : null}
+
+                            {displayName ? (
+                                <div className="sidebar-name">{displayName}</div>
+                            ) : null}
                         </div>
                     </div>
 

@@ -6,7 +6,50 @@
     height: calc(100vh - 32px);
 }
 
-/* MOBILE HELPERS */
+.sidebar-header-block {
+    margin-bottom: 18px;
+    padding: 6px 2px 14px;
+}
+
+.sidebar-department-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #a66b00;
+    margin-bottom: 4px;
+}
+
+.sidebar-dashboard-title {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #222;
+}
+
+.sidebar-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar-profile-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-role {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #8a8a8a;
+}
+
+.sidebar-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #222;
+}
 .mobile-sidebar-trigger,
 .sidebar-mobile-backdrop,
 .sidebar-mobile-topbar,
