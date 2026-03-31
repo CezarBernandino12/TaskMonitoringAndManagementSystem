@@ -26,6 +26,12 @@ function buildInitials(name) {
         .join("");
 }
 
+function buildAvatarFallbackUrl(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        name || "User"
+    )}&background=f7c4d4&color=222&size=80`;
+}
+
 function SidebarLink({
     href,
     icon,
@@ -133,6 +139,44 @@ function LogoutModal({ open, onClose, onConfirm }) {
     );
 }
 
+function SidebarAvatar({ user, displayName, displayInitials }) {
+    const [imageFailed, setImageFailed] = React.useState(false);
+
+    React.useEffect(() => {
+        setImageFailed(false);
+    }, [user.profile_image_url]);
+
+    const uploadedAvatarUrl =
+        user.profile_image_url && !imageFailed ? user.profile_image_url : "";
+
+    if (uploadedAvatarUrl) {
+        return (
+            <img
+                src={uploadedAvatarUrl}
+                alt={`${displayName} Profile`}
+                className="sidebar-avatar"
+                onError={() => setImageFailed(true)}
+            />
+        );
+    }
+
+    if (displayName) {
+        return (
+            <img
+                src={buildAvatarFallbackUrl(displayName)}
+                alt={`${displayName} Profile`}
+                className="sidebar-avatar"
+            />
+        );
+    }
+
+    return (
+        <div className="sidebar-avatar sidebar-avatar-fallback">
+            {displayInitials || "U"}
+        </div>
+    );
+}
+
 function Sidebar() {
     const [collapsed, setCollapsed] = React.useState(() => {
         return localStorage.getItem(STORAGE_KEY) === "true";
@@ -151,7 +195,8 @@ function Sidebar() {
         role_label: "",
         department_name: "",
         dashboard_title: "",
-        initials: ""
+        initials: "",
+        profile_image_url: ""
     });
 
     const [userLoaded, setUserLoaded] = React.useState(false);
@@ -212,6 +257,7 @@ function Sidebar() {
                     data = JSON.parse(rawText);
                 } catch (parseError) {
                     console.error("Invalid sidebar JSON response:", rawText);
+                    if (active) setUserLoaded(true);
                     return;
                 }
 
@@ -239,22 +285,52 @@ function Sidebar() {
                     role_label: roleLabel,
                     department_name: departmentName,
                     dashboard_title: dashboardTitle,
-                    initials: data.initials || buildInitials(name)
+                    initials: data.initials || buildInitials(name),
+                    profile_image_url: data.profile_image_url || ""
                 });
 
                 setUserLoaded(true);
             } catch (error) {
                 console.error("Failed to load sidebar user data:", error);
-                if (active) {
-                    setUserLoaded(true);
-                }
+                if (active) setUserLoaded(true);
             }
         }
 
+        function handleProfileUpdated(event) {
+            const data = event.detail;
+            if (!data) {
+                loadSidebarUser();
+                return;
+            }
+
+            const name = data.name || "User";
+            const role = data.role || "";
+            const roleLabel = data.role_label || formatRoleLabel(role);
+            const departmentName = data.department_name || "";
+
+            setUser({
+                name,
+                role,
+                role_label: roleLabel,
+                department_name: departmentName,
+                dashboard_title:
+                    data.dashboard_title ||
+                    (departmentName && roleLabel
+                        ? `${departmentName} - ${roleLabel} Dashboard`
+                        : "Dashboard"),
+                initials: data.initials || buildInitials(name),
+                profile_image_url: data.profile_image_url || ""
+            });
+
+            setUserLoaded(true);
+        }
+
         loadSidebarUser();
+        window.addEventListener("profile-updated", handleProfileUpdated);
 
         return () => {
             active = false;
+            window.removeEventListener("profile-updated", handleProfileUpdated);
         };
     }, []);
 
@@ -308,14 +384,12 @@ function Sidebar() {
     const displayName = userLoaded ? user.name : "";
     const displayDepartment = userLoaded ? user.department_name : "";
     const displayRole = userLoaded ? (user.role_label || formatRoleLabel(user.role)) : "";
-    const displayTitle = userLoaded ? user.dashboard_title : "";
     const displayInitials = userLoaded ? (user.initials || buildInitials(user.name)) : "";
 
-    const avatarUrl = displayName
-        ? `https://ui-avatars.com/api/?name=${encodeURIComponent(
-              displayName
-          )}&background=f7c4d4&color=222&size=80`
-        : "";
+    const compactLabel =
+        displayDepartment && displayRole
+            ? `${displayDepartment} - ${displayRole}`
+            : displayDepartment || displayRole || "";
 
     return (
         <>
@@ -355,7 +429,7 @@ function Sidebar() {
                 {isMobile && (
                     <div className="sidebar-mobile-topbar">
                         <div className="sidebar-mobile-title">
-                            {displayTitle || "Dashboard"}
+                            {compactLabel || "Menu"}
                         </div>
                         <button
                             type="button"
@@ -368,84 +442,78 @@ function Sidebar() {
                     </div>
                 )}
 
-            <div className="sidebar-inner">
-                <div className="sidebar-profile sidebar-profile-compact">
-                    {displayName ? (
-                        <img
-                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                displayName
-                            )}&background=f7c4d4&color=222&size=80`}
-                            alt={`${displayName} Profile`}
-                            className="sidebar-avatar"
+                <div className="sidebar-inner">
+                    <div className="sidebar-profile sidebar-profile-compact">
+                        <SidebarAvatar
+                            user={user}
+                            displayName={displayName}
+                            displayInitials={displayInitials}
                         />
-                    ) : (
-                        <div className="sidebar-avatar sidebar-avatar-fallback">
-                            {displayInitials || "U"}
-                        </div>
-                    )}
 
-                    <div className="sidebar-profile-info">
-                        <div className="sidebar-role sidebar-role-compact">
-                            {displayDepartment && displayRole
-                                ? `${displayDepartment} - ${displayRole}`
-                                : displayDepartment || displayRole || ""}
-                        </div>
+                        <div className="sidebar-profile-info">
+                            {compactLabel ? (
+                                <div className="sidebar-role sidebar-role-compact">
+                                    {compactLabel}
+                                </div>
+                            ) : null}
 
-                        <div className="sidebar-name sidebar-name-compact">
-                            {displayName || ""}
+                            {displayName ? (
+                                <div className="sidebar-name sidebar-name-compact">
+                                    {displayName}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
-                </div>
 
-                <div className="sidebar-divider"></div>
-                <div className="sidebar-section-label">MAIN</div>
+                    <div className="sidebar-divider"></div>
+                    <div className="sidebar-section-label">MAIN</div>
 
-                <SidebarLink
-                    href="dashboard.html"
-                    icon="bi-house-door"
-                    label="Dashboard"
-                    isActive={isActivePage("dashboard.html")}
-                    onNavigate={handleNavigate}
-                />
-
-                <SidebarLink
-                    href="my-tasks.html"
-                    icon="bi-list-check"
-                    label="My Tasks"
-                    isActive={isActivePage("my-tasks.html")}
-                    onNavigate={handleNavigate}
-                />
-
-                <SidebarLink
-                    href="calendar.html"
-                    icon="bi-calendar3"
-                    label="Calendar"
-                    isActive={isActivePage("calendar.html")}
-                    onNavigate={handleNavigate}
-                />
-
-                <div className="sidebar-divider mt-3"></div>
-                <div className="sidebar-section-label">SETTINGS</div>
-
-                <SidebarLink
-                    href="profile.html"
-                    icon="bi-gear"
-                    label="Account Settings"
-                    isActive={isActivePage("profile.html")}
-                    onNavigate={handleNavigate}
-                />
-
-                <div className="sidebar-bottom">
                     <SidebarLink
-                        href="../auth/login.html"
-                        icon="bi-box-arrow-right"
-                        label="Logout Account"
-                        isActive={false}
-                        extraClass="logout-link"
-                        onClick={openLogoutModal}
+                        href="dashboard.html"
+                        icon="bi-house-door"
+                        label="Dashboard"
+                        isActive={isActivePage("dashboard.html")}
+                        onNavigate={handleNavigate}
                     />
+
+                    <SidebarLink
+                        href="my-tasks.html"
+                        icon="bi-list-check"
+                        label="My Tasks"
+                        isActive={isActivePage("my-tasks.html")}
+                        onNavigate={handleNavigate}
+                    />
+
+                    <SidebarLink
+                        href="calendar.html"
+                        icon="bi-calendar3"
+                        label="Calendar"
+                        isActive={isActivePage("calendar.html")}
+                        onNavigate={handleNavigate}
+                    />
+
+                    <div className="sidebar-divider mt-3"></div>
+                    <div className="sidebar-section-label">SETTINGS</div>
+
+                    <SidebarLink
+                        href="profile.html"
+                        icon="bi-gear"
+                        label="Account Settings"
+                        isActive={isActivePage("profile.html")}
+                        onNavigate={handleNavigate}
+                    />
+
+                    <div className="sidebar-bottom">
+                        <SidebarLink
+                            href="../auth/login.html"
+                            icon="bi-box-arrow-right"
+                            label="Logout Account"
+                            isActive={false}
+                            extraClass="logout-link"
+                            onClick={openLogoutModal}
+                        />
+                    </div>
                 </div>
-            </div>
             </nav>
 
             <LogoutModal

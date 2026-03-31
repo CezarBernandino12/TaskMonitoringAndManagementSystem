@@ -18,6 +18,7 @@ try {
             u.email,
             u.role,
             u.department_id,
+            u.profile_image,
             d.name AS department_name
         FROM users u
         LEFT JOIN departments d ON d.id = u.department_id
@@ -51,7 +52,11 @@ try {
         'department_id' => $user['department_id'],
         'department_name' => $departmentName,
         'dashboard_title' => $departmentName . ' - ' . $roleLabel . ' Dashboard',
-        'initials' => $initials ?: 'U'
+        'initials' => $initials ?: 'U',
+        'profile_image' => $user['profile_image'],
+        'profile_image_url' => !empty($user['profile_image'])
+            ? 'uploads/profiles/' . $user['profile_image']
+            : null
     ]);
     exit;
 
