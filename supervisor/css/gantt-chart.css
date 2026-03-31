@@ -1,0 +1,96 @@
+
+    body {
+        background-color: #fffaf3;
+        color: #333; /* slightly darker for better contrast */
+        font-family: Arial, sans-serif;
+    }
+
+    .card {
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #ffb84d; /* slightly darker border */
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* subtle shadow for readability */
+        color: #222; /* dark text for contrast */
+    }
+
+    .overdue {
+        background-color: #fff0b3 !important; /* darker yellow for readability */
+        color: #665200; /* darker text on yellow */
+    }
+
+    .bg-white {
+        background-color: #fff !important;
+        color: #222;
+                color: #ffc560;
+        color: #4cff6a;
+        color: #ff6a6a;
+        color: #a0c4ff;
+        color: #d4a7ff;
+
+
+    }
+
+        .sidebar-orange {
+            background: #fff;
+            color: #ff9900;
+            border-right: 1px solid #ffe0b2;
+            box-shadow: 2px 0 8px rgba(255, 153, 0, 0.04);
+        }
+
+        .sidebar-orange .nav-link {
+            color: #cc7a00 !important;
+            border-radius: 8px;
+            margin-bottom: 2px;
+            transition: background 0.2s, color 0.2s;
+            font-weight: 500;
+            padding: 10px 18px;
+            font-size: 1.08rem;
+            letter-spacing: 0.01em;
+        }
+
+        .sidebar-orange .nav-link.active,
+        .sidebar-orange .nav-link:hover {
+            background: linear-gradient(90deg, #ff9900 60%, #ff8800 100%);
+            color: #fff !important;
+            box-shadow: 0 2px 8px rgba(255, 153, 0, 0.10);
+        }
+
+
+    .btn-primary {
+        background-color: #ff9900;
+        border-color: #ff9900;
+  
+    }
+
+    .btn-primary:hover, .btn-primary:focus {
+        background-color: #ffb84d;
+        border-color: #ffb84d;
+        color: #333; /* darker text for readability */
+    }
+
+    .table thead {
+        background: #ffe7b3; /* darker yellow header */
+    }
+
+    .table th {
+        color: #cc7a00; /* darker orange text for readability */
+    }
+
+    .table-hover tbody tr:hover {
+        background: #fff0b3;
+    }
+
+    .form-control:focus {
+        border-color: #ffb84d;
+        box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
+    }
+
+    h3, h5, h6 {
+        color: #cc7a00; /* darker headings */
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
+        border: 1px solid #ffb84d;
+        color: #cc7a00;
+    }
