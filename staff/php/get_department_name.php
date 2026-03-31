@@ -10,7 +10,6 @@ if (!isset($_SESSION['user_id'])) {
 require_once '../../config/db.php'; // $conn should be defined here
 
 try {
-    // Get department_id for the logged-in user
     $stmt = $conn->prepare('SELECT department_id FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);

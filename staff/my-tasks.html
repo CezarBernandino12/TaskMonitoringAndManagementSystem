@@ -26,72 +26,22 @@
 
 <div class="container-fluid py-4">
 <div class="row g-4 align-items-start">
-<aside class="col-12 col-md-4 col-lg-3 col-xl-2">
-    <nav class="dashboard-sidebar" id="dashboardSidebar">
-        <button class="sidebar-toggle" id="sidebarToggle" type="button">
-            <i class="bi bi-chevron-left"></i>
-        </button>
+        <aside class="col-12 col-md-4 col-lg-3 col-xl-2">
+            <div id="sidebar-root" data-page="tasks"></div>
+        </aside>
 
-        <div class="sidebar-inner">
-            <div class="sidebar-profile">
-                <img
-                    src="https://ui-avatars.com/api/?name=Andrew+Smith&background=f7c4d4&color=222&size=80"
-                    alt="Profile"
-                    class="sidebar-avatar"
-                >
-                <div class="sidebar-profile-info">
-                    <div class="sidebar-role">Staff</div>
-                    <div class="sidebar-name">Andrew Smith</div>
-                </div>
-            </div>
+<main class="col-md-10 ms-sm-auto px-4">
 
-            <div class="sidebar-divider"></div>
-            <div class="sidebar-section-label">MAIN</div>
-
-            <a href="dashboard.html" class="sidebar-link">
-                <span class="sidebar-icon"><i class="bi bi-house-door"></i></span>
-                <span class="sidebar-text">Dashboard</span>
-            </a>
-
-            <a href="my-tasks.html" class="sidebar-link active">
-                <span class="sidebar-icon"><i class="bi bi-list-check"></i></span>
-                <span class="sidebar-text">My Tasks</span>
-            </a>
-
-            <a href="calendar.html" class="sidebar-link">
-                <span class="sidebar-icon"><i class="bi bi-calendar3"></i></span>
-                <span class="sidebar-text">Calendar</span>
-            </a>
-
-            <div class="sidebar-divider mt-3"></div>
-            <div class="sidebar-section-label">SETTINGS</div>
-
-            <a href="profile.html" class="sidebar-link">
-                <span class="sidebar-icon"><i class="bi bi-gear"></i></span>
-                <span class="sidebar-text">Account Settings</span>
-            </a>
-
-            <div class="sidebar-bottom">
-                <a href="#" class="sidebar-link logout-link">
-                    <span class="sidebar-icon"><i class="bi bi-box-arrow-right"></i></span>
-                    <span class="sidebar-text">Logout Account</span>
-                </a>
-            </div>
-    </nav>
-</aside>
-
-        <main class="col-md-10 ms-sm-auto px-4">
-
-    <div id="dashboard-header-root"></div>
-
-    <div id="react-modal-root"></div>
-    <div id="root"></div>
-<div id="react-modal-root"></div>
-<button id="openReactModalBtn" style="display:none;"></button>
+        <div id="dashboard-header-root"></div>
+            <div id="react-modal-root"></div>
+            <div id="root"></div>
+        <div id="react-modal-root"></div>
+        
+    <button id="openReactModalBtn" style="display:none;"></button>
 
 </main>
 </div>
 <script type="text/babel" src="js/task.jsx"></script>
-<script src="js/sidebar.js"></script>
+<script type="text/babel" src="js/sidebar.jsx"></script>
 </body>
 </html>
