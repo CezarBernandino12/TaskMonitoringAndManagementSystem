@@ -1,16 +1,30 @@
 const STORAGE_KEY = "sidebar-collapsed";
+const MOBILE_BREAKPOINT = 768;
 
 function getCurrentPage() {
     const fileName = window.location.pathname.split("/").pop() || "";
-    return fileName.toLowerCase();
+    return fileName.split("?")[0].split("#")[0].toLowerCase();
 }
 
-function SidebarLink({ href, icon, label, isActive, extraClass = "", onClick }) {
+function SidebarLink({
+    href,
+    icon,
+    label,
+    isActive,
+    extraClass = "",
+    onClick,
+    onNavigate
+}) {
+    const handleClick = (e) => {
+        if (onClick) onClick(e);
+        if (!e.defaultPrevented && onNavigate) onNavigate();
+    };
+
     return (
         <a
             href={href}
             className={`sidebar-link ${isActive ? "active" : ""} ${extraClass}`.trim()}
-            onClick={onClick}
+            onClick={handleClick}
         >
             <span className="sidebar-icon">
                 <i className={`bi ${icon}`}></i>
@@ -55,6 +69,7 @@ function LogoutModal({ open, onClose, onConfirm }) {
                     <div className="logout-modal-icon-wrap">
                         <i className="bi bi-box-arrow-right"></i>
                     </div>
+
                     <button
                         type="button"
                         className="logout-modal-close"
@@ -102,9 +117,31 @@ function Sidebar() {
     const [collapsed, setCollapsed] = React.useState(() => {
         return localStorage.getItem(STORAGE_KEY) === "true";
     });
+    const [isMobile, setIsMobile] = React.useState(
+        () => window.innerWidth < MOBILE_BREAKPOINT
+    );
+    const [mobileOpen, setMobileOpen] = React.useState(false);
     const [showLogoutModal, setShowLogoutModal] = React.useState(false);
 
     const currentPage = getCurrentPage();
+
+    React.useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+            setIsMobile(mobile);
+
+            if (!mobile) {
+                setMobileOpen(false);
+            }
+        };
+
+        handleResize();
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+        };
+    }, []);
 
     React.useEffect(() => {
         localStorage.setItem(STORAGE_KEY, String(collapsed));
@@ -114,8 +151,29 @@ function Sidebar() {
         document.documentElement.classList.remove("sidebar-collapsed-init");
     }, []);
 
+    React.useEffect(() => {
+        document.body.classList.toggle("sidebar-mobile-open", isMobile && mobileOpen);
+
+        return () => {
+            document.body.classList.remove("sidebar-mobile-open");
+        };
+    }, [isMobile, mobileOpen]);
+
     const toggleSidebar = () => {
+        if (isMobile) {
+            setMobileOpen((prev) => !prev);
+            return;
+        }
+
         setCollapsed((prev) => !prev);
+    };
+
+    const openMobileSidebar = () => {
+        setMobileOpen(true);
+    };
+
+    const closeMobileSidebar = () => {
+        setMobileOpen(false);
     };
 
     const isActivePage = (fileName) => currentPage === fileName.toLowerCase();
@@ -133,21 +191,69 @@ function Sidebar() {
         window.location.href = "../auth/login.html";
     };
 
+    const handleNavigate = () => {
+        if (isMobile) {
+            closeMobileSidebar();
+        }
+    };
+
+    const sidebarClassName = [
+        "dashboard-sidebar",
+        !isMobile && collapsed ? "collapsed" : "",
+        isMobile ? "mobile" : "",
+        isMobile && mobileOpen ? "mobile-open" : ""
+    ]
+        .filter(Boolean)
+        .join(" ");
+
     return (
         <>
-            <nav
-                id="dashboardSidebar"
-                className={`dashboard-sidebar ${collapsed ? "collapsed" : ""}`}
-            >
+            {isMobile && (
                 <button
-                    className="sidebar-toggle"
-                    id="sidebarToggle"
                     type="button"
-                    onClick={toggleSidebar}
-                    aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    className="mobile-sidebar-trigger"
+                    onClick={openMobileSidebar}
+                    aria-label="Open navigation menu"
                 >
-                    <i className="bi bi-chevron-left"></i>
+                    <i className="bi bi-list"></i>
                 </button>
+            )}
+
+            {isMobile && mobileOpen && (
+                <button
+                    type="button"
+                    className="sidebar-mobile-backdrop"
+                    onClick={closeMobileSidebar}
+                    aria-label="Close navigation menu"
+                />
+            )}
+
+            <nav id="dashboardSidebar" className={sidebarClassName}>
+                {!isMobile && (
+                    <button
+                        className="sidebar-toggle"
+                        id="sidebarToggle"
+                        type="button"
+                        onClick={toggleSidebar}
+                        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        <i className="bi bi-chevron-left"></i>
+                    </button>
+                )}
+
+                {isMobile && (
+                    <div className="sidebar-mobile-topbar">
+                        <div className="sidebar-mobile-title">Staff Menu</div>
+                        <button
+                            type="button"
+                            className="sidebar-mobile-close"
+                            onClick={closeMobileSidebar}
+                            aria-label="Close sidebar"
+                        >
+                            <i className="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                )}
 
                 <div className="sidebar-inner">
                     <div className="sidebar-profile">
@@ -170,6 +276,7 @@ function Sidebar() {
                         icon="bi-house-door"
                         label="Dashboard"
                         isActive={isActivePage("dashboard.html")}
+                        onNavigate={handleNavigate}
                     />
 
                     <SidebarLink
@@ -177,6 +284,7 @@ function Sidebar() {
                         icon="bi-list-check"
                         label="My Tasks"
                         isActive={isActivePage("my-tasks.html")}
+                        onNavigate={handleNavigate}
                     />
 
                     <SidebarLink
@@ -184,6 +292,7 @@ function Sidebar() {
                         icon="bi-calendar3"
                         label="Calendar"
                         isActive={isActivePage("calendar.html")}
+                        onNavigate={handleNavigate}
                     />
 
                     <div className="sidebar-divider mt-3"></div>
@@ -194,6 +303,7 @@ function Sidebar() {
                         icon="bi-gear"
                         label="Account Settings"
                         isActive={isActivePage("profile.html")}
+                        onNavigate={handleNavigate}
                     />
 
                     <div className="sidebar-bottom">

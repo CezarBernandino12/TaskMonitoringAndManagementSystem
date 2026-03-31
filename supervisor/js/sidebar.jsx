@@ -1,16 +1,30 @@
 const STORAGE_KEY = "sidebar-collapsed";
+const MOBILE_BREAKPOINT = 768;
 
 function getCurrentPage() {
     const fileName = window.location.pathname.split("/").pop() || "";
     return fileName.split("?")[0].split("#")[0].toLowerCase();
 }
 
-function SidebarLink({ href, icon, label, isActive, extraClass = "", onClick }) {
+function SidebarLink({
+    href,
+    icon,
+    label,
+    isActive,
+    extraClass = "",
+    onClick,
+    onNavigate
+}) {
+    const handleClick = (e) => {
+        if (onClick) onClick(e);
+        if (!e.defaultPrevented && onNavigate) onNavigate();
+    };
+
     return (
         <a
             href={href}
             className={`sidebar-link ${isActive ? "active" : ""} ${extraClass}`.trim()}
-            onClick={onClick}
+            onClick={handleClick}
         >
             <span className="sidebar-icon">
                 <i className={`bi ${icon}`}></i>
@@ -104,7 +118,12 @@ function SupervisorSidebar() {
         return localStorage.getItem(STORAGE_KEY) === "true";
     });
 
+    const [isMobile, setIsMobile] = React.useState(
+        () => window.innerWidth < MOBILE_BREAKPOINT
+    );
+    const [mobileOpen, setMobileOpen] = React.useState(false);
     const [showLogoutModal, setShowLogoutModal] = React.useState(false);
+
     const currentPage = getCurrentPage();
 
     const managementPages = [
@@ -117,6 +136,24 @@ function SupervisorSidebar() {
     const isManagementActive = managementPages.some(isActivePage);
 
     const [managementOpen, setManagementOpen] = React.useState(isManagementActive);
+
+    React.useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+            setIsMobile(mobile);
+
+            if (!mobile) {
+                setMobileOpen(false);
+            }
+        };
+
+        handleResize();
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+        };
+    }, []);
 
     React.useEffect(() => {
         localStorage.setItem(STORAGE_KEY, String(collapsed));
@@ -132,8 +169,29 @@ function SupervisorSidebar() {
         }
     }, [isManagementActive]);
 
+    React.useEffect(() => {
+        document.body.classList.toggle("sidebar-mobile-open", isMobile && mobileOpen);
+
+        return () => {
+            document.body.classList.remove("sidebar-mobile-open");
+        };
+    }, [isMobile, mobileOpen]);
+
     const toggleSidebar = () => {
+        if (isMobile) {
+            setMobileOpen((prev) => !prev);
+            return;
+        }
+
         setCollapsed((prev) => !prev);
+    };
+
+    const openMobileSidebar = () => {
+        setMobileOpen(true);
+    };
+
+    const closeMobileSidebar = () => {
+        setMobileOpen(false);
     };
 
     const toggleManagement = () => {
@@ -153,21 +211,69 @@ function SupervisorSidebar() {
         window.location.href = "../auth/login.html";
     };
 
+    const handleNavigate = () => {
+        if (isMobile) {
+            closeMobileSidebar();
+        }
+    };
+
+    const sidebarClassName = [
+        "dashboard-sidebar",
+        !isMobile && collapsed ? "collapsed" : "",
+        isMobile ? "mobile" : "",
+        isMobile && mobileOpen ? "mobile-open" : ""
+    ]
+        .filter(Boolean)
+        .join(" ");
+
     return (
         <>
-            <nav
-                id="dashboardSidebar"
-                className={`dashboard-sidebar ${collapsed ? "collapsed" : ""}`}
-            >
+            {isMobile && (
                 <button
-                    className="sidebar-toggle"
-                    id="sidebarToggle"
                     type="button"
-                    onClick={toggleSidebar}
-                    aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    className="mobile-sidebar-trigger"
+                    onClick={openMobileSidebar}
+                    aria-label="Open navigation menu"
                 >
-                    <i className="bi bi-chevron-left"></i>
+                    <i className="bi bi-list"></i>
                 </button>
+            )}
+
+            {isMobile && mobileOpen && (
+                <button
+                    type="button"
+                    className="sidebar-mobile-backdrop"
+                    onClick={closeMobileSidebar}
+                    aria-label="Close navigation menu"
+                />
+            )}
+
+            <nav id="dashboardSidebar" className={sidebarClassName}>
+                {!isMobile && (
+                    <button
+                        className="sidebar-toggle"
+                        id="sidebarToggle"
+                        type="button"
+                        onClick={toggleSidebar}
+                        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        <i className="bi bi-chevron-left"></i>
+                    </button>
+                )}
+
+                {isMobile && (
+                    <div className="sidebar-mobile-topbar">
+                        <div className="sidebar-mobile-title">Supervisor Menu</div>
+                        <button
+                            type="button"
+                            className="sidebar-mobile-close"
+                            onClick={closeMobileSidebar}
+                            aria-label="Close sidebar"
+                        >
+                            <i className="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                )}
 
                 <div className="sidebar-inner">
                     <div className="sidebar-profile">
@@ -190,6 +296,7 @@ function SupervisorSidebar() {
                         icon="bi-house-door"
                         label="Dashboard"
                         isActive={isActivePage("dashboard.html")}
+                        onNavigate={handleNavigate}
                     />
 
                     <SidebarLink
@@ -197,6 +304,7 @@ function SupervisorSidebar() {
                         icon="bi-list-check"
                         label="Task Monitoring"
                         isActive={isActivePage("task-monitoring.html")}
+                        onNavigate={handleNavigate}
                     />
 
                     <SidebarLink
@@ -204,6 +312,7 @@ function SupervisorSidebar() {
                         icon="bi-calendar3"
                         label="Calendar"
                         isActive={isActivePage("calendar.html")}
+                        onNavigate={handleNavigate}
                     />
 
                     <SidebarLink
@@ -211,6 +320,7 @@ function SupervisorSidebar() {
                         icon="bi-bar-chart-line"
                         label="Gantt Chart"
                         isActive={isActivePage("gantt-chart.html")}
+                        onNavigate={handleNavigate}
                     />
 
                     <div className="sidebar-divider mt-3"></div>
@@ -218,14 +328,16 @@ function SupervisorSidebar() {
                     <div className="sidebar-management-wrap">
                         <button
                             type="button"
-                            className={`sidebar-section-label-toggle management-toggle ${managementOpen ? "open" : ""} ${isManagementActive ? "active" : ""}`}
+                            className={`sidebar-section-label-toggle management-toggle ${managementOpen ? "open" : ""} ${isManagementActive ? "active" : ""} ${!isMobile && collapsed ? "collapsed-trigger" : ""}`}
                             onClick={toggleManagement}
                             aria-expanded={managementOpen}
                             aria-controls="managementSubmenu"
                         >
-                            <span className="management-toggle-icon">
-                                <i className="bi bi-folder2-open"></i>
-                            </span>
+                            {!isMobile && collapsed && (
+                                <span className="management-toggle-icon">
+                                    <i className="bi bi-folder2-open"></i>
+                                </span>
+                            )}
 
                             <span className="sidebar-section-label-text">MANAGEMENT</span>
 
@@ -236,7 +348,7 @@ function SupervisorSidebar() {
 
                         <div
                             id="managementSubmenu"
-                            className={`sidebar-submenu ${managementOpen ? "open" : ""} ${collapsed ? "collapsed-popout" : ""}`}
+                            className={`sidebar-submenu ${managementOpen ? "open" : ""} ${!isMobile && collapsed ? "collapsed-popout" : ""}`}
                         >
                             <SidebarLink
                                 href="staff-performance.html"
@@ -244,6 +356,7 @@ function SupervisorSidebar() {
                                 label="Staff Performance"
                                 isActive={isActivePage("staff-performance.html")}
                                 extraClass="sidebar-sublink"
+                                onNavigate={handleNavigate}
                             />
 
                             <SidebarLink
@@ -252,6 +365,7 @@ function SupervisorSidebar() {
                                 label="Manage Staffs"
                                 isActive={isActivePage("manage-staffs.html")}
                                 extraClass="sidebar-sublink"
+                                onNavigate={handleNavigate}
                             />
 
                             <SidebarLink
@@ -260,6 +374,7 @@ function SupervisorSidebar() {
                                 label="Reports"
                                 isActive={isActivePage("reports.html")}
                                 extraClass="sidebar-sublink"
+                                onNavigate={handleNavigate}
                             />
                         </div>
                     </div>
@@ -272,6 +387,7 @@ function SupervisorSidebar() {
                         icon="bi-gear"
                         label="Profile"
                         isActive={isActivePage("profile.html")}
+                        onNavigate={handleNavigate}
                     />
 
                     <div className="sidebar-bottom">
