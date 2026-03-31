@@ -13,8 +13,8 @@
     width: 250px;
     min-width: 250px;
     transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
-    overflow: visible;      /* important */
-    z-index: 5;             /* important */
+    overflow: visible; 
+    z-index: 5;            
 }
 
 .dashboard-sidebar.collapsed {
@@ -23,16 +23,20 @@
     padding: 24px 14px 22px;
 }
 
-/* make inner content scroll instead of the whole sidebar clipping the toggle */
 .sidebar-inner {
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow-y: auto;
     overflow-x: visible;
+
+    scrollbar-width: none;      
+    -ms-overflow-style: none;   
 }
 
-/* TOGGLER — half inside, half outside */
+.sidebar-inner::-webkit-scrollbar {
+    display: none;             
+}
 .sidebar-toggle {
     position: absolute;
     top: 52px;

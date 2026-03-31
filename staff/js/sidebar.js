@@ -1,6 +1,6 @@
 const STORAGE_KEY = "sidebar-collapsed";
 
-function initSidebarToggle() {
+document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("dashboardSidebar");
     const toggleBtn = document.getElementById("sidebarToggle");
 
@@ -8,13 +8,10 @@ function initSidebarToggle() {
 
     const isCollapsed = localStorage.getItem(STORAGE_KEY) === "true";
     sidebar.classList.toggle("collapsed", isCollapsed);
-
     document.documentElement.classList.remove("sidebar-collapsed-init");
 
     toggleBtn.addEventListener("click", () => {
         const collapsedNow = sidebar.classList.toggle("collapsed");
-        localStorage.setItem(STORAGE_KEY, collapsedNow);
+        localStorage.setItem(STORAGE_KEY, String(collapsedNow));
     });
-}
-
-document.addEventListener("DOMContentLoaded", initSidebarToggle);
+});

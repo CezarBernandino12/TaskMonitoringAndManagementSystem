@@ -13,12 +13,12 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script>
-        (function () {
-            const isCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
-            if (isCollapsed) {
-                document.documentElement.classList.add("sidebar-collapsed-init");
-            }
-        })();
+    (function () {
+        const isCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
+        if (isCollapsed) {
+            document.documentElement.classList.add("sidebar-collapsed-init");
+        }
+    })();
     </script>
 
 </head>
@@ -96,14 +96,6 @@
 
 </div>
 <script type="text/babel" src="js/profile.jsx"></script>
-<script type="text/babel" src="js/sidebar.jsx"></script>
-<script>
-    const sidebar = document.getElementById("dashboardSidebar");
-    const sidebarToggle = document.getElementById("sidebarToggle");
-
-    sidebarToggle.addEventListener("click", function () {
-        sidebar.classList.toggle("collapsed");
-    });
-</script>
+<script src="js/sidebar.js"></script>
 </body>
 </html>
