@@ -1,0 +1,25 @@
+[31-Mar-2026 12:21:01 Asia/Manila] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php:192
+Stack trace:
+#0 C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php(192): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php on line 192
+[31-Mar-2026 12:22:57 Asia/Manila] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php:192
+Stack trace:
+#0 C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php(192): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php on line 192
+[31-Mar-2026 12:23:04 Asia/Manila] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php:192
+Stack trace:
+#0 C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php(192): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php on line 192
+[31-Mar-2026 12:27:25 Asia/Manila] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php:192
+Stack trace:
+#0 C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php(192): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php on line 192
+[31-Mar-2026 12:27:29 Asia/Manila] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php:192
+Stack trace:
+#0 C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php(192): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\taskmanagement\president\php\get_weekly_report.php on line 192

@@ -211,28 +211,38 @@ function Dashboard() {
     <div className="container-fluid py-4">
       <div className="row">
         {/* SIDEBAR */}
+        {/* SIDEBAR */}
         <nav className="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
           <div className="sidebar-orange d-flex flex-column p-3 gap-2 min-vh-100">
-            {[
-              { label: "Dashboard", file: "dashboard.html" },
-              { label: "Reports" },
-              { label: "Daily", file: "daily-reports.html" },
-              { label: "Weekly", file: "weekly-reports.html" },
-              { label: "Monthly", file: "monthly-reports.html" },
-              { label: "Quarterly", file: "quarterly-reports.html" },
-              { label: "Annually", file: "annual-reports.html" },
-              { label: "Profile", file: "profile.html" }
-
-
-            ].map((item, i) => (
-              <a
-                key={i}
-                href={item.file}
-                className="nav-link fw-semibold"
-              >
-                {item.label}
-              </a>
-            ))}
+            <a href="dashboard.html" className="nav-link fw-semibold">Dashboard</a>
+            {(() => {
+              const [showReports, setShowReports] = React.useState(false);
+              const forceUpdate = React.useReducer(x => x + 1, 0)[1];
+              if (window._showReports === undefined) window._showReports = false;
+              const toggleReports = e => {
+                e.preventDefault();
+                window._showReports = !window._showReports;
+                forceUpdate();
+              };
+              return (
+                <>
+                  <a href="#" className="nav-link fw-semibold d-flex justify-content-between align-items-center" onClick={toggleReports} style={{cursor:'pointer'}}>
+                    <span>Reports</span>
+                    <span style={{fontSize: '1.1em'}}>{window._showReports ? '\u25BC' : '\u25B6'}</span>
+                  </a>
+                  {window._showReports && (
+                    <div style={{marginLeft: 12}}>
+                      <a href="daily-reports.html" className="nav-link fw-semibold">Daily</a>
+                      <a href="weekly-reports.html" className="nav-link fw-semibold">Weekly</a>
+                      <a href="monthly-reports.html" className="nav-link fw-semibold">Monthly</a>
+                      <a href="quarterly-reports.html" className="nav-link fw-semibold">Quarterly</a>
+                      <a href="annual-reports.html" className="nav-link fw-semibold">Annually</a>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+            <a href="profile.html" className="nav-link fw-semibold">Profile</a>
           </div>
         </nav>
         {/* MAIN */}
