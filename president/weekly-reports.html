@@ -1,14 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Daily Report</title>
+  <title>Weekly Report</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- React + Babel -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -59,335 +60,789 @@
 </head>
 <body>
 
-<div id="root"></div>
-
+<div id="weeklyReportRoot"></div>
 <script type="text/babel">
+const { useEffect, useState, useRef } = React;
 
-const { useState, useEffect } = React;
+// ====================================================================
+// SIDEBAR
+// ====================================================================
+function Sidebar() {
+    const [showReports, setShowReports] = useState(false);
 
+    return (
+        <nav className="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
+            <div className="sidebar-orange d-flex flex-column p-3 gap-2 min-vh-100">
+                <a href="dashboard.html" className="nav-link fw-semibold">Dashboard</a>
 
-// Chart.js CDN
-const chartJsScript = document.createElement('script');
-chartJsScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-document.head.appendChild(chartJsScript);
+                <a
+                    href="#"
+                    className="nav-link fw-semibold d-flex justify-content-between align-items-center"
+                    onClick={e => { e.preventDefault(); setShowReports(prev => !prev); }}
+                    style={{ cursor: 'pointer' }}
+                >
+                    <span>Reports</span>
+                    <span style={{ fontSize: '1.1em' }}>{showReports ? '▼' : '▶'}</span>
+                </a>
 
-function useDepartmentPerformance() {
-  const [data, setData] = useState([]);
-  useEffect(() => {
-    fetch('php/get_department_performance.php')
-      .then(res => res.json())
-      .then(setData)
-      .catch(() => setData([]));
-  }, []);
-  return data;
-}
+                {showReports && (
+                    <div style={{ marginLeft: 12 }}>
+                        <a href="daily-reports.html"     className="nav-link fw-semibold">Daily</a>
+                        <a href="weekly-reports.html"    className="nav-link fw-semibold">Weekly</a>
+                        <a href="monthly-reports.html"   className="nav-link fw-semibold">Monthly</a>
+                        <a href="quarterly-reports.html" className="nav-link fw-semibold">Quarterly</a>
+                        <a href="annual-reports.html"    className="nav-link fw-semibold">Annually</a>
+                    </div>
+                )}
 
-
-
-
-
-function StaffBarChart({ staffs }) {
-  const chartRef = React.useRef(null);
-  useEffect(() => {
-    if (!window.Chart || !chartRef.current) return;
-    if (window.staffBarChartInstance) {
-      window.staffBarChartInstance.destroy();
-    }
-    if (!staffs || staffs.length === 0) return;
-    const ctx = chartRef.current.getContext('2d');
-    const labels = staffs.map(s => s.staff);
-    const ongoing = staffs.map(s => s.ongoing);
-    const completed = staffs.map(s => s.completed);
-    const overdue = staffs.map(s => s.overdue);
-    window.staffBarChartInstance = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Ongoing',
-            data: ongoing,
-            backgroundColor: '#ffe066',
-          },
-          {
-            label: 'Completed',
-            data: completed,
-            backgroundColor: '#b6e388',
-          },
-          {
-            label: 'Overdue',
-            data: overdue,
-            backgroundColor: '#ffb3b3',
-          }
-        ]
-      },
-      options: {
-        responsive: false,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'top' },
-          title: {
-            display: true,
-            text: 'Task Status by Staff',
-            font: { size: 18 }
-          }
-        },
-        scales: {
-          x: {
-            stacked: true,
-            title: { display: true, text: 'Staff' },
-          },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            title: { display: true, text: 'Number of Tasks' },
-          }
-        },
-        barPercentage: 0.8,
-        categoryPercentage: 0.8,
-      }
-    });
-  }, [staffs]);
-  return (
-    <div className="card p-3 mb-4" style={{ height: 390 }}>
-      <h5>Task Status by Staff</h5>
-      <div style={{ height: 340 }}>
-        <canvas ref={chartRef} height="340"></canvas>
-      </div>
-    </div>
-  );
-}
-
-function Dashboard() {
-  const [stats, setStats] = useState({
-    total_departments: '-',
-    total_tasks: '-',
-    completed_tasks: '-',
-    completion_rate: '-'
-  });
-
-  useEffect(() => {
-    fetch('php/get_dashboard_stats.php')
-      .then(res => res.json())
-      .then(data => setStats(data))
-      .catch(() => {});
-  }, []);
-
-  // Departments and staff performance
-  const [departments, setDepartments] = useState([]);
-  const [selectedDept, setSelectedDept] = useState(null);
-  const [staffs, setStaffs] = useState([]);
-  const [loadingStaffs, setLoadingStaffs] = useState(false);
-
-  useEffect(() => {
-    fetch('php/get_department_performance.php')
-      .then(res => res.json())
-      .then(data => Array.isArray(data) ? setDepartments(data) : setDepartments([]))
-      .catch(() => setDepartments([]));
-  }, []);
-
-  // Fetch staff performance when a department is selected
-  useEffect(() => {
-    if (selectedDept) {
-      setLoadingStaffs(true);
-      fetch('php/get_staff_performance_by_department.php?department=' + encodeURIComponent(selectedDept))
-        .then(res => res.json())
-        .then(data => {
-          setStaffs(Array.isArray(data) ? data : []);
-          setLoadingStaffs(false);
-        })
-        .catch(() => {
-          setStaffs([]);
-          setLoadingStaffs(false);
-        });
-    } else {
-      setStaffs([]);
-    }
-  }, [selectedDept]);
-
-  // Filtered departments for display (all or selected)
-  const displayDepartments = selectedDept
-    ? departments.filter(d => d.department === selectedDept)
-    : departments;
-
-  return (
-    <div className="container-fluid py-4">
-      <div className="row">
-        {/* SIDEBAR */}
-   <nav className="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
-  <div className="sidebar-orange d-flex flex-column p-3 gap-2 min-vh-100">
-    {/* Dashboard link */}
-    <a href="dashboard.html" className="nav-link fw-semibold">Dashboard</a>
-
-    {/* Reports collapsible menu */}
-    {(() => {
-      const [showReports, setShowReports] = React.useState(false);
-      // Use a ref to force re-render on toggle
-      const forceUpdate = React.useReducer(x => x + 1, 0)[1];
-      // Attach to window to persist state across renders
-      if (window._showReports === undefined) window._showReports = false;
-      const toggleReports = e => {
-        e.preventDefault();
-        window._showReports = !window._showReports;
-        forceUpdate();
-      };
-      return (
-        <>
-          <a href="#" className="nav-link fw-semibold d-flex justify-content-between align-items-center" onClick={toggleReports} style={{cursor:'pointer'}}>
-            <span>Reports</span>
-            <span style={{fontSize: '1.1em'}}>{window._showReports ? '\u25BC' : '\u25B6'}</span>
-          </a>
-          {window._showReports && (
-            <div style={{marginLeft: 12}}>
-              <a href="daily-reports.html" className="nav-link fw-semibold">Daily</a>
-              <a href="weekly-reports.html" className="nav-link fw-semibold">Weekly</a>
-              <a href="monthly-reports.html" className="nav-link fw-semibold">Monthly</a>
-              <a href="quarterly-reports.html" className="nav-link fw-semibold">Quarterly</a>
-              <a href="annual-reports.html" className="nav-link fw-semibold">Annually</a>
+                <a href="profile.html" className="nav-link fw-semibold">Profile</a>
             </div>
-          )}
-        </>
-      );
-    })()}
-
-    {/* Profile link */}
-    <a href="profile.html" className="nav-link fw-semibold">Profile</a>
-  </div>
-</nav>
-        {/* MAIN */}
-        <main className="col-md-10 ms-sm-auto px-4">
-          {/* HEADER */}
-          <div className="mb-4">
-            <h3>Daily Reports</h3>
-            <p className="text-muted">Department Performance Overview</p>
-          </div>
-          {/* SUMMARY: Show department names from DB as filter buttons */}
-          <div className="row mb-4">
-            {departments.length === 0 ? (
-              <div className="col-12">
-                <div className="card summary-card text-center p-3">
-                  <h6>No departments found</h6>
-                </div>
-              </div>
-            ) : (
-              departments.slice(0, 6).map((dept, idx) => (
-                <div className="col-md-2" key={dept.department + idx}>
-                  <div
-                    className={`card summary-card text-center p-3 ${selectedDept === dept.department ? 'border-3 border-warning' : ''}`}
-                    style={{ cursor: 'pointer', boxShadow: selectedDept === dept.department ? '0 0 0 2px #ff9900' : undefined }}
-                    onClick={() => setSelectedDept(selectedDept === dept.department ? null : dept.department)}
-                  >
-                    <h6>{dept.department}</h6>
-                  </div>
-                </div>
-              ))
-            )}
-     
-          </div>
-
-          {/* STAFF BAR CHART */}
-          {selectedDept && staffs.length > 0 ? (
-            <StaffBarChart staffs={staffs} />
-          ) : (
-            <div className="card p-3 mb-4 text-center text-muted" style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span>Select a department to view staff performance chart.</span>
-            </div>
-          )}
-   
-          {/* TABLE VERSION OF PERFORMANCE */}
-          <div className="card p-3">
-            <h5>Staff Performance Table</h5>
-            <div className="table-responsive">
-                <table className="table table-bordered table-hover align-middle">
-                  <thead className="table-light">
-                    <tr>
-                      <th>Staff</th>
-                      <th>Total Tasks</th>
-                      <th>Completed</th>
-                      <th>Ongoing</th>
-                      <th>Overdue</th>
-                      <th>Completion %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedDept ? (
-                      loadingStaffs ? (
-                        <tr><td colSpan="6" className="text-center">Loading...</td></tr>
-                      ) : staffs.length === 0 ? (
-                        <tr><td colSpan="6" className="text-center">No staff data available</td></tr>
-                      ) : (
-                        staffs.map((staff, idx) => (
-                          <tr key={staff.staff + idx}>
-                            <td>{staff.staff}</td>
-                            <td>{staff.total_tasks}</td>
-                            <td>{staff.completed}</td>
-                            <td>{staff.ongoing}</td>
-                            <td>{staff.overdue}</td>
-                            <td>
-                              <div className="d-flex align-items-center gap-2">
-                                <span style={{minWidth: 32}}>{staff.completion_percent}%</span>
-                                <div className="progress flex-grow-1" style={{height: '18px', minWidth: 80}}>
-                                  <div
-                                    className="progress-bar bg-success"
-                                    role="progressbar"
-                                    style={{width: `${staff.completion_percent}%`}}
-                                    aria-valuenow={staff.completion_percent}
-                                    aria-valuemin="0"
-                                    aria-valuemax="100"
-                                  >
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )
-                    ) : (
-                      displayDepartments.length === 0 ? (
-                        <tr><td colSpan="6" className="text-center">No data available</td></tr>
-                      ) : (
-                        displayDepartments.map((dept, idx) => (
-                          <tr key={dept.department + idx}>
-                            <td>{dept.department}</td>
-                            <td>{dept.total_tasks}</td>
-                            <td>{dept.completed}</td>
-                            <td>{dept.ongoing}</td>
-                            <td>{dept.overdue}</td>
-                            <td>
-                              <div className="d-flex align-items-center gap-2">
-                                <span style={{minWidth: 32}}>{dept.completion_percent}%</span>
-                                <div className="progress flex-grow-1" style={{height: '18px', minWidth: 80}}>
-                                  <div
-                                    className="progress-bar bg-success"
-                                    role="progressbar"
-                                    style={{width: `${dept.completion_percent}%`}}
-                                    aria-valuenow={dept.completion_percent}
-                                    aria-valuemin="0"
-                                    aria-valuemax="100"
-                                  >
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )
-                    )}
-
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </main>
-        </div>
-      </div>
+        </nav>
     );
-  }
+}
 
-chartJsScript.onload = () => {
-  ReactDOM.createRoot(document.getElementById('root')).render(<Dashboard />);
-};
+// ====================================================================
+// HELPERS
+// ====================================================================
+function getWeekStart(offsetWeeks = 0) {
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMonday = (day === 0 ? -6 : 1 - day);
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday + offsetWeeks * 7);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+}
+
+function formatDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function formatDisplayDate(date) {
+    return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function weekDayLabels(monday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days.map((d, i) => {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + i);
+        return `${d} ${date.getDate()}`;
+    });
+}
+
+// ====================================================================
+// EMPLOYEE TASK MODAL — weekly version
+//
+// BUG FIX #1: Changed fetch endpoint from the non-existent
+// `get_employee_tasks_report.php` to the correct `get_weekly_report.php`.
+//
+// BUG FIX #4: Props are now plain strings (weekStartStr, weekEndStr)
+// instead of Date objects. Date objects have a new identity on every
+// render, which caused the useEffect dep array to fire on every
+// re-render of the parent. Strings compare by value so the effect
+// only re-runs when the week actually changes.
+// ====================================================================
+function EmployeeTaskModal({ emp, weekStartStr, weekEndStr, onClose }) {
+    const [tasks, setTasks]         = useState([]);
+    const [loading, setLoading]     = useState(true);
+    const [error, setError]         = useState(null);
+    const [activeTab, setActiveTab] = useState('all');
+
+    useEffect(() => {
+        setLoading(true);
+        setError(null);
+        setTasks([]);
+        setActiveTab('all');
+
+        // BUG FIX #1: correct PHP filename
+        fetch(`php/get_weekly_report.php?employee_id=${emp.id}&week_start=${weekStartStr}&week_end=${weekEndStr}`)
+            .then(res => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+                setLoading(false);
+            })
+            .catch(err => {
+                setError(`Could not load tasks: ${err.message}`);
+                setLoading(false);
+            });
+    // BUG FIX #4: dep array uses stable string values, not Date objects
+    }, [emp.id, weekStartStr, weekEndStr]);
+
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) onClose();
+    };
+
+    // Use derived_status from the API — no JS recalculation
+    const getTaskStatus  = (task) => task.derived_status ?? task.status;
+
+    const statusBadge = (status) => ({
+        'Completed': 'success',
+        'Ongoing':   'warning',
+        'Overdue':   'danger',
+    }[status] ?? 'secondary');
+
+    const priorityBadge = (priority) => ({
+        'High':   'danger',
+        'Medium': 'warning',
+        'Low':    'secondary',
+    }[priority] ?? 'secondary');
+
+    const annotated  = tasks.map(t => ({ ...t, derivedStatus: getTaskStatus(t) }));
+    const filtered   = activeTab === 'all' ? annotated : annotated.filter(t => t.derivedStatus === activeTab);
+    const countFor   = (status) => annotated.filter(t => t.derivedStatus === status).length;
+
+    // Re-parse strings to Date only for display purposes (read-only, no mutation)
+    const weekStartDisplay = new Date(weekStartStr + 'T00:00:00');
+    const weekEndDisplay   = new Date(weekEndStr   + 'T00:00:00');
+
+    return (
+        <div
+            onClick={handleBackdropClick}
+            style={{
+                position: 'fixed', inset: 0,
+                background: 'rgba(0,0,0,0.45)',
+                zIndex: 1050,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem',
+            }}
+        >
+            <div style={{
+                background: '#fff',
+                borderRadius: 12,
+                width: '100%',
+                maxWidth: 720,
+                maxHeight: '85vh',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+            }}>
+                {/* Header */}
+                <div style={{
+                    padding: '1rem 1.25rem',
+                    borderBottom: '1px solid #dee2e6',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexShrink: 0,
+                }}>
+                    <div>
+                        <h5 style={{ margin: 0, fontWeight: 600 }}>{emp.name}</h5>
+                        <small className="text-muted">
+                            {emp.department} &nbsp;·&nbsp;
+                            Week of {formatDisplayDate(weekStartDisplay)} — {formatDisplayDate(weekEndDisplay)}
+                        </small>
+                    </div>
+                    <button className="btn-close" aria-label="Close" onClick={onClose} style={{ marginTop: 2 }} />
+                </div>
+
+                {/* Tab filter pills */}
+                <div style={{
+                    padding: '0.75rem 1.25rem',
+                    borderBottom: '1px solid #dee2e6',
+                    display: 'flex',
+                    gap: 8,
+                    flexShrink: 0,
+                    flexWrap: 'wrap',
+                }}>
+                    {[
+                        { label: 'All',       key: 'all',       count: tasks.length,         color: '#6c757d' },
+                        { label: 'Completed', key: 'Completed', count: countFor('Completed'), color: '#28a745' },
+                        { label: 'Ongoing',   key: 'Ongoing',   count: countFor('Ongoing'),   color: '#ffc107' },
+                        { label: 'Overdue',   key: 'Overdue',   count: countFor('Overdue'),   color: '#dc3545' },
+                    ].map(tab => (
+                        <button
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            style={{
+                                border: `2px solid ${activeTab === tab.key ? tab.color : '#dee2e6'}`,
+                                borderRadius: 20,
+                                padding: '3px 14px',
+                                background: activeTab === tab.key ? tab.color : '#fff',
+                                color: activeTab === tab.key ? '#fff' : '#555',
+                                fontWeight: 500,
+                                fontSize: 13,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                            }}
+                        >
+                            {tab.label}{' '}
+                            <span style={{
+                                background: activeTab === tab.key ? 'rgba(255,255,255,0.3)' : '#eee',
+                                borderRadius: 10,
+                                padding: '1px 7px',
+                                marginLeft: 4,
+                                fontSize: 12,
+                            }}>{tab.count}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Scrollable body */}
+                <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
+                    {loading ? (
+                        <div className="text-center text-muted py-4">
+                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading tasks...
+                        </div>
+                    ) : error ? (
+                        <div className="alert alert-danger">{error}</div>
+                    ) : filtered.length === 0 ? (
+                        <div className="text-center text-muted py-4">
+                            No {activeTab === 'all' ? '' : activeTab.toLowerCase() + ' '}tasks found for this week.
+                        </div>
+                    ) : (
+                        <table className="table table-bordered table-hover align-middle mb-0">
+                            <thead className="table-light" style={{ position: 'sticky', top: 0 }}>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Deadline</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((task, idx) => {
+                                    const days = task.days_until_deadline;
+                                    let deadlineLabel = '—';
+                                    let deadlineSub   = null;
+                                    if (task.deadline) {
+                                        deadlineLabel = new Date(task.deadline).toLocaleDateString('en-PH', {
+                                            month: 'short', day: 'numeric', year: 'numeric'
+                                        });
+                                        if (task.derivedStatus === 'Overdue' && days !== null) {
+                                            deadlineSub = (
+                                                <div style={{ fontSize: 11, color: '#dc3545', fontWeight: 600 }}>
+                                                    {Math.abs(days)} day{Math.abs(days) !== 1 ? 's' : ''} overdue
+                                                </div>
+                                            );
+                                        } else if (task.derivedStatus === 'Ongoing' && days !== null) {
+                                            deadlineSub = (
+                                                <div style={{ fontSize: 11, color: days <= 2 ? '#dc3545' : '#6c757d' }}>
+                                                    {days === 0 ? 'Due today' : `${days} day${days !== 1 ? 's' : ''} left`}
+                                                </div>
+                                            );
+                                        } else if (task.derivedStatus === 'Completed' && task.completed_at) {
+                                            deadlineSub = (
+                                                <div style={{ fontSize: 11, color: '#28a745' }}>
+                                                    Done {new Date(task.completed_at).toLocaleDateString('en-PH', {
+                                                        month: 'short', day: 'numeric'
+                                                    })}
+                                                </div>
+                                            );
+                                        }
+                                    }
+                                    return (
+                                        <tr key={task.id ?? idx}>
+                                            <td>
+                                                <div style={{ fontWeight: 500 }}>{task.title}</div>
+                                                {task.description && (
+                                                    <small className="text-muted">{task.description}</small>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <span className={`badge bg-${statusBadge(task.derivedStatus)}`}>
+                                                    {task.derivedStatus}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge bg-${priorityBadge(task.priority)}`}>
+                                                    {task.priority ?? '—'}
+                                                </span>
+                                            </td>
+                                            <td style={{ whiteSpace: 'nowrap' }}>
+                                                {deadlineLabel}
+                                                {deadlineSub}
+                                            </td>
+                                            <td style={{ minWidth: 100 }}>
+                                                <div className="progress" style={{ height: 16 }}>
+                                                    <div
+                                                        className="progress-bar bg-success"
+                                                        style={{ width: `${task.progress ?? 0}%` }}
+                                                    >
+                                                        {task.progress ?? 0}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                    padding: '0.75rem 1.25rem',
+                    borderTop: '1px solid #dee2e6',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    flexShrink: 0,
+                }}>
+                    <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ====================================================================
+// MAIN PAGE
+// ====================================================================
+function WeeklyReportPage() {
+    const [summary, setSummary]                   = useState({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
+    const [employees, setEmployees]               = useState([]);
+    const [dailyTrend, setDailyTrend]             = useState([]);
+    const [departments, setDepartments]           = useState([]);
+    const [departmentFilter, setDepartmentFilter] = useState('all');
+    const [weekOffset, setWeekOffset]             = useState(0);
+    const [selectedEmp, setSelectedEmp]           = useState(null);
+    // modalEmp drives the task modal — separate from selectedEmp (chart filter)
+    const [modalEmp, setModalEmp]                 = useState(null);
+
+    const lineRef  = useRef(null);
+    const pieRef   = useRef(null);
+    const lineChart = useRef(null);
+    const pieChart  = useRef(null);
+
+    const weekStart = getWeekStart(weekOffset);
+    const weekEnd   = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+
+    // Pre-format as strings once — used for fetch params and passed as
+    // stable prop values to EmployeeTaskModal (BUG FIX #4)
+    const weekStartStr = formatDate(weekStart);
+    const weekEndStr   = formatDate(weekEnd);
+
+    // Fetch departments once
+    useEffect(() => {
+        fetch('php/get_departments.php')
+            .then(res => res.json())
+            .then(data => setDepartments(data))
+            .catch(() => setDepartments([]));
+    }, []);
+
+    // Fetch weekly report whenever week or department changes
+    useEffect(() => {
+        setSelectedEmp(null);
+        setModalEmp(null);
+        fetch(`php/get_weekly_report.php?department=${departmentFilter}&week_start=${weekStartStr}&week_end=${weekEndStr}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) { console.error('PHP error:', data.error); return; }
+                setSummary(data.summary);
+                setEmployees(data.employees);
+                setDailyTrend(data.daily_trend ?? []);
+            })
+            .catch(err => console.error(err));
+    }, [departmentFilter, weekOffset]);
+
+    const handleRowClick = (emp) => {
+        setSelectedEmp(prev => prev?.id === emp.id ? null : emp);
+    };
+
+    // Derived chart data
+    const dayLabels     = weekDayLabels(weekStart);
+    const trendSource   = (selectedEmp && selectedEmp.daily_trend) ? selectedEmp.daily_trend : dailyTrend;
+    const lineCompleted = trendSource.map(d => d.completed ?? 0);
+    const lineOngoing   = trendSource.map(d => d.ongoing   ?? 0);
+    const lineOverdue   = trendSource.map(d => d.overdue   ?? 0);
+    const pieData       = selectedEmp
+        ? [selectedEmp.completed, selectedEmp.ongoing, selectedEmp.overdue]
+        : [summary.completed, summary.ongoing, summary.overdue];
+
+    // Rebuild charts whenever data changes
+    // BUG FIX #2: Guard against refs not yet mounted before calling Chart()
+    useEffect(() => {
+        if (!lineRef.current || !pieRef.current) return;
+
+        if (lineChart.current) lineChart.current.destroy();
+        lineChart.current = new Chart(lineRef.current, {
+            type: 'line',
+            data: {
+                labels: dayLabels,
+                datasets: [
+                    {
+                        label: 'Completed',
+                        data: lineCompleted,
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40,167,69,0.08)',
+                        pointBackgroundColor: '#28a745',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Ongoing',
+                        data: lineOngoing,
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255,193,7,0.08)',
+                        pointBackgroundColor: '#ffc107',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Overdue',
+                        data: lineOverdue,
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220,53,69,0.08)',
+                        pointBackgroundColor: '#dc3545',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    title: {
+                        display: !!selectedEmp,
+                        text: selectedEmp ? `${selectedEmp.name} — Daily Trend` : ''
+                    }
+                },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+
+        if (pieChart.current) pieChart.current.destroy();
+        pieChart.current = new Chart(pieRef.current, {
+            type: 'pie',
+            data: {
+                labels: ['Completed', 'Ongoing', 'Overdue'],
+                datasets: [{
+                    data: pieData,
+                    backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    title: {
+                        display: !!selectedEmp,
+                        text: selectedEmp ? `${selectedEmp.name} — Status Split` : ''
+                    }
+                }
+            }
+        });
+
+        return () => {
+            if (lineChart.current) lineChart.current.destroy();
+            if (pieChart.current)  pieChart.current.destroy();
+        };
+    }, [selectedEmp, summary, employees, dailyTrend, weekOffset]);
+
+    // Completion rate: include overdue in denominator so 0 completed
+    // with 5 overdue doesn't incorrectly show 100%
+    const completionRate = (emp) => {
+        const total = emp.completed + emp.ongoing + emp.overdue;
+        return total > 0 ? Math.round((emp.completed / total) * 100) : 0;
+    };
+
+    // BUG FIX #3: Avg completion/day — divide by actual elapsed weekdays,
+    // not a hardcoded 6. For past weeks use the full week length (7).
+    // For the current week use days elapsed so far (min 1 to avoid /0).
+    const avgPerDayDivisor = (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (weekEnd < today) return 7;                                    // past week — full 7 days
+        const elapsed = Math.round((today - weekStart) / 86400000) + 1;  // days elapsed including today
+        return Math.max(1, Math.min(elapsed, 7));
+    })();
+
+    const isCurrentWeek = weekOffset === 0;
+
+    return (
+        <div className="container-fluid p-4">
+            <div className="row">
+
+                <Sidebar />
+
+                <main className="col-md-10 ms-sm-auto px-4">
+
+                    {/* Page header */}
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                        <h2 className="mb-0">Weekly Task Report</h2>
+                        <div className="d-flex align-items-center gap-2">
+                            <button
+                                className="btn btn-sm btn-outline-secondary"
+                                onClick={() => setWeekOffset(prev => prev - 1)}
+                            >
+                                ‹ Prev
+                            </button>
+                            <span className="fw-semibold" style={{ minWidth: 200, textAlign: 'center' }}>
+                                {formatDisplayDate(weekStart)} — {formatDisplayDate(weekEnd)}
+                            </span>
+                            <button
+                                className="btn btn-sm btn-outline-secondary"
+                                onClick={() => setWeekOffset(prev => prev + 1)}
+                                disabled={isCurrentWeek}
+                            >
+                                Next ›
+                            </button>
+                            {weekOffset !== 0 && (
+                                <button
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={() => setWeekOffset(0)}
+                                >
+                                    This Week
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Info alert */}
+                    <div className="alert alert-info" role="alert">
+                        <strong>Overview:</strong> This report summarises all staff task activity for the
+                        selected week (<strong>{formatDisplayDate(weekStart)}</strong> to{' '}
+                        <strong>{formatDisplayDate(weekEnd)}</strong>).
+                        <ul className="mb-0 mt-1">
+                            <li><strong>Completed</strong>: Tasks marked as completed within this week.</li>
+                            <li><strong>Ongoing</strong>: Tasks still in progress with a deadline on or after the week start.</li>
+                            <li><strong>Overdue</strong>: Incomplete tasks whose deadline fell within or before this week.</li>
+                        </ul>
+                        Use the <strong>Department</strong> filter to narrow results. Use <strong>‹ Prev / Next ›</strong> to
+                        navigate between weeks. Click any row to focus the charts on that employee, or
+                        click the <strong>eye icon</strong> to view their task list for this week.
+                    </div>
+
+                    {/* Department filter */}
+                    <div className="mb-4">
+                        <select
+                            className="form-select w-auto"
+                            value={departmentFilter}
+                            onChange={e => setDepartmentFilter(e.target.value)}
+                        >
+                            <option value="all">All Departments</option>
+                            {departments.map(dep => (
+                                <option key={dep.id} value={dep.id}>{dep.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Summary cards */}
+                    <div className="row mb-4">
+                        <div className="col-md-3">
+                            <div className="card shadow-sm border-0 p-3 text-center">
+                                <h6 className="text-muted mb-1">Total Tasks</h6>
+                                <h2 className="mb-0">{summary.total}</h2>
+                            </div>
+                        </div>
+                        <div className="col-md-3">
+                            <div className="card shadow-sm border-0 p-3 text-center">
+                                <h6 className="text-muted mb-1">Completed</h6>
+                                <h2 className="text-success mb-0">{summary.completed}</h2>
+                            </div>
+                        </div>
+                        <div className="col-md-3">
+                            <div className="card shadow-sm border-0 p-3 text-center">
+                                <h6 className="text-muted mb-1">Ongoing</h6>
+                                <h2 className="text-warning mb-0">{summary.ongoing}</h2>
+                            </div>
+                        </div>
+                        <div className="col-md-3">
+                            <div className="card shadow-sm border-0 p-3 text-center">
+                                <h6 className="text-muted mb-1">Overdue</h6>
+                                <h2 className="text-danger mb-0">{summary.overdue}</h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Line chart — full width */}
+                    <div className="row mb-4">
+                        <div className="col-12">
+                            <div className="card shadow-sm border-0 p-3">
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 className="mb-0">Daily Task Trend</h5>
+                                    {selectedEmp ? (
+                                        <div className="d-flex align-items-center gap-2">
+                                            <span className="badge bg-primary">{selectedEmp.name}</span>
+                                            <button
+                                                className="btn btn-sm btn-outline-secondary"
+                                                onClick={() => setSelectedEmp(null)}
+                                            >
+                                                ✕ Clear
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <small className="text-muted">Click a row below to filter by employee</small>
+                                    )}
+                                </div>
+                                <div style={{ height: 280 }}>
+                                    <canvas ref={lineRef}></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Pie chart */}
+                    <div className="row mb-4">
+                        <div className="col-md-5">
+                            <div className="card shadow-sm border-0 p-3 h-100">
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 className="mb-0">Status Distribution</h5>
+                                    {selectedEmp && (
+                                        <span className="badge bg-primary">{selectedEmp.name}</span>
+                                    )}
+                                </div>
+                                <div style={{ height: 280 }}>
+                                    <canvas ref={pieRef}></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Employee details table */}
+                    <div className="card shadow-sm border-0 p-3 mt-2">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h5 className="mb-0">Employee Details</h5>
+                            {selectedEmp && (
+                                <small className="text-muted">
+                                    Showing charts for <strong>{selectedEmp.name}</strong> —{' '}
+                                    <span
+                                        style={{ cursor: 'pointer', color: '#0d6efd' }}
+                                        onClick={() => setSelectedEmp(null)}
+                                    >
+                                        show all
+                                    </span>
+                                </small>
+                            )}
+                        </div>
+                        <div className="table-responsive">
+                            <table className="table table-bordered table-hover align-middle">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Department</th>
+                                        <th>Completed</th>
+                                        <th>Ongoing</th>
+                                        <th>Overdue</th>
+                                        <th>Avg. Completion/Day</th>
+                                        <th>Completion Rate</th>
+                                        <th style={{ textAlign: 'center' }}>Tasks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {employees.map(emp => {
+                                        const rate       = completionRate(emp);
+                                        const total      = emp.completed + emp.ongoing + emp.overdue;
+                                        // BUG FIX #3: use computed divisor, not hardcoded 6
+                                        const avgPerDay  = (emp.completed / avgPerDayDivisor).toFixed(1);
+                                        const isSelected = selectedEmp?.id === emp.id;
+
+                                        return (
+                                            <tr
+                                                key={emp.id}
+                                                onClick={() => handleRowClick(emp)}
+                                                style={{
+                                                    cursor: 'pointer',
+                                                    backgroundColor: isSelected ? '#cfe2ff' : '',
+                                                    fontWeight: isSelected ? '600' : 'normal',
+                                                    opacity: selectedEmp && !isSelected ? 0.5 : 1,
+                                                    transition: 'opacity 0.2s, background-color 0.2s'
+                                                }}
+                                            >
+                                                <td>
+                                                    {isSelected && (
+                                                        <span className="me-1" style={{ color: '#0d6efd' }}>▶</span>
+                                                    )}
+                                                    {emp.name}
+                                                </td>
+                                                <td>{emp.department}</td>
+                                                <td>{emp.completed}</td>
+                                                <td>{emp.ongoing}</td>
+                                                <td className="text-danger fw-bold">{emp.overdue}</td>
+                                                <td>{avgPerDay}</td>
+                                                <td>
+                                                    {total === 0 ? (
+                                                        <span className="text-muted" style={{ fontSize: '0.9em' }}>
+                                                            No tasks yet
+                                                        </span>
+                                                    ) : rate === 0 ? (
+                                                        <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>
+                                                            0% — None completed
+                                                        </span>
+                                                    ) : (
+                                                        <div className="progress" style={{ height: 20 }}>
+                                                            <div
+                                                                className="progress-bar bg-success"
+                                                                style={{ width: `${rate}%` }}
+                                                                aria-valuenow={rate}
+                                                                aria-valuemin="0"
+                                                                aria-valuemax="100"
+                                                            >
+                                                                {rate}%
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* Eye icon — stopPropagation so it doesn't trigger row selection */}
+                                                <td
+                                                    style={{ textAlign: 'center' }}
+                                                    onClick={e => {
+                                                        e.stopPropagation();
+                                                        setModalEmp(emp);
+                                                    }}
+                                                >
+                                                    <button
+                                                        className="btn btn-link p-0"
+                                                        title={`View ${emp.name}'s tasks this week`}
+                                                        style={{ color: '#0d6efd' }}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.12 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.133 13.133 0 0 1 1.172 8z"/>
+                                                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z"/>
+                                                        </svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </main>
+            </div>
+
+            {/*
+                Modal rendered at page root — outside the table entirely.
+                BUG FIX #4: Pass pre-formatted date strings instead of
+                Date objects so the modal's useEffect dep array stays stable.
+            */}
+            {modalEmp && (
+                <EmployeeTaskModal
+                    emp={modalEmp}
+                    weekStartStr={weekStartStr}
+                    weekEndStr={weekEndStr}
+                    onClose={() => setModalEmp(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('weeklyReportRoot'));
+root.render(<WeeklyReportPage />);
 </script>
+
 
 </body>
 </html>

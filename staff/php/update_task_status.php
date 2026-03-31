@@ -28,8 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $now = new DateTime();
         $deadline = new DateTime($task['deadline']);
 
-        // 🔥 Force overdue if past deadline and not completed
-        if ($deadline < $now && $status !== 'Completed') {
+        // 🔥 Force overdue if past deadline date and not completed
+        $nowDate = $now->format('Y-m-d');
+        $deadlineDate = $deadline->format('Y-m-d');
+        if ($deadlineDate < $nowDate && $status !== 'Completed') {
             $status = 'Overdue';
         }
 
