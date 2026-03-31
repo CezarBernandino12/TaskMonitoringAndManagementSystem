@@ -368,92 +368,84 @@ function Sidebar() {
                     </div>
                 )}
 
-                <div className="sidebar-inner">
-                    <div className="sidebar-header-block">
-                        {displayDepartment ? (
-                            <div className="sidebar-department-label">
-                                {displayDepartment}
-                            </div>
-                        ) : null}
+            <div className="sidebar-inner">
+                <div className="sidebar-profile sidebar-profile-compact">
+                    {displayName ? (
+                        <img
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                displayName
+                            )}&background=f7c4d4&color=222&size=80`}
+                            alt={`${displayName} Profile`}
+                            className="sidebar-avatar"
+                        />
+                    ) : (
+                        <div className="sidebar-avatar sidebar-avatar-fallback">
+                            {displayInitials || "U"}
+                        </div>
+                    )}
 
-                        {displayTitle ? (
-                            <div className="sidebar-dashboard-title">
-                                {displayTitle}
-                            </div>
-                        ) : null}
-                    </div>
+                    <div className="sidebar-profile-info">
+                        <div className="sidebar-role sidebar-role-compact">
+                            {displayDepartment && displayRole
+                                ? `${displayDepartment} - ${displayRole}`
+                                : displayDepartment || displayRole || ""}
+                        </div>
 
-                    <div className="sidebar-profile">
-                        {avatarUrl ? (
-                            <img
-                                src={avatarUrl}
-                                alt={`${displayName} Profile`}
-                                className="sidebar-avatar"
-                            />
-                        ) : (
-                            <div className="sidebar-avatar sidebar-avatar-fallback"></div>
-                        )}
-
-                        <div className="sidebar-profile-info">
-                            {displayRole ? (
-                                <div className="sidebar-role">{displayRole}</div>
-                            ) : null}
-
-                            {displayName ? (
-                                <div className="sidebar-name">{displayName}</div>
-                            ) : null}
+                        <div className="sidebar-name sidebar-name-compact">
+                            {displayName || ""}
                         </div>
                     </div>
-
-                    <div className="sidebar-divider"></div>
-                    <div className="sidebar-section-label">MAIN</div>
-
-                    <SidebarLink
-                        href="dashboard.html"
-                        icon="bi-house-door"
-                        label="Dashboard"
-                        isActive={isActivePage("dashboard.html")}
-                        onNavigate={handleNavigate}
-                    />
-
-                    <SidebarLink
-                        href="my-tasks.html"
-                        icon="bi-list-check"
-                        label="My Tasks"
-                        isActive={isActivePage("my-tasks.html")}
-                        onNavigate={handleNavigate}
-                    />
-
-                    <SidebarLink
-                        href="calendar.html"
-                        icon="bi-calendar3"
-                        label="Calendar"
-                        isActive={isActivePage("calendar.html")}
-                        onNavigate={handleNavigate}
-                    />
-
-                    <div className="sidebar-divider mt-3"></div>
-                    <div className="sidebar-section-label">SETTINGS</div>
-
-                    <SidebarLink
-                        href="profile.html"
-                        icon="bi-gear"
-                        label="Account Settings"
-                        isActive={isActivePage("profile.html")}
-                        onNavigate={handleNavigate}
-                    />
-
-                    <div className="sidebar-bottom">
-                        <SidebarLink
-                            href="../auth/login.html"
-                            icon="bi-box-arrow-right"
-                            label="Logout Account"
-                            isActive={false}
-                            extraClass="logout-link"
-                            onClick={openLogoutModal}
-                        />
-                    </div>
                 </div>
+
+                <div className="sidebar-divider"></div>
+                <div className="sidebar-section-label">MAIN</div>
+
+                <SidebarLink
+                    href="dashboard.html"
+                    icon="bi-house-door"
+                    label="Dashboard"
+                    isActive={isActivePage("dashboard.html")}
+                    onNavigate={handleNavigate}
+                />
+
+                <SidebarLink
+                    href="my-tasks.html"
+                    icon="bi-list-check"
+                    label="My Tasks"
+                    isActive={isActivePage("my-tasks.html")}
+                    onNavigate={handleNavigate}
+                />
+
+                <SidebarLink
+                    href="calendar.html"
+                    icon="bi-calendar3"
+                    label="Calendar"
+                    isActive={isActivePage("calendar.html")}
+                    onNavigate={handleNavigate}
+                />
+
+                <div className="sidebar-divider mt-3"></div>
+                <div className="sidebar-section-label">SETTINGS</div>
+
+                <SidebarLink
+                    href="profile.html"
+                    icon="bi-gear"
+                    label="Account Settings"
+                    isActive={isActivePage("profile.html")}
+                    onNavigate={handleNavigate}
+                />
+
+                <div className="sidebar-bottom">
+                    <SidebarLink
+                        href="../auth/login.html"
+                        icon="bi-box-arrow-right"
+                        label="Logout Account"
+                        isActive={false}
+                        extraClass="logout-link"
+                        onClick={openLogoutModal}
+                    />
+                </div>
+            </div>
             </nav>
 
             <LogoutModal

@@ -283,8 +283,8 @@ function SupervisorSidebar() {
                             className="sidebar-avatar"
                         />
                         <div className="sidebar-profile-info">
-                            <div className="sidebar-role">Supervisor</div>
-                            <div className="sidebar-name">Supervisor</div>
+                            <div className="sidebar-role">MIS - Staff</div>
+                            <div className="sidebar-name">Juan Dela Cruz</div>
                         </div>
                     </div>
 
