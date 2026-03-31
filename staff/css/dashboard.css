@@ -1,0 +1,61 @@
+
+    body {
+        background: #ffffff;
+        color: #333;
+        font-family: Arial, sans-serif;
+    }
+
+    /* cards / existing */
+    .card {
+        border-radius: 16px;
+        background: #ffffff;
+        border: 1px solid #ffddb0;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+        color: #222;
+    }
+
+    .overdue {
+        background-color: #fff0b3 !important;
+        color: #665200;
+    }
+
+    .btn-primary {
+        background-color: #ff9900;
+        border-color: #ff9900;
+        color: #fff;
+    }
+
+    .btn-primary:hover,
+    .btn-primary:focus {
+        background-color: #ffb84d;
+        border-color: #ffb84d;
+        color: #333;
+    }
+
+    .table thead {
+        background: #ffe7b3;
+    }
+
+    .table th {
+        color: #cc7a00;
+    }
+
+    .table-hover tbody tr:hover {
+        background: #fff0b3;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #ffb84d;
+        box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
+    }
+
+    h3, h5, h6 {
+        color: #cc7a00;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
+        border: 1px solid #ffb84d;
+        color: #cc7a00;
+    }

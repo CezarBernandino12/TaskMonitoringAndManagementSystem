@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
 
-  <!-- Chart.js — was missing entirely -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Bootstrap -->
@@ -61,10 +61,12 @@
 <body>
 
 <div id="weeklyReportRoot"></div>
-
 <script type="text/babel">
 const { useEffect, useState, useRef } = React;
 
+// ====================================================================
+// SIDEBAR
+// ====================================================================
 function Sidebar() {
     const [showReports, setShowReports] = useState(false);
 
@@ -99,9 +101,12 @@ function Sidebar() {
     );
 }
 
+// ====================================================================
+// HELPERS
+// ====================================================================
 function getWeekStart(offsetWeeks = 0) {
     const now = new Date();
-    const day = now.getDay(); // 0 = Sun, 1 = Mon ...
+    const day = now.getDay();
     const diffToMonday = (day === 0 ? -6 : 1 - day);
     const monday = new Date(now);
     monday.setDate(now.getDate() + diffToMonday + offsetWeeks * 7);
@@ -113,14 +118,13 @@ function formatDate(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`; // uses local timezone, not UTC
+    return `${y}-${m}-${d}`;
 }
 
 function formatDisplayDate(date) {
     return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// Labels for each day of the week starting from a Monday
 function weekDayLabels(monday) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return days.map((d, i) => {
@@ -130,28 +134,296 @@ function weekDayLabels(monday) {
     });
 }
 
+// ====================================================================
+// EMPLOYEE TASK MODAL — weekly version
+//
+// BUG FIX #1: Changed fetch endpoint from the non-existent
+// `get_employee_tasks_report.php` to the correct `get_weekly_report.php`.
+//
+// BUG FIX #4: Props are now plain strings (weekStartStr, weekEndStr)
+// instead of Date objects. Date objects have a new identity on every
+// render, which caused the useEffect dep array to fire on every
+// re-render of the parent. Strings compare by value so the effect
+// only re-runs when the week actually changes.
+// ====================================================================
+function EmployeeTaskModal({ emp, weekStartStr, weekEndStr, onClose }) {
+    const [tasks, setTasks]         = useState([]);
+    const [loading, setLoading]     = useState(true);
+    const [error, setError]         = useState(null);
+    const [activeTab, setActiveTab] = useState('all');
+
+    useEffect(() => {
+        setLoading(true);
+        setError(null);
+        setTasks([]);
+        setActiveTab('all');
+
+        // BUG FIX #1: correct PHP filename
+        fetch(`php/get_weekly_report.php?employee_id=${emp.id}&week_start=${weekStartStr}&week_end=${weekEndStr}`)
+            .then(res => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+                setLoading(false);
+            })
+            .catch(err => {
+                setError(`Could not load tasks: ${err.message}`);
+                setLoading(false);
+            });
+    // BUG FIX #4: dep array uses stable string values, not Date objects
+    }, [emp.id, weekStartStr, weekEndStr]);
+
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) onClose();
+    };
+
+    // Use derived_status from the API — no JS recalculation
+    const getTaskStatus  = (task) => task.derived_status ?? task.status;
+
+    const statusBadge = (status) => ({
+        'Completed': 'success',
+        'Ongoing':   'warning',
+        'Overdue':   'danger',
+    }[status] ?? 'secondary');
+
+    const priorityBadge = (priority) => ({
+        'High':   'danger',
+        'Medium': 'warning',
+        'Low':    'secondary',
+    }[priority] ?? 'secondary');
+
+    const annotated  = tasks.map(t => ({ ...t, derivedStatus: getTaskStatus(t) }));
+    const filtered   = activeTab === 'all' ? annotated : annotated.filter(t => t.derivedStatus === activeTab);
+    const countFor   = (status) => annotated.filter(t => t.derivedStatus === status).length;
+
+    // Re-parse strings to Date only for display purposes (read-only, no mutation)
+    const weekStartDisplay = new Date(weekStartStr + 'T00:00:00');
+    const weekEndDisplay   = new Date(weekEndStr   + 'T00:00:00');
+
+    return (
+        <div
+            onClick={handleBackdropClick}
+            style={{
+                position: 'fixed', inset: 0,
+                background: 'rgba(0,0,0,0.45)',
+                zIndex: 1050,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem',
+            }}
+        >
+            <div style={{
+                background: '#fff',
+                borderRadius: 12,
+                width: '100%',
+                maxWidth: 720,
+                maxHeight: '85vh',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+            }}>
+                {/* Header */}
+                <div style={{
+                    padding: '1rem 1.25rem',
+                    borderBottom: '1px solid #dee2e6',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexShrink: 0,
+                }}>
+                    <div>
+                        <h5 style={{ margin: 0, fontWeight: 600 }}>{emp.name}</h5>
+                        <small className="text-muted">
+                            {emp.department} &nbsp;·&nbsp;
+                            Week of {formatDisplayDate(weekStartDisplay)} — {formatDisplayDate(weekEndDisplay)}
+                        </small>
+                    </div>
+                    <button className="btn-close" aria-label="Close" onClick={onClose} style={{ marginTop: 2 }} />
+                </div>
+
+                {/* Tab filter pills */}
+                <div style={{
+                    padding: '0.75rem 1.25rem',
+                    borderBottom: '1px solid #dee2e6',
+                    display: 'flex',
+                    gap: 8,
+                    flexShrink: 0,
+                    flexWrap: 'wrap',
+                }}>
+                    {[
+                        { label: 'All',       key: 'all',       count: tasks.length,         color: '#6c757d' },
+                        { label: 'Completed', key: 'Completed', count: countFor('Completed'), color: '#28a745' },
+                        { label: 'Ongoing',   key: 'Ongoing',   count: countFor('Ongoing'),   color: '#ffc107' },
+                        { label: 'Overdue',   key: 'Overdue',   count: countFor('Overdue'),   color: '#dc3545' },
+                    ].map(tab => (
+                        <button
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            style={{
+                                border: `2px solid ${activeTab === tab.key ? tab.color : '#dee2e6'}`,
+                                borderRadius: 20,
+                                padding: '3px 14px',
+                                background: activeTab === tab.key ? tab.color : '#fff',
+                                color: activeTab === tab.key ? '#fff' : '#555',
+                                fontWeight: 500,
+                                fontSize: 13,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                            }}
+                        >
+                            {tab.label}{' '}
+                            <span style={{
+                                background: activeTab === tab.key ? 'rgba(255,255,255,0.3)' : '#eee',
+                                borderRadius: 10,
+                                padding: '1px 7px',
+                                marginLeft: 4,
+                                fontSize: 12,
+                            }}>{tab.count}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Scrollable body */}
+                <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
+                    {loading ? (
+                        <div className="text-center text-muted py-4">
+                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading tasks...
+                        </div>
+                    ) : error ? (
+                        <div className="alert alert-danger">{error}</div>
+                    ) : filtered.length === 0 ? (
+                        <div className="text-center text-muted py-4">
+                            No {activeTab === 'all' ? '' : activeTab.toLowerCase() + ' '}tasks found for this week.
+                        </div>
+                    ) : (
+                        <table className="table table-bordered table-hover align-middle mb-0">
+                            <thead className="table-light" style={{ position: 'sticky', top: 0 }}>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Deadline</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((task, idx) => {
+                                    const days = task.days_until_deadline;
+                                    let deadlineLabel = '—';
+                                    let deadlineSub   = null;
+                                    if (task.deadline) {
+                                        deadlineLabel = new Date(task.deadline).toLocaleDateString('en-PH', {
+                                            month: 'short', day: 'numeric', year: 'numeric'
+                                        });
+                                        if (task.derivedStatus === 'Overdue' && days !== null) {
+                                            deadlineSub = (
+                                                <div style={{ fontSize: 11, color: '#dc3545', fontWeight: 600 }}>
+                                                    {Math.abs(days)} day{Math.abs(days) !== 1 ? 's' : ''} overdue
+                                                </div>
+                                            );
+                                        } else if (task.derivedStatus === 'Ongoing' && days !== null) {
+                                            deadlineSub = (
+                                                <div style={{ fontSize: 11, color: days <= 2 ? '#dc3545' : '#6c757d' }}>
+                                                    {days === 0 ? 'Due today' : `${days} day${days !== 1 ? 's' : ''} left`}
+                                                </div>
+                                            );
+                                        } else if (task.derivedStatus === 'Completed' && task.completed_at) {
+                                            deadlineSub = (
+                                                <div style={{ fontSize: 11, color: '#28a745' }}>
+                                                    Done {new Date(task.completed_at).toLocaleDateString('en-PH', {
+                                                        month: 'short', day: 'numeric'
+                                                    })}
+                                                </div>
+                                            );
+                                        }
+                                    }
+                                    return (
+                                        <tr key={task.id ?? idx}>
+                                            <td>
+                                                <div style={{ fontWeight: 500 }}>{task.title}</div>
+                                                {task.description && (
+                                                    <small className="text-muted">{task.description}</small>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <span className={`badge bg-${statusBadge(task.derivedStatus)}`}>
+                                                    {task.derivedStatus}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge bg-${priorityBadge(task.priority)}`}>
+                                                    {task.priority ?? '—'}
+                                                </span>
+                                            </td>
+                                            <td style={{ whiteSpace: 'nowrap' }}>
+                                                {deadlineLabel}
+                                                {deadlineSub}
+                                            </td>
+                                            <td style={{ minWidth: 100 }}>
+                                                <div className="progress" style={{ height: 16 }}>
+                                                    <div
+                                                        className="progress-bar bg-success"
+                                                        style={{ width: `${task.progress ?? 0}%` }}
+                                                    >
+                                                        {task.progress ?? 0}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                    padding: '0.75rem 1.25rem',
+                    borderTop: '1px solid #dee2e6',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    flexShrink: 0,
+                }}>
+                    <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ====================================================================
+// MAIN PAGE
+// ====================================================================
 function WeeklyReportPage() {
-    const [summary, setSummary]     = useState({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
-    const [employees, setEmployees] = useState([]);
-    const [dailyTrend, setDailyTrend] = useState([]); // array of 7 objects {date, completed, ongoing, overdue}
+    const [summary, setSummary]                   = useState({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
+    const [employees, setEmployees]               = useState([]);
+    const [dailyTrend, setDailyTrend]             = useState([]);
     const [departments, setDepartments]           = useState([]);
     const [departmentFilter, setDepartmentFilter] = useState('all');
-    const [weekOffset, setWeekOffset]             = useState(0);  // 0 = current week
+    const [weekOffset, setWeekOffset]             = useState(0);
     const [selectedEmp, setSelectedEmp]           = useState(null);
+    // modalEmp drives the task modal — separate from selectedEmp (chart filter)
+    const [modalEmp, setModalEmp]                 = useState(null);
 
-    // Chart canvas refs
-    const lineRef   = useRef(null);
-    const pieRef    = useRef(null);
-    const radarRef  = useRef(null);
-
-    // Chart instance refs
-    const lineChart  = useRef(null);
-    const pieChart   = useRef(null);
-    const radarChart = useRef(null);
+    const lineRef  = useRef(null);
+    const pieRef   = useRef(null);
+    const lineChart = useRef(null);
+    const pieChart  = useRef(null);
 
     const weekStart = getWeekStart(weekOffset);
     const weekEnd   = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
+
+    // Pre-format as strings once — used for fetch params and passed as
+    // stable prop values to EmployeeTaskModal (BUG FIX #4)
+    const weekStartStr = formatDate(weekStart);
+    const weekEndStr   = formatDate(weekEnd);
 
     // Fetch departments once
     useEffect(() => {
@@ -164,12 +436,11 @@ function WeeklyReportPage() {
     // Fetch weekly report whenever week or department changes
     useEffect(() => {
         setSelectedEmp(null);
-        const start = formatDate(weekStart);
-        const end   = formatDate(weekEnd);
-         console.log('Fetching:', { department: departmentFilter, start, end });
-        fetch(`php/get_weekly_report.php?department=${departmentFilter}&week_start=${start}&week_end=${end}`)
+        setModalEmp(null);
+        fetch(`php/get_weekly_report.php?department=${departmentFilter}&week_start=${weekStartStr}&week_end=${weekEndStr}`)
             .then(res => res.json())
             .then(data => {
+                if (data.error) { console.error('PHP error:', data.error); return; }
                 setSummary(data.summary);
                 setEmployees(data.employees);
                 setDailyTrend(data.daily_trend ?? []);
@@ -177,37 +448,25 @@ function WeeklyReportPage() {
             .catch(err => console.error(err));
     }, [departmentFilter, weekOffset]);
 
-    // Row click — toggle selected employee
     const handleRowClick = (emp) => {
         setSelectedEmp(prev => prev?.id === emp.id ? null : emp);
     };
 
-    // Derived chart data depending on whether an employee is selected
-    const dayLabels = weekDayLabels(weekStart);
-
-    // Line chart: completed per day
-    // When an employee is selected, use their daily_trend if available,
-    // otherwise fall back to the team trend.
-    const trendSource = (selectedEmp && selectedEmp.daily_trend) ? selectedEmp.daily_trend : dailyTrend;
+    // Derived chart data
+    const dayLabels     = weekDayLabels(weekStart);
+    const trendSource   = (selectedEmp && selectedEmp.daily_trend) ? selectedEmp.daily_trend : dailyTrend;
     const lineCompleted = trendSource.map(d => d.completed ?? 0);
     const lineOngoing   = trendSource.map(d => d.ongoing   ?? 0);
     const lineOverdue   = trendSource.map(d => d.overdue   ?? 0);
-
-    // Pie chart: overall status split
-    const pieData = selectedEmp
+    const pieData       = selectedEmp
         ? [selectedEmp.completed, selectedEmp.ongoing, selectedEmp.overdue]
         : [summary.completed, summary.ongoing, summary.overdue];
 
-    // Radar chart: per-employee performance (all employees always shown for team context)
-    const radarLabels   = employees.map(e => e.name);
-    const radarCompleted = employees.map(e => e.completed);
-    const radarOverdue   = employees.map(e => e.overdue);
-
-    // ----------------------------------------------------------------
-    // Build / rebuild charts
-    // ----------------------------------------------------------------
+    // Rebuild charts whenever data changes
+    // BUG FIX #2: Guard against refs not yet mounted before calling Chart()
     useEffect(() => {
-        // --- Line chart: daily completions trend ---
+        if (!lineRef.current || !pieRef.current) return;
+
         if (lineChart.current) lineChart.current.destroy();
         lineChart.current = new Chart(lineRef.current, {
             type: 'line',
@@ -253,13 +512,10 @@ function WeeklyReportPage() {
                         text: selectedEmp ? `${selectedEmp.name} — Daily Trend` : ''
                     }
                 },
-                scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                }
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
             }
         });
 
-        // --- Pie chart: overall status distribution ---
         if (pieChart.current) pieChart.current.destroy();
         pieChart.current = new Chart(pieRef.current, {
             type: 'pie',
@@ -285,82 +541,32 @@ function WeeklyReportPage() {
             }
         });
 
-        // --- Radar chart: employee performance overview ---
-        if (radarChart.current) radarChart.current.destroy();
-        if (employees.length > 0) {
-            radarChart.current = new Chart(radarRef.current, {
-                type: 'radar',
-                data: {
-                    labels: radarLabels,
-                    datasets: [
-                        {
-                            label: 'Completed',
-                            data: radarCompleted,
-                            borderColor: '#28a745',
-                            backgroundColor: 'rgba(40,167,69,0.15)',
-                            pointBackgroundColor: '#28a745',
-                            pointRadius: 4
-                        },
-                        {
-                            label: 'Overdue',
-                            data: radarOverdue,
-                            borderColor: '#dc3545',
-                            backgroundColor: 'rgba(220,53,69,0.15)',
-                            pointBackgroundColor: '#dc3545',
-                            pointRadius: 4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' },
-                        title: {
-                            display: true,
-                            text: 'Team Performance Overview'
-                        }
-                    },
-                    scales: {
-                        r: {
-                            beginAtZero: true,
-                            ticks: { stepSize: 1 },
-                            // Highlight the selected employee's spoke
-                            pointLabels: {
-                                font: { size: 12 },
-                                color: (ctx) => {
-                                    if (!selectedEmp) return '#666';
-                                    return radarLabels[ctx.index] === selectedEmp.name
-                                        ? '#0d6efd'
-                                        : '#aaa';
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
         return () => {
-            if (lineChart.current)  lineChart.current.destroy();
-            if (pieChart.current)   pieChart.current.destroy();
-            if (radarChart.current) radarChart.current.destroy();
+            if (lineChart.current) lineChart.current.destroy();
+            if (pieChart.current)  pieChart.current.destroy();
         };
     }, [selectedEmp, summary, employees, dailyTrend, weekOffset]);
 
-    // ----------------------------------------------------------------
-    // Completion rate helper
-    // ----------------------------------------------------------------
+    // Completion rate: include overdue in denominator so 0 completed
+    // with 5 overdue doesn't incorrectly show 100%
     const completionRate = (emp) => {
-        const total = emp.completed + emp.ongoing;
+        const total = emp.completed + emp.ongoing + emp.overdue;
         return total > 0 ? Math.round((emp.completed / total) * 100) : 0;
     };
 
+    // BUG FIX #3: Avg completion/day — divide by actual elapsed weekdays,
+    // not a hardcoded 6. For past weeks use the full week length (7).
+    // For the current week use days elapsed so far (min 1 to avoid /0).
+    const avgPerDayDivisor = (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (weekEnd < today) return 7;                                    // past week — full 7 days
+        const elapsed = Math.round((today - weekStart) / 86400000) + 1;  // days elapsed including today
+        return Math.max(1, Math.min(elapsed, 7));
+    })();
+
     const isCurrentWeek = weekOffset === 0;
 
-    // ----------------------------------------------------------------
-    // RENDER
-    // ----------------------------------------------------------------
     return (
         <div className="container-fluid p-4">
             <div className="row">
@@ -372,7 +578,6 @@ function WeeklyReportPage() {
                     {/* Page header */}
                     <div className="d-flex justify-content-between align-items-center mb-4">
                         <h2 className="mb-0">Weekly Task Report</h2>
-                        {/* Week navigation */}
                         <div className="d-flex align-items-center gap-2">
                             <button
                                 className="btn btn-sm btn-outline-secondary"
@@ -412,8 +617,8 @@ function WeeklyReportPage() {
                             <li><strong>Overdue</strong>: Incomplete tasks whose deadline fell within or before this week.</li>
                         </ul>
                         Use the <strong>Department</strong> filter to narrow results. Use <strong>‹ Prev / Next ›</strong> to
-                        navigate between weeks. Click any row in the <strong>Employee Details</strong> table to
-                        focus the charts on that employee — click again to return to the full team view.
+                        navigate between weeks. Click any row to focus the charts on that employee, or
+                        click the <strong>eye icon</strong> to view their task list for this week.
                     </div>
 
                     {/* Department filter */}
@@ -458,7 +663,7 @@ function WeeklyReportPage() {
                         </div>
                     </div>
 
-                    {/* Row 1: Line chart (daily trend) full width */}
+                    {/* Line chart — full width */}
                     <div className="row mb-4">
                         <div className="col-12">
                             <div className="card shadow-sm border-0 p-3">
@@ -485,9 +690,9 @@ function WeeklyReportPage() {
                         </div>
                     </div>
 
-                    {/* Row 2: Pie chart + Radar chart side by side */}
+                    {/* Pie chart */}
                     <div className="row mb-4">
-                        <div className="col-md-4">
+                        <div className="col-md-5">
                             <div className="card shadow-sm border-0 p-3 h-100">
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <h5 className="mb-0">Status Distribution</h5>
@@ -497,21 +702,6 @@ function WeeklyReportPage() {
                                 </div>
                                 <div style={{ height: 280 }}>
                                     <canvas ref={pieRef}></canvas>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-md-8">
-                            <div className="card shadow-sm border-0 p-3 h-100">
-                                <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <h5 className="mb-0">Team Performance Radar</h5>
-                                    {selectedEmp && (
-                                        <small className="text-primary fw-semibold">
-                                            {selectedEmp.name} highlighted
-                                        </small>
-                                    )}
-                                </div>
-                                <div style={{ height: 280 }}>
-                                    <canvas ref={radarRef}></canvas>
                                 </div>
                             </div>
                         </div>
@@ -544,13 +734,15 @@ function WeeklyReportPage() {
                                         <th>Overdue</th>
                                         <th>Avg. Completion/Day</th>
                                         <th>Completion Rate</th>
+                                        <th style={{ textAlign: 'center' }}>Tasks</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {employees.map(emp => {
-                                        const rate = completionRate(emp);
-                                        // Average completions per working day (Mon–Sat = 6 days)
-                                        const avgPerDay = (emp.completed / 6).toFixed(1);
+                                        const rate       = completionRate(emp);
+                                        const total      = emp.completed + emp.ongoing + emp.overdue;
+                                        // BUG FIX #3: use computed divisor, not hardcoded 6
+                                        const avgPerDay  = (emp.completed / avgPerDayDivisor).toFixed(1);
                                         const isSelected = selectedEmp?.id === emp.id;
 
                                         return (
@@ -577,14 +769,47 @@ function WeeklyReportPage() {
                                                 <td className="text-danger fw-bold">{emp.overdue}</td>
                                                 <td>{avgPerDay}</td>
                                                 <td>
-                                                    <div className="progress" style={{ height: 20 }}>
-                                                        <div
-                                                            className="progress-bar bg-success"
-                                                            style={{ width: `${rate}%` }}
-                                                        >
-                                                            {rate}%
+                                                    {total === 0 ? (
+                                                        <span className="text-muted" style={{ fontSize: '0.9em' }}>
+                                                            No tasks yet
+                                                        </span>
+                                                    ) : rate === 0 ? (
+                                                        <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>
+                                                            0% — None completed
+                                                        </span>
+                                                    ) : (
+                                                        <div className="progress" style={{ height: 20 }}>
+                                                            <div
+                                                                className="progress-bar bg-success"
+                                                                style={{ width: `${rate}%` }}
+                                                                aria-valuenow={rate}
+                                                                aria-valuemin="0"
+                                                                aria-valuemax="100"
+                                                            >
+                                                                {rate}%
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
+                                                </td>
+
+                                                {/* Eye icon — stopPropagation so it doesn't trigger row selection */}
+                                                <td
+                                                    style={{ textAlign: 'center' }}
+                                                    onClick={e => {
+                                                        e.stopPropagation();
+                                                        setModalEmp(emp);
+                                                    }}
+                                                >
+                                                    <button
+                                                        className="btn btn-link p-0"
+                                                        title={`View ${emp.name}'s tasks this week`}
+                                                        style={{ color: '#0d6efd' }}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.12 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.133 13.133 0 0 1 1.172 8z"/>
+                                                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z"/>
+                                                        </svg>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         );
@@ -596,6 +821,20 @@ function WeeklyReportPage() {
 
                 </main>
             </div>
+
+            {/*
+                Modal rendered at page root — outside the table entirely.
+                BUG FIX #4: Pass pre-formatted date strings instead of
+                Date objects so the modal's useEffect dep array stays stable.
+            */}
+            {modalEmp && (
+                <EmployeeTaskModal
+                    emp={modalEmp}
+                    weekStartStr={weekStartStr}
+                    weekEndStr={weekEndStr}
+                    onClose={() => setModalEmp(null)}
+                />
+            )}
         </div>
     );
 }

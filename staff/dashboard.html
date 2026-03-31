@@ -4,501 +4,93 @@
     <meta charset="UTF-8">
     <title>Staff Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- Bootstrap -->
+    <link rel="icon" type="image/png" href="../imgs/psi.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- React, ReactDOM, Babel -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <style>
-    body {
-        background-color: #fffaf3;
-        color: #333; /* slightly darker for better contrast */
-        font-family: Arial, sans-serif;
-    }
-
-    .card {
-        border-radius: 12px;
-        background: #ffffff;
-        border: 1px solid #ffb84d; /* slightly darker border */
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* subtle shadow for readability */
-        color: #222; /* dark text for contrast */
-    }
-
-    .overdue {
-        background-color: #fff0b3 !important; /* darker yellow for readability */
-        color: #665200; /* darker text on yellow */
-    }
-
-    .sidebar-orange {
-        background: #fff;
-        color: #ff9900;
-        border-right: 1px solid #ffe0b2;
-        box-shadow: 2px 0 8px rgba(255, 153, 0, 0.04);
-    }
-
-    .sidebar-orange .nav-link {
-        color: #cc7a00 !important;
-        border-radius: 8px;
-        margin-bottom: 2px;
-        transition: background 0.2s, color 0.2s;
-        font-weight: 500;
-        padding: 10px 18px;
-        font-size: 1.08rem;
-        letter-spacing: 0.01em;
-    }
-
-    .sidebar-orange .nav-link.active, 
-    .sidebar-orange .nav-link:hover {
-        background: linear-gradient(90deg, #ff9900 60%, #ff8800 100%);
-        color: #fff !important;
-        box-shadow: 0 2px 8px rgba(255, 153, 0, 0.10);
-    }
-
-    .sidebar-orange {
-        background: linear-gradient(180deg, #ff9900 0%, #ff8800 100%);
-        color: #fff;
-    }
-
-    .sidebar-orange .nav-link {
-        color: #fff !important;
-        border-radius: 8px;
-        margin-bottom: 2px;
-        transition: background 0.2s;
-    }
-
-    .sidebar-orange .nav-link.active, 
-    .sidebar-orange .nav-link:hover {
-        background: #ffe7b3; /* darker hover background */
-        color: #ff8000 !important; /* darker orange for contrast */
-    }
-
-    .btn-primary {
-        background-color: #ff9900;
-        border-color: #ff9900;
-        color: #fff;
-    }
-
-    .btn-primary:hover, .btn-primary:focus {
-        background-color: #ffb84d;
-        border-color: #ffb84d;
-        color: #333; /* darker text for readability */
-    }
-
-    .table thead {
-        background: #ffe7b3; /* darker yellow header */
-    }
-
-    .table th {
-        color: #cc7a00; /* darker orange text for readability */
-    }
-
-    .table-hover tbody tr:hover {
-        background: #fff0b3;
-    }
-
-    .form-control:focus {
-        border-color: #ffb84d;
-        box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
-    }
-
-    h3, h5, h6 {
-        color: #cc7a00; /* darker headings */
-    }
-
-    .summary-card {
-        background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
-        border: 1px solid #ffb84d;
-        color: #cc7a00;
-    }
-    </style>
+    <script>
+    (function () {
+        const isCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
+        if (isCollapsed) {
+            document.documentElement.classList.add("sidebar-collapsed-init");
+        }
+    })();
+    </script>
 </head>
 <body>
 
-
 <div class="container-fluid py-4">
-    <div class="row">
-        <!-- SIDEBAR -->
-        <nav class="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
-            <div class="sidebar-orange d-flex flex-column align-items-start p-3 gap-2 min-vh-100">
-                <a href="dashboard.html" class="nav-link fw-semibold active">Dashboard</a>
-                <a href="my-tasks.html" class="nav-link fw-semibold">My Tasks</a>
-                <a href="calendar.html" class="nav-link fw-semibold">Calendar</a>
-                <a href="profile.html" class="nav-link fw-semibold">Profile</a>
+<div class="row g-4 align-items-start">
+<aside class="col-12 col-md-4 col-lg-3 col-xl-2">
+    <nav class="dashboard-sidebar" id="dashboardSidebar">
+        <button class="sidebar-toggle" id="sidebarToggle" type="button">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <div class="sidebar-inner">
+            <div class="sidebar-profile">
+                <img
+                    src="https://ui-avatars.com/api/?name=Andrew+Smith&background=f7c4d4&color=222&size=80"
+                    alt="Profile"
+                    class="sidebar-avatar"
+                >
+                <div class="sidebar-profile-info">
+                    <div class="sidebar-role">Staff</div>
+                    <div class="sidebar-name">Andrew Smith</div>
+                </div>
             </div>
-        </nav>
-        <!-- MAIN CONTENT -->
-        <main class="col-md-10 ms-sm-auto px-4">
 
-    <!-- HEADER (React) -->
-    <div id="dashboard-header-root"></div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-section-label">MAIN</div>
 
-    <!-- React Modal Root -->
-    <div id="react-modal-root"></div>
+            <a href="dashboard.html" class="sidebar-link active">
+                <span class="sidebar-icon"><i class="bi bi-house-door"></i></span>
+                <span class="sidebar-text">Dashboard</span>
+            </a>
 
-    
-   
+            <a href="my-tasks.html" class="sidebar-link">
+                <span class="sidebar-icon"><i class="bi bi-list-check"></i></span>
+                <span class="sidebar-text">My Tasks</span>
+            </a>
 
-    
+            <a href="calendar.html" class="sidebar-link">
+                <span class="sidebar-icon"><i class="bi bi-calendar3"></i></span>
+                <span class="sidebar-text">Calendar</span>
+            </a>
 
-    <div id="root"></div>
-<div id="react-modal-root"></div>
-<button id="openReactModalBtn" style="display:none;"></button>
+            <div class="sidebar-divider mt-3"></div>
+            <div class="sidebar-section-label">SETTINGS</div>
 
+            <a href="profile.html" class="sidebar-link">
+                <span class="sidebar-icon"><i class="bi bi-gear"></i></span>
+                <span class="sidebar-text">Account Settings</span>
+            </a>
 
+            <div class="sidebar-bottom">
+                <a href="../auth/login.html" class="sidebar-link logout-link">
+                    <span class="sidebar-icon"><i class="bi bi-box-arrow-right"></i></span>
+                    <span class="sidebar-text">Logout Account</span>
+                </a>
+            </div>
+    </nav>
+</aside>
 
+        <main class="col-12 col-md-8 col-lg-9 col-xl-10 px-md-4">
+            <div id="dashboard-header-root"></div>
+            <div id="react-modal-root"></div>
+            <div id="root"></div>
+            <button id="openReactModalBtn" style="display:none;"></button>
+        </main>
 
-
+    </div>
 </div>
-<script type="text/babel">
 
 
-        const statusColorMap = {
-        'Ongoing': '#ffe066',   // sunny golden yellow
-        'Completed': '#b6e388', // vibrant fresh green
-        'Overdue': '#ffb3b3',   // lively red
-        'Other': '#ffe082',     // soft buttery yellow
-        'Extra': '#fff8e1'      // pale warm near-white
-    };
-
-    
-function App() {
-    const [tasks, setTasks] = React.useState([]);
-
-    // Load tasks from PHP
-    const fetchTasks = async () => {
-        try {
-            const response = await fetch("http://localhost/taskmanagement/staff/php/get_tasks.php");
-            const data = await response.json();
-            setTasks(data);
-        } catch (error) {
-            console.error("Error:", error);
-        }
-    };
-
-    React.useEffect(() => {
-        fetchTasks();
-    }, []);
-
-    return (
-        <>
-            <TaskSummary tasks={tasks} />
-            <DueSoon tasks={tasks} />
-
-    
-
-            <TaskTable tasks={tasks} refreshTasks={fetchTasks} />
-        </>
-    );
-}
-
-
-function TaskTable({ tasks, refreshTasks }) { 
-    const [selectedTask, setSelectedTask] = React.useState(null);
-    const [showDetailModal, setShowDetailModal] = React.useState(false);
-
-    const handleRowClick = (task) => {
-        setSelectedTask(task);
-        setShowDetailModal(true);
-    };
-
-    return (
-        <>
-            <table className="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Task</th>
-                        <th>Start</th>
-                        <th>Due</th>
-                        <th>Status</th>
-                        <th>Priority</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {tasks.length === 0 ? (
-                        <tr>
-                            <td colSpan="5">No tasks found</td>
-                        </tr>
-                    ) : (
-                        tasks.map(task => (
-                            <tr
-                                key={task.id}
-                                style={{ backgroundColor: task.is_overdue ? '#f8d7da' : '', cursor: 'pointer' }}
-                                onClick={() => handleRowClick(task)}
-                            >
-                                <td>{task.title}</td>
-                                <td>{formatDate(task.start_date)}</td>
-                                <td>{formatDate(task.deadline)}</td>
-                                    <td
-        style={{
-          backgroundColor: statusColorMap[task.status] || '#ffffff',
-          color: '#000',
-          textAlign: 'center',
-          padding: '4px 8px',
-          borderRadius: '4px'
-        }}
-      >
-        {task.status}
-      </td>
-                                <td>{task.priority}</td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
-
-            {showDetailModal && selectedTask && (
-                <TaskDetailModal
-                    show={showDetailModal}
-                    task={selectedTask}
-                    onClose={() => setShowDetailModal(false)}
-                    refreshTasks={refreshTasks} 
-                />
-            )}
-        </>
-    );
-}
-
-// Modal component
-function TaskDetailModal({ show, task, onClose, refreshTasks }) {
-    const [status, setStatus] = React.useState(task.status);
-
-    React.useEffect(() => {
-        setStatus(task.status);
-    }, [task]);
-
-    if (!show || !task) return null;
-
-    // Only updates state locally
-    const handleStatusChange = (e) => {
-        setStatus(e.target.value);
-    };
-
-    // Save status to backend
-    const handleSave = async () => {
-        try {
-            const formData = new FormData();
-            formData.append("task_id", task.id);
-            formData.append("status", status);
-
-            const res = await fetch("http://localhost/taskmanagement/staff/php/update_task_status.php", {
-                method: "POST",
-                body: formData
-            });
-
-            const result = await res.text();
-            alert(result);
-
-            onClose();
-            refreshTasks(); // refresh table without reload
-
-        } catch (error) {
-            alert("Failed to update task");
-            console.error(error);
-        }
-    };
-
-    // Delete task
-    const handleDelete = async () => {
-        if (!confirm("Are you sure you want to delete this task?")) return;
-
-        try {
-            const formData = new FormData();
-            formData.append("task_id", task.id);
-
-            const res = await fetch("http://localhost/taskmanagement/staff/php/delete_task.php", {
-                method: "POST",
-                body: formData
-            });
-
-            const result = await res.text();
-            alert(result);
-
-            onClose();
-            refreshTasks(); // refresh table
-
-        } catch (error) {
-            alert("Failed to delete task");
-            console.error(error);
-        }
-    };
-
-    return (
-        <div className="modal fade show" style={{ display: 'block', background: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-            <div className="modal-dialog">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title">Task Details</h5>
-                        <button type="button" className="btn-close" onClick={onClose}></button>
-                    </div>
-
-                    <div className="modal-body">
-                        <div className="mb-2"><strong>Title:</strong> {task.title}</div>
-                        <div className="mb-2"><strong>Description:</strong> {task.description || "-"}</div>
-                        <div className="mb-2"><strong>Start Date:</strong> {task.start_date}</div>
-                        <div className="mb-2"><strong>Deadline:</strong> {task.deadline}</div>
-                        <div className="mb-2"><strong>Priority:</strong> {task.priority}</div>
-                        <div className="mb-2">
-                            <strong>Status:</strong>
-                            <select className="form-select mt-1" value={status} onChange={handleStatusChange}>
-                                <option value="Ongoing">Ongoing</option>
-                                <option value="Completed">Completed</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="modal-footer">
-                        <button className="btn btn-danger" onClick={handleDelete}>
-                            Delete
-                        </button>
-
-                        <button className="btn btn-primary" onClick={handleSave}>
-                            Save
-                        </button>
-
-                        <button className="btn btn-secondary" onClick={onClose}>
-                            Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-
-
-function TaskSummary({ tasks }) {
-
-    const total = tasks.length;
-
-    const ongoing = tasks.filter(task => task.status === "Ongoing").length;
-
-    const completed = tasks.filter(task => task.status === "Completed").length;
-
-    const overdue = tasks.filter(task => task.is_overdue).length;
-
-    return (
-        <div className="row mb-4">
-            <div className="col-md-3">
-                <div className="card summary-card text-center p-3">
-                    <h5>Total Tasks</h5>
-                    <h3>{total}</h3>
-                </div>
-            </div>
-            <div className="col-md-3">
-                <div className="card summary-card text-center p-3">
-                    <h5>Ongoing</h5>
-                    <h3>{ongoing}</h3>
-                </div>
-            </div>
-            <div className="col-md-3">
-                <div className="card summary-card text-center p-3">
-                    <h5>Completed</h5>
-                    <h3>{completed}</h3>
-                </div>
-            </div>
-            <div className="col-md-3">
-                <div className="card summary-card text-center p-3">
-                    <h5>Overdue</h5>
-                    <h3>{overdue}</h3>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function DueSoon({ tasks }) {
-
-    // Get "today" in Philippine time
-    const today = new Date(
-        new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
-    );
-
-    // Filter tasks due today or tomorrow
-    const dueSoonTasks = tasks.filter(task => {
-        if (task.status.toLowerCase() === "completed") return false;
-
-        const deadline = new Date(task.deadline + "T00:00:00");
-
-        const diffTime = deadline - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        // Only today or tomorrow
-        return diffDays === 0 || diffDays === 1;
-    });
-
-    const formatLabel = (deadlineStr) => {
-        const todayPH = new Date(
-            new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
-        );
-
-        const deadline = new Date(deadlineStr + "T00:00:00");
-
-        const diffDays = Math.ceil((deadline - todayPH) / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 0) return "Due Today";
-        if (diffDays === 1) return "Due Tomorrow";
-        return ""; // this should never appear
-    };
-
-    return (
-        <div className="card p-3 mb-4">
-            <h5>⚠️ Due Soon</h5>
-            <ul>
-                {dueSoonTasks.length === 0 ? (
-                    <li>No upcoming deadlines</li>
-                ) : (
-                    dueSoonTasks.map(task => (
-                        <li key={task.id}>
-                            {task.title} - {formatLabel(task.deadline)}
-                        </li>
-                    ))
-                )}
-            </ul>
-        </div>
-    );
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
-}
-
-function DashboardHeader() {
-    const [dept, setDept] = React.useState('');
-    const [loading, setLoading] = React.useState(true);
-
-    React.useEffect(() => {
-        fetch('php/get_department_name.php')
-            .then(res => res.json())
-            .then(data => {
-                if (data.department_name) setDept(data.department_name);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
-    }, []);
-
-    return (
-        <div className="d-flex justify-content-between align-items-center mb-4">
-            <h3>
-                {loading ? 'Loading...' : dept ? `${dept} - Staff Dashboard` : 'Staff Dashboard'}
-            </h3>
-        </div>
-    );
-}
-
-ReactDOM.createRoot(document.getElementById('dashboard-header-root')).render(<DashboardHeader />);
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script>
-
+<script type="text/babel" src="js/dashboard.jsx"></script>
+<script src="js/sidebar.js"></script>
 </body>
 </html>

@@ -1,0 +1,450 @@
+
+        const statusColorMap = {
+        'Ongoing': '#ffe066',   
+        'Completed': '#b6e388', 
+        'Overdue': '#ffb3b3',   // lively red
+        'Other': '#ffe082',     // soft buttery yellow
+        'Extra': '#fff8e1'      // pale warm near-white
+    };
+
+    
+function App() {
+    const [tasks, setTasks] = React.useState([]);
+
+    // Load tasks from PHP
+    const fetchTasks = async () => {
+        try {
+            const response = await fetch("http://localhost/taskmanagement/staff/php/get_tasks.php");
+            const data = await response.json();
+            setTasks(data);
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchTasks();
+    }, []);
+
+    return (
+        <>
+  
+           
+
+            <button 
+                className="btn btn-primary mb-3"
+                onClick={() => document.getElementById('openReactModalBtn').click()}
+            >
+                Add Task
+            </button>
+
+            <ModalController refreshTasks={fetchTasks} />
+
+            <TaskTable tasks={tasks} refreshTasks={fetchTasks} />
+        </>
+    );
+}
+
+
+function TaskTable({ tasks, refreshTasks }) { 
+    const [selectedTask, setSelectedTask] = React.useState(null);
+    const [showDetailModal, setShowDetailModal] = React.useState(false);
+
+    const handleRowClick = (task) => {
+        setSelectedTask(task);
+        setShowDetailModal(true);
+    };
+
+    return (
+        <>
+            <table className="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Start</th>
+                        <th>Due</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {tasks.length === 0 ? (
+                        <tr>
+                            <td colSpan="5">No tasks found</td>
+                        </tr>
+                    ) : (
+                        tasks.map(task => (
+                            <tr
+                                key={task.id}
+                                style={{ backgroundColor: task.is_overdue ? '#f8d7da' : '', cursor: 'pointer' }}
+                                onClick={() => handleRowClick(task)}
+                            >
+                                <td>{task.title}</td>
+                                <td>{formatDate(task.start_date)}</td>
+                                <td>{formatDate(task.deadline)}</td>
+                                    <td
+        style={{
+          backgroundColor: statusColorMap[task.status] || '#ffffff',
+          color: '#000',
+          textAlign: 'center',
+          padding: '4px 8px',
+          borderRadius: '4px'
+        }}
+      >
+        {task.status}
+      </td>
+                                <td>{task.priority}</td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+
+            {showDetailModal && selectedTask && (
+                <TaskDetailModal
+                    show={showDetailModal}
+                    task={selectedTask}
+                    onClose={() => setShowDetailModal(false)}
+                    refreshTasks={refreshTasks} 
+                />
+            )}
+        </>
+    );
+}
+
+// Modal component
+function TaskDetailModal({ show, task, onClose, refreshTasks }) {
+    const [status, setStatus] = React.useState(task.status);
+
+    React.useEffect(() => {
+        setStatus(task.status);
+    }, [task]);
+
+    if (!show || !task) return null;
+
+    // Only updates state locally
+    const handleStatusChange = (e) => {
+        setStatus(e.target.value);
+    };
+
+    // Save status to backend
+    const handleSave = async () => {
+        try {
+            const formData = new FormData();
+            formData.append("task_id", task.id);
+            formData.append("status", status);
+
+            const res = await fetch("http://localhost/taskmanagement/staff/php/update_task_status.php", {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await res.text();
+            alert(result);
+
+            onClose();
+            refreshTasks(); // refresh table without reload
+
+        } catch (error) {
+            alert("Failed to update task");
+            console.error(error);
+        }
+    };
+
+    // Delete task
+    const handleDelete = async () => {
+        if (!confirm("Are you sure you want to delete this task?")) return;
+
+        try {
+            const formData = new FormData();
+            formData.append("task_id", task.id);
+
+            const res = await fetch("http://localhost/taskmanagement/staff/php/delete_task.php", {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await res.text();
+            alert(result);
+
+            onClose();
+            refreshTasks(); // refresh table
+
+        } catch (error) {
+            alert("Failed to delete task");
+            console.error(error);
+        }
+    };
+
+    return (
+        <div className="modal fade show" style={{ display: 'block', background: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+            <div className="modal-dialog">
+                <div className="modal-content">
+                    <div className="modal-header">
+                        <h5 className="modal-title">Task Details</h5>
+                        <button type="button" className="btn-close" onClick={onClose}></button>
+                    </div>
+
+                    <div className="modal-body">
+                        <div className="mb-2"><strong>Title:</strong> {task.title}</div>
+                        <div className="mb-2"><strong>Description:</strong> {task.description || "-"}</div>
+                        <div className="mb-2"><strong>Start Date:</strong> {task.start_date}</div>
+                        <div className="mb-2"><strong>Deadline:</strong> {task.deadline}</div>
+                        <div className="mb-2"><strong>Priority:</strong> {task.priority}</div>
+                        <div className="mb-2">
+                            <strong>Status:</strong>
+                            <select className="form-select mt-1" value={status} onChange={handleStatusChange}>
+                                <option value="Ongoing">Ongoing</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="modal-footer">
+                        <button className="btn btn-danger" onClick={handleDelete}>
+                            Delete
+                        </button>
+
+                        <button className="btn btn-primary" onClick={handleSave}>
+                            Save
+                        </button>
+
+                        <button className="btn btn-secondary" onClick={onClose}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function AddTaskModal({ show, onClose, refreshTasks }) {
+    const [taskName, setTaskName] = React.useState("");
+    const [startDate, setStartDate] = React.useState("");
+    const [deadline, setDeadline] = React.useState("");
+    const [priority, setPriority] = React.useState("Low");
+
+    if (!show) return null;
+
+const handleSubmit = async () => {
+    const formData = new FormData();
+    formData.append("task_name", taskName);
+    formData.append("description", "");
+    formData.append("start_date", startDate);
+    formData.append("deadline", deadline);
+    formData.append("priority", priority);
+
+    try {
+        const response = await fetch("http://localhost/taskmanagement/staff/php/create_task.php", {
+            method: "POST",
+            body: formData
+        });
+
+        const result = await response.text();
+        alert(result);
+
+        // 🔥 THIS IS THE IMPORTANT PART
+        refreshTasks(); // reload table data
+
+        // reset form
+        setTaskName("");
+        setStartDate("");
+        setDeadline("");
+        setPriority("Low");
+
+        onClose();
+
+    } catch (error) {
+        console.error("Error:", error);
+    }
+};
+
+    return (
+        <div className="modal fade show" style={{ display: 'block', background: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+            <div className="modal-dialog">
+                <div className="modal-content">
+                    
+                    <div className="modal-header">
+                        <h5 className="modal-title">Add Task</h5>
+                        <button type="button" className="btn-close" onClick={onClose}></button>
+                    </div>
+
+                    <div className="modal-body">
+                        <div className="mb-3">
+                            <label className="form-label">Task Name</label>
+                            <input 
+                                type="text" 
+                                className="form-control"
+                                value={taskName}
+                                onChange={(e) => setTaskName(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="mb-3">
+                            <label className="form-label">Start Date</label>
+                            <input 
+                                type="date" 
+                                className="form-control"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="mb-3">
+                            <label className="form-label">Due Date</label>
+                            <input 
+                                type="date" 
+                                className="form-control"
+                                value={deadline}
+                                onChange={(e) => setDeadline(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="mb-3">
+                            <label className="form-label">Priority</label>
+                            <select 
+                                className="form-select"
+                                value={priority}
+                                onChange={(e) => setPriority(e.target.value)}
+                            >
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="modal-footer">
+                        <button type="button" className="btn btn-secondary" onClick={onClose}>
+                            Close
+                        </button>
+
+                        <button type="button" className="btn btn-primary" onClick={handleSubmit}>
+                            Add Task
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ModalController({ refreshTasks }) {
+    const [show, setShow] = React.useState(false);
+
+    React.useEffect(() => {
+        const btn = document.getElementById('openReactModalBtn');
+        if (btn) {
+            btn.onclick = () => setShow(true);
+        }
+        return () => {
+            if (btn) btn.onclick = null;
+        };
+    }, []);
+
+    return (
+        <AddTaskModal 
+            show={show} 
+            onClose={() => setShow(false)} 
+            refreshTasks={refreshTasks}
+        />
+    );
+}
+
+
+
+function DueSoon({ tasks }) {
+
+    // Get "today" in Philippine time
+    const today = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+    );
+
+    // Filter tasks due today or tomorrow
+    const dueSoonTasks = tasks.filter(task => {
+        if (task.status.toLowerCase() === "completed") return false;
+
+        const deadline = new Date(task.deadline + "T00:00:00");
+
+        const diffTime = deadline - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Only today or tomorrow
+        return diffDays === 0 || diffDays === 1;
+    });
+
+    const formatLabel = (deadlineStr) => {
+        const todayPH = new Date(
+            new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+        );
+
+        const deadline = new Date(deadlineStr + "T00:00:00");
+
+        const diffDays = Math.ceil((deadline - todayPH) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return "Due Today";
+        if (diffDays === 1) return "Due Tomorrow";
+        return ""; // this should never appear
+    };
+
+    return (
+        <div className="card p-3 mb-4">
+            <h5>⚠️ Due Soon</h5>
+            <ul>
+                {dueSoonTasks.length === 0 ? (
+                    <li>No upcoming deadlines</li>
+                ) : (
+                    dueSoonTasks.map(task => (
+                        <li key={task.id}>
+                            {task.title} - {formatLabel(task.deadline)}
+                        </li>
+                    ))
+                )}
+            </ul>
+        </div>
+    );
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+
+
+
+
+function DashboardHeader() {
+    const [dept, setDept] = React.useState('');
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        fetch('php/get_department_name.php')
+            .then(res => res.json())
+            .then(data => {
+                if (data.department_name) setDept(data.department_name);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    }, []);
+
+    return (
+        <div className="d-flex justify-content-between align-items-center mb-4">
+            <h3>
+                {loading ? 'Loading...' : dept ? `${dept} - Staff Dashboard` : 'Staff Dashboard'}
+            </h3>
+        </div>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('dashboard-header-root')).render(<DashboardHeader />);
+
+ReactDOM.createRoot(document.getElementById('react-modal-root')).render(<ModalController />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
