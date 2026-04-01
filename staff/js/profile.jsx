@@ -274,8 +274,8 @@ function ProfilePage() {
 
     const staticEmployeeId = profile?.employee_id || "SJ53862";
     const staticDepartmentId = profile?.department_id || "DPT-001";
-    const staticGender = profile?.gender || "Female";
-    const staticDateOfBirth = profile?.date_of_birth || "05 March, 1996";
+    const staticGender = profile?.gender || "Male";
+    const staticDateOfBirth = profile?.date_of_birth || "November 21, 2003";
 
     if (loading) {
         return (
