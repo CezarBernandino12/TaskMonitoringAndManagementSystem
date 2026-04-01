@@ -3,16 +3,6 @@ import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
 
 
-function ProfileToaster() {
-    return (
-        <Toaster
-            position="top-center"
-            offset={{ top: 4 }}
-            options={toasterOptions}
-        />
-    );
-}
-
 function getInitials(name) {
     if (!name) return "U";
 
@@ -38,14 +28,24 @@ async function parseJsonResponse(response) {
 
 const toasterOptions = {
     fill: "#111111",
-    roundness: 18,
+    roundness: 24,
     styles: {
-        title: "text-white! text-[15px] font-semibold!",
-        description: "text-white/80! text-[13px]!",
+        title: "text-white! text-[18px] font-semibold!",
+        description: "text-white! text-[15px]!",
         badge: "bg-white/10!",
         button: "bg-white/10! text-white! hover:bg-white/15!"
     }
 };
+
+function ProfileToaster() {
+    return (
+        <Toaster
+            position="top-center"
+            offset={{ top: 10 }}
+            options={toasterOptions}
+        />
+    );
+}
 
 function Avatar({ src, name, size = 74 }) {
     if (src) {
