@@ -2,6 +2,17 @@ import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
 
+
+function ProfileToaster() {
+    return (
+        <Toaster
+            position="top-center"
+            offset={{ top: 4 }}
+            options={toasterOptions}
+        />
+    );
+}
+
 function getInitials(name) {
     if (!name) return "U";
 
@@ -86,7 +97,8 @@ function InfoItem({ label, value, strong = true }) {
                 style={{
                     fontSize: "16px",
                     lineHeight: 1.5,
-                    wordBreak: "break-word"
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere"
                 }}
             >
                 {value || "—"}
@@ -566,11 +578,11 @@ function ProfilePage() {
                                                 onEdit={() => handleStartEdit("contact")}
                                             >
                                                 <div className="row g-4">
-                                                    <div className="col-12 col-md-6 col-xl-12">
+                                                    <div className="col-12 col-md-6">
                                                         <InfoItem label="Contact number" value={form.contact} />
                                                     </div>
 
-                                                    <div className="col-12 col-md-6 col-xl-12">
+                                                    <div className="col-12 col-md-6">
                                                         <InfoItem label="Email" value={form.email} />
                                                     </div>
                                                 </div>
@@ -833,8 +845,13 @@ function ProfilePage() {
     );
 }
 
-const profileRoot = document.getElementById("root");
+const sileoRoot = document.getElementById("sileo-root");
+if (sileoRoot && !sileoRoot.dataset.mounted) {
+    sileoRoot.dataset.mounted = "true";
+    createRoot(sileoRoot).render(<ProfileToaster />);
+}
 
+const profileRoot = document.getElementById("root");
 if (profileRoot) {
     createRoot(profileRoot).render(<ProfilePage />);
 }

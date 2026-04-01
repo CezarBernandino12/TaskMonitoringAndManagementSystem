@@ -3,31 +3,85 @@
     --shell-gap: 12px;
     --sidebar-expanded-w: 250px;
     --sidebar-collapsed-w: 108px;
-    --sileo-width: 420px;
+        --sileo-width: 420px;
     --sileo-height: 48px;
+    --topbar-mask-height: calc(var(--shell-edge, 18px) + var(--topbar-height, 78px) + 26px);
 }
 
 
-[data-sileo-toast="true"] {
-    z-index: 4000 !important;
+#sileo-root {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    pointer-events: none;
 }
 
-[data-sileo-toast="true"] {
+#sileo-root > * {
+    pointer-events: none;
+}
+
+#sileo-root [data-sileo-description] {
+    color: #ffffff !important;
+}
+
+#sileo-root [data-sileo-toast="true"],
+#sileo-root [data-sileo-toaster],
+#sileo-root [data-sileo-viewport],
+#sileo-root [data-sileo-region],
+#sileo-root svg {
+    z-index: 5001 !important;
     pointer-events: auto;
 }
 
+
+.app-shell::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: calc(var(--shell-edge, 18px) + var(--sidebar-expanded-w, 250px) + var(--shell-gap, 12px));
+    right: 0;
+    height: var(--topbar-mask-height);
+    background: var(--bg-page);
+    z-index: 1190;
+    pointer-events: none;
+}
+
+body:has(.dashboard-sidebar.collapsed) .app-shell::before {
+    left: calc(var(--shell-edge, 18px) + var(--sidebar-collapsed-w, 108px) + var(--shell-gap, 12px));
+}
+
 .app-topbar {
-    z-index: 1200;
+    z-index: 1200 !important;
     isolation: isolate;
 }
 
 .app-topbar .topbar {
     position: relative;
+    z-index: 1201;
     overflow: hidden;
     background: var(--bg-card) !important;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
+
+/* push content slightly lower so it never peeks under the header */
+.app-main-col {
+    position: relative;
+    padding-top: calc(var(--shell-edge, 18px) + var(--topbar-height, 78px) + 30px) !important;
+}
+
+@media (max-width: 767.98px) {
+    .app-shell::before {
+        left: 0;
+        right: 0;
+        height: calc(var(--topbar-height, 78px) + 10px);
+    }
+
+    .app-main-col {
+        padding-top: calc(var(--topbar-height, 78px) + 18px) !important;
+    }
+}
+
 html, body {
     height: 100%;
     margin: 0;
