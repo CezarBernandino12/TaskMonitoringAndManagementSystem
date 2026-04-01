@@ -276,6 +276,4 @@ function formatDate(dateStr) {
     });
 }
 
-// ── Mount ONLY the App into #root ───────────────────────────
-// TopBar (topbar.jsx) already owns #dashboard-header-root — do NOT render here.
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
