@@ -2,19 +2,16 @@ import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
 
-function buildAvatarUrl(name) {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-        name || "User"
-    )}&background=e9c7d5&color=222&size=180`;
-}
+function getInitials(name) {
+    if (!name) return "U";
 
-function SectionHeader({ title, subtitle }) {
-    return (
-        <div className="account-section-header">
-            <h6>{title}</h6>
-            {subtitle ? <p>{subtitle}</p> : null}
-        </div>
-    );
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "U";
+
+    return parts
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join("");
 }
 
 async function parseJsonResponse(response) {
@@ -24,9 +21,7 @@ async function parseJsonResponse(response) {
         return JSON.parse(rawText);
     } catch (error) {
         console.error("Invalid JSON response:", rawText);
-        throw new Error(
-            "Server returned invalid JSON. Check your PHP file for warnings or mixed output."
-        );
+        throw new Error("Server returned invalid JSON.");
     }
 }
 
@@ -40,6 +35,113 @@ const toasterOptions = {
         button: "bg-white/10! text-white! hover:bg-white/15!"
     }
 };
+
+function Avatar({ src, name, size = 74 }) {
+    if (src) {
+        return (
+            <img
+                src={src}
+                alt={name || "User"}
+                className="rounded-circle border"
+                style={{
+                    width: size,
+                    height: size,
+                    objectFit: "cover",
+                    flexShrink: 0
+                }}
+            />
+        );
+    }
+
+    return (
+        <div
+            className="rounded-circle border d-inline-flex align-items-center justify-content-center fw-bold text-uppercase bg-secondary-subtle text-secondary-emphasis"
+            style={{
+                width: size,
+                height: size,
+                flexShrink: 0,
+                fontSize: size >= 74 ? "1.35rem" : "1rem"
+            }}
+        >
+            {getInitials(name)}
+        </div>
+    );
+}
+
+function InfoItem({ label, value, strong = true }) {
+    return (
+        <div>
+            <div
+                className="text-body-secondary"
+                style={{
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    marginBottom: "6px"
+                }}
+            >
+                {label}
+            </div>
+            <div
+                className={strong ? "fw-bold text-body" : "fw-semibold text-body"}
+                style={{
+                    fontSize: "16px",
+                    lineHeight: 1.5,
+                    wordBreak: "break-word"
+                }}
+            >
+                {value || "—"}
+            </div>
+        </div>
+    );
+}
+
+function CardSection({ title, onEdit, children, bodyClassName = "" }) {
+    return (
+        <div
+            className="card border shadow-sm bg-body-tertiary h-100"
+            style={{ borderRadius: "16px" }}
+        >
+            <div className={`card-body p-4 ${bodyClassName}`}>
+                <div className="d-flex align-items-center justify-content-between gap-3">
+                    <h6
+                        className="mb-0 fw-bold text-body"
+                        style={{ fontSize: "22px" }}
+                    >
+                        {title}
+                    </h6>
+
+                    {onEdit ? (
+                        <button
+                            type="button"
+                            className="btn btn-sm p-0 border-0 bg-transparent text-secondary"
+                            onClick={onEdit}
+                            aria-label={`Edit ${title}`}
+                            style={{
+                                width: "34px",
+                                height: "34px",
+                                borderRadius: "8px"
+                            }}
+                        >
+                            <i className="bi bi-pencil-fill"></i>
+                        </button>
+                    ) : null}
+                </div>
+
+                <div className="border-top mt-3 pt-4">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function AlertMessage({ kind = "danger", children }) {
+    return (
+        <div className={`alert alert-${kind} mb-4`} role="alert">
+            {children}
+        </div>
+    );
+}
 
 function ProfilePage() {
     const [profile, setProfile] = React.useState(null);
@@ -56,7 +158,9 @@ function ProfilePage() {
     const [selectedImage, setSelectedImage] = React.useState(null);
     const [previewUrl, setPreviewUrl] = React.useState("");
     const [removeImage, setRemoveImage] = React.useState(false);
-    const [activeSection, setActiveSection] = React.useState(null); // null | "personal" | "contact"
+    const [activeSection, setActiveSection] = React.useState(null);
+
+    const fileInputRef = React.useRef(null);
 
     const hydrateForm = React.useCallback((data) => {
         setProfile(data);
@@ -89,11 +193,11 @@ function ProfilePage() {
 
                 hydrateForm(data);
                 setPageError("");
-                setLoading(false);
             } catch (error) {
                 if (!mounted) return;
                 setPageError(error.message || "Failed to load profile");
-                setLoading(false);
+            } finally {
+                if (mounted) setLoading(false);
             }
         }
 
@@ -125,9 +229,7 @@ function ProfilePage() {
     };
 
     const handleStartEdit = (section) => {
-        if (profile) {
-            hydrateForm(profile);
-        }
+        if (profile) hydrateForm(profile);
         setSelectedImage(null);
         setRemoveImage(false);
         setPageError("");
@@ -135,9 +237,7 @@ function ProfilePage() {
     };
 
     const handleCancelEdit = () => {
-        if (profile) {
-            hydrateForm(profile);
-        }
+        if (profile) hydrateForm(profile);
         setSelectedImage(null);
         setRemoveImage(false);
         setPageError("");
@@ -187,6 +287,11 @@ function ProfilePage() {
 
         setSelectedImage(null);
         setPreviewUrl("");
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+
         setRemoveImage(true);
 
         sileo.warning({
@@ -202,9 +307,9 @@ function ProfilePage() {
 
         const formData = new FormData();
         formData.append("name", form.full_name.trim());
-        formData.append("email", form.email);
-        formData.append("contact", form.contact);
-        formData.append("address", form.address);
+        formData.append("email", form.email.trim());
+        formData.append("contact", form.contact.trim());
+        formData.append("address", form.address.trim());
 
         if (removeImage) {
             formData.append("remove_profile_image", "1");
@@ -270,7 +375,8 @@ function ProfilePage() {
     };
 
     const displayName = form.full_name.trim() || profile?.name || "User";
-    const avatarSrc = previewUrl || buildAvatarUrl(displayName);
+    const role = profile?.role || "—";
+    const departmentName = profile?.department_name || "—";
 
     const staticEmployeeId = profile?.employee_id || "SJ53862";
     const staticDepartmentId = profile?.department_id || "DPT-001";
@@ -280,10 +386,22 @@ function ProfilePage() {
     if (loading) {
         return (
             <>
-                <Toaster position="top-center" offset={{ top: 24 }} options={toasterOptions} />
-                <div className="account-shell">
-                    <div className="account-card">
-                        <div className="account-loading">Loading profile...</div>
+                <Toaster
+                    position="top-center"
+                    offset={{ top: 8 }}
+                    options={toasterOptions}
+                />
+                <div className="w-100 pb-4">
+                    <div
+                        className="card border shadow-sm bg-body"
+                        style={{ borderRadius: "20px" }}
+                    >
+                        <div className="card-body py-5">
+                            <div className="d-flex align-items-center justify-content-center gap-3 text-body-secondary">
+                                <div className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+                                <span>Loading profile...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </>
@@ -293,10 +411,19 @@ function ProfilePage() {
     if (pageError && !profile) {
         return (
             <>
-                <Toaster position="top-center" offset={{ top: 24 }} options={toasterOptions} />
-                <div className="account-shell">
-                    <div className="account-card">
-                        <div className="account-error">{pageError}</div>
+                <Toaster
+                    position="top-center"
+                    offset={{ top: 8 }}
+                    options={toasterOptions}
+                />
+                <div className="w-100 pb-4">
+                    <div
+                        className="card border shadow-sm bg-body"
+                        style={{ borderRadius: "20px" }}
+                    >
+                        <div className="card-body p-4">
+                            <AlertMessage>{pageError}</AlertMessage>
+                        </div>
                     </div>
                 </div>
             </>
@@ -307,325 +434,407 @@ function ProfilePage() {
 
     return (
         <>
-            <Toaster position="top-center" offset={{ top: 24 }} options={toasterOptions} />
+           <Toaster
+                position="top-center"
+                offset={{ top: 8 }}
+                options={toasterOptions}
+            />
 
-            <div className="account-shell">
-                <div className="account-card">
-                    <div className="account-top">
-                        <h4>Account settings</h4>
-                        <p>Preview your account details and edit them by section.</p>
-                    </div>
-
-                    {pageError && profile ? (
-                        <div className="account-alert error">{pageError}</div>
-                    ) : null}
-
-                    {!isEditing ? (
-                        <div className="staff-preview-shell">
-                            <div className="staff-hero-card">
-                                <div className="staff-hero-left">
-                                    <img
-                                        src={avatarSrc}
-                                        alt="Profile preview"
-                                        className="staff-hero-avatar"
-                                    />
-
-                                    <div className="staff-hero-identity">
-                                        <h5>{displayName}</h5>
-                                        <p>
-                                            <span>{profile?.role || "—"}</span>
-                                            <span className="staff-hero-dot">|</span>
-                                            <span>{profile?.department_name || "—"}</span>
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="staff-hero-divider"></div>
-
-                                <div className="staff-hero-meta">
-                                    <div className="staff-meta-item">
-                                        <span>Role</span>
-                                        <strong>{profile?.role || "—"}</strong>
-                                    </div>
-
-                                    <div className="staff-meta-item">
-                                        <span>Employee ID</span>
-                                        <strong>{staticEmployeeId}</strong>
-                                    </div>
-
-                                    <div className="staff-meta-item">
-                                        <span>Department</span>
-                                        <strong>{profile?.department_name || "—"}</strong>
-                                    </div>
-
-                                    <div className="staff-meta-item">
-                                        <span>Department ID</span>
-                                        <strong>{staticDepartmentId}</strong>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="staff-preview-grid">
-                                <section className="staff-info-card staff-card-personal">
-                                    <div className="staff-info-card-head">
-                                        <h6>Personal information</h6>
-
-                                        <button
-                                            type="button"
-                                            className="staff-card-edit"
-                                            onClick={() => handleStartEdit("personal")}
-                                            aria-label="Edit personal information"
-                                        >
-                                            <i className="bi bi-pencil-fill"></i>
-                                        </button>
-                                    </div>
-
-                                    <div className="staff-info-divider"></div>
-
-                                    <div className="staff-info-grid">
-                                        <div className="staff-info-item">
-                                            <span>Full name</span>
-                                            <strong>{form.full_name || "—"}</strong>
-                                        </div>
-
-                                        <div className="staff-info-item">
-                                            <span>Gender</span>
-                                            <strong>{staticGender}</strong>
-                                        </div>
-
-                                        <div className="staff-info-item">
-                                            <span>Date of birth</span>
-                                            <strong>{staticDateOfBirth}</strong>
-                                        </div>
-
-                                        <div className="staff-info-item full-span">
-                                            <span>Address</span>
-                                            <strong>{form.address || "—"}</strong>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section className="staff-info-card staff-card-contact">
-                                    <div className="staff-info-card-head">
-                                        <h6>Contact information</h6>
-
-                                        <button
-                                            type="button"
-                                            className="staff-card-edit"
-                                            onClick={() => handleStartEdit("contact")}
-                                            aria-label="Edit contact information"
-                                        >
-                                            <i className="bi bi-pencil-fill"></i>
-                                        </button>
-                                    </div>
-
-                                    <div className="staff-info-divider"></div>
-
-                                    <div className="staff-info-grid staff-info-grid-single">
-                                        <div className="staff-info-item">
-                                            <span>Contact number</span>
-                                            <strong>{form.contact || "—"}</strong>
-                                        </div>
-
-                                        <div className="staff-info-item">
-                                            <span>Email</span>
-                                            <strong>{form.email || "—"}</strong>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section className="staff-info-card staff-card-account">
-                                    <div className="staff-info-card-head">
-                                        <h6>Account information</h6>
-                                    </div>
-
-                                    <div className="staff-info-divider"></div>
-
-                                    <div className="staff-info-grid staff-info-grid-single">
-                                        <div className="staff-info-item">
-                                            <span>Department</span>
-                                            <strong>{profile?.department_name || "—"}</strong>
-                                        </div>
-
-                                        <div className="staff-info-item">
-                                            <span>Role</span>
-                                            <strong>{profile?.role || "—"}</strong>
-                                        </div>
-
-                                        <div className="staff-info-item">
-                                            <span>Employee ID</span>
-                                            <strong>{staticEmployeeId}</strong>
-                                        </div>
-
-                                        <div className="staff-info-item">
-                                            <span>Department ID</span>
-                                            <strong>{staticDepartmentId}</strong>
-                                        </div>
-                                    </div>
-                                </section>
-                            </div>
+            <div className="w-100 pb-4">
+                <div
+                    className="card border shadow-sm bg-body"
+                    style={{
+                        borderRadius: "20px",
+                        minHeight: "fit-content"
+                    }}
+                >
+                    <div className="card-body p-4 p-xl-5">
+                        <div className="mb-4">
+                            <h4
+                                className="mb-2 fw-bold text-body"
+                                style={{ fontSize: "28px" }}
+                            >
+                                Account settings
+                            </h4>
+                            <p
+                                className="mb-0 text-body-secondary"
+                                style={{ fontSize: "15px", maxWidth: "760px" }}
+                            >
+                                Preview your account details and edit them by section.
+                            </p>
                         </div>
+
+                        {pageError && profile ? (
+                            <AlertMessage>{pageError}</AlertMessage>
+                        ) : null}
+
+                        {!isEditing ? (
+                            <>
+                                <div
+                                    className="card border shadow-sm bg-body-tertiary mb-4"
+                                    style={{ borderRadius: "16px" }}
+                                >
+                                    <div className="card-body px-4 py-3 px-xl-4 py-xl-3">
+                                        <div className="row g-4 align-items-center">
+                                            <div className="col-12 col-xl-5">
+                                                <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+                                                    <Avatar
+                                                        src={previewUrl}
+                                                        name={displayName}
+                                                        size={74}
+                                                    />
+
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <h5
+                                                            className="mb-2 fw-bold text-body"
+                                                            style={{
+                                                                fontSize: "30px",
+                                                                lineHeight: 1.15
+                                                            }}
+                                                        >
+                                                            {displayName}
+                                                        </h5>
+
+                                                        <div
+                                                            className="d-flex align-items-center flex-wrap gap-2 text-body-secondary"
+                                                            style={{ fontSize: "15px", fontWeight: 500 }}
+                                                        >
+                                                            <span className="fw-bold text-info-emphasis">
+                                                                {role}
+                                                            </span>
+                                                            <span className="text-body-secondary">|</span>
+                                                            <span>{departmentName}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="col-auto d-none d-xl-flex justify-content-center">
+                                                <div className="vr opacity-25" style={{ minHeight: "118px" }}></div>
+                                            </div>
+
+                                            <div className="col-12 col-xl">
+                                                <div className="row g-4">
+                                                    <div className="col-6">
+                                                        <InfoItem label="Role" value={role} />
+                                                    </div>
+                                                    <div className="col-6">
+                                                        <InfoItem label="Employee ID" value={staticEmployeeId} />
+                                                    </div>
+                                                    <div className="col-6">
+                                                        <InfoItem label="Department" value={departmentName} />
+                                                    </div>
+                                                    <div className="col-6">
+                                                        <InfoItem label="Department ID" value={staticDepartmentId} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="row g-3 align-items-stretch">
+                                    <div className="col-12 col-xl-7 col-xxl-6">
+                                        <CardSection
+                                            title="Personal information"
+                                            onEdit={() => handleStartEdit("personal")}
+                                        >
+                                            <div className="row g-4">
+                                                <div className="col-12 col-md-6">
+                                                    <InfoItem label="Full name" value={form.full_name} />
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <InfoItem label="Gender" value={staticGender} />
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <InfoItem label="Date of birth" value={staticDateOfBirth} />
+                                                </div>
+
+                                                <div className="col-12">
+                                                    <InfoItem label="Address" value={form.address} />
+                                                </div>
+                                            </div>
+                                        </CardSection>
+                                    </div>
+
+                                    <div className="col-12 col-xl-5 col-xxl-6">
+                                        <div className="d-grid gap-3 h-100">
+                                            <CardSection
+                                                title="Contact information"
+                                                onEdit={() => handleStartEdit("contact")}
+                                            >
+                                                <div className="row g-4">
+                                                    <div className="col-12 col-md-6 col-xl-12">
+                                                        <InfoItem label="Contact number" value={form.contact} />
+                                                    </div>
+
+                                                    <div className="col-12 col-md-6 col-xl-12">
+                                                        <InfoItem label="Email" value={form.email} />
+                                                    </div>
+                                                </div>
+                                            </CardSection>
+
+                                            <CardSection title="Account information">
+                                                <div className="row g-4">
+                                                    <div className="col-12 col-md-6 col-xl-6">
+                                                        <InfoItem label="Department" value={departmentName} />
+                                                    </div>
+
+                                                    <div className="col-12 col-md-6 col-xl-6">
+                                                        <InfoItem label="Role" value={role} />
+                                                    </div>
+
+                                                    <div className="col-12 col-md-6 col-xl-6">
+                                                        <InfoItem label="Employee ID" value={staticEmployeeId} />
+                                                    </div>
+
+                                                    <div className="col-12 col-md-6 col-xl-6">
+                                                        <InfoItem label="Department ID" value={staticDepartmentId} />
+                                                    </div>
+                                                </div>
+                                            </CardSection>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
                         ) : (
-                            <form onSubmit={handleSubmit} className="section-edit-form">
-                                <div className="editor-panel">
-                                    <div className="editor-header">
-                                        <div>
-                                            <h5>
+                            <form onSubmit={handleSubmit}>
+                                <div
+                                    className="card border shadow-sm bg-body-tertiary"
+                                    style={{ borderRadius: "24px" }}
+                                >
+                                    <div className="card-body p-4 p-xl-4">
+                                        <div className="mb-4">
+                                            <h5
+                                                className="mb-1 fw-bold text-body"
+                                                style={{ fontSize: "22px" }}
+                                            >
                                                 {activeSection === "contact"
-                                                    ? "Contact Information"
-                                                    : "Personal Information"}
+                                                    ? "Contact information"
+                                                    : "Personal information"}
                                             </h5>
-                                            <p>
+                                            <p
+                                                className="mb-0 text-body-secondary"
+                                                style={{ fontSize: "15px" }}
+                                            >
                                                 {activeSection === "contact"
                                                     ? "Edit your contact details"
-                                                    : "Edit your personal informations"}
+                                                    : "Edit your personal information"}
                                             </p>
                                         </div>
-                                    </div>
 
-                                    {activeSection === "personal" ? (
-                                        <>
-                                            <div className="editor-media-row">
-                                                <img
-                                                    src={avatarSrc}
-                                                    alt="Profile preview"
-                                                    className="editor-avatar"
-                                                />
+                                        {activeSection === "personal" ? (
+                                            <>
+                                                <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4 pb-2">
+                                                    <Avatar
+                                                        src={previewUrl}
+                                                        name={displayName}
+                                                        size={108}
+                                                    />
 
-                                                <div className="editor-avatar-actions">
-                                                    <label className="editor-upload-btn">
-                                                        Upload An Image
+                                                    <div className="d-flex flex-column flex-sm-row gap-2 flex-wrap">
                                                         <input
+                                                            ref={fileInputRef}
                                                             type="file"
                                                             accept="image/png,image/jpeg,image/webp"
-                                                            hidden
+                                                            className="d-none"
                                                             onChange={handleImageChange}
                                                         />
-                                                    </label>
 
-                                                    <button
-                                                        type="button"
-                                                        className="editor-trash-btn"
-                                                        onClick={handleRemoveImage}
-                                                        aria-label="Remove image"
-                                                    >
-                                                        <i className="bi bi-trash3-fill"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-dark fw-bold px-4"
+                                                            style={{
+                                                                minHeight: "46px",
+                                                                borderRadius: "16px"
+                                                            }}
+                                                            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                                                        >
+                                                            Upload an image
+                                                        </button>
 
-                                            <div className="editor-divider"></div>
-
-                                            <div className="editor-grid">
-                                                <div className="editor-field editor-field-full">
-                                                    <label className="editor-label">
-                                                        Full name <span className="required">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        className="editor-input"
-                                                        name="full_name"
-                                                        value={form.full_name}
-                                                        onChange={handleChange}
-                                                        required
-                                                    />
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-outline-danger"
+                                                            style={{
+                                                                minHeight: "46px",
+                                                                borderRadius: "16px"
+                                                            }}
+                                                            onClick={handleRemoveImage}
+                                                        >
+                                                            <i className="bi bi-trash3-fill me-2"></i>
+                                                            Remove
+                                                        </button>
+                                                    </div>
                                                 </div>
 
-                                                <div className="editor-field">
-                                                    <label className="editor-label">Gender</label>
-                                                    <input
-                                                        type="text"
-                                                        className="editor-input editor-input-static"
-                                                        value={staticGender}
-                                                        readOnly
-                                                        disabled
-                                                    />
+                                                <div className="border-top my-4"></div>
+
+                                                <div className="row g-4">
+                                                    <div className="col-12">
+                                                        <label className="form-label fw-semibold text-body">
+                                                            Full name <span className="text-danger">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-control"
+                                                            name="full_name"
+                                                            value={form.full_name}
+                                                            onChange={handleChange}
+                                                            required
+                                                            style={{
+                                                                minHeight: "58px",
+                                                                borderRadius: "16px",
+                                                                paddingInline: "18px",
+                                                                fontSize: "16px"
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    <div className="col-12 col-md-6">
+                                                        <label className="form-label fw-semibold text-body">Gender</label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-control"
+                                                            value={staticGender}
+                                                            readOnly
+                                                            disabled
+                                                            style={{
+                                                                minHeight: "58px",
+                                                                borderRadius: "16px",
+                                                                paddingInline: "18px",
+                                                                fontSize: "16px"
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    <div className="col-12 col-md-6">
+                                                        <label className="form-label fw-semibold text-body">Date of birth</label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-control"
+                                                            value={staticDateOfBirth}
+                                                            readOnly
+                                                            disabled
+                                                            style={{
+                                                                minHeight: "58px",
+                                                                borderRadius: "16px",
+                                                                paddingInline: "18px",
+                                                                fontSize: "16px"
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    <div className="col-12">
+                                                        <label className="form-label fw-semibold text-body">Address</label>
+                                                        <textarea
+                                                            className="form-control"
+                                                            name="address"
+                                                            rows="4"
+                                                            value={form.address}
+                                                            onChange={handleChange}
+                                                            placeholder="Enter address"
+                                                            style={{
+                                                                minHeight: "132px",
+                                                                borderRadius: "16px",
+                                                                padding: "16px 18px",
+                                                                fontSize: "16px"
+                                                            }}
+                                                        ></textarea>
+                                                    </div>
                                                 </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="border-top my-4"></div>
 
-                                                <div className="editor-field">
-                                                    <label className="editor-label">Date of birth</label>
-                                                    <input
-                                                        type="text"
-                                                        className="editor-input editor-input-static"
-                                                        value={staticDateOfBirth}
-                                                        readOnly
-                                                        disabled
-                                                    />
+                                                <div className="row g-4">
+                                                    <div className="col-12 col-md-6">
+                                                        <label className="form-label fw-semibold text-body">
+                                                            Email <span className="text-danger">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="email"
+                                                            className="form-control"
+                                                            name="email"
+                                                            value={form.email}
+                                                            onChange={handleChange}
+                                                            required
+                                                            style={{
+                                                                minHeight: "58px",
+                                                                borderRadius: "16px",
+                                                                paddingInline: "18px",
+                                                                fontSize: "16px"
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    <div className="col-12 col-md-6">
+                                                        <label className="form-label fw-semibold text-body">
+                                                            Contact number <span className="text-danger">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-control"
+                                                            name="contact"
+                                                            value={form.contact}
+                                                            onChange={handleChange}
+                                                            placeholder="Enter contact number"
+                                                            style={{
+                                                                minHeight: "58px",
+                                                                borderRadius: "16px",
+                                                                paddingInline: "18px",
+                                                                fontSize: "16px"
+                                                            }}
+                                                        />
+                                                    </div>
                                                 </div>
+                                            </>
+                                        )}
 
-                                                <div className="editor-field editor-field-full">
-                                                    <label className="editor-label">Address</label>
-                                                    <textarea
-                                                        className="editor-textarea"
-                                                        name="address"
-                                                        rows="4"
-                                                        value={form.address}
-                                                        onChange={handleChange}
-                                                        placeholder="Enter address"
-                                                    ></textarea>
-                                                </div>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="editor-divider"></div>
+                                        <div className="d-flex flex-column-reverse flex-sm-row justify-content-end align-items-stretch align-items-sm-center gap-2 mt-4 pt-4 border-top">
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline-secondary fw-semibold"
+                                                style={{
+                                                    minHeight: "46px",
+                                                    borderRadius: "12px",
+                                                    paddingInline: "16px"
+                                                }}
+                                                onClick={handleCancelEdit}
+                                            >
+                                                Cancel
+                                            </button>
 
-                                            <div className="editor-grid">
-                                                <div className="editor-field">
-                                                    <label className="editor-label">
-                                                        Email <span className="required">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="email"
-                                                        className="editor-input"
-                                                        name="email"
-                                                        value={form.email}
-                                                        onChange={handleChange}
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div className="editor-field">
-                                                    <label className="editor-label">
-                                                        Contact number <span className="required">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        className="editor-input"
-                                                        name="contact"
-                                                        value={form.contact}
-                                                        onChange={handleChange}
-                                                        placeholder="Enter contact number"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    <div className="editor-actions">
-                                        <button
-                                            type="button"
-                                            className="btn account-btn-soft"
-                                            onClick={handleCancelEdit}
-                                        >
-                                            Cancel
-                                        </button>
-
-                                        <button
-                                            type="submit"
-                                            className="btn account-save-btn"
-                                            disabled={saving}
-                                        >
-                                            {saving ? "Saving..." : "Save changes"}
-                                        </button>
+                                            <button
+                                                type="submit"
+                                                className="btn btn-dark fw-bold"
+                                                style={{
+                                                    minHeight: "46px",
+                                                    minWidth: "140px",
+                                                    borderRadius: "12px",
+                                                    paddingInline: "20px"
+                                                }}
+                                                disabled={saving}
+                                            >
+                                                {saving ? "Saving..." : "Save changes"}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </form>
                         )}
+                    </div>
                 </div>
             </div>
         </>
     );
 }
 
-createRoot(document.getElementById("root")).render(<ProfilePage />);
+const profileRoot = document.getElementById("root");
+
+if (profileRoot) {
+    createRoot(profileRoot).render(<ProfilePage />);
+}

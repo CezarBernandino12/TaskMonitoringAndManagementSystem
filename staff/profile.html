@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="css/sidebar.css">
     <link rel="stylesheet" href="css/topbar.css">
     <link rel="stylesheet" href="css/app-shell.css">
-    <link rel="stylesheet" href="css/profile.css">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,16 +23,29 @@
 
     <script>
         (function () {
+            const root = document.documentElement;
+
             if (localStorage.getItem("sidebar-collapsed") === "true") {
-                document.documentElement.classList.add("sidebar-collapsed-init");
+                root.classList.add("sidebar-collapsed-init");
             }
 
             const theme = localStorage.getItem("dashboard-theme") || "light";
-            document.documentElement.setAttribute("data-theme", theme);
+            root.setAttribute("data-theme", theme);
+            root.setAttribute("data-bs-theme", theme);
+
+            const syncBootstrapTheme = () => {
+                root.setAttribute("data-bs-theme", root.getAttribute("data-theme") || "light");
+            };
+
+            new MutationObserver(syncBootstrapTheme).observe(root, {
+                attributes: true,
+                attributeFilter: ["data-theme"]
+            });
         })();
     </script>
 </head>
-<body>
+
+<body class="bg-body">
     <div class="app-shell">
         <header class="app-topbar">
             <div id="topbar-root"></div>
@@ -44,7 +56,7 @@
                 <div id="sidebar-root"></div>
             </aside>
 
-            <main class="app-main-col profile-main">
+            <main class="app-main-col">
                 <div id="react-modal-root"></div>
                 <div id="root"></div>
             </main>
@@ -54,10 +66,10 @@
     <script type="text/babel" src="js/sidebar.jsx"></script>
     <script type="text/babel" src="js/topbar.jsx"></script>
     <script
-    type="text/babel"
-    data-type="module"
-    data-presets="react"
-    src="js/profile.jsx"
-></script>
+        type="text/babel"
+        data-type="module"
+        data-presets="react"
+        src="js/profile.jsx"
+    ></script>
 </body>
 </html>

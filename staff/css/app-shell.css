@@ -3,8 +3,31 @@
     --shell-gap: 12px;
     --sidebar-expanded-w: 250px;
     --sidebar-collapsed-w: 108px;
+    --sileo-width: 420px;
+    --sileo-height: 48px;
 }
 
+
+[data-sileo-toast="true"] {
+    z-index: 4000 !important;
+}
+
+[data-sileo-toast="true"] {
+    pointer-events: auto;
+}
+
+.app-topbar {
+    z-index: 1200;
+    isolation: isolate;
+}
+
+.app-topbar .topbar {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-card) !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
 html, body {
     height: 100%;
     margin: 0;
