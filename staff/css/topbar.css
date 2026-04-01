@@ -1,45 +1,29 @@
-/* ============================================================
-   topbar.css  –  Top Bar (Navbar) + Full Dark Mode
-   Dark mode: html[data-theme="dark"]
-   ============================================================ */
-
-/* ── 1. CSS VARIABLES ────────────────────────────────────── */
 :root {
     --bg-page:          #f4f4f6;
     --bg-card:          #ffffff;
     --bg-input:         #f4f5f7;
     --bg-muted:         #f0f0f2;
-
     --border:           #ececec;
     --border-strong:    #d8d8d8;
-
     --text-primary:     #111827;
     --text-secondary:   #4b5563;
     --text-muted:       #9ca3af;
-
-    /* topbar — navbar style */
     --topbar-bg:        #ffffff;
     --topbar-border:    #ececec;
     --topbar-shadow:    0 1px 0 rgba(0,0,0,0.07);
-    --topbar-height:    62px;
-
+    --topbar-height:    70px;
     --accent-soft:      #f1f1f1;
     --danger:           #e5483a;
     --danger-soft:      #fff1ef;
-
     --track-bg:         #e2e4e9;
     --track-thumb:      #ffffff;
     --track-thumb-shadow: 0 1px 4px rgba(0,0,0,0.18);
-
     --notif-green-bg:   #ecfdf5;  --notif-green-fg:   #059669;
     --notif-blue-bg:    #eff6ff;  --notif-blue-fg:    #2563eb;
     --notif-purple-bg:  #f5f3ff;  --notif-purple-fg:  #7c3aed;
     --notif-amber-bg:   #fffbeb;  --notif-amber-fg:   #d97706;
-
     --avatar-bg:        #f7c4d4;
     --avatar-fg:        #222;
-
-    /* sidebar tokens */
     --sidebar-bg:            #ffffff;
     --sidebar-border:        #ececec;
     --sidebar-link-hover-bg: #f3f3f3;
@@ -102,23 +86,20 @@
     --sidebar-toggle-border: rgba(255,255,255,0.08);
 }
 
-/* ── 3. PAGE BASE ────────────────────────────────────────── */
 html, body {
     background-color: var(--bg-page);
     color: var(--text-primary);
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ── 4. TOPBAR — NAVBAR STYLE ────────────────────────────── */
 #dashboard-header-root {
-    /* stretch across the full main column, no gap above */
-    margin: -16px -12px 24px;   /* cancel container padding, reapply bottom space */
+    margin: -16px -12px 24px;  
 }
 
 .topbar {
     display: flex;
     align-items: center;
-    justify-content: flex-end;   /* controls pinned right; no title */
+    justify-content: flex-end; 
     height: var(--topbar-height);
     padding: 0 24px;
     background: var(--topbar-bg);
@@ -127,7 +108,6 @@ html, body {
     position: relative;
     z-index: 20;
     transition: background var(--transition), border-color var(--transition);
-    /* rounded top-right corner to match the card feel */
     border-radius: 0 20px 0 0;
 }
 
