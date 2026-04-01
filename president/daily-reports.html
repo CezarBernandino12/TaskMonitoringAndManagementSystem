@@ -288,7 +288,6 @@ function EmployeeTaskModal({ emp, onClose }) {
                                     <th>Status</th>
                                     <th>Priority</th>
                                     <th>Deadline</th>
-                                    <th>Progress</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -344,16 +343,7 @@ function EmployeeTaskModal({ emp, onClose }) {
                                                 {deadlineLabel}
                                                 {deadlineSub}
                                             </td>
-                                            <td style={{ minWidth: 100 }}>
-                                                <div className="progress" style={{ height: 16 }}>
-                                                    <div
-                                                        className="progress-bar bg-success"
-                                                        style={{ width: `${task.progress ?? 0}%` }}
-                                                    >
-                                                        {task.progress ?? 0}%
-                                                    </div>
-                                                </div>
-                                            </td>
+                                          
                                         </tr>
                                     );
                                 })}
@@ -454,6 +444,11 @@ function DailyReportPage() {
         });
 
         if (barChart.current) barChart.current.destroy();
+        // Calculate a fixed max for the x-axis (e.g., 10 or the highest total + buffer)
+        const maxTasks = Math.max(
+            10,
+            ...employees.map(e => e.completed + e.ongoing + e.overdue)
+        );
         barChart.current = new Chart(barRef.current, {
             type: 'bar',
             data: {
@@ -466,6 +461,7 @@ function DailyReportPage() {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 plugins: {
                     legend: { position: 'top' },
@@ -475,7 +471,7 @@ function DailyReportPage() {
                     }
                 },
                 scales: {
-                    x: { stacked: true, beginAtZero: true },
+                    x: { stacked: true, beginAtZero: true, max: maxTasks },
                     y: { stacked: true }
                 }
             }
@@ -496,7 +492,7 @@ function DailyReportPage() {
                 <main className="col-md-10 ms-sm-auto px-4">
                     <h2 className="mb-4">Daily Task Report</h2>
 
-                    <div className="alert alert-info" role="alert">
+                    <div className="alert alert-info" role="alert" hidden>
                         <strong>Overview:</strong> This dashboard displays a real-time snapshot of all
                         staff task activity for <strong>today</strong>.<br />
                         <ul className="mb-0 mt-1">
@@ -582,8 +578,8 @@ function DailyReportPage() {
                                         <small className="text-muted">Click a row to filter</small>
                                     )}
                                 </div>
-                                <div style={{ height: '500px' }}>
-                                    <canvas ref={barRef} height="500"></canvas>
+                                <div style={{ width: '100%' }}>
+                                    <canvas ref={barRef} style={{ width: '100%', minHeight: 300 }}></canvas>
                                 </div>
                             </div>
                         </div>
