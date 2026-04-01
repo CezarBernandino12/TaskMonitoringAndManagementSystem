@@ -5,6 +5,19 @@
 
 const TOPBAR_USER_API = "php/sidebar.php";
 const THEME_KEY       = "dashboard-theme";
+const GREETING_REFRESH_MS = 60 * 1000;
+
+function getGreetingByTime(date = new Date()) {
+    const hour = date.getHours();
+
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+}
+
+function getDisplayName(name) {
+    return name && name.trim() ? name.trim() : "User";
+}
 
 function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
@@ -140,6 +153,7 @@ function UserChip({ user, userLoaded }) {
 
 function TopBar() {
     const [dark, setDark] = React.useState(() => getStoredTheme() === "dark");
+    const [now, setNow] = React.useState(() => new Date());
     const [user, setUser] = React.useState({
         name: "",
         email: "",
@@ -154,6 +168,14 @@ function TopBar() {
     React.useEffect(() => {
         applyTheme(dark ? "dark" : "light");
     }, [dark]);
+
+    React.useEffect(() => {
+        const timer = window.setInterval(() => {
+            setNow(new Date());
+        }, GREETING_REFRESH_MS);
+
+        return () => window.clearInterval(timer);
+    }, []);
 
     React.useEffect(() => {
         let active = true;
@@ -213,23 +235,25 @@ function TopBar() {
         };
     }, []);
 
-return (
-    <header className="topbar">
-        <div className="topbar-left">
-            <div className="topbar-greeting">
-                <h1 className="topbar-greeting-title">Good Afternoon, John Paul</h1>
-            </div>
-        </div>
+    const greetingText = `${getGreetingByTime(now)}, ${getDisplayName(user.name)}`;
 
-        <div className="topbar-right">
-            <DarkModeToggle dark={dark} onToggle={() => setDark(v => !v)} />
-            <div className="topbar-sep"></div>
-            <NotificationBell />
-            <div className="topbar-sep"></div>
-            <UserChip user={user} userLoaded={userLoaded} />
-        </div>
-    </header>
-);
+    return (
+        <header className="topbar">
+            <div className="topbar-left">
+                <div className="topbar-greeting">
+                    <h1 className="topbar-greeting-title">{greetingText}</h1>
+                </div>
+            </div>
+
+            <div className="topbar-right">
+                <DarkModeToggle dark={dark} onToggle={() => setDark(v => !v)} />
+                <div className="topbar-sep"></div>
+                <NotificationBell />
+                <div className="topbar-sep"></div>
+                <UserChip user={user} userLoaded={userLoaded} />
+            </div>
+        </header>
+    );
 }
 
 const topbarRoot = document.getElementById("topbar-root");
