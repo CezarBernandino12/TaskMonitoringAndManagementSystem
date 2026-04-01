@@ -1052,3 +1052,155 @@ body {
         font-size: 24px;
     }
 }
+
+/* =========================
+   DARK MODE
+   ========================= */
+[data-theme="dark"] body {
+    background: var(--bg-page);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .account-card,
+[data-theme="dark"] .staff-hero-card,
+[data-theme="dark"] .staff-info-card,
+[data-theme="dark"] .editor-panel {
+    background: var(--bg-card);
+    border-color: var(--border);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .account-top h4,
+[data-theme="dark"] .account-section-header h6,
+[data-theme="dark"] .profile-picture-title,
+[data-theme="dark"] .staff-hero-identity h5,
+[data-theme="dark"] .staff-info-card-head h6,
+[data-theme="dark"] .staff-meta-item strong,
+[data-theme="dark"] .staff-info-item strong,
+[data-theme="dark"] .editor-header h5 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .account-top p,
+[data-theme="dark"] .account-section-header p,
+[data-theme="dark"] .profile-picture-subtitle,
+[data-theme="dark"] .staff-hero-identity p,
+[data-theme="dark"] .staff-meta-item span,
+[data-theme="dark"] .staff-info-item span,
+[data-theme="dark"] .editor-header p,
+[data-theme="dark"] .editor-label,
+[data-theme="dark"] .form-label {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .account-divider,
+[data-theme="dark"] .staff-hero-divider,
+[data-theme="dark"] .staff-info-divider,
+[data-theme="dark"] .editor-divider,
+[data-theme="dark"] .editor-actions {
+    border-color: var(--border);
+    background: var(--border);
+}
+
+[data-theme="dark"] .profile-picture-avatar,
+[data-theme="dark"] .staff-hero-avatar,
+[data-theme="dark"] .editor-avatar {
+    border-color: var(--border);
+    background: var(--bg-input);
+}
+
+[data-theme="dark"] .edit-note {
+    background: var(--bg-input);
+    border-color: var(--border);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .account-btn-soft,
+[data-theme="dark"] .editor-trash-btn {
+    background: var(--bg-card);
+    border-color: var(--border);
+    color: var(--text-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="dark"] .account-btn-soft:hover,
+[data-theme="dark"] .editor-trash-btn:hover,
+[data-theme="dark"] .staff-card-edit:hover {
+    background: var(--bg-input);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .account-edit-btn,
+[data-theme="dark"] .account-save-btn,
+[data-theme="dark"] .editor-upload-btn {
+    background: var(--text-primary);
+    color: var(--bg-card);
+}
+
+[data-theme="dark"] .account-edit-btn:hover,
+[data-theme="dark"] .account-save-btn:hover,
+[data-theme="dark"] .account-edit-btn:focus,
+[data-theme="dark"] .account-save-btn:focus,
+[data-theme="dark"] .editor-upload-btn:hover {
+    background: #ffffff;
+    color: #111827;
+}
+
+[data-theme="dark"] .staff-card-edit {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .staff-hero-identity p span:first-child {
+    color: #67e8f9;
+}
+
+[data-theme="dark"] .staff-hero-dot {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .account-input,
+[data-theme="dark"] .account-textarea,
+[data-theme="dark"] .editor-input,
+[data-theme="dark"] .editor-textarea {
+    background: var(--bg-input);
+    border-color: var(--border);
+    color: var(--text-primary);
+    box-shadow: none;
+}
+
+[data-theme="dark"] .account-input::placeholder,
+[data-theme="dark"] .account-textarea::placeholder,
+[data-theme="dark"] .editor-input::placeholder,
+[data-theme="dark"] .editor-textarea::placeholder {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .account-input:focus,
+[data-theme="dark"] .account-textarea:focus,
+[data-theme="dark"] .editor-input:focus,
+[data-theme="dark"] .editor-textarea:focus {
+    border-color: var(--border-strong);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .input-icon-left {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .editor-input-static {
+    background: var(--bg-muted) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .account-alert.error,
+[data-theme="dark"] .account-error {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.22);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .account-loading {
+    color: var(--text-secondary);
+}

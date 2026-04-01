@@ -1,0 +1,82 @@
+:root {
+    --shell-edge: 18px;
+    --shell-gap: 12px;
+    --sidebar-expanded-w: 250px;
+    --sidebar-collapsed-w: 108px;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+.app-shell {
+    min-height: 100vh;
+    background: var(--bg-page, #f4f4f6);
+}
+
+.app-topbar {
+    position: fixed;
+    top: var(--shell-edge);
+    left: calc(var(--shell-edge) + var(--sidebar-expanded-w) + var(--shell-gap));
+    right: var(--shell-edge);
+    z-index: 260;
+    width: auto;
+}
+
+.app-body {
+    position: relative;
+    min-height: 100vh;
+}
+
+.app-sidebar-col {
+    position: fixed;
+    top: var(--shell-edge);
+    left: var(--shell-edge);
+    z-index: 300;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.app-main-col {
+    min-width: 0;
+    padding:
+        calc(var(--shell-edge) + var(--topbar-height, 78px) + 18px)
+        var(--shell-edge)
+        24px
+        calc(var(--shell-edge) + var(--sidebar-expanded-w) + var(--shell-gap));
+}
+
+body:has(.dashboard-sidebar.collapsed) .app-topbar {
+    left: calc(var(--shell-edge) + var(--sidebar-collapsed-w) + var(--shell-gap));
+}
+
+body:has(.dashboard-sidebar.collapsed) .app-main-col {
+    padding-left: calc(var(--shell-edge) + var(--sidebar-collapsed-w) + var(--shell-gap));
+}
+
+@media (max-width: 767.98px) {
+    .app-topbar {
+        position: sticky;
+        top: 0;
+        left: auto;
+        right: auto;
+        width: 100%;
+        z-index: 100;
+    }
+
+    .app-sidebar-col {
+        position: static;
+        top: auto;
+        left: auto;
+        z-index: auto;
+    }
+
+    .app-main-col {
+        padding: calc(var(--topbar-height, 78px) + 16px) 16px 16px;
+    }
+}
