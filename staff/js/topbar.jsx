@@ -147,53 +147,9 @@ function UserChip({ user, userLoaded }) {
                     <span className="topbar-online-dot"></span>
                 </div>
                 <div className="topbar-user-info">
-                    <span className="topbar-user-name">{userLoaded ? name : ""}</span>
                     <span className="topbar-user-email">{userLoaded ? email : ""}</span>
                 </div>
-                <i className={`bi bi-chevron-down topbar-user-caret ${open ? "open" : ""}`}></i>
             </button>
-
-            {open && (
-                <div ref={menuRef} className="topbar-user-menu" role="menu">
-                    <div className="tum-header">
-                        <div className="tum-avatar">
-                            {hasImage
-                                ? <img src={user.profile_image_url} alt={name} />
-                                : <span>{initials}</span>
-                            }
-                        </div>
-                        <div className="tum-info">
-                            <div className="tum-name">{name}</div>
-                            <div className="tum-email">{email}</div>
-                            {role && <div className="tum-role">{role}</div>}
-                        </div>
-                    </div>
-                    <div className="tum-divider"></div>
-                    <a href="profile.html" className="tum-item" role="menuitem">
-                        <i className="bi bi-person-circle"></i>
-                        <span>My Profile</span>
-                    </a>
-                    <a href="profile.html" className="tum-item" role="menuitem">
-                        <i className="bi bi-gear"></i>
-                        <span>Account Settings</span>
-                    </a>
-                    <div className="tum-divider"></div>
-                    <a
-                        href="../auth/login.html"
-                        className="tum-item tum-logout"
-                        role="menuitem"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            const btn = document.getElementById("openReactModalBtn");
-                            if (btn) btn.click();
-                            else window.location.href = "../auth/login.html";
-                        }}
-                    >
-                        <i className="bi bi-box-arrow-right"></i>
-                        <span>Log out</span>
-                    </a>
-                </div>
-            )}
         </div>
     );
 }

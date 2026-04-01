@@ -339,8 +339,7 @@ html, body {
 }
 
 .topbar-user-info { display: flex; flex-direction: column; min-width: 0; }
-.topbar-user-name  { font-size: 12px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; transition: color var(--transition); }
-.topbar-user-email { font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; transition: color var(--transition); }
+.topbar-user-email{ font-size: 11px; font-weight: 400; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; transition: color var(--transition); }
 
 .topbar-user-caret { font-size: 10px; color: var(--text-muted); flex-shrink: 0; margin-left: 2px; transition: transform 0.22s ease, color var(--transition); }
 .topbar-user-caret.open { transform: rotate(180deg); }
@@ -349,7 +348,6 @@ html, body {
 .topbar-user-menu {
     position: absolute; top: calc(100% + 8px); right: 0;
     width: 250px;
-    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 18px;
     box-shadow: 0 16px 44px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
