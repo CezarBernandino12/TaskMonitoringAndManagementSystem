@@ -22,7 +22,7 @@
     min-width: 250px;
     transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
     overflow: visible;
-    z-index: 5;
+    z-index: 350;
 }
 
 .dashboard-sidebar.collapsed {

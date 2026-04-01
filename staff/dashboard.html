@@ -26,129 +26,103 @@
         })();
     </script>
 
-    <style>
-        /* ── Layout shell ───────────────────────────────────────── */
-        html, body {
-            height: 100%;
-            margin: 0;
-        }
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
 
-        .app-shell {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+    body {
+        overflow-x: hidden;
+    }
 
-        /* ── Topbar: full-width sticky row ──────────────────────── */
-        .app-topbar {
-            position: sticky;
-            top: 0;
-            z-index: 200;
-            width: 100%;
-            /* Blend with sidebar's white card feel */
-            background: var(--topbar-bg, #1c1008);
-            border-bottom: 1px solid var(--topbar-border, rgba(255,255,255,0.08));
-        }
+    .app-shell {
+        min-height: 100vh;
+        background: var(--bg-page, #f4f4f6);
+    }
 
-        /* ── Body row: sidebar + content side by side ───────────── */
-        .app-body {
-            display: flex;
-            flex: 1;
-            min-height: 0;
-            gap: 0;
-        }
+    .app-topbar {
+        position: sticky;
+        top: 0;
+        left: 0;
+        z-index: 100;
+        width: 100%;
+    }
 
-        /* ── Sidebar column ─────────────────────────────────────── */
+    .app-body {
+        position: relative;
+        min-height: calc(100vh - var(--topbar-height, 70px));
+    }
+
+    /* sidebar floats over the topbar */
+    .app-sidebar-col {
+        position: fixed;
+        top: 18px;
+        left: 18px;
+        z-index: 300;
+        padding: 0;
+        flex-shrink: 0;
+    }
+
+    /* main content leaves room for the floating sidebar */
+    .app-main-col {
+        min-width: 0;
+        padding: calc(var(--topbar-height, 70px) + 24px) 28px 24px 332px;
+    }
+
+    /* nicer spacing when sidebar is collapsed */
+    body:has(.dashboard-sidebar.collapsed) .app-main-col {
+        padding-left: 172px;
+    }
+
+    .topbar-profile-name,
+    .topbar-profile-chevron,
+    .topbar-dropdown-toggle i.bi-chevron-down,
+    [class*="topbar"][class*="caret"],
+    [class*="topbar"][class*="arrow"] {
+        display: none !important;
+    }
+
+    @media (max-width: 767.98px) {
         .app-sidebar-col {
-            /* Sticky within the scrollable body row */
-            position: sticky;
-            top: 0;                    /* sticks below the topbar */
-            align-self: flex-start;
-            height: calc(100vh - var(--topbar-height, 64px));
-            padding: 16px 0 16px 16px;
-            flex-shrink: 0;
+            position: static;
+            top: auto;
+            left: auto;
+            z-index: auto;
         }
 
-        /* ── Main content column ────────────────────────────────── */
         .app-main-col {
-            flex: 1;
-            min-width: 0;
-            padding: 24px 28px;
-            overflow-y: auto;
+            padding: calc(var(--topbar-height, 70px) + 16px) 16px 16px;
         }
-
-        /* ── Topbar profile: email-only, no dropdown ────────────── */
-        /*
-         * Add these overrides to topbar.css (or keep here).
-         * They hide the name row and the chevron/dropdown toggle.
-         */
-        .topbar-profile-name,
-        .topbar-profile-chevron,
-        .topbar-dropdown-toggle i.bi-chevron-down,
-        [class*="topbar"][class*="caret"],
-        [class*="topbar"][class*="arrow"] {
-            display: none !important;
-        }
-
-        /* Tighten the profile pill now that name is gone */
-        .topbar-profile,
-        .topbar-user-info,
-        [class*="topbar-user"],
-        [class*="topbar-profile"] {
-            cursor: default !important;
-            pointer-events: none;       /* disable any dropdown trigger */
-        }
-
-        /* ── Mobile: stack topbar → sidebar drawer → content ────── */
-        @media (max-width: 767.98px) {
-            .app-body {
-                flex-direction: column;
-            }
-
-            .app-sidebar-col {
-                position: static;
-                height: auto;
-                padding: 0;
-            }
-
-            .app-main-col {
-                padding: 16px;
-            }
-        }
-    </style>
+    }
+</style>
 </head>
 
 <body>
 <div class="app-shell">
 
-    <!-- ── Full-width topbar ── -->
     <header class="app-topbar">
         <div id="topbar-root"></div>
     </header>
 
-    <!-- ── Sidebar + content row ── -->
     <div class="app-body">
-
         <aside class="app-sidebar-col">
             <div id="sidebar-root" data-page="dashboard"></div>
         </aside>
 
         <main class="app-main-col">
-            <div id="dashboard-header-root"></div>
             <div id="react-modal-root"></div>
             <div id="root"></div>
 
-            <!-- Hidden trigger kept for ModalController compatibility -->
             <button
                 id="openReactModalBtn"
                 style="display:none;"
                 onclick="window.__triggerLogoutModal && window.__triggerLogoutModal()"
             ></button>
         </main>
+    </div>
 
-    </div><!-- /.app-body -->
-
-</div><!-- /.app-shell -->
+</div>
 
 <script type="text/babel" src="js/sidebar.jsx"></script>
 <script type="text/babel" src="js/topbar.jsx"></script>

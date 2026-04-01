@@ -125,12 +125,7 @@ h3, h5, h6 {
     color: var(--text-primary);
 }
 
-
-/* ============================================================
-   DARK MODE OVERRIDES
-   ============================================================ */
 [data-theme="dark"] {
-    /* dashboard-specific dark tokens */
     --dash-card-border:     rgba(255,184,77,0.18);
     --dash-summary-bg:      linear-gradient(135deg, rgba(255,184,77,0.12) 0%, rgba(255,160,0,0.18) 100%);
     --dash-summary-border:  rgba(255,184,77,0.25);

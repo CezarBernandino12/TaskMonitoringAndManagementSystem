@@ -1,6 +1,6 @@
 /* ============================================================
-   topbar.jsx  –  Dashboard Top Bar (Navbar Style)
-   Renders into #dashboard-header-root
+   topbar.jsx  –  Dashboard Top Bar
+   Renders into #topbar-root
    ============================================================ */
 
 const TOPBAR_USER_API = "php/sidebar.php";
@@ -15,7 +15,6 @@ function getStoredTheme() {
     return localStorage.getItem(THEME_KEY) || "light";
 }
 
-/* ── DarkModeToggle ──────────────────────────────────────── */
 function DarkModeToggle({ dark, onToggle }) {
     return (
         <button
@@ -34,30 +33,33 @@ function DarkModeToggle({ dark, onToggle }) {
     );
 }
 
-/* ── NotificationBell ────────────────────────────────────── */
 function NotificationBell() {
     const [open, setOpen] = React.useState(false);
-    const [count]         = React.useState(3);
-    const panelRef        = React.useRef(null);
-    const btnRef          = React.useRef(null);
+    const [count] = React.useState(3);
+    const panelRef = React.useRef(null);
+    const btnRef = React.useRef(null);
 
     React.useEffect(() => {
         if (!open) return;
+
         function handle(e) {
             if (
                 panelRef.current && !panelRef.current.contains(e.target) &&
-                btnRef.current   && !btnRef.current.contains(e.target)
-            ) setOpen(false);
+                btnRef.current && !btnRef.current.contains(e.target)
+            ) {
+                setOpen(false);
+            }
         }
+
         document.addEventListener("mousedown", handle);
         return () => document.removeEventListener("mousedown", handle);
     }, [open]);
 
     const notifications = [
-        { id: 1, icon: "bi-check2-circle",    iconColor: "notif-green",  title: "Task completed",   desc: "Q2 Report has been marked as done.",    time: "2 min ago",  unread: true  },
-        { id: 2, icon: "bi-calendar-event",    iconColor: "notif-blue",   title: "Meeting reminder", desc: "Team standup starts in 15 minutes.",     time: "14 min ago", unread: true  },
-        { id: 3, icon: "bi-person-plus",       iconColor: "notif-purple", title: "New team member",  desc: "Maria Santos joined your department.",   time: "1 hr ago",   unread: true  },
-        { id: 4, icon: "bi-file-earmark-text", iconColor: "notif-amber",  title: "Document shared",  desc: "Budget proposal was shared with you.",   time: "Yesterday",  unread: false },
+        { id: 1, icon: "bi-check2-circle",    iconColor: "notif-green",  title: "Task completed",   desc: "Q2 Report has been marked as done.",  time: "2 min ago",  unread: true  },
+        { id: 2, icon: "bi-calendar-event",   iconColor: "notif-blue",   title: "Meeting reminder", desc: "Team standup starts in 15 minutes.",   time: "14 min ago", unread: true  },
+        { id: 3, icon: "bi-person-plus",      iconColor: "notif-purple", title: "New team member",  desc: "Maria Santos joined your department.", time: "1 hr ago",   unread: true  },
+        { id: 4, icon: "bi-file-earmark-text",iconColor: "notif-amber",  title: "Document shared",  desc: "Budget proposal was shared with you.", time: "Yesterday",  unread: false },
     ];
 
     return (
@@ -79,6 +81,7 @@ function NotificationBell() {
                         <span className="notif-panel-title">Notifications</span>
                         {count > 0 && <span className="notif-panel-count">{count} new</span>}
                     </div>
+
                     <div className="notif-list">
                         {notifications.map(n => (
                             <div key={n.id} className={`notif-item ${n.unread ? "unread" : ""}`}>
@@ -94,6 +97,7 @@ function NotificationBell() {
                             </div>
                         ))}
                     </div>
+
                     <div className="notif-panel-footer">
                         <a href="#" className="notif-view-all">View all notifications</a>
                     </div>
@@ -103,42 +107,21 @@ function NotificationBell() {
     );
 }
 
-/* ── UserChip ────────────────────────────────────────────── */
 function UserChip({ user, userLoaded }) {
-    const [open,      setOpen]      = React.useState(false);
     const [imgFailed, setImgFailed] = React.useState(false);
-    const menuRef = React.useRef(null);
-    const chipRef = React.useRef(null);
-
-    React.useEffect(() => { setImgFailed(false); }, [user.profile_image_url]);
 
     React.useEffect(() => {
-        if (!open) return;
-        function handle(e) {
-            if (
-                menuRef.current && !menuRef.current.contains(e.target) &&
-                chipRef.current && !chipRef.current.contains(e.target)
-            ) setOpen(false);
-        }
-        document.addEventListener("mousedown", handle);
-        return () => document.removeEventListener("mousedown", handle);
-    }, [open]);
+        setImgFailed(false);
+    }, [user.profile_image_url]);
 
     const hasImage = user.profile_image_url && !imgFailed;
-    const initials = user.initials    || "U";
-    const name     = user.name        || "User";
-    const email    = user.email       || "";
-    const role     = user.role_label  || "";
+    const initials = user.initials || "U";
+    const name = user.name || "User";
+    const email = user.email || "";
 
     return (
-        <div className="topbar-user-wrap">
-            <button
-                ref={chipRef}
-                type="button"
-                className={`topbar-user-chip ${open ? "active" : ""}`}
-                onClick={() => setOpen(v => !v)}
-                aria-label="User menu"
-            >
+        <div className="topbar-user-wrap" aria-label="Current user">
+            <div className="topbar-user-chip">
                 <div className="topbar-user-avatar">
                     {hasImage
                         ? <img src={user.profile_image_url} alt={name} onError={() => setImgFailed(true)} />
@@ -146,45 +129,55 @@ function UserChip({ user, userLoaded }) {
                     }
                     <span className="topbar-online-dot"></span>
                 </div>
+
                 <div className="topbar-user-info">
                     <span className="topbar-user-email">{userLoaded ? email : ""}</span>
                 </div>
-            </button>
+            </div>
         </div>
     );
 }
 
-/* ── TopBar (no title, right-controls only) ─────────────── */
 function TopBar() {
-    const [dark, setDark]             = React.useState(() => getStoredTheme() === "dark");
-    const [user, setUser]             = React.useState({
-        name: "", email: "", role: "", role_label: "",
-        department_name: "", initials: "", profile_image_url: ""
+    const [dark, setDark] = React.useState(() => getStoredTheme() === "dark");
+    const [user, setUser] = React.useState({
+        name: "",
+        email: "",
+        role: "",
+        role_label: "",
+        department_name: "",
+        initials: "",
+        profile_image_url: ""
     });
     const [userLoaded, setUserLoaded] = React.useState(false);
 
-    React.useEffect(() => { applyTheme(dark ? "dark" : "light"); }, [dark]);
+    React.useEffect(() => {
+        applyTheme(dark ? "dark" : "light");
+    }, [dark]);
 
     React.useEffect(() => {
         let active = true;
 
         async function load() {
             try {
-                const res  = await fetch(TOPBAR_USER_API, {
+                const res = await fetch(TOPBAR_USER_API, {
                     credentials: "same-origin",
                     headers: { Accept: "application/json" }
                 });
+
                 const data = await res.json();
                 if (!active || !res.ok || data.error) return;
+
                 setUser({
-                    name:              data.name || "User",
-                    email:             data.email || "",
-                    role:              data.role || "",
-                    role_label:        data.role_label || "",
-                    department_name:   data.department_name || "",
-                    initials:          data.initials || "U",
+                    name: data.name || "User",
+                    email: data.email || "",
+                    role: data.role || "",
+                    role_label: data.role_label || "",
+                    department_name: data.department_name || "",
+                    initials: data.initials || "U",
                     profile_image_url: data.profile_image_url || "",
                 });
+
                 setUserLoaded(true);
             } catch (_) {
                 if (active) setUserLoaded(true);
@@ -193,21 +186,27 @@ function TopBar() {
 
         function onProfileUpdated(e) {
             const d = e.detail;
-            if (!d) { load(); return; }
+            if (!d) {
+                load();
+                return;
+            }
+
             setUser({
-                name:              d.name || "User",
-                email:             d.email || "",
-                role:              d.role || "",
-                role_label:        d.role_label || "",
-                department_name:   d.department_name || "",
-                initials:          d.initials || "U",
+                name: d.name || "User",
+                email: d.email || "",
+                role: d.role || "",
+                role_label: d.role_label || "",
+                department_name: d.department_name || "",
+                initials: d.initials || "U",
                 profile_image_url: d.profile_image_url || "",
             });
+
             setUserLoaded(true);
         }
 
         load();
         window.addEventListener("profile-updated", onProfileUpdated);
+
         return () => {
             active = false;
             window.removeEventListener("profile-updated", onProfileUpdated);
@@ -227,7 +226,7 @@ function TopBar() {
     );
 }
 
-const topbarRoot = document.getElementById("dashboard-header-root");
+const topbarRoot = document.getElementById("topbar-root");
 if (topbarRoot) {
     ReactDOM.createRoot(topbarRoot).render(<TopBar />);
 }
