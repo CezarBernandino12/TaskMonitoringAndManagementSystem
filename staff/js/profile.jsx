@@ -465,153 +465,163 @@ function ProfilePage() {
                                 </section>
                             </div>
                         </div>
-                    ) : (
-                        <form onSubmit={handleSubmit}>
-                            <div className="edit-note">
-                                {activeSection === "contact"
-                                    ? "You are editing the Contact information section only."
-                                    : "You are editing the Personal information section only."}
-                            </div>
-
-                            {activeSection === "personal" ? (
-                                <>
-                                    <div className="account-divider"></div>
-
-                                    <div className="profile-picture-row">
-                                        <div className="profile-picture-meta">
-                                            <img
-                                                src={avatarSrc}
-                                                alt="Profile preview"
-                                                className="profile-picture-avatar"
-                                            />
-
-                                            <div>
-                                                <div className="profile-picture-title">Profile picture</div>
-                                                <div className="profile-picture-subtitle">
-                                                    PNG, JPEG, WEBP under 15MB
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="profile-picture-actions">
-                                            <label className="btn btn-light account-btn-soft mb-0">
-                                                Upload new picture
-                                                <input
-                                                    type="file"
-                                                    accept="image/png,image/jpeg,image/webp"
-                                                    hidden
-                                                    onChange={handleImageChange}
-                                                />
-                                            </label>
-
-                                            <button
-                                                type="button"
-                                                className="btn btn-light account-btn-soft"
-                                                onClick={handleRemoveImage}
-                                            >
-                                                Delete
-                                            </button>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="section-edit-form">
+                                <div className="editor-panel">
+                                    <div className="editor-header">
+                                        <div>
+                                            <h5>
+                                                {activeSection === "contact"
+                                                    ? "Contact Information"
+                                                    : "Personal Information"}
+                                            </h5>
+                                            <p>
+                                                {activeSection === "contact"
+                                                    ? "Edit your contact details"
+                                                    : "Edit your personal informations"}
+                                            </p>
                                         </div>
                                     </div>
 
-                                    <div className="account-divider"></div>
-
-                                    <section className="account-section">
-                                        <SectionHeader
-                                            title="Personal information"
-                                            subtitle="Only editable personal details are shown here."
-                                        />
-
-                                        <div className="account-grid two-col">
-                                            <div className="account-field full-span">
-                                                <label className="form-label">Full name</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control account-input"
-                                                    name="full_name"
-                                                    value={form.full_name}
-                                                    onChange={handleChange}
-                                                    required
+                                    {activeSection === "personal" ? (
+                                        <>
+                                            <div className="editor-media-row">
+                                                <img
+                                                    src={avatarSrc}
+                                                    alt="Profile preview"
+                                                    className="editor-avatar"
                                                 />
+
+                                                <div className="editor-avatar-actions">
+                                                    <label className="editor-upload-btn">
+                                                        Upload An Image
+                                                        <input
+                                                            type="file"
+                                                            accept="image/png,image/jpeg,image/webp"
+                                                            hidden
+                                                            onChange={handleImageChange}
+                                                        />
+                                                    </label>
+
+                                                    <button
+                                                        type="button"
+                                                        className="editor-trash-btn"
+                                                        onClick={handleRemoveImage}
+                                                        aria-label="Remove image"
+                                                    >
+                                                        <i className="bi bi-trash3-fill"></i>
+                                                    </button>
+                                                </div>
                                             </div>
 
-                                            <div className="account-field full-span">
-                                                <label className="form-label">Address</label>
-                                                <textarea
-                                                    className="form-control account-input account-textarea"
-                                                    name="address"
-                                                    rows="4"
-                                                    value={form.address}
-                                                    onChange={handleChange}
-                                                    placeholder="Enter address"
-                                                ></textarea>
+                                            <div className="editor-divider"></div>
+
+                                            <div className="editor-grid">
+                                                <div className="editor-field editor-field-full">
+                                                    <label className="editor-label">
+                                                        Full name <span className="required">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        className="editor-input"
+                                                        name="full_name"
+                                                        value={form.full_name}
+                                                        onChange={handleChange}
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="editor-field">
+                                                    <label className="editor-label">Gender</label>
+                                                    <input
+                                                        type="text"
+                                                        className="editor-input editor-input-static"
+                                                        value={staticGender}
+                                                        readOnly
+                                                        disabled
+                                                    />
+                                                </div>
+
+                                                <div className="editor-field">
+                                                    <label className="editor-label">Date of birth</label>
+                                                    <input
+                                                        type="text"
+                                                        className="editor-input editor-input-static"
+                                                        value={staticDateOfBirth}
+                                                        readOnly
+                                                        disabled
+                                                    />
+                                                </div>
+
+                                                <div className="editor-field editor-field-full">
+                                                    <label className="editor-label">Address</label>
+                                                    <textarea
+                                                        className="editor-textarea"
+                                                        name="address"
+                                                        rows="4"
+                                                        value={form.address}
+                                                        onChange={handleChange}
+                                                        placeholder="Enter address"
+                                                    ></textarea>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </section>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="account-divider"></div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="editor-divider"></div>
 
-                                    <section className="account-section">
-                                        <SectionHeader
-                                            title="Contact information"
-                                            subtitle="Update your contact number and email here."
-                                        />
-
-                                        <div className="account-grid two-col">
-                                            <div className="account-field">
-                                                <label className="form-label">Contact number</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control account-input"
-                                                    name="contact"
-                                                    value={form.contact}
-                                                    onChange={handleChange}
-                                                    placeholder="Enter contact number"
-                                                />
-                                            </div>
-
-                                            <div className="account-field">
-                                                <label className="form-label">Email</label>
-                                                <div className="input-icon-shell">
-                                                    <span className="input-icon-left">
-                                                        <i className="bi bi-envelope"></i>
-                                                    </span>
+                                            <div className="editor-grid">
+                                                <div className="editor-field">
+                                                    <label className="editor-label">
+                                                        Email <span className="required">*</span>
+                                                    </label>
                                                     <input
                                                         type="email"
-                                                        className="form-control account-input with-left-icon"
+                                                        className="editor-input"
                                                         name="email"
                                                         value={form.email}
                                                         onChange={handleChange}
                                                         required
                                                     />
                                                 </div>
+
+                                                <div className="editor-field">
+                                                    <label className="editor-label">
+                                                        Contact number <span className="required">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        className="editor-input"
+                                                        name="contact"
+                                                        value={form.contact}
+                                                        onChange={handleChange}
+                                                        placeholder="Enter contact number"
+                                                    />
+                                                </div>
                                             </div>
-                                        </div>
-                                    </section>
-                                </>
-                            )}
+                                        </>
+                                    )}
 
-                            <div className="account-footer account-footer-between">
-                                <button
-                                    type="button"
-                                    className="btn btn-light account-btn-soft"
-                                    onClick={handleCancelEdit}
-                                >
-                                    Cancel
-                                </button>
+                                    <div className="editor-actions">
+                                        <button
+                                            type="button"
+                                            className="btn account-btn-soft"
+                                            onClick={handleCancelEdit}
+                                        >
+                                            Cancel
+                                        </button>
 
-                                <button
-                                    type="submit"
-                                    className="btn account-save-btn"
-                                    disabled={saving}
-                                >
-                                    {saving ? "Saving..." : "Save changes"}
-                                </button>
-                            </div>
-                        </form>
-                    )}
+                                        <button
+                                            type="submit"
+                                            className="btn account-save-btn"
+                                            disabled={saving}
+                                        >
+                                            {saving ? "Saving..." : "Save changes"}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        )}
                 </div>
             </div>
         </>
