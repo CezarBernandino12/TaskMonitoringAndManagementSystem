@@ -1,20 +1,17 @@
+const statusColorMap = {
+    'Ongoing': '#ffe066',
+    'Completed': '#b6e388',
+    'Overdue': '#ffb3b3',
+    'Other': '#ffe082',
+    'Extra': '#fff8e1'
+};
 
-
-        const statusColorMap = {
-        'Ongoing': '#ffe066',   
-        'Completed': '#b6e388', 
-        'Overdue': '#ffb3b3',  
-        'Other': '#ffe082',     
-        'Extra': '#fff8e1'      
-    };
-    
 function App() {
     const [tasks, setTasks] = React.useState([]);
 
-    // Load tasks from PHP
     const fetchTasks = async () => {
         try {
-            const response = await fetch("http://localhost/taskmanagement/staff/php/get_tasks.php");
+            const response = await fetch("php/get_tasks.php");
             const data = await response.json();
             setTasks(data);
         } catch (error) {
@@ -30,16 +27,12 @@ function App() {
         <>
             <TaskSummary tasks={tasks} />
             <DueSoon tasks={tasks} />
-
-    
-
             <TaskTable tasks={tasks} refreshTasks={fetchTasks} />
         </>
     );
 }
 
-
-function TaskTable({ tasks, refreshTasks }) { 
+function TaskTable({ tasks, refreshTasks }) {
     const [selectedTask, setSelectedTask] = React.useState(null);
     const [showDetailModal, setShowDetailModal] = React.useState(false);
 
@@ -75,17 +68,17 @@ function TaskTable({ tasks, refreshTasks }) {
                                 <td>{task.title}</td>
                                 <td>{formatDate(task.start_date)}</td>
                                 <td>{formatDate(task.deadline)}</td>
-                                    <td
-        style={{
-          backgroundColor: statusColorMap[task.status] || '#ffffff',
-          color: '#000',
-          textAlign: 'center',
-          padding: '4px 8px',
-          borderRadius: '4px'
-        }}
-      >
-        {task.status}
-      </td>
+                                <td
+                                    style={{
+                                        backgroundColor: statusColorMap[task.status] || '#ffffff',
+                                        color: '#000',
+                                        textAlign: 'center',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px'
+                                    }}
+                                >
+                                    {task.status}
+                                </td>
                                 <td>{task.priority}</td>
                             </tr>
                         ))
@@ -98,14 +91,13 @@ function TaskTable({ tasks, refreshTasks }) {
                     show={showDetailModal}
                     task={selectedTask}
                     onClose={() => setShowDetailModal(false)}
-                    refreshTasks={refreshTasks} 
+                    refreshTasks={refreshTasks}
                 />
             )}
         </>
     );
 }
 
-// Modal component
 function TaskDetailModal({ show, task, onClose, refreshTasks }) {
     const [status, setStatus] = React.useState(task.status);
 
@@ -115,19 +107,17 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
 
     if (!show || !task) return null;
 
-    // Only updates state locally
     const handleStatusChange = (e) => {
         setStatus(e.target.value);
     };
 
-    // Save status to backend
     const handleSave = async () => {
         try {
             const formData = new FormData();
             formData.append("task_id", task.id);
             formData.append("status", status);
 
-            const res = await fetch("http://localhost/taskmanagement/staff/php/update_task_status.php", {
+            const res = await fetch("php/update_task_status.php", {
                 method: "POST",
                 body: formData
             });
@@ -136,15 +126,13 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
             alert(result);
 
             onClose();
-            refreshTasks(); // refresh table without reload
-
+            refreshTasks();
         } catch (error) {
             alert("Failed to update task");
             console.error(error);
         }
     };
 
-    // Delete task
     const handleDelete = async () => {
         if (!confirm("Are you sure you want to delete this task?")) return;
 
@@ -152,7 +140,7 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
             const formData = new FormData();
             formData.append("task_id", task.id);
 
-            const res = await fetch("http://localhost/taskmanagement/staff/php/delete_task.php", {
+            const res = await fetch("php/delete_task.php", {
                 method: "POST",
                 body: formData
             });
@@ -161,8 +149,7 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
             alert(result);
 
             onClose();
-            refreshTasks(); // refresh table
-
+            refreshTasks();
         } catch (error) {
             alert("Failed to delete task");
             console.error(error);
@@ -177,7 +164,6 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
                         <h5 className="modal-title">Task Details</h5>
                         <button type="button" className="btn-close" onClick={onClose}></button>
                     </div>
-
                     <div className="modal-body">
                         <div className="mb-2"><strong>Title:</strong> {task.title}</div>
                         <div className="mb-2"><strong>Description:</strong> {task.description || "-"}</div>
@@ -192,19 +178,10 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
                             </select>
                         </div>
                     </div>
-
                     <div className="modal-footer">
-                        <button className="btn btn-danger" onClick={handleDelete}>
-                            Delete
-                        </button>
-
-                        <button className="btn btn-primary" onClick={handleSave}>
-                            Save
-                        </button>
-
-                        <button className="btn btn-secondary" onClick={onClose}>
-                            Close
-                        </button>
+                        <button className="btn btn-danger" onClick={handleDelete}>Delete</button>
+                        <button className="btn btn-primary" onClick={handleSave}>Save</button>
+                        <button className="btn btn-secondary" onClick={onClose}>Close</button>
                     </div>
                 </div>
             </div>
@@ -212,17 +189,11 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
     );
 }
 
-
-
 function TaskSummary({ tasks }) {
-
-    const total = tasks.length;
-
-    const ongoing = tasks.filter(task => task.status === "Ongoing").length;
-
-    const completed = tasks.filter(task => task.status === "Completed").length;
-
-    const overdue = tasks.filter(task => task.is_overdue).length;
+    const total     = tasks.length;
+    const ongoing   = tasks.filter(t => t.status === "Ongoing").length;
+    const completed = tasks.filter(t => t.status === "Completed").length;
+    const overdue   = tasks.filter(t => t.is_overdue).length;
 
     return (
         <div className="row mb-4">
@@ -255,22 +226,14 @@ function TaskSummary({ tasks }) {
 }
 
 function DueSoon({ tasks }) {
-
-    // Get "today" in Philippine time
     const today = new Date(
         new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
     );
 
-    // Filter tasks due today or tomorrow
     const dueSoonTasks = tasks.filter(task => {
         if (task.status.toLowerCase() === "completed") return false;
-
         const deadline = new Date(task.deadline + "T00:00:00");
-
-        const diffTime = deadline - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        // Only today or tomorrow
+        const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
         return diffDays === 0 || diffDays === 1;
     });
 
@@ -278,14 +241,11 @@ function DueSoon({ tasks }) {
         const todayPH = new Date(
             new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
         );
-
         const deadline = new Date(deadlineStr + "T00:00:00");
-
         const diffDays = Math.ceil((deadline - todayPH) / (1000 * 60 * 60 * 24));
-
         if (diffDays === 0) return "Due Today";
         if (diffDays === 1) return "Due Tomorrow";
-        return ""; // this should never appear
+        return "";
     };
 
     return (
@@ -316,28 +276,6 @@ function formatDate(dateStr) {
     });
 }
 
-function DashboardHeader() {
-    const [dept, setDept] = React.useState('');
-    const [loading, setLoading] = React.useState(true);
-
-    React.useEffect(() => {
-        fetch('php/get_department_name.php')
-            .then(res => res.json())
-            .then(data => {
-                if (data.department_name) setDept(data.department_name);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
-    }, []);
-
-    return (
-        <div className="d-flex justify-content-between align-items-center mb-4">
-            <h3>
-                {loading ? 'Loading...' : dept ? `${dept} - Staff Dashboard` : 'Staff Dashboard'}
-            </h3>
-        </div>
-    );
-}
-
-ReactDOM.createRoot(document.getElementById('dashboard-header-root')).render(<DashboardHeader />);
+// ── Mount ONLY the App into #root ───────────────────────────
+// TopBar (topbar.jsx) already owns #dashboard-header-root — do NOT render here.
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);

@@ -1,0 +1,277 @@
+/* ============================================================
+   topbar.jsx  –  Dashboard Top Bar (Navbar Style)
+   Renders into #dashboard-header-root
+   ============================================================ */
+
+const TOPBAR_USER_API = "php/sidebar.php";
+const THEME_KEY       = "dashboard-theme";
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(THEME_KEY, theme);
+}
+
+function getStoredTheme() {
+    return localStorage.getItem(THEME_KEY) || "light";
+}
+
+/* ── DarkModeToggle ──────────────────────────────────────── */
+function DarkModeToggle({ dark, onToggle }) {
+    return (
+        <button
+            type="button"
+            className={`topbar-icon-btn theme-toggle ${dark ? "is-dark" : ""}`}
+            onClick={onToggle}
+            aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+            title={dark ? "Light mode" : "Dark mode"}
+        >
+            <span className="theme-toggle-track">
+                <span className="theme-toggle-thumb">
+                    <i className={`bi ${dark ? "bi-moon-stars-fill" : "bi-sun-fill"}`}></i>
+                </span>
+            </span>
+        </button>
+    );
+}
+
+/* ── NotificationBell ────────────────────────────────────── */
+function NotificationBell() {
+    const [open, setOpen] = React.useState(false);
+    const [count]         = React.useState(3);
+    const panelRef        = React.useRef(null);
+    const btnRef          = React.useRef(null);
+
+    React.useEffect(() => {
+        if (!open) return;
+        function handle(e) {
+            if (
+                panelRef.current && !panelRef.current.contains(e.target) &&
+                btnRef.current   && !btnRef.current.contains(e.target)
+            ) setOpen(false);
+        }
+        document.addEventListener("mousedown", handle);
+        return () => document.removeEventListener("mousedown", handle);
+    }, [open]);
+
+    const notifications = [
+        { id: 1, icon: "bi-check2-circle",    iconColor: "notif-green",  title: "Task completed",   desc: "Q2 Report has been marked as done.",    time: "2 min ago",  unread: true  },
+        { id: 2, icon: "bi-calendar-event",    iconColor: "notif-blue",   title: "Meeting reminder", desc: "Team standup starts in 15 minutes.",     time: "14 min ago", unread: true  },
+        { id: 3, icon: "bi-person-plus",       iconColor: "notif-purple", title: "New team member",  desc: "Maria Santos joined your department.",   time: "1 hr ago",   unread: true  },
+        { id: 4, icon: "bi-file-earmark-text", iconColor: "notif-amber",  title: "Document shared",  desc: "Budget proposal was shared with you.",   time: "Yesterday",  unread: false },
+    ];
+
+    return (
+        <div className="topbar-notif-wrap">
+            <button
+                ref={btnRef}
+                type="button"
+                className={`topbar-icon-btn notif-btn ${open ? "active" : ""}`}
+                onClick={() => setOpen(v => !v)}
+                aria-label="Notifications"
+            >
+                <i className="bi bi-bell"></i>
+                {count > 0 && <span className="notif-badge">{count}</span>}
+            </button>
+
+            {open && (
+                <div ref={panelRef} className="notif-panel" role="dialog" aria-label="Notifications">
+                    <div className="notif-panel-head">
+                        <span className="notif-panel-title">Notifications</span>
+                        {count > 0 && <span className="notif-panel-count">{count} new</span>}
+                    </div>
+                    <div className="notif-list">
+                        {notifications.map(n => (
+                            <div key={n.id} className={`notif-item ${n.unread ? "unread" : ""}`}>
+                                <div className={`notif-item-icon ${n.iconColor}`}>
+                                    <i className={`bi ${n.icon}`}></i>
+                                </div>
+                                <div className="notif-item-body">
+                                    <div className="notif-item-title">{n.title}</div>
+                                    <div className="notif-item-desc">{n.desc}</div>
+                                    <div className="notif-item-time">{n.time}</div>
+                                </div>
+                                {n.unread && <span className="notif-unread-dot"></span>}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="notif-panel-footer">
+                        <a href="#" className="notif-view-all">View all notifications</a>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ── UserChip ────────────────────────────────────────────── */
+function UserChip({ user, userLoaded }) {
+    const [open,      setOpen]      = React.useState(false);
+    const [imgFailed, setImgFailed] = React.useState(false);
+    const menuRef = React.useRef(null);
+    const chipRef = React.useRef(null);
+
+    React.useEffect(() => { setImgFailed(false); }, [user.profile_image_url]);
+
+    React.useEffect(() => {
+        if (!open) return;
+        function handle(e) {
+            if (
+                menuRef.current && !menuRef.current.contains(e.target) &&
+                chipRef.current && !chipRef.current.contains(e.target)
+            ) setOpen(false);
+        }
+        document.addEventListener("mousedown", handle);
+        return () => document.removeEventListener("mousedown", handle);
+    }, [open]);
+
+    const hasImage = user.profile_image_url && !imgFailed;
+    const initials = user.initials    || "U";
+    const name     = user.name        || "User";
+    const email    = user.email       || "";
+    const role     = user.role_label  || "";
+
+    return (
+        <div className="topbar-user-wrap">
+            <button
+                ref={chipRef}
+                type="button"
+                className={`topbar-user-chip ${open ? "active" : ""}`}
+                onClick={() => setOpen(v => !v)}
+                aria-label="User menu"
+            >
+                <div className="topbar-user-avatar">
+                    {hasImage
+                        ? <img src={user.profile_image_url} alt={name} onError={() => setImgFailed(true)} />
+                        : <span className="topbar-user-initials">{initials}</span>
+                    }
+                    <span className="topbar-online-dot"></span>
+                </div>
+                <div className="topbar-user-info">
+                    <span className="topbar-user-name">{userLoaded ? name : ""}</span>
+                    <span className="topbar-user-email">{userLoaded ? email : ""}</span>
+                </div>
+                <i className={`bi bi-chevron-down topbar-user-caret ${open ? "open" : ""}`}></i>
+            </button>
+
+            {open && (
+                <div ref={menuRef} className="topbar-user-menu" role="menu">
+                    <div className="tum-header">
+                        <div className="tum-avatar">
+                            {hasImage
+                                ? <img src={user.profile_image_url} alt={name} />
+                                : <span>{initials}</span>
+                            }
+                        </div>
+                        <div className="tum-info">
+                            <div className="tum-name">{name}</div>
+                            <div className="tum-email">{email}</div>
+                            {role && <div className="tum-role">{role}</div>}
+                        </div>
+                    </div>
+                    <div className="tum-divider"></div>
+                    <a href="profile.html" className="tum-item" role="menuitem">
+                        <i className="bi bi-person-circle"></i>
+                        <span>My Profile</span>
+                    </a>
+                    <a href="profile.html" className="tum-item" role="menuitem">
+                        <i className="bi bi-gear"></i>
+                        <span>Account Settings</span>
+                    </a>
+                    <div className="tum-divider"></div>
+                    <a
+                        href="../auth/login.html"
+                        className="tum-item tum-logout"
+                        role="menuitem"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            const btn = document.getElementById("openReactModalBtn");
+                            if (btn) btn.click();
+                            else window.location.href = "../auth/login.html";
+                        }}
+                    >
+                        <i className="bi bi-box-arrow-right"></i>
+                        <span>Log out</span>
+                    </a>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ── TopBar (no title, right-controls only) ─────────────── */
+function TopBar() {
+    const [dark, setDark]             = React.useState(() => getStoredTheme() === "dark");
+    const [user, setUser]             = React.useState({
+        name: "", email: "", role: "", role_label: "",
+        department_name: "", initials: "", profile_image_url: ""
+    });
+    const [userLoaded, setUserLoaded] = React.useState(false);
+
+    React.useEffect(() => { applyTheme(dark ? "dark" : "light"); }, [dark]);
+
+    React.useEffect(() => {
+        let active = true;
+
+        async function load() {
+            try {
+                const res  = await fetch(TOPBAR_USER_API, {
+                    credentials: "same-origin",
+                    headers: { Accept: "application/json" }
+                });
+                const data = await res.json();
+                if (!active || !res.ok || data.error) return;
+                setUser({
+                    name:              data.name || "User",
+                    email:             data.email || "",
+                    role:              data.role || "",
+                    role_label:        data.role_label || "",
+                    department_name:   data.department_name || "",
+                    initials:          data.initials || "U",
+                    profile_image_url: data.profile_image_url || "",
+                });
+                setUserLoaded(true);
+            } catch (_) {
+                if (active) setUserLoaded(true);
+            }
+        }
+
+        function onProfileUpdated(e) {
+            const d = e.detail;
+            if (!d) { load(); return; }
+            setUser({
+                name:              d.name || "User",
+                email:             d.email || "",
+                role:              d.role || "",
+                role_label:        d.role_label || "",
+                department_name:   d.department_name || "",
+                initials:          d.initials || "U",
+                profile_image_url: d.profile_image_url || "",
+            });
+            setUserLoaded(true);
+        }
+
+        load();
+        window.addEventListener("profile-updated", onProfileUpdated);
+        return () => {
+            active = false;
+            window.removeEventListener("profile-updated", onProfileUpdated);
+        };
+    }, []);
+
+    return (
+        <header className="topbar">
+            <div className="topbar-right">
+                <DarkModeToggle dark={dark} onToggle={() => setDark(v => !v)} />
+                <div className="topbar-sep"></div>
+                <NotificationBell />
+                <div className="topbar-sep"></div>
+                <UserChip user={user} userLoaded={userLoaded} />
+            </div>
+        </header>
+    );
+}
+
+const topbarRoot = document.getElementById("dashboard-header-root");
+if (topbarRoot) {
+    ReactDOM.createRoot(topbarRoot).render(<TopBar />);
+}
