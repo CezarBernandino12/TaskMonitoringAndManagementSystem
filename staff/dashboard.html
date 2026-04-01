@@ -11,7 +11,9 @@
     <link rel="stylesheet" href="css/sidebar.css">
     <link rel="stylesheet" href="css/topbar.css">
     <link rel="stylesheet" href="css/dashboard.css">
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -27,6 +29,13 @@
     </script>
 
 <style>
+    :root {
+        --shell-edge: 18px;
+        --shell-gap: 12px; /* small gap between sidebar and topbar */
+        --sidebar-expanded-w: 250px;
+        --sidebar-collapsed-w: 108px;
+    }
+
     html, body {
         height: 100%;
         margin: 0;
@@ -42,37 +51,43 @@
     }
 
     .app-topbar {
-        position: sticky;
-        top: 0;
-        left: 0;
-        z-index: 100;
-        width: 100%;
+        position: fixed;
+        top: var(--shell-edge);
+        left: calc(var(--shell-edge) + var(--sidebar-expanded-w) + var(--shell-gap));
+        right: var(--shell-edge);
+        z-index: 260;
+        width: auto;
     }
 
     .app-body {
         position: relative;
-        min-height: calc(100vh - var(--topbar-height, 70px));
+        min-height: 100vh;
     }
 
-    /* sidebar floats over the topbar */
     .app-sidebar-col {
         position: fixed;
-        top: 18px;
-        left: 18px;
+        top: var(--shell-edge);
+        left: var(--shell-edge);
         z-index: 300;
         padding: 0;
         flex-shrink: 0;
     }
 
-    /* main content leaves room for the floating sidebar */
     .app-main-col {
         min-width: 0;
-        padding: calc(var(--topbar-height, 70px) + 24px) 28px 24px 332px;
+        padding:
+            calc(var(--shell-edge) + var(--topbar-height, 78px) + 18px)
+            var(--shell-edge)
+            24px
+            calc(var(--shell-edge) + var(--sidebar-expanded-w) + var(--shell-gap));
     }
 
-    /* nicer spacing when sidebar is collapsed */
+    body:has(.dashboard-sidebar.collapsed) .app-topbar {
+        left: calc(var(--shell-edge) + var(--sidebar-collapsed-w) + var(--shell-gap));
+    }
+
     body:has(.dashboard-sidebar.collapsed) .app-main-col {
-        padding-left: 172px;
+        padding-left: calc(var(--shell-edge) + var(--sidebar-collapsed-w) + var(--shell-gap));
     }
 
     .topbar-profile-name,
@@ -84,6 +99,15 @@
     }
 
     @media (max-width: 767.98px) {
+        .app-topbar {
+            position: sticky;
+            top: 0;
+            left: auto;
+            right: auto;
+            width: 100%;
+            z-index: 100;
+        }
+
         .app-sidebar-col {
             position: static;
             top: auto;
@@ -92,7 +116,7 @@
         }
 
         .app-main-col {
-            padding: calc(var(--topbar-height, 70px) + 16px) 16px 16px;
+            padding: calc(var(--topbar-height, 78px) + 16px) 16px 16px;
         }
     }
 </style>

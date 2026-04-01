@@ -213,17 +213,23 @@ function TopBar() {
         };
     }, []);
 
-    return (
-        <header className="topbar">
-            <div className="topbar-right">
-                <DarkModeToggle dark={dark} onToggle={() => setDark(v => !v)} />
-                <div className="topbar-sep"></div>
-                <NotificationBell />
-                <div className="topbar-sep"></div>
-                <UserChip user={user} userLoaded={userLoaded} />
+return (
+    <header className="topbar">
+        <div className="topbar-left">
+            <div className="topbar-greeting">
+                <h1 className="topbar-greeting-title">Good Afternoon, John Paul</h1>
             </div>
-        </header>
-    );
+        </div>
+
+        <div className="topbar-right">
+            <DarkModeToggle dark={dark} onToggle={() => setDark(v => !v)} />
+            <div className="topbar-sep"></div>
+            <NotificationBell />
+            <div className="topbar-sep"></div>
+            <UserChip user={user} userLoaded={userLoaded} />
+        </div>
+    </header>
+);
 }
 
 const topbarRoot = document.getElementById("topbar-root");

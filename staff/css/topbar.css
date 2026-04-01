@@ -85,23 +85,47 @@ html, body {
 #topbar-root {
     width: 100%;
 }
-
 .topbar {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     width: 100%;
     min-height: var(--topbar-height);
-    padding: 14px 28px;
+    padding: 14px 22px;
     background: var(--topbar-bg);
-    border-bottom: 1px solid var(--topbar-border);
+    border: 1px solid var(--topbar-border);
     box-shadow: var(--topbar-shadow);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     position: relative;
     z-index: 110;
     transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
-    border-radius: 0;
+    border-radius: 22px;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    flex: 1;
+    padding-right: 16px;
+}
+
+.topbar-greeting {
+    min-width: 0;
+}
+
+.topbar-greeting-title {
+    margin: 0;
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: clamp(20px, 1.45vw, 22px);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: #223042;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .topbar-right {
@@ -402,6 +426,8 @@ html, body {
     border-color: var(--sidebar-border);
     box-shadow: 0 10px 40px rgba(0,0,0,0.36);
 }
+
+[data-theme="dark"] .topbar-greeting-title {color: #e8eef7;}
 [data-theme="dark"] .sidebar-toggle { background: var(--sidebar-toggle-bg); border-color: var(--sidebar-toggle-border); color: var(--text-primary); }
 [data-theme="dark"] .sidebar-toggle:hover { background: var(--bg-input); }
 [data-theme="dark"] .sidebar-link { color: var(--sidebar-text); }

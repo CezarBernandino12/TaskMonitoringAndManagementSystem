@@ -1,9 +1,4 @@
-/* ============================================================
-   dashboard.css  –  Dashboard page styles + dark mode
-   Dark mode tokens come from topbar.css (:root / [data-theme="dark"])
-   ============================================================ */
 
-/* ── BASE ─────────────────────────────────────────────────── */
 body {
     background: var(--bg-page, #f4f4f6);
     color: var(--text-primary, #333);
