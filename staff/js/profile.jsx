@@ -2,19 +2,6 @@ import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
 
-function splitFullName(fullName = "") {
-    const parts = fullName.trim().split(/\s+/).filter(Boolean);
-
-    if (parts.length === 0) {
-        return { firstName: "", lastName: "" };
-    }
-
-    return {
-        firstName: parts[0] || "",
-        lastName: parts.slice(1).join(" ")
-    };
-}
-
 function buildAvatarUrl(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
         name || "User"
@@ -30,35 +17,6 @@ function SectionHeader({ title, subtitle }) {
     );
 }
 
-function StaticPasswordField({ label, value = "••••••••••" }) {
-    return (
-        <div className="account-field">
-            <label className="form-label">{label}</label>
-            <div className="password-shell">
-                <span className="password-shell-icon">
-                    <i className="bi bi-lock"></i>
-                </span>
-
-                <input
-                    type="password"
-                    className="form-control password-static-input"
-                    value={value}
-                    readOnly
-                    disabled
-                />
-
-                <button
-                    type="button"
-                    className="password-shell-action"
-                    tabIndex="-1"
-                >
-                    <i className="bi bi-eye"></i>
-                </button>
-            </div>
-        </div>
-    );
-}
-
 async function parseJsonResponse(response) {
     const rawText = await response.text();
 
@@ -66,15 +24,27 @@ async function parseJsonResponse(response) {
         return JSON.parse(rawText);
     } catch (error) {
         console.error("Invalid JSON response:", rawText);
-        throw new Error("Server returned invalid JSON. Check your PHP file for warnings or mixed output.");
+        throw new Error(
+            "Server returned invalid JSON. Check your PHP file for warnings or mixed output."
+        );
     }
 }
+
+const toasterOptions = {
+    fill: "#111111",
+    roundness: 18,
+    styles: {
+        title: "text-white! text-[15px] font-semibold!",
+        description: "text-white/80! text-[13px]!",
+        badge: "bg-white/10!",
+        button: "bg-white/10! text-white! hover:bg-white/15!"
+    }
+};
 
 function ProfilePage() {
     const [profile, setProfile] = React.useState(null);
     const [form, setForm] = React.useState({
-        first_name: "",
-        last_name: "",
+        full_name: "",
         email: "",
         contact: "",
         address: ""
@@ -86,21 +56,19 @@ function ProfilePage() {
     const [selectedImage, setSelectedImage] = React.useState(null);
     const [previewUrl, setPreviewUrl] = React.useState("");
     const [removeImage, setRemoveImage] = React.useState(false);
+    const [activeSection, setActiveSection] = React.useState(null); // null | "personal" | "contact"
 
-    const hydrateForm = (data) => {
-        const { firstName, lastName } = splitFullName(data.name || "");
-
+    const hydrateForm = React.useCallback((data) => {
         setProfile(data);
         setForm({
-            first_name: firstName,
-            last_name: lastName,
+            full_name: data.name || "",
             email: data.email || "",
             contact: data.contact || "",
             address: data.address || ""
         });
         setPreviewUrl(data.profile_image_url || "");
         setRemoveImage(false);
-    };
+    }, []);
 
     React.useEffect(() => {
         let mounted = true;
@@ -118,7 +86,9 @@ function ProfilePage() {
                 }
 
                 if (!mounted) return;
+
                 hydrateForm(data);
+                setPageError("");
                 setLoading(false);
             } catch (error) {
                 if (!mounted) return;
@@ -132,7 +102,7 @@ function ProfilePage() {
         return () => {
             mounted = false;
         };
-    }, []);
+    }, [hydrateForm]);
 
     React.useEffect(() => {
         if (!selectedImage) return;
@@ -154,9 +124,48 @@ function ProfilePage() {
         }));
     };
 
+    const handleStartEdit = (section) => {
+        if (profile) {
+            hydrateForm(profile);
+        }
+        setSelectedImage(null);
+        setRemoveImage(false);
+        setPageError("");
+        setActiveSection(section);
+    };
+
+    const handleCancelEdit = () => {
+        if (profile) {
+            hydrateForm(profile);
+        }
+        setSelectedImage(null);
+        setRemoveImage(false);
+        setPageError("");
+        setActiveSection(null);
+    };
+
     const handleImageChange = (e) => {
         const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
         if (!file) return;
+
+        const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+        const maxSize = 15 * 1024 * 1024;
+
+        if (!allowedTypes.includes(file.type)) {
+            sileo.error({
+                title: "Invalid image type",
+                description: "Please upload a PNG, JPEG, or WEBP image."
+            });
+            return;
+        }
+
+        if (file.size > maxSize) {
+            sileo.error({
+                title: "Image too large",
+                description: "Please upload an image under 15MB."
+            });
+            return;
+        }
 
         setSelectedImage(file);
         setRemoveImage(false);
@@ -168,6 +177,14 @@ function ProfilePage() {
     };
 
     const handleRemoveImage = () => {
+        if (!previewUrl && !selectedImage) {
+            sileo.info({
+                title: "No picture to remove",
+                description: "There is no profile picture set yet."
+            });
+            return;
+        }
+
         setSelectedImage(null);
         setPreviewUrl("");
         setRemoveImage(true);
@@ -181,11 +198,10 @@ function ProfilePage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
-
-        const mergedName = `${form.first_name} ${form.last_name}`.trim();
+        setPageError("");
 
         const formData = new FormData();
-        formData.append("name", mergedName);
+        formData.append("name", form.full_name.trim());
         formData.append("email", form.email);
         formData.append("contact", form.contact);
         formData.append("address", form.address);
@@ -216,11 +232,14 @@ function ProfilePage() {
             const data = await sileo.promise(request, {
                 loading: {
                     title: "Saving profile...",
-                    description: selectedImage
-                        ? "Uploading your profile picture."
-                        : removeImage
-                            ? "Removing your profile picture."
-                            : "Updating your account details."
+                    description:
+                        activeSection === "contact"
+                            ? "Updating your contact information."
+                            : selectedImage
+                                ? "Uploading your profile picture."
+                                : removeImage
+                                    ? "Removing your profile picture."
+                                    : "Updating your personal information."
                 },
                 success: {
                     title: "Profile updated",
@@ -235,6 +254,7 @@ function ProfilePage() {
             hydrateForm(data.profile);
             setSelectedImage(null);
             setRemoveImage(false);
+            setActiveSection(null);
 
             window.dispatchEvent(
                 new CustomEvent("profile-updated", {
@@ -243,35 +263,24 @@ function ProfilePage() {
             );
         } catch (error) {
             console.error(error);
+            setPageError(error.message || "Something went wrong.");
         } finally {
             setSaving(false);
         }
     };
 
-    const displayName =
-        `${form.first_name} ${form.last_name}`.trim() ||
-        profile?.name ||
-        "User";
-
+    const displayName = form.full_name.trim() || profile?.name || "User";
     const avatarSrc = previewUrl || buildAvatarUrl(displayName);
+
+    const staticEmployeeId = profile?.employee_id || "SJ53862";
+    const staticDepartmentId = profile?.department_id || "DPT-001";
+    const staticGender = profile?.gender || "Male";
+    const staticDateOfBirth = profile?.date_of_birth || "November 21, 2003";
 
     if (loading) {
         return (
             <>
-                <Toaster
-                    position="top-center"
-                    offset={{ top: 24 }}
-                    options={{
-                        fill: "#111111",
-                        roundness: 18,
-                        styles: {
-                            title: "text-white! text-[15px] font-semibold!",
-                            description: "text-white/80! text-[13px]!",
-                            badge: "bg-white/10!",
-                            button: "bg-white/10! text-white! hover:bg-white/15!"
-                        }
-                    }}
-                />
+                <Toaster position="top-center" offset={{ top: 24 }} options={toasterOptions} />
                 <div className="account-shell">
                     <div className="account-card">
                         <div className="account-loading">Loading profile...</div>
@@ -284,20 +293,7 @@ function ProfilePage() {
     if (pageError && !profile) {
         return (
             <>
-                <Toaster
-                    position="top-center"
-                    offset={{ top: 24 }}
-                    options={{
-                        fill: "#111111",
-                        roundness: 18,
-                        styles: {
-                            title: "text-white! text-[15px] font-semibold!",
-                            description: "text-white/80! text-[13px]!",
-                            badge: "bg-white/10!",
-                            button: "bg-white/10! text-white! hover:bg-white/15!"
-                        }
-                    }}
-                />
+                <Toaster position="top-center" offset={{ top: 24 }} options={toasterOptions} />
                 <div className="account-shell">
                     <div className="account-card">
                         <div className="account-error">{pageError}</div>
@@ -307,237 +303,325 @@ function ProfilePage() {
         );
     }
 
+    const isEditing = activeSection !== null;
+
     return (
         <>
-            <Toaster
-                position="top-center"
-                offset={{ top: 24 }}
-                options={{
-                    fill: "#111111",
-                    roundness: 18,
-                    styles: {
-                        title: "text-white! text-[15px] font-semibold!",
-                        description: "text-white/80! text-[13px]!",
-                        badge: "bg-white/10!",
-                        button: "bg-white/10! text-white! hover:bg-white/15!"
-                    }
-                }}
-            />
+            <Toaster position="top-center" offset={{ top: 24 }} options={toasterOptions} />
 
             <div className="account-shell">
                 <div className="account-card">
                     <div className="account-top">
-                        <h4>Account</h4>
-                        <p>Real-time information and activities of your property.</p>
+                        <h4>Account settings</h4>
+                        <p>Preview your account details and edit them by section.</p>
                     </div>
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="account-divider"></div>
+                    {pageError && profile ? (
+                        <div className="account-alert error">{pageError}</div>
+                    ) : null}
 
-                        <div className="profile-picture-row">
-                            <div className="profile-picture-meta">
-                                <img
-                                    src={avatarSrc}
-                                    alt="Profile preview"
-                                    className="profile-picture-avatar"
-                                />
+                    {!isEditing ? (
+                        <div className="staff-preview-shell">
+                            <div className="staff-hero-card">
+                                <div className="staff-hero-left">
+                                    <img
+                                        src={avatarSrc}
+                                        alt="Profile preview"
+                                        className="staff-hero-avatar"
+                                    />
 
-                                <div>
-                                    <div className="profile-picture-title">Profile picture</div>
-                                    <div className="profile-picture-subtitle">
-                                        PNG, JPEG under 15MB
+                                    <div className="staff-hero-identity">
+                                        <h5>{displayName}</h5>
+                                        <p>
+                                            <span>{profile?.role || "—"}</span>
+                                            <span className="staff-hero-dot">|</span>
+                                            <span>{profile?.department_name || "—"}</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="staff-hero-divider"></div>
+
+                                <div className="staff-hero-meta">
+                                    <div className="staff-meta-item">
+                                        <span>Role</span>
+                                        <strong>{profile?.role || "—"}</strong>
+                                    </div>
+
+                                    <div className="staff-meta-item">
+                                        <span>Employee ID</span>
+                                        <strong>{staticEmployeeId}</strong>
+                                    </div>
+
+                                    <div className="staff-meta-item">
+                                        <span>Department</span>
+                                        <strong>{profile?.department_name || "—"}</strong>
+                                    </div>
+
+                                    <div className="staff-meta-item">
+                                        <span>Department ID</span>
+                                        <strong>{staticDepartmentId}</strong>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="profile-picture-actions">
-                                <label className="btn btn-light account-btn-soft mb-0">
-                                    Upload new picture
-                                    <input
-                                        type="file"
-                                        accept="image/png,image/jpeg,image/webp"
-                                        hidden
-                                        onChange={handleImageChange}
-                                    />
-                                </label>
+                            <div className="staff-preview-grid">
+                                <section className="staff-info-card staff-card-personal">
+                                    <div className="staff-info-card-head">
+                                        <h6>Personal information</h6>
 
-                                <button
-                                    type="button"
-                                    className="btn btn-light account-btn-soft"
-                                    onClick={handleRemoveImage}
-                                >
-                                    Delete
-                                </button>
+                                        <button
+                                            type="button"
+                                            className="staff-card-edit"
+                                            onClick={() => handleStartEdit("personal")}
+                                            aria-label="Edit personal information"
+                                        >
+                                            <i className="bi bi-pencil-fill"></i>
+                                        </button>
+                                    </div>
+
+                                    <div className="staff-info-divider"></div>
+
+                                    <div className="staff-info-grid">
+                                        <div className="staff-info-item">
+                                            <span>Full name</span>
+                                            <strong>{form.full_name || "—"}</strong>
+                                        </div>
+
+                                        <div className="staff-info-item">
+                                            <span>Gender</span>
+                                            <strong>{staticGender}</strong>
+                                        </div>
+
+                                        <div className="staff-info-item">
+                                            <span>Date of birth</span>
+                                            <strong>{staticDateOfBirth}</strong>
+                                        </div>
+
+                                        <div className="staff-info-item full-span">
+                                            <span>Address</span>
+                                            <strong>{form.address || "—"}</strong>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section className="staff-info-card staff-card-contact">
+                                    <div className="staff-info-card-head">
+                                        <h6>Contact information</h6>
+
+                                        <button
+                                            type="button"
+                                            className="staff-card-edit"
+                                            onClick={() => handleStartEdit("contact")}
+                                            aria-label="Edit contact information"
+                                        >
+                                            <i className="bi bi-pencil-fill"></i>
+                                        </button>
+                                    </div>
+
+                                    <div className="staff-info-divider"></div>
+
+                                    <div className="staff-info-grid staff-info-grid-single">
+                                        <div className="staff-info-item">
+                                            <span>Contact number</span>
+                                            <strong>{form.contact || "—"}</strong>
+                                        </div>
+
+                                        <div className="staff-info-item">
+                                            <span>Email</span>
+                                            <strong>{form.email || "—"}</strong>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section className="staff-info-card staff-card-account">
+                                    <div className="staff-info-card-head">
+                                        <h6>Account information</h6>
+                                    </div>
+
+                                    <div className="staff-info-divider"></div>
+
+                                    <div className="staff-info-grid staff-info-grid-single">
+                                        <div className="staff-info-item">
+                                            <span>Department</span>
+                                            <strong>{profile?.department_name || "—"}</strong>
+                                        </div>
+
+                                        <div className="staff-info-item">
+                                            <span>Role</span>
+                                            <strong>{profile?.role || "—"}</strong>
+                                        </div>
+
+                                        <div className="staff-info-item">
+                                            <span>Employee ID</span>
+                                            <strong>{staticEmployeeId}</strong>
+                                        </div>
+
+                                        <div className="staff-info-item">
+                                            <span>Department ID</span>
+                                            <strong>{staticDepartmentId}</strong>
+                                        </div>
+                                    </div>
+                                </section>
                             </div>
                         </div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="section-edit-form">
+                                <div className="editor-panel">
+                                    <div className="editor-header">
+                                        <div>
+                                            <h5>
+                                                {activeSection === "contact"
+                                                    ? "Contact Information"
+                                                    : "Personal Information"}
+                                            </h5>
+                                            <p>
+                                                {activeSection === "contact"
+                                                    ? "Edit your contact details"
+                                                    : "Edit your personal informations"}
+                                            </p>
+                                        </div>
+                                    </div>
 
-                        <div className="account-divider"></div>
+                                    {activeSection === "personal" ? (
+                                        <>
+                                            <div className="editor-media-row">
+                                                <img
+                                                    src={avatarSrc}
+                                                    alt="Profile preview"
+                                                    className="editor-avatar"
+                                                />
 
-                        <section className="account-section">
-                            <SectionHeader title="Full name" />
+                                                <div className="editor-avatar-actions">
+                                                    <label className="editor-upload-btn">
+                                                        Upload An Image
+                                                        <input
+                                                            type="file"
+                                                            accept="image/png,image/jpeg,image/webp"
+                                                            hidden
+                                                            onChange={handleImageChange}
+                                                        />
+                                                    </label>
 
-                            <div className="account-grid two-col">
-                                <div className="account-field">
-                                    <label className="form-label">First name</label>
-                                    <input
-                                        type="text"
-                                        className="form-control account-input"
-                                        name="first_name"
-                                        value={form.first_name}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                </div>
+                                                    <button
+                                                        type="button"
+                                                        className="editor-trash-btn"
+                                                        onClick={handleRemoveImage}
+                                                        aria-label="Remove image"
+                                                    >
+                                                        <i className="bi bi-trash3-fill"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
 
-                                <div className="account-field">
-                                    <label className="form-label">Last name</label>
-                                    <input
-                                        type="text"
-                                        className="form-control account-input"
-                                        name="last_name"
-                                        value={form.last_name}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-                            </div>
-                        </section>
+                                            <div className="editor-divider"></div>
 
-                        <div className="account-divider"></div>
+                                            <div className="editor-grid">
+                                                <div className="editor-field editor-field-full">
+                                                    <label className="editor-label">
+                                                        Full name <span className="required">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        className="editor-input"
+                                                        name="full_name"
+                                                        value={form.full_name}
+                                                        onChange={handleChange}
+                                                        required
+                                                    />
+                                                </div>
 
-                        <section className="account-section">
-                            <SectionHeader
-                                title="Contact email"
-                                subtitle="Manage your account email address for invoices."
-                            />
+                                                <div className="editor-field">
+                                                    <label className="editor-label">Gender</label>
+                                                    <input
+                                                        type="text"
+                                                        className="editor-input editor-input-static"
+                                                        value={staticGender}
+                                                        readOnly
+                                                        disabled
+                                                    />
+                                                </div>
 
-                            <div className="account-grid email-row">
-                                <div className="account-field">
-                                    <label className="form-label">Email</label>
+                                                <div className="editor-field">
+                                                    <label className="editor-label">Date of birth</label>
+                                                    <input
+                                                        type="text"
+                                                        className="editor-input editor-input-static"
+                                                        value={staticDateOfBirth}
+                                                        readOnly
+                                                        disabled
+                                                    />
+                                                </div>
 
-                                    <div className="input-icon-shell">
-                                        <span className="input-icon-left">
-                                            <i className="bi bi-envelope"></i>
-                                        </span>
-                                        <input
-                                            type="email"
-                                            className="form-control account-input with-left-icon"
-                                            name="email"
-                                            value={form.email}
-                                            onChange={handleChange}
-                                            required
-                                        />
+                                                <div className="editor-field editor-field-full">
+                                                    <label className="editor-label">Address</label>
+                                                    <textarea
+                                                        className="editor-textarea"
+                                                        name="address"
+                                                        rows="4"
+                                                        value={form.address}
+                                                        onChange={handleChange}
+                                                        placeholder="Enter address"
+                                                    ></textarea>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="editor-divider"></div>
+
+                                            <div className="editor-grid">
+                                                <div className="editor-field">
+                                                    <label className="editor-label">
+                                                        Email <span className="required">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="email"
+                                                        className="editor-input"
+                                                        name="email"
+                                                        value={form.email}
+                                                        onChange={handleChange}
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="editor-field">
+                                                    <label className="editor-label">
+                                                        Contact number <span className="required">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        className="editor-input"
+                                                        name="contact"
+                                                        value={form.contact}
+                                                        onChange={handleChange}
+                                                        placeholder="Enter contact number"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <div className="editor-actions">
+                                        <button
+                                            type="button"
+                                            className="btn account-btn-soft"
+                                            onClick={handleCancelEdit}
+                                        >
+                                            Cancel
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            className="btn account-save-btn"
+                                            disabled={saving}
+                                        >
+                                            {saving ? "Saving..." : "Save changes"}
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className="email-action-wrap">
-                                    <button
-                                        type="button"
-                                        className="btn btn-light account-btn-soft add-email-btn"
-                                    >
-                                        <i className="bi bi-plus-circle me-2"></i>
-                                        Add another email
-                                    </button>
-                                </div>
-                            </div>
-                        </section>
-
-                        <div className="account-divider"></div>
-
-                        <section className="account-section">
-                            <SectionHeader
-                                title="Password"
-                                subtitle="Modify your current password."
-                            />
-
-                            <div className="account-grid two-col">
-                                <StaticPasswordField label="Current password" />
-                                <StaticPasswordField label="New password" />
-                            </div>
-                        </section>
-
-                        <div className="account-divider"></div>
-
-                        <section className="account-section">
-                            <SectionHeader
-                                title="Contact details"
-                                subtitle="Update your personal contact information."
-                            />
-
-                            <div className="account-grid two-col">
-                                <div className="account-field">
-                                    <label className="form-label">Contact</label>
-                                    <input
-                                        type="text"
-                                        className="form-control account-input"
-                                        name="contact"
-                                        value={form.contact}
-                                        onChange={handleChange}
-                                        placeholder="Enter contact number"
-                                    />
-                                </div>
-
-                                <div className="account-field">
-                                    <label className="form-label">Department ID</label>
-                                    <input
-                                        type="text"
-                                        className="form-control account-input readonly"
-                                        value={profile?.department_id || ""}
-                                        readOnly
-                                    />
-                                </div>
-
-                                <div className="account-field full-span">
-                                    <label className="form-label">Address</label>
-                                    <textarea
-                                        className="form-control account-input account-textarea"
-                                        name="address"
-                                        rows="4"
-                                        value={form.address}
-                                        onChange={handleChange}
-                                        placeholder="Enter address"
-                                    ></textarea>
-                                </div>
-                            </div>
-                        </section>
-
-                        <div className="account-divider"></div>
-
-                        <section className="account-section">
-                            <SectionHeader title="Account details" />
-
-                            <div className="account-grid two-col">
-                                <div className="account-field">
-                                    <label className="form-label">Role</label>
-                                    <input
-                                        type="text"
-                                        className="form-control account-input readonly"
-                                        value={profile?.role || ""}
-                                        readOnly
-                                    />
-                                </div>
-
-                                <div className="account-field">
-                                    <label className="form-label">Department</label>
-                                    <input
-                                        type="text"
-                                        className="form-control account-input readonly"
-                                        value={profile?.department_name || ""}
-                                        readOnly
-                                    />
-                                </div>
-                            </div>
-                        </section>
-
-                        <div className="account-footer">
-                            <button
-                                type="submit"
-                                className="btn account-save-btn"
-                                disabled={saving}
-                            >
-                                {saving ? "Saving..." : "Save changes"}
-                            </button>
-                        </div>
-                    </form>
+                            </form>
+                        )}
                 </div>
             </div>
         </>

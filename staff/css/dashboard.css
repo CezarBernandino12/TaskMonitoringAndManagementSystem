@@ -1,61 +1,238 @@
 
-    body {
-        background: #ffffff;
-        color: #333;
-        font-family: Arial, sans-serif;
-    }
+body {
+    background: var(--bg-page, #f4f4f6);
+    color: var(--text-primary, #333);
+    font-family: Arial, sans-serif;
+    transition: background 0.3s ease, color 0.3s ease;
+}
 
-    /* cards / existing */
-    .card {
-        border-radius: 16px;
-        background: #ffffff;
-        border: 1px solid #ffddb0;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-        color: #222;
-    }
+/* ── CARDS ────────────────────────────────────────────────── */
+.card {
+    border-radius: 16px;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--dash-card-border, #ffddb0);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    color: var(--text-primary, #222);
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
 
-    .overdue {
-        background-color: #fff0b3 !important;
-        color: #665200;
-    }
+/* ── SUMMARY CARDS ────────────────────────────────────────── */
+.summary-card {
+    background: var(--dash-summary-bg, linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%));
+    border: 1px solid var(--dash-summary-border, #ffb84d);
+    color: var(--dash-summary-text, #cc7a00);
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
 
-    .btn-primary {
-        background-color: #ff9900;
-        border-color: #ff9900;
-        color: #fff;
-    }
+/* ── HEADINGS ─────────────────────────────────────────────── */
+h3, h5, h6 {
+    color: var(--dash-heading, #cc7a00);
+    transition: color 0.3s ease;
+}
 
-    .btn-primary:hover,
-    .btn-primary:focus {
-        background-color: #ffb84d;
-        border-color: #ffb84d;
-        color: #333;
-    }
+/* ── TABLE ────────────────────────────────────────────────── */
+.table {
+    color: var(--text-primary, #222);
+    transition: color 0.3s ease;
+}
 
-    .table thead {
-        background: #ffe7b3;
-    }
+.table thead {
+    background: var(--dash-thead-bg, #ffe7b3);
+    transition: background 0.3s ease;
+}
 
-    .table th {
-        color: #cc7a00;
-    }
+.table th {
+    color: var(--dash-th-color, #cc7a00);
+    border-color: var(--border, #ececec);
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
 
-    .table-hover tbody tr:hover {
-        background: #fff0b3;
-    }
+.table td {
+    border-color: var(--border, #ececec);
+    transition: border-color 0.3s ease;
+}
 
-    .form-control:focus,
-    .form-select:focus {
-        border-color: #ffb84d;
-        box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
-    }
+.table-hover tbody tr:hover {
+    background: var(--dash-row-hover, #fff0b3);
+    transition: background 0.2s ease;
+}
 
-    h3, h5, h6 {
-        color: #cc7a00;
-    }
+/* ── FORM CONTROLS ────────────────────────────────────────── */
+.form-control,
+.form-select {
+    background-color: var(--bg-input, #f4f5f7);
+    border-color: var(--border, #ececec);
+    color: var(--text-primary, #222);
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
 
-    .summary-card {
-        background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
-        border: 1px solid #ffb84d;
-        color: #cc7a00;
-    }
+.form-control:focus,
+.form-select:focus {
+    border-color: #ffb84d;
+    box-shadow: 0 0 0 0.2rem rgba(255,184,77,0.25);
+    background-color: var(--bg-input, #f4f5f7);
+    color: var(--text-primary, #222);
+}
+
+/* ── BUTTONS ──────────────────────────────────────────────── */
+.btn-primary {
+    background-color: #ff9900;
+    border-color: #ff9900;
+    color: #fff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: #ffb84d;
+    border-color: #ffb84d;
+    color: #333;
+}
+
+/* ── OVERDUE ROW ──────────────────────────────────────────── */
+.overdue {
+    background-color: var(--dash-overdue-bg, #fff0b3) !important;
+    color: var(--dash-overdue-text, #665200);
+}
+
+/* ── MODAL ────────────────────────────────────────────────── */
+.modal-content {
+    background: var(--bg-card, #ffffff);
+    border-color: var(--border, #ececec);
+    color: var(--text-primary, #222);
+}
+
+.modal-header {
+    border-bottom-color: var(--border, #ececec);
+}
+
+.modal-footer {
+    border-top-color: var(--border, #ececec);
+}
+
+.btn-close {
+    filter: var(--dash-btn-close-filter, none);
+}
+
+/* ── BOOTSTRAP OVERRIDES ──────────────────────────────────── */
+.dropdown-menu {
+    background: var(--bg-card);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] {
+    --dash-card-border:     rgba(255,184,77,0.18);
+    --dash-summary-bg:      linear-gradient(135deg, rgba(255,184,77,0.12) 0%, rgba(255,160,0,0.18) 100%);
+    --dash-summary-border:  rgba(255,184,77,0.25);
+    --dash-summary-text:    #fbbf24;
+    --dash-heading:         #fbbf24;
+    --dash-thead-bg:        rgba(255,184,77,0.10);
+    --dash-th-color:        #fbbf24;
+    --dash-row-hover:       rgba(255,184,77,0.07);
+    --dash-overdue-bg:      rgba(255,160,0,0.12);
+    --dash-overdue-text:    #fbbf24;
+    --dash-btn-close-filter: invert(1) brightness(0.8);
+}
+
+[data-theme="dark"] .card {
+    background: var(--bg-card);
+    border-color: var(--dash-card-border);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+[data-theme="dark"] .summary-card {
+    background: var(--dash-summary-bg);
+    border-color: var(--dash-summary-border);
+    color: var(--dash-summary-text);
+}
+
+[data-theme="dark"] .summary-card h5,
+[data-theme="dark"] .summary-card h3 {
+    color: var(--dash-summary-text);
+}
+
+[data-theme="dark"] h3,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+    color: var(--dash-heading);
+}
+
+[data-theme="dark"] .table {
+    color: var(--text-primary);
+    --bs-table-bg: transparent;
+    --bs-table-striped-bg: transparent;
+    --bs-table-hover-bg: var(--dash-row-hover);
+    --bs-table-border-color: var(--border);
+}
+
+[data-theme="dark"] .table thead {
+    background: var(--dash-thead-bg);
+}
+
+[data-theme="dark"] .table th {
+    color: var(--dash-th-color);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .table td {
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .table-hover > tbody > tr:hover > * {
+    background: var(--dash-row-hover);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+    background-color: var(--bg-input);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-select option {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-content {
+    background: var(--bg-card);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-header { border-bottom-color: var(--border); }
+[data-theme="dark"] .modal-footer { border-top-color:    var(--border); }
+
+[data-theme="dark"] .btn-close {
+    filter: var(--dash-btn-close-filter);
+}
+
+[data-theme="dark"] .btn-secondary {
+    background-color: var(--bg-input);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background-color: var(--bg-muted);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+/* status badge colors keep contrast in dark mode */
+[data-theme="dark"] tr td[style*="background"] {
+    opacity: 0.85;
+}
+
+/* Bootstrap list-group & misc */
+[data-theme="dark"] .list-group-item {
+    background-color: var(--bg-card);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] ul li {
+    color: var(--text-secondary);
+}
+

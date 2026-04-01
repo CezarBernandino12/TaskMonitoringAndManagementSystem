@@ -22,7 +22,7 @@
     min-width: 250px;
     transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
     overflow: visible;
-    z-index: 5;
+    z-index: 350;
 }
 
 .dashboard-sidebar.collapsed {
@@ -1237,7 +1237,31 @@ body.sidebar-mobile-open {
         width: 100%;
     }
 }
-/* DESKTOP / TABLET: sidebar should not have its own scroll */
+@media (min-width: 768px) {
+    .sidebar-toggle {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateX(50%) scale(0.96);
+        transition:
+            opacity 0.2s ease,
+            visibility 0.2s ease,
+            transform 0.25s ease,
+            background 0.25s ease;
+    }
+
+    .dashboard-sidebar:hover .sidebar-toggle {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translateX(50%) scale(1);
+    }
+
+    /* remove the extra hover bridge on collapsed mode */
+    .dashboard-sidebar.collapsed::after {
+        content: none;
+    }
+}
 @media (min-width: 768px) {
     .staff-sidebar-col {
         position: sticky;
