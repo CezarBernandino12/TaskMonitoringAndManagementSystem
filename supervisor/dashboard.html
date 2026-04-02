@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Profile</title>
+    <title>Supervisor Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="../imgs/psi.png">
 
@@ -24,48 +24,55 @@
 
     <script>
         (function () {
+            const root = document.documentElement;
+
             const isCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
             if (isCollapsed) {
-                document.documentElement.classList.add("sidebar-collapsed-init");
+                root.classList.add("sidebar-collapsed-init");
             }
+
+            const theme = localStorage.getItem("dashboard-theme") || "light";
+            root.setAttribute("data-theme", theme);
+            root.setAttribute("data-bs-theme", theme);
         })();
     </script>
-
 </head>
-<body>
+<body class="bg-body">
+    <div id="sileo-root"></div>
 
-<div class="container-fluid py-4">
-    <div class="row g-4 align-items-start">
-        <aside class="col-12 col-md-4 col-lg-3 col-xl-2 supervisor-sidebar-col">
-            <div id="sidebar-root"></div>
-        </aside>
-        <main class="col-md-10 ms-sm-auto px-4">
+    <div class="app-shell">
+        <header class="app-topbar">
+            <div id="topbar-root"></div>
+        </header>
 
+        <div class="app-body">
+            <aside class="app-sidebar-col">
+                <div id="sidebar-root"></div>
+            </aside>
 
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3>Supervisor Dashboard</h3>
+            <main class="app-main-col">
+                <div id="react-modal-root"></div>
+
+                <div class="container-fluid py-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3>Supervisor Dashboard</h3>
+                    </div>
+
+                    <div id="supervisor-dashboard-root"></div>
+                </div>
+            </main>
+        </div>
     </div>
-    <div id="react-modal-root"></div>
-     <div id="supervisor-dashboard-root"></div>
 
- 
+    <script type="text/babel" src="js/sidebar.jsx"></script>
 
-
-</div>
-
-    </main>
-  </div>
-
-
-<script type="text/babel" src="js/sidebar.jsx"></script>
     <script
         type="text/babel"
         data-type="module"
         data-presets="react"
         src="js/topbar.jsx"
     ></script>
-<script type="text/babel" src="js/dashboard.jsx"></script>
 
+    <script type="text/babel" src="js/dashboard.jsx"></script>
 </body>
 </html>
