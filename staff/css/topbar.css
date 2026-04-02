@@ -39,7 +39,7 @@
 }
 
 [data-theme="dark"] {
-    --bg-page:          #0f1117;
+    --bg-page:          #000;
     --bg-card:          #1a1d27;
     --bg-input:         #252836;
     --bg-muted:         #1f2230;
