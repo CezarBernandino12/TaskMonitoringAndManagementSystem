@@ -41,10 +41,10 @@ function getToasterOptions(theme) {
 
     return {
         fill: isDark ? "#111111" : "#ffffff",
-        roundness: 18,
+        roundness: 15,
         styles: {
             title: isDark
-                ? "text-[#30d158]! text-[20px] font-semibold! leading-none!"
+                ? "text-[#32d74b]! text-[20px] font-semibold! leading-none!"
                 : "text-[#111111]! text-[20px] font-semibold! leading-none!",
             description: isDark
                 ? "text-[#a1a1aa]! text-[18px]! leading-[1.45]!"
@@ -707,13 +707,13 @@ function ProfilePage() {
                                                         type="button"
                                                         className="btn btn-outline-danger"
                                                         style={{
-                                                            minHeight: "46px",
+                                                            minHeight: "40px",
+                                                            maxWidth: "45px",
                                                             borderRadius: "16px"
                                                         }}
                                                         onClick={handleRemoveImage}
                                                     >
                                                         <i className="bi bi-trash3-fill me-2"></i>
-                                                        Remove
                                                     </button>
                                                 </div>
                                             </div>

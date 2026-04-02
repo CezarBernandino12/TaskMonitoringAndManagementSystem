@@ -3,13 +3,8 @@
     --shell-gap: 12px;
     --sidebar-expanded-w: 250px;
     --sidebar-collapsed-w: 108px;
-
     --topbar-content-gap: 18px;
-
-    /* exact bottom edge of the topbar */
     --topbar-bottom: calc(var(--shell-edge) + var(--topbar-height, 78px));
-
-    /* where main content starts */
     --topbar-stack: calc(var(--topbar-bottom) + var(--topbar-content-gap));
 }
 
@@ -34,20 +29,23 @@ body {
     pointer-events: auto;
 }
 
-[data-theme="light"] #sileo-root [data-sileo-title],
+[data-theme="light"] #sileo-root [data-sileo-title] {
+    font-size: 16px !important;
+}
+
+[data-theme="dark"] #sileo-root [data-sileo-title] {
+    font-size: 16px !important;
+}
+
 [data-theme="light"] #sileo-root [data-sileo-description] {
     color: #ffffff !important;
+    font-size: 15px !important;
 }
 
-[data-theme="dark"] #sileo-root [data-sileo-title],
 [data-theme="dark"] #sileo-root [data-sileo-description] {
-    color: #000000 !important;
-}
-
-.app-shell {
-    position: relative;
-    min-height: 100vh;
-    background: var(--bg-page, #f4f4f6);
+    color: #3f3f46 !important;
+    font-size: 15px !important;
+    
 }
 
 /* hide only the area directly behind the topbar */

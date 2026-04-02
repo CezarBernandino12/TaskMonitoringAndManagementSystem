@@ -27,7 +27,7 @@ function getToasterOptions(theme) {
 
     return {
         fill: isDark ? "#111111" : "#ffffff",
-        roundness: 18,
+        roundness: 15,
         styles: {
             title: isDark
                 ? "text-[#32d74b]! text-[20px] font-semibold! leading-none!"
