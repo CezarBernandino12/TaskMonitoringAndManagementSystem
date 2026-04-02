@@ -4,10 +4,6 @@
     --sidebar-expanded-w: 250px;
     --sidebar-collapsed-w: 108px;
 
-    --sileo-width: 560px;
-    --sileo-height: 68px;
-
-    /* gap you want below the topbar */
     --topbar-content-gap: 18px;
 
     /* exact bottom edge of the topbar */
@@ -38,9 +34,14 @@ body {
     pointer-events: auto;
 }
 
-#sileo-root [data-sileo-title],
-#sileo-root [data-sileo-description] {
+[data-theme="light"] #sileo-root [data-sileo-title],
+[data-theme="light"] #sileo-root [data-sileo-description] {
     color: #ffffff !important;
+}
+
+[data-theme="dark"] #sileo-root [data-sileo-title],
+[data-theme="dark"] #sileo-root [data-sileo-description] {
+    color: #000000 !important;
 }
 
 .app-shell {

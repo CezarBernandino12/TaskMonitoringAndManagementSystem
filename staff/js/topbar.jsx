@@ -11,23 +11,81 @@ const TOPBAR_USER_API = "php/sidebar.php";
 const THEME_KEY = "dashboard-theme";
 const GREETING_REFRESH_MS = 60 * 1000;
 
-const toasterOptions = {
-    fill: "#111111",
-    roundness: 24,
-    styles: {
-        title: "text-white! text-[18px] font-semibold!",
-        description: "text-white! text-[15px]!",
-        badge: "bg-white/10!",
-        button: "bg-white/10! text-white! hover:bg-white/15!"
-    }
-};
+function getCurrentTheme() {
+    const attrTheme = document.documentElement.getAttribute("data-theme");
+    if (attrTheme === "dark" || attrTheme === "light") return attrTheme;
+
+    const bsTheme = document.documentElement.getAttribute("data-bs-theme");
+    if (bsTheme === "dark" || bsTheme === "light") return bsTheme;
+
+    const storedTheme = localStorage.getItem(THEME_KEY);
+    return storedTheme === "dark" ? "dark" : "light";
+}
+
+function getToasterOptions(theme) {
+    const isDark = theme === "dark";
+
+    return {
+        fill: isDark ? "#111111" : "#ffffff",
+        roundness: 18,
+        styles: {
+            title: isDark
+                ? "text-[#32d74b]! text-[20px] font-semibold! leading-none!"
+                : "text-[#111111]! text-[20px] font-semibold! leading-none!",
+            description: isDark
+                ? "text-[#a1a1aa]! text-[18px]! leading-[1.45]!"
+                : "text-[#3f3f46]! text-[18px]! leading-[1.45]!",
+            badge: isDark
+                ? "bg-[#1f3b22]! text-[#32d74b]!"
+                : "bg-[#e8f7ec]! text-[#1f8f38]!",
+            button: isDark
+                ? "bg-white/10! text-white! hover:bg-white/15!"
+                : "bg-dark-subtle! text-dark! hover:bg-secondary-subtle!"
+        }
+    };
+}
+
+function useSileoTheme() {
+    const [theme, setTheme] = React.useState(getCurrentTheme);
+
+    React.useEffect(() => {
+        function syncTheme(e) {
+            const nextTheme = e?.detail?.theme;
+            if (nextTheme === "dark" || nextTheme === "light") {
+                setTheme(nextTheme);
+                return;
+            }
+
+            setTheme(getCurrentTheme());
+        }
+
+        const observer = new MutationObserver(() => {
+            setTheme(getCurrentTheme());
+        });
+
+        window.addEventListener("dashboard-theme-changed", syncTheme);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["data-theme", "data-bs-theme"]
+        });
+
+        return () => {
+            window.removeEventListener("dashboard-theme-changed", syncTheme);
+            observer.disconnect();
+        };
+    }, []);
+
+    return theme;
+}
 
 function ThemeToaster() {
+    const theme = useSileoTheme();
+
     return (
         <Toaster
             position="top-center"
             offset={{ top: 10 }}
-            options={toasterOptions}
+            options={getToasterOptions(theme)}
         />
     );
 }
@@ -42,11 +100,6 @@ function getGreetingByTime(date = new Date()) {
 
 function getDisplayName(name) {
     return name && name.trim() ? name.trim() : "User";
-}
-
-function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(THEME_KEY, theme);
 }
 
 function getStoredTheme() {
@@ -73,7 +126,6 @@ function DarkModeToggle({ dark, onToggle }) {
 
 function NotificationBell() {
     const [open, setOpen] = React.useState(false);
-    const [count] = React.useState(3);
     const panelRef = React.useRef(null);
     const btnRef = React.useRef(null);
 
@@ -97,8 +149,10 @@ function NotificationBell() {
         { id: 1, icon: "bi-check2-circle", iconColor: "notif-green", title: "Task completed", desc: "Q2 Report has been marked as done.", time: "2 min ago", unread: true },
         { id: 2, icon: "bi-calendar-event", iconColor: "notif-blue", title: "Meeting reminder", desc: "Team standup starts in 15 minutes.", time: "14 min ago", unread: true },
         { id: 3, icon: "bi-person-plus", iconColor: "notif-purple", title: "New team member", desc: "Maria Santos joined your department.", time: "1 hr ago", unread: true },
-        { id: 4, icon: "bi-file-earmark-text", iconColor: "notif-amber", title: "Document shared", desc: "Budget proposal was shared with you.", time: "Yesterday", unread: false },
+        { id: 4, icon: "bi-file-earmark-text", iconColor: "notif-amber", title: "Document shared", desc: "Budget proposal was shared with you.", time: "Yesterday", unread: false }
     ];
+
+    const unreadCount = notifications.filter((n) => n.unread).length;
 
     return (
         <div className="topbar-notif-wrap">
@@ -106,22 +160,22 @@ function NotificationBell() {
                 ref={btnRef}
                 type="button"
                 className={`topbar-icon-btn notif-btn ${open ? "active" : ""}`}
-                onClick={() => setOpen(v => !v)}
+                onClick={() => setOpen((v) => !v)}
                 aria-label="Notifications"
             >
                 <i className="bi bi-bell"></i>
-                {count > 0 && <span className="notif-badge">{count}</span>}
+                {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
             </button>
 
             {open && (
                 <div ref={panelRef} className="notif-panel" role="dialog" aria-label="Notifications">
                     <div className="notif-panel-head">
                         <span className="notif-panel-title">Notifications</span>
-                        {count > 0 && <span className="notif-panel-count">{count} new</span>}
+                        {unreadCount > 0 && <span className="notif-panel-count">{unreadCount} new</span>}
                     </div>
 
                     <div className="notif-list">
-                        {notifications.map(n => (
+                        {notifications.map((n) => (
                             <div key={n.id} className={`notif-item ${n.unread ? "unread" : ""}`}>
                                 <div className={`notif-item-icon ${n.iconColor}`}>
                                     <i className={`bi ${n.icon}`}></i>
@@ -204,6 +258,14 @@ function TopBar() {
                     detail: { theme }
                 })
             );
+
+            sileo.info({
+                title: theme === "dark" ? "Dark mode enabled" : "Light mode enabled",
+                description:
+                    theme === "dark"
+                        ? "Your dashboard theme is now using dark mode."
+                        : "Your dashboard theme is now using light mode."
+            });
         } else {
             didInitThemeRef.current = true;
         }
@@ -237,7 +299,7 @@ function TopBar() {
                     role_label: data.role_label || "",
                     department_name: data.department_name || "",
                     initials: data.initials || "U",
-                    profile_image_url: data.profile_image_url || "",
+                    profile_image_url: data.profile_image_url || ""
                 });
 
                 setUserLoaded(true);
@@ -260,7 +322,7 @@ function TopBar() {
                 role_label: d.role_label || "",
                 department_name: d.department_name || "",
                 initials: d.initials || "U",
-                profile_image_url: d.profile_image_url || "",
+                profile_image_url: d.profile_image_url || ""
             });
 
             setUserLoaded(true);
@@ -286,7 +348,7 @@ function TopBar() {
             </div>
 
             <div className="topbar-right">
-                <DarkModeToggle dark={dark} onToggle={() => setDark(v => !v)} />
+                <DarkModeToggle dark={dark} onToggle={() => setDark((v) => !v)} />
                 <div className="topbar-sep"></div>
                 <NotificationBell />
                 <div className="topbar-sep"></div>
@@ -296,12 +358,13 @@ function TopBar() {
     );
 }
 
+const sileoRoot = document.getElementById("sileo-root");
+if (sileoRoot && !sileoRoot.dataset.mounted) {
+    sileoRoot.dataset.mounted = "true";
+    createRoot(sileoRoot).render(<ThemeToaster />);
+}
+
 const topbarRoot = document.getElementById("topbar-root");
 if (topbarRoot) {
-    createRoot(topbarRoot).render(
-        <>
-            <ThemeToaster />
-            <TopBar />
-        </>
-    );
+    createRoot(topbarRoot).render(<TopBar />);
 }

@@ -2,7 +2,6 @@ import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
 
-
 function getInitials(name) {
     if (!name) return "U";
 
@@ -26,23 +25,81 @@ async function parseJsonResponse(response) {
     }
 }
 
-const toasterOptions = {
-    fill: "#111111",
-    roundness: 24,
-    styles: {
-        title: "text-white! text-[18px] font-semibold!",
-        description: "text-white! text-[15px]!",
-        badge: "bg-white/10!",
-        button: "bg-white/10! text-white! hover:bg-white/15!"
-    }
-};
+function getCurrentTheme() {
+    const attrTheme = document.documentElement.getAttribute("data-theme");
+    if (attrTheme === "dark" || attrTheme === "light") return attrTheme;
+
+    const bsTheme = document.documentElement.getAttribute("data-bs-theme");
+    if (bsTheme === "dark" || bsTheme === "light") return bsTheme;
+
+    const storedTheme = localStorage.getItem("dashboard-theme");
+    return storedTheme === "dark" ? "dark" : "light";
+}
+
+function getToasterOptions(theme) {
+    const isDark = theme === "dark";
+
+    return {
+        fill: isDark ? "#111111" : "#ffffff",
+        roundness: 18,
+        styles: {
+            title: isDark
+                ? "text-[#30d158]! text-[20px] font-semibold! leading-none!"
+                : "text-[#111111]! text-[20px] font-semibold! leading-none!",
+            description: isDark
+                ? "text-[#a1a1aa]! text-[18px]! leading-[1.45]!"
+                : "text-[#3f3f46]! text-[18px]! leading-[1.45]!",
+            badge: isDark
+                ? "bg-[#1f3b22]! text-[#32d74b]!"
+                : "bg-[#e8f7ec]! text-[#1f8f38]!",
+            button: isDark
+                ? "bg-white/10! text-white! hover:bg-white/15!"
+                : "bg-dark-subtle! text-dark! hover:bg-secondary-subtle!"
+        }
+    };
+}
+
+function useSileoTheme() {
+    const [theme, setTheme] = React.useState(getCurrentTheme);
+
+    React.useEffect(() => {
+        function syncTheme(e) {
+            const nextTheme = e?.detail?.theme;
+            if (nextTheme === "dark" || nextTheme === "light") {
+                setTheme(nextTheme);
+                return;
+            }
+
+            setTheme(getCurrentTheme());
+        }
+
+        const observer = new MutationObserver(() => {
+            setTheme(getCurrentTheme());
+        });
+
+        window.addEventListener("dashboard-theme-changed", syncTheme);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["data-theme", "data-bs-theme"]
+        });
+
+        return () => {
+            window.removeEventListener("dashboard-theme-changed", syncTheme);
+            observer.disconnect();
+        };
+    }, []);
+
+    return theme;
+}
 
 function ProfileToaster() {
+    const theme = useSileoTheme();
+
     return (
         <Toaster
             position="top-center"
             offset={{ top: 10 }}
-            options={toasterOptions}
+            options={getToasterOptions(theme)}
         />
     );
 }
@@ -184,25 +241,6 @@ function ProfilePage() {
         });
         setPreviewUrl(data.profile_image_url || "");
         setRemoveImage(false);
-    }, []);
-
-    React.useEffect(() => {
-        function handleThemeChanged(e) {
-            const theme = e.detail?.theme === "dark" ? "dark" : "light";
-
-            sileo.info({
-                title: theme === "dark" ? "Dark mode enabled" : "Light mode enabled",
-                description:
-                    theme === "dark"
-                        ? "Your dashboard theme is now using dark mode."
-                        : "Your dashboard theme is now using light mode."
-            });
-        }
-
-        window.addEventListener("dashboard-theme-changed", handleThemeChanged);
-        return () => {
-            window.removeEventListener("dashboard-theme-changed", handleThemeChanged);
-        };
     }, []);
 
     React.useEffect(() => {
@@ -416,451 +454,429 @@ function ProfilePage() {
 
     if (loading) {
         return (
-            <>
-                <Toaster
-                    position="top-center"
-                    offset={{ top: 8 }}
-                    options={toasterOptions}
-                />
-                <div className="w-100 pb-4">
-                    <div
-                        className="card border shadow-sm bg-body"
-                        style={{ borderRadius: "20px" }}
-                    >
-                        <div className="card-body py-5">
-                            <div className="d-flex align-items-center justify-content-center gap-3 text-body-secondary">
-                                <div className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
-                                <span>Loading profile...</span>
-                            </div>
+            <div className="w-100 pb-4">
+                <div
+                    className="card border shadow-sm bg-body"
+                    style={{ borderRadius: "20px" }}
+                >
+                    <div className="card-body py-5">
+                        <div className="d-flex align-items-center justify-content-center gap-3 text-body-secondary">
+                            <div className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+                            <span>Loading profile...</span>
                         </div>
                     </div>
                 </div>
-            </>
+            </div>
         );
     }
 
     if (pageError && !profile) {
         return (
-            <>
-                <Toaster
-                    position="top-center"
-                    offset={{ top: 8 }}
-                    options={toasterOptions}
-                />
-                <div className="w-100 pb-4">
-                    <div
-                        className="card border shadow-sm bg-body"
-                        style={{ borderRadius: "20px" }}
-                    >
-                        <div className="card-body p-4">
-                            <AlertMessage>{pageError}</AlertMessage>
-                        </div>
+            <div className="w-100 pb-4">
+                <div
+                    className="card border shadow-sm bg-body"
+                    style={{ borderRadius: "20px" }}
+                >
+                    <div className="card-body p-4">
+                        <AlertMessage>{pageError}</AlertMessage>
                     </div>
                 </div>
-            </>
+            </div>
         );
     }
 
     const isEditing = activeSection !== null;
 
     return (
-        <>
-           <Toaster
-                position="top-center"
-                offset={{ top: 8 }}
-                options={toasterOptions}
-            />
+        <div className="w-100 pb-4">
+            <div
+                className="card border shadow-sm bg-body"
+                style={{
+                    borderRadius: "20px",
+                    minHeight: "fit-content"
+                }}
+            >
+                <div className="card-body p-4 p-xl-5">
+                    <div className="mb-4">
+                        <h4
+                            className="mb-2 fw-bold text-body"
+                            style={{ fontSize: "28px" }}
+                        >
+                            Account settings
+                        </h4>
+                        <p
+                            className="mb-0 text-body-secondary"
+                            style={{ fontSize: "15px", maxWidth: "760px" }}
+                        >
+                            Preview your account details and edit them by section.
+                        </p>
+                    </div>
 
-            <div className="w-100 pb-4">
-                <div
-                    className="card border shadow-sm bg-body"
-                    style={{
-                        borderRadius: "20px",
-                        minHeight: "fit-content"
-                    }}
-                >
-                    <div className="card-body p-4 p-xl-5">
-                        <div className="mb-4">
-                            <h4
-                                className="mb-2 fw-bold text-body"
-                                style={{ fontSize: "28px" }}
+                    {pageError && profile ? (
+                        <AlertMessage>{pageError}</AlertMessage>
+                    ) : null}
+
+                    {!isEditing ? (
+                        <>
+                            <div
+                                className="card border shadow-sm bg-body-tertiary mb-4"
+                                style={{ borderRadius: "16px" }}
                             >
-                                Account settings
-                            </h4>
-                            <p
-                                className="mb-0 text-body-secondary"
-                                style={{ fontSize: "15px", maxWidth: "760px" }}
-                            >
-                                Preview your account details and edit them by section.
-                            </p>
-                        </div>
+                                <div className="card-body px-4 py-3 px-xl-4 py-xl-3">
+                                    <div className="row g-4 align-items-center">
+                                        <div className="col-12 col-xl-5">
+                                            <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+                                                <Avatar
+                                                    src={previewUrl}
+                                                    name={displayName}
+                                                    size={74}
+                                                />
 
-                        {pageError && profile ? (
-                            <AlertMessage>{pageError}</AlertMessage>
-                        ) : null}
+                                                <div style={{ minWidth: 0 }}>
+                                                    <h5
+                                                        className="mb-2 fw-bold text-body"
+                                                        style={{
+                                                            fontSize: "30px",
+                                                            lineHeight: 1.15
+                                                        }}
+                                                    >
+                                                        {displayName}
+                                                    </h5>
 
-                        {!isEditing ? (
-                            <>
-                                <div
-                                    className="card border shadow-sm bg-body-tertiary mb-4"
-                                    style={{ borderRadius: "16px" }}
-                                >
-                                    <div className="card-body px-4 py-3 px-xl-4 py-xl-3">
-                                        <div className="row g-4 align-items-center">
-                                            <div className="col-12 col-xl-5">
-                                                <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
-                                                    <Avatar
-                                                        src={previewUrl}
-                                                        name={displayName}
-                                                        size={74}
-                                                    />
-
-                                                    <div style={{ minWidth: 0 }}>
-                                                        <h5
-                                                            className="mb-2 fw-bold text-body"
-                                                            style={{
-                                                                fontSize: "30px",
-                                                                lineHeight: 1.15
-                                                            }}
-                                                        >
-                                                            {displayName}
-                                                        </h5>
-
-                                                        <div
-                                                            className="d-flex align-items-center flex-wrap gap-2 text-body-secondary"
-                                                            style={{ fontSize: "15px", fontWeight: 500 }}
-                                                        >
-                                                            <span className="fw-bold text-info-emphasis">
-                                                                {role}
-                                                            </span>
-                                                            <span className="text-body-secondary">|</span>
-                                                            <span>{departmentName}</span>
-                                                        </div>
+                                                    <div
+                                                        className="d-flex align-items-center flex-wrap gap-2 text-body-secondary"
+                                                        style={{ fontSize: "15px", fontWeight: 500 }}
+                                                    >
+                                                        <span className="fw-bold text-info-emphasis">
+                                                            {role}
+                                                        </span>
+                                                        <span className="text-body-secondary">|</span>
+                                                        <span>{departmentName}</span>
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            <div className="col-auto d-none d-xl-flex justify-content-center">
-                                                <div className="vr opacity-25" style={{ minHeight: "118px" }}></div>
-                                            </div>
+                                        <div className="col-auto d-none d-xl-flex justify-content-center">
+                                            <div className="vr opacity-25" style={{ minHeight: "118px" }}></div>
+                                        </div>
 
-                                            <div className="col-12 col-xl">
-                                                <div className="row g-4">
-                                                    <div className="col-6">
-                                                        <InfoItem label="Role" value={role} />
-                                                    </div>
-                                                    <div className="col-6">
-                                                        <InfoItem label="Employee ID" value={staticEmployeeId} />
-                                                    </div>
-                                                    <div className="col-6">
-                                                        <InfoItem label="Department" value={departmentName} />
-                                                    </div>
-                                                    <div className="col-6">
-                                                        <InfoItem label="Department ID" value={staticDepartmentId} />
-                                                    </div>
+                                        <div className="col-12 col-xl">
+                                            <div className="row g-4">
+                                                <div className="col-6">
+                                                    <InfoItem label="Role" value={role} />
+                                                </div>
+                                                <div className="col-6">
+                                                    <InfoItem label="Employee ID" value={staticEmployeeId} />
+                                                </div>
+                                                <div className="col-6">
+                                                    <InfoItem label="Department" value={departmentName} />
+                                                </div>
+                                                <div className="col-6">
+                                                    <InfoItem label="Department ID" value={staticDepartmentId} />
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="row g-3 align-items-stretch">
-                                    <div className="col-12 col-xl-7 col-xxl-6">
+                            <div className="row g-3 align-items-stretch">
+                                <div className="col-12 col-xl-7 col-xxl-6">
+                                    <CardSection
+                                        title="Personal information"
+                                        onEdit={() => handleStartEdit("personal")}
+                                    >
+                                        <div className="row g-4">
+                                            <div className="col-12 col-md-6">
+                                                <InfoItem label="Full name" value={form.full_name} />
+                                            </div>
+
+                                            <div className="col-12 col-md-6">
+                                                <InfoItem label="Gender" value={staticGender} />
+                                            </div>
+
+                                            <div className="col-12 col-md-6">
+                                                <InfoItem label="Date of birth" value={staticDateOfBirth} />
+                                            </div>
+
+                                            <div className="col-12">
+                                                <InfoItem label="Address" value={form.address} />
+                                            </div>
+                                        </div>
+                                    </CardSection>
+                                </div>
+
+                                <div className="col-12 col-xl-5 col-xxl-6">
+                                    <div className="d-grid gap-3 h-100">
                                         <CardSection
-                                            title="Personal information"
-                                            onEdit={() => handleStartEdit("personal")}
+                                            title="Contact information"
+                                            onEdit={() => handleStartEdit("contact")}
                                         >
                                             <div className="row g-4">
                                                 <div className="col-12 col-md-6">
-                                                    <InfoItem label="Full name" value={form.full_name} />
+                                                    <InfoItem label="Contact number" value={form.contact} />
                                                 </div>
 
                                                 <div className="col-12 col-md-6">
-                                                    <InfoItem label="Gender" value={staticGender} />
+                                                    <InfoItem label="Email" value={form.email} />
+                                                </div>
+                                            </div>
+                                        </CardSection>
+
+                                        <CardSection title="Account information">
+                                            <div className="row g-4">
+                                                <div className="col-12 col-md-6 col-xl-6">
+                                                    <InfoItem label="Department" value={departmentName} />
                                                 </div>
 
-                                                <div className="col-12 col-md-6">
-                                                    <InfoItem label="Date of birth" value={staticDateOfBirth} />
+                                                <div className="col-12 col-md-6 col-xl-6">
+                                                    <InfoItem label="Role" value={role} />
                                                 </div>
 
-                                                <div className="col-12">
-                                                    <InfoItem label="Address" value={form.address} />
+                                                <div className="col-12 col-md-6 col-xl-6">
+                                                    <InfoItem label="Employee ID" value={staticEmployeeId} />
+                                                </div>
+
+                                                <div className="col-12 col-md-6 col-xl-6">
+                                                    <InfoItem label="Department ID" value={staticDepartmentId} />
                                                 </div>
                                             </div>
                                         </CardSection>
                                     </div>
-
-                                    <div className="col-12 col-xl-5 col-xxl-6">
-                                        <div className="d-grid gap-3 h-100">
-                                            <CardSection
-                                                title="Contact information"
-                                                onEdit={() => handleStartEdit("contact")}
-                                            >
-                                                <div className="row g-4">
-                                                    <div className="col-12 col-md-6">
-                                                        <InfoItem label="Contact number" value={form.contact} />
-                                                    </div>
-
-                                                    <div className="col-12 col-md-6">
-                                                        <InfoItem label="Email" value={form.email} />
-                                                    </div>
-                                                </div>
-                                            </CardSection>
-
-                                            <CardSection title="Account information">
-                                                <div className="row g-4">
-                                                    <div className="col-12 col-md-6 col-xl-6">
-                                                        <InfoItem label="Department" value={departmentName} />
-                                                    </div>
-
-                                                    <div className="col-12 col-md-6 col-xl-6">
-                                                        <InfoItem label="Role" value={role} />
-                                                    </div>
-
-                                                    <div className="col-12 col-md-6 col-xl-6">
-                                                        <InfoItem label="Employee ID" value={staticEmployeeId} />
-                                                    </div>
-
-                                                    <div className="col-12 col-md-6 col-xl-6">
-                                                        <InfoItem label="Department ID" value={staticDepartmentId} />
-                                                    </div>
-                                                </div>
-                                            </CardSection>
-                                        </div>
-                                    </div>
                                 </div>
-                            </>
-                        ) : (
-                            <form onSubmit={handleSubmit}>
-                                <div
-                                    className="card border shadow-sm bg-body-tertiary"
-                                    style={{ borderRadius: "24px" }}
-                                >
-                                    <div className="card-body p-4 p-xl-4">
-                                        <div className="mb-4">
-                                            <h5
-                                                className="mb-1 fw-bold text-body"
-                                                style={{ fontSize: "22px" }}
-                                            >
-                                                {activeSection === "contact"
-                                                    ? "Contact information"
-                                                    : "Personal information"}
-                                            </h5>
-                                            <p
-                                                className="mb-0 text-body-secondary"
-                                                style={{ fontSize: "15px" }}
-                                            >
-                                                {activeSection === "contact"
-                                                    ? "Edit your contact details"
-                                                    : "Edit your personal information"}
-                                            </p>
-                                        </div>
+                            </div>
+                        </>
+                    ) : (
+                        <form onSubmit={handleSubmit}>
+                            <div
+                                className="card border shadow-sm bg-body-tertiary"
+                                style={{ borderRadius: "24px" }}
+                            >
+                                <div className="card-body p-4 p-xl-4">
+                                    <div className="mb-4">
+                                        <h5
+                                            className="mb-1 fw-bold text-body"
+                                            style={{ fontSize: "22px" }}
+                                        >
+                                            {activeSection === "contact"
+                                                ? "Contact information"
+                                                : "Personal information"}
+                                        </h5>
+                                        <p
+                                            className="mb-0 text-body-secondary"
+                                            style={{ fontSize: "15px" }}
+                                        >
+                                            {activeSection === "contact"
+                                                ? "Edit your contact details"
+                                                : "Edit your personal information"}
+                                        </p>
+                                    </div>
 
-                                        {activeSection === "personal" ? (
-                                            <>
-                                                <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4 pb-2">
-                                                    <Avatar
-                                                        src={previewUrl}
-                                                        name={displayName}
-                                                        size={108}
+                                    {activeSection === "personal" ? (
+                                        <>
+                                            <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4 pb-2">
+                                                <Avatar
+                                                    src={previewUrl}
+                                                    name={displayName}
+                                                    size={108}
+                                                />
+
+                                                <div className="d-flex flex-column flex-sm-row gap-2 flex-wrap">
+                                                    <input
+                                                        ref={fileInputRef}
+                                                        type="file"
+                                                        accept="image/png,image/jpeg,image/webp"
+                                                        className="d-none"
+                                                        onChange={handleImageChange}
                                                     />
 
-                                                    <div className="d-flex flex-column flex-sm-row gap-2 flex-wrap">
-                                                        <input
-                                                            ref={fileInputRef}
-                                                            type="file"
-                                                            accept="image/png,image/jpeg,image/webp"
-                                                            className="d-none"
-                                                            onChange={handleImageChange}
-                                                        />
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-dark fw-bold px-4"
+                                                        style={{
+                                                            minHeight: "46px",
+                                                            borderRadius: "16px"
+                                                        }}
+                                                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                                                    >
+                                                        Upload an image
+                                                    </button>
 
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-dark fw-bold px-4"
-                                                            style={{
-                                                                minHeight: "46px",
-                                                                borderRadius: "16px"
-                                                            }}
-                                                            onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                                                        >
-                                                            Upload an image
-                                                        </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline-danger"
+                                                        style={{
+                                                            minHeight: "46px",
+                                                            borderRadius: "16px"
+                                                        }}
+                                                        onClick={handleRemoveImage}
+                                                    >
+                                                        <i className="bi bi-trash3-fill me-2"></i>
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            </div>
 
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-outline-danger"
-                                                            style={{
-                                                                minHeight: "46px",
-                                                                borderRadius: "16px"
-                                                            }}
-                                                            onClick={handleRemoveImage}
-                                                        >
-                                                            <i className="bi bi-trash3-fill me-2"></i>
-                                                            Remove
-                                                        </button>
-                                                    </div>
+                                            <div className="border-top my-4"></div>
+
+                                            <div className="row g-4">
+                                                <div className="col-12">
+                                                    <label className="form-label fw-semibold text-body">
+                                                        Full name <span className="text-danger">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        name="full_name"
+                                                        value={form.full_name}
+                                                        onChange={handleChange}
+                                                        required
+                                                        style={{
+                                                            minHeight: "58px",
+                                                            borderRadius: "16px",
+                                                            paddingInline: "18px",
+                                                            fontSize: "16px"
+                                                        }}
+                                                    />
                                                 </div>
 
-                                                <div className="border-top my-4"></div>
-
-                                                <div className="row g-4">
-                                                    <div className="col-12">
-                                                        <label className="form-label fw-semibold text-body">
-                                                            Full name <span className="text-danger">*</span>
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            name="full_name"
-                                                            value={form.full_name}
-                                                            onChange={handleChange}
-                                                            required
-                                                            style={{
-                                                                minHeight: "58px",
-                                                                borderRadius: "16px",
-                                                                paddingInline: "18px",
-                                                                fontSize: "16px"
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    <div className="col-12 col-md-6">
-                                                        <label className="form-label fw-semibold text-body">Gender</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={staticGender}
-                                                            readOnly
-                                                            disabled
-                                                            style={{
-                                                                minHeight: "58px",
-                                                                borderRadius: "16px",
-                                                                paddingInline: "18px",
-                                                                fontSize: "16px"
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    <div className="col-12 col-md-6">
-                                                        <label className="form-label fw-semibold text-body">Date of birth</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={staticDateOfBirth}
-                                                            readOnly
-                                                            disabled
-                                                            style={{
-                                                                minHeight: "58px",
-                                                                borderRadius: "16px",
-                                                                paddingInline: "18px",
-                                                                fontSize: "16px"
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    <div className="col-12">
-                                                        <label className="form-label fw-semibold text-body">Address</label>
-                                                        <textarea
-                                                            className="form-control"
-                                                            name="address"
-                                                            rows="4"
-                                                            value={form.address}
-                                                            onChange={handleChange}
-                                                            placeholder="Enter address"
-                                                            style={{
-                                                                minHeight: "132px",
-                                                                borderRadius: "16px",
-                                                                padding: "16px 18px",
-                                                                fontSize: "16px"
-                                                            }}
-                                                        ></textarea>
-                                                    </div>
+                                                <div className="col-12 col-md-6">
+                                                    <label className="form-label fw-semibold text-body">Gender</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        value={staticGender}
+                                                        readOnly
+                                                        disabled
+                                                        style={{
+                                                            minHeight: "58px",
+                                                            borderRadius: "16px",
+                                                            paddingInline: "18px",
+                                                            fontSize: "16px"
+                                                        }}
+                                                    />
                                                 </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="border-top my-4"></div>
 
-                                                <div className="row g-4">
-                                                    <div className="col-12 col-md-6">
-                                                        <label className="form-label fw-semibold text-body">
-                                                            Email <span className="text-danger">*</span>
-                                                        </label>
-                                                        <input
-                                                            type="email"
-                                                            className="form-control"
-                                                            name="email"
-                                                            value={form.email}
-                                                            onChange={handleChange}
-                                                            required
-                                                            style={{
-                                                                minHeight: "58px",
-                                                                borderRadius: "16px",
-                                                                paddingInline: "18px",
-                                                                fontSize: "16px"
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    <div className="col-12 col-md-6">
-                                                        <label className="form-label fw-semibold text-body">
-                                                            Contact number <span className="text-danger">*</span>
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            name="contact"
-                                                            value={form.contact}
-                                                            onChange={handleChange}
-                                                            placeholder="Enter contact number"
-                                                            style={{
-                                                                minHeight: "58px",
-                                                                borderRadius: "16px",
-                                                                paddingInline: "18px",
-                                                                fontSize: "16px"
-                                                            }}
-                                                        />
-                                                    </div>
+                                                <div className="col-12 col-md-6">
+                                                    <label className="form-label fw-semibold text-body">Date of birth</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        value={staticDateOfBirth}
+                                                        readOnly
+                                                        disabled
+                                                        style={{
+                                                            minHeight: "58px",
+                                                            borderRadius: "16px",
+                                                            paddingInline: "18px",
+                                                            fontSize: "16px"
+                                                        }}
+                                                    />
                                                 </div>
-                                            </>
-                                        )}
 
-                                        <div className="d-flex flex-column-reverse flex-sm-row justify-content-end align-items-stretch align-items-sm-center gap-2 mt-4 pt-4 border-top">
-                                            <button
-                                                type="button"
-                                                className="btn btn-outline-secondary fw-semibold"
-                                                style={{
-                                                    minHeight: "46px",
-                                                    borderRadius: "12px",
-                                                    paddingInline: "16px"
-                                                }}
-                                                onClick={handleCancelEdit}
-                                            >
-                                                Cancel
-                                            </button>
+                                                <div className="col-12">
+                                                    <label className="form-label fw-semibold text-body">Address</label>
+                                                    <textarea
+                                                        className="form-control"
+                                                        name="address"
+                                                        rows="4"
+                                                        value={form.address}
+                                                        onChange={handleChange}
+                                                        placeholder="Enter address"
+                                                        style={{
+                                                            minHeight: "132px",
+                                                            borderRadius: "16px",
+                                                            padding: "16px 18px",
+                                                            fontSize: "16px"
+                                                        }}
+                                                    ></textarea>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="border-top my-4"></div>
 
-                                            <button
-                                                type="submit"
-                                                className="btn btn-dark fw-bold"
-                                                style={{
-                                                    minHeight: "46px",
-                                                    minWidth: "140px",
-                                                    borderRadius: "12px",
-                                                    paddingInline: "20px"
-                                                }}
-                                                disabled={saving}
-                                            >
-                                                {saving ? "Saving..." : "Save changes"}
-                                            </button>
-                                        </div>
+                                            <div className="row g-4">
+                                                <div className="col-12 col-md-6">
+                                                    <label className="form-label fw-semibold text-body">
+                                                        Email <span className="text-danger">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="email"
+                                                        className="form-control"
+                                                        name="email"
+                                                        value={form.email}
+                                                        onChange={handleChange}
+                                                        required
+                                                        style={{
+                                                            minHeight: "58px",
+                                                            borderRadius: "16px",
+                                                            paddingInline: "18px",
+                                                            fontSize: "16px"
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <label className="form-label fw-semibold text-body">
+                                                        Contact number <span className="text-danger">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        name="contact"
+                                                        value={form.contact}
+                                                        onChange={handleChange}
+                                                        placeholder="Enter contact number"
+                                                        style={{
+                                                            minHeight: "58px",
+                                                            borderRadius: "16px",
+                                                            paddingInline: "18px",
+                                                            fontSize: "16px"
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <div className="d-flex flex-column-reverse flex-sm-row justify-content-end align-items-stretch align-items-sm-center gap-2 mt-4 pt-4 border-top">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary fw-semibold"
+                                            style={{
+                                                minHeight: "46px",
+                                                borderRadius: "12px",
+                                                paddingInline: "16px"
+                                            }}
+                                            onClick={handleCancelEdit}
+                                        >
+                                            Cancel
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            className="btn btn-dark fw-bold"
+                                            style={{
+                                                minHeight: "46px",
+                                                minWidth: "140px",
+                                                borderRadius: "12px",
+                                                paddingInline: "20px"
+                                            }}
+                                            disabled={saving}
+                                        >
+                                            {saving ? "Saving..." : "Save changes"}
+                                        </button>
                                     </div>
                                 </div>
-                            </form>
-                        )}
-                    </div>
+                            </div>
+                        </form>
+                    )}
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 
