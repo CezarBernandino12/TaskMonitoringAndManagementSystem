@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Supervisor Dashboard</title>
+    <title>Supervisor Calendar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="../imgs/psi.png">
 
@@ -37,24 +37,32 @@
         })();
     </script>
 </head>
-<body>
+<body class="bg-body">
+    <div id="sileo-root"></div>
 
-<div class="container-fluid py-4">
-    <div class="row g-4 align-items-start">
-        <aside class="col-12 col-md-4 col-lg-3 col-xl-2 supervisor-sidebar-col">
-            <div id="sidebar-root"></div>
-        </aside>
+    <div class="app-shell">
+        <header class="app-topbar">
+            <div id="topbar-root"></div>
+        </header>
 
-        <main class="col-12 col-md-8 col-lg-9 col-xl-10 px-md-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3>Calendar</h3>
-            </div>
+        <div class="app-body">
+            <aside class="app-sidebar-col">
+                <div id="sidebar-root"></div>
+            </aside>
 
-            <div id="react-modal-root"></div>
-            <div id="calendar-page-root"></div>
-        </main>
+            <main class="app-main-col">
+                <div id="react-modal-root"></div>
+
+                <div class="container-fluid py-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3>Calendar</h3>
+                    </div>
+
+                    <div id="calendar-page-root"></div>
+                </div>
+            </main>
+        </div>
     </div>
-</div>
 
     <script type="text/babel" src="js/sidebar.jsx"></script>
 
@@ -66,6 +74,5 @@
     ></script>
 
     <script type="text/babel" src="js/calendar.jsx"></script>
-
 </body>
 </html>

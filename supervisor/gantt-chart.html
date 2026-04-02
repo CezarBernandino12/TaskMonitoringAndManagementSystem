@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Supervisor Dashboard</title>
+    <title>Supervisor Gantt Chart</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="../imgs/psi.png">
 
@@ -37,29 +37,32 @@
         })();
     </script>
 </head>
-<body>
+<body class="bg-body">
+    <div id="sileo-root"></div>
 
+    <div class="app-shell">
+        <header class="app-topbar">
+            <div id="topbar-root"></div>
+        </header>
 
-<div class="container-fluid py-4">
-    <div class="row g-4 align-items-start">
-        <aside class="col-12 col-md-4 col-lg-3 col-xl-2">
-            <div id="sidebar-root"></div>
-        </aside>
+        <div class="app-body">
+            <aside class="app-sidebar-col">
+                <div id="sidebar-root"></div>
+            </aside>
 
+            <main class="app-main-col">
+                <div id="react-modal-root"></div>
 
-<main class="col-md-10 ms-sm-auto px-4">
+                <div class="container-fluid py-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3>Gantt Chart</h3>
+                    </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3>Gantt Chart</h3>
+                    <div id="gantt-chart-root"></div>
+                </div>
+            </main>
+        </div>
     </div>
-
-  <div id="react-modal-root"></div>
-  <div id="gantt-chart-root"></div>
-    </div>
-
-</main>
-  </div>
-
 
     <script type="text/babel" src="js/sidebar.jsx"></script>
 
@@ -71,6 +74,5 @@
     ></script>
 
     <script type="text/babel" src="js/gantt-chart.jsx"></script>
-
 </body>
 </html>
