@@ -3,9 +3,34 @@
    Renders into #topbar-root
    ============================================================ */
 
+import React from "https://esm.sh/react@18.3.1";
+import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
+import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
+
 const TOPBAR_USER_API = "php/sidebar.php";
-const THEME_KEY       = "dashboard-theme";
+const THEME_KEY = "dashboard-theme";
 const GREETING_REFRESH_MS = 60 * 1000;
+
+const toasterOptions = {
+    fill: "#111111",
+    roundness: 24,
+    styles: {
+        title: "text-white! text-[18px] font-semibold!",
+        description: "text-white! text-[15px]!",
+        badge: "bg-white/10!",
+        button: "bg-white/10! text-white! hover:bg-white/15!"
+    }
+};
+
+function ThemeToaster() {
+    return (
+        <Toaster
+            position="top-center"
+            offset={{ top: 10 }}
+            options={toasterOptions}
+        />
+    );
+}
 
 function getGreetingByTime(date = new Date()) {
     const hour = date.getHours();
@@ -69,10 +94,10 @@ function NotificationBell() {
     }, [open]);
 
     const notifications = [
-        { id: 1, icon: "bi-check2-circle",    iconColor: "notif-green",  title: "Task completed",   desc: "Q2 Report has been marked as done.",  time: "2 min ago",  unread: true  },
-        { id: 2, icon: "bi-calendar-event",   iconColor: "notif-blue",   title: "Meeting reminder", desc: "Team standup starts in 15 minutes.",   time: "14 min ago", unread: true  },
-        { id: 3, icon: "bi-person-plus",      iconColor: "notif-purple", title: "New team member",  desc: "Maria Santos joined your department.", time: "1 hr ago",   unread: true  },
-        { id: 4, icon: "bi-file-earmark-text",iconColor: "notif-amber",  title: "Document shared",  desc: "Budget proposal was shared with you.", time: "Yesterday",  unread: false },
+        { id: 1, icon: "bi-check2-circle", iconColor: "notif-green", title: "Task completed", desc: "Q2 Report has been marked as done.", time: "2 min ago", unread: true },
+        { id: 2, icon: "bi-calendar-event", iconColor: "notif-blue", title: "Meeting reminder", desc: "Team standup starts in 15 minutes.", time: "14 min ago", unread: true },
+        { id: 3, icon: "bi-person-plus", iconColor: "notif-purple", title: "New team member", desc: "Maria Santos joined your department.", time: "1 hr ago", unread: true },
+        { id: 4, icon: "bi-file-earmark-text", iconColor: "notif-amber", title: "Document shared", desc: "Budget proposal was shared with you.", time: "Yesterday", unread: false },
     ];
 
     return (
@@ -164,9 +189,24 @@ function TopBar() {
         profile_image_url: ""
     });
     const [userLoaded, setUserLoaded] = React.useState(false);
+    const didInitThemeRef = React.useRef(false);
 
     React.useEffect(() => {
-        applyTheme(dark ? "dark" : "light");
+        const theme = dark ? "dark" : "light";
+
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.setAttribute("data-bs-theme", theme);
+        localStorage.setItem(THEME_KEY, theme);
+
+        if (didInitThemeRef.current) {
+            window.dispatchEvent(
+                new CustomEvent("dashboard-theme-changed", {
+                    detail: { theme }
+                })
+            );
+        } else {
+            didInitThemeRef.current = true;
+        }
     }, [dark]);
 
     React.useEffect(() => {
@@ -258,5 +298,10 @@ function TopBar() {
 
 const topbarRoot = document.getElementById("topbar-root");
 if (topbarRoot) {
-    ReactDOM.createRoot(topbarRoot).render(<TopBar />);
+    createRoot(topbarRoot).render(
+        <>
+            <ThemeToaster />
+            <TopBar />
+        </>
+    );
 }

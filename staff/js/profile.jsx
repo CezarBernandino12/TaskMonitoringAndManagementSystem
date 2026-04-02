@@ -187,6 +187,25 @@ function ProfilePage() {
     }, []);
 
     React.useEffect(() => {
+        function handleThemeChanged(e) {
+            const theme = e.detail?.theme === "dark" ? "dark" : "light";
+
+            sileo.info({
+                title: theme === "dark" ? "Dark mode enabled" : "Light mode enabled",
+                description:
+                    theme === "dark"
+                        ? "Your dashboard theme is now using dark mode."
+                        : "Your dashboard theme is now using light mode."
+            });
+        }
+
+        window.addEventListener("dashboard-theme-changed", handleThemeChanged);
+        return () => {
+            window.removeEventListener("dashboard-theme-changed", handleThemeChanged);
+        };
+    }, []);
+
+    React.useEffect(() => {
         let mounted = true;
 
         async function loadProfile() {
