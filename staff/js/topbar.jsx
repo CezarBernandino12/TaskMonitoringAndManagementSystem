@@ -131,7 +131,7 @@ function getGreetingMeta(date = new Date()) {
 function getHonorific(gender) {
     const value = (gender || "").trim().toLowerCase();
 
-    if (value === "male") return "Mr.";
+    if (value === "male") return "Sir.";
     if (value === "female") return "Ma'am";
     return "";
 }
