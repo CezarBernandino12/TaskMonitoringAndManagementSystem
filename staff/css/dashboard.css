@@ -1,6 +1,6 @@
 
 body {
-    background: var(--bg-page, #f4f4f6);
+    background: var(--bg-page, #ffff);
     color: var(--text-primary, #333);
     font-family: Arial, sans-serif;
     transition: background 0.3s ease, color 0.3s ease;
