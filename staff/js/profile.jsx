@@ -26,16 +26,19 @@ async function parseJsonResponse(response) {
 
 function parseYMD(value) {
     if (!value) return null;
+
     const [year, month, day] = value.split("-").map(Number);
     if (!year || !month || !day) return null;
-    return new Date(year, month - 1, day);
+
+    const parsed = new Date(year, month - 1, day);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function formatYMD(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
 }
 
 function isSameDay(a, b) {
@@ -48,6 +51,16 @@ function isSameDay(a, b) {
     );
 }
 
+function isFutureYMD(value) {
+    const parsed = parseYMD(value);
+    if (!parsed) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return parsed > today;
+}
+
 function formatCalendarMonth(date) {
     return date.toLocaleString("en-US", { month: "short" });
 }
@@ -55,6 +68,7 @@ function formatCalendarMonth(date) {
 function formatReadableDate(value) {
     const date = parseYMD(value);
     if (!date) return "";
+
     return date.toLocaleDateString("en-US", {
         month: "long",
         day: "numeric",
@@ -62,70 +76,47 @@ function formatReadableDate(value) {
     });
 }
 
-function getPhilippineLocalNumber(value) {
-    if (!value) return "";
-
-    const digits = String(value).replace(/\D/g, "");
+function sanitizePhilippineMobileInput(value) {
+    let digits = String(value || "").replace(/\D/g, "");
 
     if (digits.startsWith("63")) {
-        return digits.slice(2, 12);
+        digits = digits.slice(2);
     }
 
     if (digits.startsWith("0")) {
-        return digits.slice(0, 11);
+        digits = digits.slice(1);
     }
 
     return digits.slice(0, 10);
 }
 
+function getPhilippineLocalNumber(value) {
+    return sanitizePhilippineMobileInput(value);
+}
+
 function normalizePhilippineNumberForSave(value) {
-    const digits = String(value || "").replace(/\D/g, "");
-
-    if (!digits) return "";
-
-    let local = digits;
-
-    if (local.startsWith("63")) {
-        local = local.slice(2);
-    }
-
-    if (local.startsWith("0")) {
-        local = local.slice(1);
-    }
-
-    local = local.slice(0, 10);
-
+    const local = sanitizePhilippineMobileInput(value);
     return local ? `+63${local}` : "";
 }
 
 function formatPhilippineNumberDisplay(value) {
-    const digits = String(value || "").replace(/\D/g, "");
+    const local = sanitizePhilippineMobileInput(value);
 
-    if (!digits) return "—";
-
-    let normalized = digits;
-
-    if (normalized.startsWith("0")) {
-        normalized = `63${normalized.slice(1)}`;
-    }
-
-    if (!normalized.startsWith("63")) {
-        normalized = `63${normalized}`;
-    }
-
-    const local = normalized.slice(2);
-
-    if (!local) return "+63";
+    if (!local) return "—";
     if (local.length <= 3) return `+63 ${local}`;
     if (local.length <= 6) return `+63 ${local.slice(0, 3)} ${local.slice(3)}`;
     return `+63 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6, 10)}`;
 }
 
+function isValidPhilippineMobile(value) {
+    return /^9\d{9}$/.test(sanitizePhilippineMobileInput(value));
+}
+
 function getYearOptions(centerYear) {
     const startYear = 1950;
     const endYear = new Date().getFullYear();
-
     const years = [];
+
     for (let year = endYear; year >= startYear; year -= 1) {
         years.push(year);
     }
@@ -144,11 +135,23 @@ function getCalendarDays(viewDate) {
     const mondayIndex = (firstOfMonth.getDay() + 6) % 7;
     const start = new Date(year, month, 1 - mondayIndex);
 
-    return Array.from({ length: 42 }, (_, i) => {
+    return Array.from({ length: 42 }, (_, index) => {
         const date = new Date(start);
-        date.setDate(start.getDate() + i);
+        date.setDate(start.getDate() + index);
         return date;
     });
+}
+
+function mapProfileToForm(data) {
+    return {
+        full_name: data.name || "",
+        nickname: data.nickname || "",
+        email: data.email || "",
+        contact: getPhilippineLocalNumber(data.contact),
+        address: data.address || "",
+        gender: data.gender || "",
+        date_of_birth: data.date_of_birth || ""
+    };
 }
 
 function ProfileEditorStyles() {
@@ -225,7 +228,8 @@ function ProfileEditorStyles() {
             .profile-form-textarea,
             .profile-picker-trigger,
             .profile-select-trigger {
-                max-width: 70%;
+                width: 100%;
+                max-width: none;
                 border: 1px solid var(--profile-control-border) !important;
                 border-radius: 16px !important;
                 background: var(--profile-control-bg) !important;
@@ -301,8 +305,9 @@ function ProfileEditorStyles() {
             .profile-phone-field {
                 display: flex;
                 align-items: stretch;
-                max-height: 48px;
-                max-width: 70%;
+                width: 100%;
+                max-width: none;
+                min-height: 48px;
                 border: 1px solid var(--profile-control-border);
                 border-radius: 18px;
                 background: var(--profile-control-bg);
@@ -364,7 +369,7 @@ function ProfileEditorStyles() {
                 outline: 0 !important;
                 background: transparent !important;
                 box-shadow: none !important;
-                padding: 20px 10px !important;
+                padding: 0 16px !important;
                 font-size: 15px;
                 font-weight: 500;
                 color: var(--profile-control-text);
@@ -379,16 +384,18 @@ function ProfileEditorStyles() {
             .profile-picker-shell {
                 position: relative;
                 width: 100%;
-                max-width: 280px;
+                max-width: none;
             }
 
             .profile-picker-trigger,
             .profile-select-trigger {
-                max-width: 280px;
+                width: 100%;
+                max-width: none;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 12px;
+                text-align: left;
             }
 
             .profile-picker-trigger.is-empty,
@@ -425,8 +432,7 @@ function ProfileEditorStyles() {
             }
 
             .profile-picker-popup {
-                width: 280px;
-                max-width: 280px;
+                width: min(320px, calc(100vw - 24px));
                 padding: 14px 12px 10px;
                 overflow: hidden;
             }
@@ -576,8 +582,8 @@ function ProfileEditorStyles() {
 
             .profile-picker-day {
                 position: relative;
-                width: 30px;
-                height: 30px;
+                width: 34px;
+                height: 34px;
                 margin: 1px auto;
                 border: 0;
                 background: transparent;
@@ -600,6 +606,11 @@ function ProfileEditorStyles() {
                 box-shadow: inset 0 0 0 2px currentColor;
                 font-weight: 700;
                 background: transparent;
+            }
+
+            .profile-picker-day.is-disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
             }
 
             .profile-picker-day.is-today {
@@ -652,8 +663,7 @@ function ProfileEditorStyles() {
 
             @media (max-width: 575.98px) {
                 .profile-picker-popup {
-                    width: min(280px, calc(100vw - 24px));
-                    max-width: min(280px, calc(100vw - 24px));
+                    width: min(320px, calc(100vw - 24px));
                 }
             }
         `}</style>
@@ -705,6 +715,7 @@ function InfoItem({ label, value, strong = true }) {
             >
                 {label}
             </div>
+
             <div
                 className={strong ? "fw-bold text-body" : "fw-semibold text-body"}
                 style={{
@@ -772,6 +783,8 @@ function CustomDatePicker({ value, onChange, name = "date_of_birth" }) {
     const selectedDate = parseYMD(value);
     const [viewDate, setViewDate] = React.useState(selectedDate || new Date());
     const rootRef = React.useRef(null);
+    const popupId = React.useId();
+    const yearMenuId = React.useId();
     const today = new Date();
 
     React.useEffect(() => {
@@ -781,53 +794,75 @@ function CustomDatePicker({ value, onChange, name = "date_of_birth" }) {
     }, [selectedDate]);
 
     React.useEffect(() => {
-        function handleOutside(e) {
-            if (rootRef.current && !rootRef.current.contains(e.target)) {
+        function handleOutside(event) {
+            if (rootRef.current && !rootRef.current.contains(event.target)) {
+                setOpen(false);
+                setYearMenuOpen(false);
+            }
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === "Escape") {
                 setOpen(false);
                 setYearMenuOpen(false);
             }
         }
 
         document.addEventListener("mousedown", handleOutside);
-        return () => document.removeEventListener("mousedown", handleOutside);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("mousedown", handleOutside);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
     }, []);
 
-    const days = getCalendarDays(viewDate);
+    const days = React.useMemo(() => getCalendarDays(viewDate), [viewDate]);
     const years = React.useMemo(
         () => getYearOptions(viewDate.getFullYear()),
         [viewDate]
     );
 
-    const pickDate = (date) => {
+    function pickDate(date) {
+        if (date > today) return;
+
         onChange({
             target: {
                 name,
                 value: formatYMD(date)
             }
         });
+
         setOpen(false);
         setYearMenuOpen(false);
-    };
+    }
 
-    const changeYear = (year) => {
+    function changeYear(year) {
         setViewDate(new Date(year, viewDate.getMonth(), 1));
         setYearMenuOpen(false);
-    };
+    }
 
     return (
         <div className="profile-picker-shell" ref={rootRef}>
             <button
                 type="button"
                 className={`profile-picker-trigger ${!value ? "is-empty" : ""}`}
-                onClick={() => setOpen((v) => !v)}
+                onClick={() => setOpen((current) => !current)}
                 aria-expanded={open}
+                aria-haspopup="dialog"
+                aria-controls={popupId}
             >
                 <span>{value ? formatReadableDate(value) : "Select date of birth"}</span>
-                <i className="bi bi-chevron-down"></i>
+                <i className="bi bi-chevron-down" aria-hidden="true"></i>
             </button>
 
             {open && (
-                <div className="profile-picker-popup">
+                <div
+                    id={popupId}
+                    className="profile-picker-popup"
+                    role="dialog"
+                    aria-label="Choose date of birth"
+                >
                     <div className="profile-picker-header">
                         <div className="profile-picker-title">
                             <span className="profile-picker-title-month">
@@ -837,20 +872,34 @@ function CustomDatePicker({ value, onChange, name = "date_of_birth" }) {
                             <button
                                 type="button"
                                 className="profile-picker-year-trigger"
-                                onClick={() => setYearMenuOpen((v) => !v)}
+                                onClick={() => setYearMenuOpen((current) => !current)}
                                 aria-expanded={yearMenuOpen}
+                                aria-controls={yearMenuOpen ? yearMenuId : undefined}
+                                aria-haspopup="listbox"
                             >
                                 <span>{viewDate.getFullYear()}</span>
-                                <i className={`bi ${yearMenuOpen ? "bi-chevron-up" : "bi-chevron-down"}`}></i>
+                                <i
+                                    className={`bi ${yearMenuOpen ? "bi-chevron-up" : "bi-chevron-down"}`}
+                                    aria-hidden="true"
+                                ></i>
                             </button>
 
                             {yearMenuOpen && (
-                                <div className="profile-picker-year-menu">
+                                <div
+                                    id={yearMenuId}
+                                    className="profile-picker-year-menu"
+                                    role="listbox"
+                                    aria-label="Choose year"
+                                >
                                     {years.map((year) => (
                                         <button
                                             key={year}
                                             type="button"
-                                            className={`profile-picker-year-option ${year === viewDate.getFullYear() ? "is-selected" : ""}`}
+                                            role="option"
+                                            aria-selected={year === viewDate.getFullYear()}
+                                            className={`profile-picker-year-option ${
+                                                year === viewDate.getFullYear() ? "is-selected" : ""
+                                            }`}
                                             onClick={() => changeYear(year)}
                                         >
                                             {year}
@@ -870,7 +919,7 @@ function CustomDatePicker({ value, onChange, name = "date_of_birth" }) {
                                 }
                                 aria-label="Previous month"
                             >
-                                <i className="bi bi-chevron-left"></i>
+                                <i className="bi bi-chevron-left" aria-hidden="true"></i>
                             </button>
 
                             <button
@@ -882,7 +931,7 @@ function CustomDatePicker({ value, onChange, name = "date_of_birth" }) {
                                 }
                                 aria-label="Next month"
                             >
-                                <i className="bi bi-chevron-right"></i>
+                                <i className="bi bi-chevron-right" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
@@ -900,16 +949,20 @@ function CustomDatePicker({ value, onChange, name = "date_of_birth" }) {
                             const isOutside = day.getMonth() !== viewDate.getMonth();
                             const selected = isSameDay(day, selectedDate);
                             const isTodayFlag = isSameDay(day, today);
+                            const isDisabled = day > today;
 
                             return (
                                 <button
                                     key={day.toISOString()}
                                     type="button"
+                                    disabled={isDisabled}
+                                    aria-disabled={isDisabled}
                                     className={[
                                         "profile-picker-day",
                                         isOutside ? "is-outside" : "",
                                         selected ? "is-selected" : "",
-                                        !selected && isTodayFlag ? "is-today" : ""
+                                        !selected && isTodayFlag ? "is-today" : "",
+                                        isDisabled ? "is-disabled" : ""
                                     ].join(" ").trim()}
                                     onClick={() => pickDate(day)}
                                 >
@@ -927,6 +980,7 @@ function CustomDatePicker({ value, onChange, name = "date_of_birth" }) {
 function CustomGenderSelect({ value, onChange, name = "gender" }) {
     const [open, setOpen] = React.useState(false);
     const rootRef = React.useRef(null);
+    const popupId = React.useId();
 
     const options = [
         { value: "Male", label: "Male" },
@@ -935,49 +989,71 @@ function CustomGenderSelect({ value, onChange, name = "gender" }) {
     ];
 
     React.useEffect(() => {
-        function handleOutside(e) {
-            if (rootRef.current && !rootRef.current.contains(e.target)) {
+        function handleOutside(event) {
+            if (rootRef.current && !rootRef.current.contains(event.target)) {
+                setOpen(false);
+            }
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === "Escape") {
                 setOpen(false);
             }
         }
 
         document.addEventListener("mousedown", handleOutside);
-        return () => document.removeEventListener("mousedown", handleOutside);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("mousedown", handleOutside);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
     }, []);
 
-    const current =
-        options.find((opt) => opt.value === value)?.label || "Select gender";
+    const currentLabel =
+        options.find((option) => option.value === value)?.label || "Select gender";
 
     return (
         <div className="profile-picker-shell" ref={rootRef}>
             <button
                 type="button"
                 className={`profile-select-trigger ${!value ? "is-empty" : ""}`}
-                onClick={() => setOpen((v) => !v)}
+                onClick={() => setOpen((current) => !current)}
                 aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-controls={popupId}
             >
-                <span>{current}</span>
-                <i className="bi bi-chevron-down"></i>
+                <span>{currentLabel}</span>
+                <i className="bi bi-chevron-down" aria-hidden="true"></i>
             </button>
 
             {open && (
-                <div className="profile-select-popup">
-                    {options.map((opt) => (
+                <div
+                    id={popupId}
+                    className="profile-select-popup"
+                    role="listbox"
+                    aria-label="Choose gender"
+                >
+                    {options.map((option) => (
                         <button
-                            key={opt.value}
+                            key={option.value}
                             type="button"
-                            className={`profile-select-option ${value === opt.value ? "is-selected" : ""}`}
+                            role="option"
+                            aria-selected={value === option.value}
+                            className={`profile-select-option ${
+                                value === option.value ? "is-selected" : ""
+                            }`}
                             onClick={() => {
                                 onChange({
                                     target: {
                                         name,
-                                        value: opt.value
+                                        value: option.value
                                     }
                                 });
                                 setOpen(false);
                             }}
                         >
-                            {opt.label}
+                            {option.label}
                         </button>
                     ))}
                 </div>
@@ -997,7 +1073,6 @@ function ProfilePage() {
         gender: "",
         date_of_birth: ""
     });
-
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
     const [pageError, setPageError] = React.useState("");
@@ -1010,22 +1085,17 @@ function ProfilePage() {
 
     const hydrateForm = React.useCallback((data) => {
         setProfile(data);
-        setForm({
-            full_name: data.name || "",
-            nickname: data.nickname || "",
-            email: data.email || "",
-            contact: getPhilippineLocalNumber(data.contact),
-            address: data.address || "",
-            gender: data.gender || "",
-            date_of_birth: data.date_of_birth || ""
-        });
+        setForm(mapProfileToForm(data));
         setPreviewUrl(data.profile_image_url || "");
         setRemoveImage(false);
     }, []);
 
     const resetEditor = React.useCallback(
         (nextSection = null) => {
-            if (profile) hydrateForm(profile);
+            if (profile) {
+                hydrateForm(profile);
+            }
+
             setSelectedImage(null);
             setRemoveImage(false);
             setPageError("");
@@ -1044,14 +1114,17 @@ function ProfilePage() {
 
         async function loadProfile() {
             try {
-                const res = await fetch("php/get_profile.php", {
-                    credentials: "same-origin"
+                const response = await fetch("php/get_profile.php", {
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json"
+                    }
                 });
 
-                const data = await parseJsonResponse(res);
+                const data = await parseJsonResponse(response);
 
-                if (!res.ok || data.error) {
-                    throw new Error(data.error || "Failed to load profile");
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || "Failed to load profile.");
                 }
 
                 if (!mounted) return;
@@ -1060,7 +1133,7 @@ function ProfilePage() {
                 setPageError("");
             } catch (error) {
                 if (!mounted) return;
-                setPageError(error.message || "Failed to load profile");
+                setPageError(error.message || "Failed to load profile.");
             } finally {
                 if (mounted) setLoading(false);
             }
@@ -1074,7 +1147,7 @@ function ProfilePage() {
     }, [hydrateForm]);
 
     React.useEffect(() => {
-        if (!selectedImage) return;
+        if (!selectedImage) return undefined;
 
         const objectUrl = URL.createObjectURL(selectedImage);
         setPreviewUrl(objectUrl);
@@ -1084,30 +1157,28 @@ function ProfilePage() {
         };
     }, [selectedImage]);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        let nextValue = value;
+    function handleChange(event) {
+        const { name, value } = event.target;
 
-        if (name === "contact") {
-            nextValue = value.replace(/\D/g, "").slice(0, 11);
-        }
-
-        setForm((prev) => ({
-            ...prev,
-            [name]: nextValue
+        setForm((previous) => ({
+            ...previous,
+            [name]:
+                name === "contact"
+                    ? sanitizePhilippineMobileInput(value)
+                    : value
         }));
-    };
+    }
 
-    const handleStartEdit = (section) => {
+    function handleStartEdit(section) {
         resetEditor(section);
-    };
+    }
 
-    const handleCancelEdit = () => {
+    function handleCancelEdit() {
         resetEditor(null);
-    };
+    }
 
-    const handleImageChange = (e) => {
-        const file = e.target.files?.[0] || null;
+    function handleImageChange(event) {
+        const file = event.target.files?.[0] || null;
         if (!file) return;
 
         const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
@@ -1115,20 +1186,22 @@ function ProfilePage() {
 
         if (!allowedTypes.includes(file.type)) {
             setPageError("Please upload a PNG, JPEG, or WEBP image.");
+            if (fileInputRef.current) fileInputRef.current.value = "";
             return;
         }
 
         if (file.size > maxSize) {
             setPageError("Please upload an image under 15MB.");
+            if (fileInputRef.current) fileInputRef.current.value = "";
             return;
         }
 
         setPageError("");
         setSelectedImage(file);
         setRemoveImage(false);
-    };
+    }
 
-    const handleRemoveImage = () => {
+    function handleRemoveImage() {
         if (!previewUrl && !selectedImage) {
             setPageError("There is no profile picture set yet.");
             return;
@@ -1137,33 +1210,47 @@ function ProfilePage() {
         setPageError("");
         setSelectedImage(null);
         setPreviewUrl("");
+        setRemoveImage(true);
 
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
+    }
 
-        setRemoveImage(true);
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    async function handleSubmit(event) {
+        event.preventDefault();
         setSaving(true);
         setPageError("");
 
         try {
+            const fullName = form.full_name.trim();
+            const email = form.email.trim();
+            const nickname = form.nickname.trim();
+            const address = form.address.trim();
             const normalizedContact = normalizePhilippineNumberForSave(form.contact);
-            const localDigits = normalizedContact.replace(/^\+63/, "");
 
-            if (form.contact && localDigits.length !== 10) {
-                throw new Error("Please enter a valid Philippine mobile number.");
+            if (!fullName) {
+                throw new Error("Full name is required.");
+            }
+
+            if (!email) {
+                throw new Error("Email is required.");
+            }
+
+            if (form.contact && !isValidPhilippineMobile(form.contact)) {
+                throw new Error("Please enter a valid Philippine mobile number starting with 9.");
+            }
+
+            if (form.date_of_birth && isFutureYMD(form.date_of_birth)) {
+                throw new Error("Date of birth cannot be in the future.");
             }
 
             const formData = new FormData();
-            formData.append("name", form.full_name.trim());
-            formData.append("nickname", form.nickname.trim());
-            formData.append("email", form.email.trim());
+            formData.append("name", fullName);
+            formData.append("nickname", nickname);
+            formData.append("email", email);
             formData.append("contact", normalizedContact);
-            formData.append("address", form.address.trim());
+            formData.append("address", address);
             formData.append("gender", form.gender);
             formData.append("date_of_birth", form.date_of_birth);
 
@@ -1175,16 +1262,16 @@ function ProfilePage() {
                 formData.append("profile_image", selectedImage);
             }
 
-            const res = await fetch("php/update_profile.php", {
+            const response = await fetch("php/update_profile.php", {
                 method: "POST",
                 body: formData,
                 credentials: "same-origin"
             });
 
-            const data = await parseJsonResponse(res);
+            const data = await parseJsonResponse(response);
 
-            if (!res.ok || data.error) {
-                throw new Error(data.error || "Failed to update profile");
+            if (!response.ok || data.error) {
+                throw new Error(data.error || "Failed to update profile.");
             }
 
             hydrateForm(data.profile);
@@ -1208,7 +1295,7 @@ function ProfilePage() {
         } finally {
             setSaving(false);
         }
-    };
+    }
 
     const displayName = form.full_name.trim() || profile?.name || "User";
     const role = profile?.role || "—";
@@ -1222,7 +1309,7 @@ function ProfilePage() {
         fontWeight: 700,
         letterSpacing: "0.03em",
         marginBottom: "10px",
-        color: "#374151"
+        color: "var(--bs-secondary-color)"
     };
 
     const primaryButtonStyle = {
@@ -1255,7 +1342,11 @@ function ProfilePage() {
                 >
                     <div className="card-body py-5">
                         <div className="d-flex align-items-center justify-content-center gap-3 text-body-secondary">
-                            <div className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+                            <div
+                                className="spinner-border spinner-border-sm"
+                                role="status"
+                                aria-hidden="true"
+                            ></div>
                             <span>Loading profile...</span>
                         </div>
                     </div>
@@ -1301,6 +1392,7 @@ function ProfilePage() {
                                 >
                                     Account settings
                                 </h4>
+
                                 <p
                                     className="mb-0 text-body-secondary"
                                     style={{ fontSize: "15px", maxWidth: "760px" }}
@@ -1312,11 +1404,18 @@ function ProfilePage() {
                             <>
                                 <div className="profile-edit-chip">
                                     <i
-                                        className={`bi ${activeSection === "contact" ? "bi-envelope-paper" : "bi-person-vcard"}`}
+                                        className={`bi ${
+                                            activeSection === "contact"
+                                                ? "bi-envelope-paper"
+                                                : "bi-person-vcard"
+                                        }`}
                                         aria-hidden="true"
                                     ></i>
+
                                     <span>
-                                        {activeSection === "contact" ? "Contact editor" : "Profile editor"}
+                                        {activeSection === "contact"
+                                            ? "Contact editor"
+                                            : "Profile editor"}
                                     </span>
                                 </div>
 
@@ -1334,7 +1433,11 @@ function ProfilePage() {
 
                                 <p
                                     className="mb-0 text-body-secondary"
-                                    style={{ fontSize: "15px", maxWidth: "760px", lineHeight: 1.65 }}
+                                    style={{
+                                        fontSize: "15px",
+                                        maxWidth: "760px",
+                                        lineHeight: 1.65
+                                    }}
                                 >
                                     {activeSection === "contact"
                                         ? "Keep your email and phone information updated so your account details stay accurate."
@@ -1355,7 +1458,10 @@ function ProfilePage() {
                                 <div className="card-body px-4 py-3 px-xl-4 py-xl-3">
                                     <div className="row g-4 align-items-center">
                                         <div className="col-12 col-xl-5">
-                                            <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+                                            <div
+                                                className="d-flex align-items-center gap-3"
+                                                style={{ minWidth: 0 }}
+                                            >
                                                 <Avatar
                                                     src={previewUrl}
                                                     name={displayName}
@@ -1388,7 +1494,10 @@ function ProfilePage() {
                                         </div>
 
                                         <div className="col-auto d-none d-xl-flex justify-content-center">
-                                            <div className="vr opacity-25" style={{ minHeight: "118px" }}></div>
+                                            <div
+                                                className="vr opacity-25"
+                                                style={{ minHeight: "118px" }}
+                                            ></div>
                                         </div>
 
                                         <div className="col-12 col-xl">
@@ -1507,6 +1616,7 @@ function ProfilePage() {
                                                     >
                                                         {displayName}
                                                     </div>
+
                                                     <div
                                                         className="text-body-secondary mt-1"
                                                         style={{ fontSize: "14px" }}
@@ -1531,7 +1641,7 @@ function ProfilePage() {
                                                     style={softIconButtonStyle}
                                                     onClick={() => fileInputRef.current?.click()}
                                                 >
-                                                    <i className="bi bi-cloud-arrow-up"></i>
+                                                    <i className="bi bi-cloud-arrow-up" aria-hidden="true"></i>
                                                     Upload image
                                                 </button>
 
@@ -1541,7 +1651,7 @@ function ProfilePage() {
                                                     style={softIconButtonStyle}
                                                     onClick={handleRemoveImage}
                                                 >
-                                                    <i className="bi bi-trash3-fill"></i>
+                                                    <i className="bi bi-trash3-fill" aria-hidden="true"></i>
                                                     Remove
                                                 </button>
                                             </div>
@@ -1554,6 +1664,7 @@ function ProfilePage() {
                                                 <label className="form-label text-body" style={labelStyle}>
                                                     Full name <span className="text-danger">*</span>
                                                 </label>
+
                                                 <input
                                                     type="text"
                                                     className="form-control profile-form-control"
@@ -1568,6 +1679,7 @@ function ProfilePage() {
                                                 <label className="form-label text-body" style={labelStyle}>
                                                     Nickname
                                                 </label>
+
                                                 <input
                                                     type="text"
                                                     className="form-control profile-form-control"
@@ -1583,9 +1695,13 @@ function ProfilePage() {
                                                     className="form-label text-body profile-label-with-icon"
                                                     style={labelStyle}
                                                 >
-                                                    <i className="bi bi-calendar3 text-body-secondary" aria-hidden="true"></i>
+                                                    <i
+                                                        className="bi bi-calendar3 text-body-secondary"
+                                                        aria-hidden="true"
+                                                    ></i>
                                                     <span>Date of birth</span>
                                                 </label>
+
                                                 <CustomDatePicker
                                                     value={form.date_of_birth}
                                                     onChange={handleChange}
@@ -1598,9 +1714,13 @@ function ProfilePage() {
                                                     className="form-label text-body profile-label-with-icon"
                                                     style={labelStyle}
                                                 >
-                                                    <i className="bi bi-person-badge text-body-secondary" aria-hidden="true"></i>
+                                                    <i
+                                                        className="bi bi-person-badge text-body-secondary"
+                                                        aria-hidden="true"
+                                                    ></i>
                                                     <span>Gender</span>
                                                 </label>
+
                                                 <CustomGenderSelect
                                                     value={form.gender}
                                                     onChange={handleChange}
@@ -1612,6 +1732,7 @@ function ProfilePage() {
                                                 <label className="form-label text-body" style={labelStyle}>
                                                     Address
                                                 </label>
+
                                                 <textarea
                                                     className="form-control profile-form-textarea"
                                                     name="address"
@@ -1631,6 +1752,7 @@ function ProfilePage() {
                                             <label className="form-label text-body" style={labelStyle}>
                                                 Email <span className="text-danger">*</span>
                                             </label>
+
                                             <input
                                                 type="email"
                                                 className="form-control profile-form-control"
@@ -1666,7 +1788,8 @@ function ProfilePage() {
                                                     onChange={handleChange}
                                                     inputMode="numeric"
                                                     autoComplete="tel-national"
-                                                    placeholder="963 025 7890"
+                                                    placeholder="9XX XXX XXXX"
+                                                    maxLength={10}
                                                     aria-label="Philippine contact number"
                                                 />
                                             </div>
@@ -1703,6 +1826,7 @@ function ProfilePage() {
 }
 
 const profileRoot = document.getElementById("root");
-if (profileRoot) {
+if (profileRoot && !profileRoot.dataset.mounted) {
+    profileRoot.dataset.mounted = "true";
     createRoot(profileRoot).render(<ProfilePage />);
 }

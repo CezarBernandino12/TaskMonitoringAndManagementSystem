@@ -27,7 +27,6 @@ body {
     background: var(--bg-page);
 }
 
-
 .app-shell::before {
     content: "";
     position: fixed;

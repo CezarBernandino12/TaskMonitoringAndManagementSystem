@@ -6,6 +6,62 @@ const TOPBAR_USER_API = "php/sidebar.php";
 const THEME_KEY = "dashboard-theme";
 const GREETING_REFRESH_MS = 60 * 1000;
 
+const FALLBACK_USER = {
+    name: "User",
+    nickname: "",
+    gender: "",
+    email: "",
+    role: "",
+    role_label: "",
+    department_name: "",
+    initials: "U",
+    profile_image_url: ""
+};
+
+const STATIC_NOTIFICATIONS = [
+    {
+        id: 1,
+        icon: "bi-check2-circle",
+        iconColor: "notif-green",
+        title: "Task completed",
+        desc: "Q2 Report has been marked as done.",
+        time: "2 min ago",
+        unread: true
+    },
+    {
+        id: 2,
+        icon: "bi-calendar-event",
+        iconColor: "notif-blue",
+        title: "Meeting reminder",
+        desc: "Team standup starts in 15 minutes.",
+        time: "14 min ago",
+        unread: true
+    },
+    {
+        id: 3,
+        icon: "bi-person-plus",
+        iconColor: "notif-purple",
+        title: "New team member",
+        desc: "Maria Santos joined your department.",
+        time: "1 hr ago",
+        unread: true
+    },
+    {
+        id: 4,
+        icon: "bi-file-earmark-text",
+        iconColor: "notif-amber",
+        title: "Document shared",
+        desc: "Budget proposal was shared with you.",
+        time: "Yesterday",
+        unread: false
+    }
+];
+
+function getStoredTheme() {
+    const storedTheme = localStorage.getItem(THEME_KEY);
+    return storedTheme === "dark" ? "dark" : "light";
+}
+
 function getCurrentTheme() {
     const attrTheme = document.documentElement.getAttribute("data-theme");
     if (attrTheme === "dark" || attrTheme === "light") return attrTheme;
@@ -13,29 +69,68 @@ function getCurrentTheme() {
     const bsTheme = document.documentElement.getAttribute("data-bs-theme");
     if (bsTheme === "dark" || bsTheme === "light") return bsTheme;
 
-    const storedTheme = localStorage.getItem(THEME_KEY);
-    return storedTheme === "dark" ? "dark" : "light";
+    return getStoredTheme();
+}
+
+async function parseJsonResponse(response) {
+    const rawText = await response.text();
+
+    try {
+        return JSON.parse(rawText);
+    } catch (error) {
+        console.error("Invalid JSON response:", rawText);
+        throw new Error("Server returned invalid JSON.");
+    }
+}
+
+function getInitials(name) {
+    if (!name) return "U";
+
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "U";
+
+    return parts
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join("");
+}
+
+function normalizeUserPayload(data = {}) {
+    const name = (data.name || "User").trim();
+    const nickname = (data.nickname || "").trim();
+
+    return {
+        name,
+        nickname,
+        gender: (data.gender || "").trim(),
+        email: (data.email || "").trim(),
+        role: (data.role || "").trim(),
+        role_label: (data.role_label || "").trim(),
+        department_name: (data.department_name || "").trim(),
+        initials: (data.initials || getInitials(nickname || name)).trim(),
+        profile_image_url: (data.profile_image_url || "").trim()
+    };
 }
 
 function getToasterOptions(theme) {
     const isDark = theme === "dark";
 
     return {
-        fill: isDark ? "#000000" : "#ffffff",
+        fill: isDark ? "#18181b" : "#ffffff",
         roundness: 15,
         styles: {
             title: isDark
-                ? "text-[#111111]! text-[20px] font-semibold! leading-none!"
-                : "text-[#f4f4f5]! text-[20px] font-semibold! leading-none!",
+                ? "text-[#f4f4f5]! text-[20px] font-semibold! leading-none!"
+                : "text-[#111827]! text-[20px] font-semibold! leading-none!",
             description: isDark
-                ? "text-[#52525b]! text-[18px]! leading-[1.45]!"
-                : "text-[#d4d4d8]! text-[18px]! leading-[1.45]!",
+                ? "text-[#d4d4d8]! text-[16px]! leading-[1.45]!"
+                : "text-[#52525b]! text-[16px]! leading-[1.45]!",
             badge: isDark
-                ? "bg-[#e8f7ec]! text-[#1f8f38]!"
-                : "bg-[#1f3b22]! text-[#32d74b]!",
+                ? "bg-[#163d22]! text-[#86efac]!"
+                : "bg-[#e8f7ec]! text-[#166534]!",
             button: isDark
-                ? "bg-black/10! text-black! hover:bg-black/15!"
-                : "bg-white/10! text-white! hover:bg-white/15!"
+                ? "bg-white/10! text-white! hover:bg-white/15!"
+                : "bg-black/10! text-black! hover:bg-black/15!"
         }
     };
 }
@@ -44,8 +139,8 @@ function useSileoTheme() {
     const [theme, setTheme] = React.useState(getCurrentTheme);
 
     React.useEffect(() => {
-        function syncTheme(e) {
-            const nextTheme = e?.detail?.theme;
+        function syncTheme(event) {
+            const nextTheme = event?.detail?.theme;
             if (nextTheme === "dark" || nextTheme === "light") {
                 setTheme(nextTheme);
                 return;
@@ -87,24 +182,23 @@ function SileoRootStyles() {
                 pointer-events: auto;
             }
 
-            [data-theme="light"] #sileo-root [data-sileo-title] {
+            #sileo-root [data-sileo-title] {
                 font-size: 16px;
             }
 
-            [data-theme="light"] #sileo-root [data-sileo-description] {
-                color: #5A9690 !important;
+            #sileo-root [data-sileo-description] {
                 font-size: 15px;
                 font-weight: 500;
             }
 
-            [data-theme="dark"] #sileo-root [data-sileo-title] {
-                font-size: 16px;
+            [data-theme="light"] #sileo-root [data-sileo-description],
+            [data-bs-theme="light"] #sileo-root [data-sileo-description] {
+                color: #5A9690 !important;
             }
 
-            [data-theme="dark"] #sileo-root [data-sileo-description] {
-                color: #5A9690 !important;
-                font-size: 15px;
-                font-weight: 500;
+            [data-theme="dark"] #sileo-root [data-sileo-description],
+            [data-bs-theme="dark"] #sileo-root [data-sileo-description] {
+                color: #7dd3c7 !important;
             }
         `}</style>
     );
@@ -124,18 +218,6 @@ function ThemeToaster() {
             />
         </>
     );
-}
-
-function getInitials(name) {
-    if (!name) return "U";
-
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return "U";
-
-    return parts
-        .slice(0, 2)
-        .map((part) => part.charAt(0).toUpperCase())
-        .join("");
 }
 
 function getGreetingMeta(date = new Date()) {
@@ -167,17 +249,9 @@ function getGreetingMeta(date = new Date()) {
 function getHonorific(gender) {
     const value = (gender || "").trim().toLowerCase();
 
-    if (value === "male") return "Sir.";
+    if (value === "male") return "Sir";
     if (value === "female") return "Ma'am";
     return "";
-}
-
-function getPreferredName(user) {
-    const nickname = user?.nickname?.trim();
-    if (nickname) return nickname;
-
-    const name = user?.name?.trim();
-    return name || "User";
 }
 
 function getDisplayName(user) {
@@ -190,18 +264,20 @@ function getDisplayName(user) {
 
 function getRoleLabel(user) {
     if (user?.role_label?.trim()) return user.role_label.trim();
+
     if (user?.role?.trim()) {
         return user.role.charAt(0).toUpperCase() + user.role.slice(1);
     }
+
     return "User";
 }
 
 function buildGreeting(user, date = new Date()) {
     const meta = getGreetingMeta(date);
     const title = getHonorific(user?.gender);
-    const preferredName = getPreferredName(user);
+    const displayName = getDisplayName(user);
 
-    return `${meta.label}, ${title ? `${title} ` : ""}${preferredName}`;
+    return `${meta.label}, ${title ? `${title} ` : ""}${displayName}`;
 }
 
 function getFriendlyDate(date = new Date()) {
@@ -210,10 +286,6 @@ function getFriendlyDate(date = new Date()) {
         month: "long",
         day: "numeric"
     }).format(date);
-}
-
-function getStoredTheme() {
-    return localStorage.getItem(THEME_KEY) || "light";
 }
 
 function DarkModeToggle({ dark, onToggle }) {
@@ -238,31 +310,44 @@ function NotificationBell() {
     const [open, setOpen] = React.useState(false);
     const panelRef = React.useRef(null);
     const btnRef = React.useRef(null);
+    const panelId = React.useId();
+
+    const unreadCount = React.useMemo(
+        () => STATIC_NOTIFICATIONS.filter((item) => item.unread).length,
+        []
+    );
 
     React.useEffect(() => {
-        if (!open) return;
+        if (!open) return undefined;
 
-        function handle(e) {
+        function handlePointerDown(event) {
+            const target = event.target;
+
             if (
-                panelRef.current && !panelRef.current.contains(e.target) &&
-                btnRef.current && !btnRef.current.contains(e.target)
+                panelRef.current &&
+                !panelRef.current.contains(target) &&
+                btnRef.current &&
+                !btnRef.current.contains(target)
             ) {
                 setOpen(false);
             }
         }
 
-        document.addEventListener("mousedown", handle);
-        return () => document.removeEventListener("mousedown", handle);
+        function handleKeyDown(event) {
+            if (event.key === "Escape") {
+                setOpen(false);
+                btnRef.current?.focus();
+            }
+        }
+
+        document.addEventListener("mousedown", handlePointerDown);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("mousedown", handlePointerDown);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
     }, [open]);
-
-    const notifications = [
-        { id: 1, icon: "bi-check2-circle", iconColor: "notif-green", title: "Task completed", desc: "Q2 Report has been marked as done.", time: "2 min ago", unread: true },
-        { id: 2, icon: "bi-calendar-event", iconColor: "notif-blue", title: "Meeting reminder", desc: "Team standup starts in 15 minutes.", time: "14 min ago", unread: true },
-        { id: 3, icon: "bi-person-plus", iconColor: "notif-purple", title: "New team member", desc: "Maria Santos joined your department.", time: "1 hr ago", unread: true },
-        { id: 4, icon: "bi-file-earmark-text", iconColor: "notif-amber", title: "Document shared", desc: "Budget proposal was shared with you.", time: "Yesterday", unread: false }
-    ];
-
-    const unreadCount = notifications.filter((n) => n.unread).length;
 
     return (
         <div className="topbar-notif-wrap">
@@ -270,38 +355,61 @@ function NotificationBell() {
                 ref={btnRef}
                 type="button"
                 className={`topbar-icon-btn notif-btn ${open ? "active" : ""}`}
-                onClick={() => setOpen((v) => !v)}
+                onClick={() => setOpen((value) => !value)}
                 aria-label="Notifications"
+                aria-expanded={open}
+                aria-haspopup="dialog"
+                aria-controls={panelId}
             >
                 <i className="bi bi-bell"></i>
                 {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
             </button>
 
             {open && (
-                <div ref={panelRef} className="notif-panel" role="dialog" aria-label="Notifications">
+                <div
+                    ref={panelRef}
+                    id={panelId}
+                    className="notif-panel"
+                    role="dialog"
+                    aria-label="Notifications"
+                    tabIndex={-1}
+                >
                     <div className="notif-panel-head">
                         <span className="notif-panel-title">Notifications</span>
-                        {unreadCount > 0 && <span className="notif-panel-count">{unreadCount} new</span>}
+                        {unreadCount > 0 && (
+                            <span className="notif-panel-count">{unreadCount} new</span>
+                        )}
                     </div>
 
                     <div className="notif-list">
-                        {notifications.map((n) => (
-                            <div key={n.id} className={`notif-item ${n.unread ? "unread" : ""}`}>
-                                <div className={`notif-item-icon ${n.iconColor}`}>
-                                    <i className={`bi ${n.icon}`}></i>
+                        {STATIC_NOTIFICATIONS.map((item) => (
+                            <div
+                                key={item.id}
+                                className={`notif-item ${item.unread ? "unread" : ""}`}
+                            >
+                                <div className={`notif-item-icon ${item.iconColor}`}>
+                                    <i className={`bi ${item.icon}`}></i>
                                 </div>
+
                                 <div className="notif-item-body">
-                                    <div className="notif-item-title">{n.title}</div>
-                                    <div className="notif-item-desc">{n.desc}</div>
-                                    <div className="notif-item-time">{n.time}</div>
+                                    <div className="notif-item-title">{item.title}</div>
+                                    <div className="notif-item-desc">{item.desc}</div>
+                                    <div className="notif-item-time">{item.time}</div>
                                 </div>
-                                {n.unread && <span className="notif-unread-dot"></span>}
+
+                                {item.unread && <span className="notif-unread-dot"></span>}
                             </div>
                         ))}
                     </div>
 
                     <div className="notif-panel-footer">
-                        <a href="#" className="notif-view-all">View all notifications</a>
+                        <button
+                            type="button"
+                            className="notif-view-all btn btn-link p-0 text-decoration-none"
+                            onClick={() => setOpen(false)}
+                        >
+                            View all notifications
+                        </button>
                     </div>
                 </div>
             )}
@@ -316,11 +424,10 @@ function UserChip({ user, userLoaded }) {
         setImgFailed(false);
     }, [user.profile_image_url]);
 
-    const hasImage = user.profile_image_url && !imgFailed;
-    const initials = user.initials || getInitials(user.name || user.nickname || "U");
     const displayName = getDisplayName(user);
-    const email = user.email || "";
-    const roleText = getRoleLabel(user);
+    const initials = user.initials || getInitials(user.name || user.nickname || "U");
+    const email = userLoaded ? user.email || "" : "";
+    const hasImage = Boolean(user.profile_image_url) && !imgFailed;
 
     return (
         <div className="topbar-user-wrap" aria-label="Current user">
@@ -335,10 +442,15 @@ function UserChip({ user, userLoaded }) {
                 }}
             >
                 <div className="topbar-user-avatar">
-                    {hasImage
-                        ? <img src={user.profile_image_url} alt={displayName} onError={() => setImgFailed(true)} />
-                        : <span className="topbar-user-initials">{initials}</span>
-                    }
+                    {hasImage ? (
+                        <img
+                            src={user.profile_image_url}
+                            alt={displayName}
+                            onError={() => setImgFailed(true)}
+                        />
+                    ) : (
+                        <span className="topbar-user-initials">{initials}</span>
+                    )}
                     <span className="topbar-online-dot"></span>
                 </div>
 
@@ -366,7 +478,7 @@ function UserChip({ user, userLoaded }) {
                             textOverflow: "ellipsis"
                         }}
                     >
-                        {userLoaded ? `${email}` : ""}
+                        {email}
                     </div>
                 </div>
             </div>
@@ -377,17 +489,7 @@ function UserChip({ user, userLoaded }) {
 function TopBar() {
     const [dark, setDark] = React.useState(() => getStoredTheme() === "dark");
     const [now, setNow] = React.useState(() => new Date());
-    const [user, setUser] = React.useState({
-        name: "",
-        nickname: "",
-        gender: "",
-        email: "",
-        role: "",
-        role_label: "",
-        department_name: "",
-        initials: "",
-        profile_image_url: ""
-    });
+    const [user, setUser] = React.useState(FALLBACK_USER);
     const [userLoaded, setUserLoaded] = React.useState(false);
     const didInitThemeRef = React.useRef(false);
 
@@ -398,13 +500,13 @@ function TopBar() {
         document.documentElement.setAttribute("data-bs-theme", theme);
         localStorage.setItem(THEME_KEY, theme);
 
-        if (didInitThemeRef.current) {
-            window.dispatchEvent(
-                new CustomEvent("dashboard-theme-changed", {
-                    detail: { theme }
-                })
-            );
+        window.dispatchEvent(
+            new CustomEvent("dashboard-theme-changed", {
+                detail: { theme }
+            })
+        );
 
+        if (didInitThemeRef.current) {
             sileo.info({
                 title: theme === "dark" ? "Dark mode enabled" : "Light mode enabled",
                 description:
@@ -418,165 +520,203 @@ function TopBar() {
     }, [dark]);
 
     React.useEffect(() => {
-        const timer = window.setInterval(() => {
+        const timerId = window.setInterval(() => {
             setNow(new Date());
         }, GREETING_REFRESH_MS);
 
-        return () => window.clearInterval(timer);
+        return () => window.clearInterval(timerId);
     }, []);
 
     React.useEffect(() => {
         let active = true;
 
-        async function load() {
+        async function loadUser() {
             try {
-                const res = await fetch(TOPBAR_USER_API, {
+                const response = await fetch(TOPBAR_USER_API, {
                     credentials: "same-origin",
-                    headers: { Accept: "application/json" }
+                    headers: {
+                        Accept: "application/json"
+                    }
                 });
 
-                const data = await res.json();
-                if (!active || !res.ok || data.error) return;
+                const data = await parseJsonResponse(response);
 
-                setUser({
-                    name: data.name || "User",
-                    nickname: data.nickname || "",
-                    gender: data.gender || "",
-                    email: data.email || "",
-                    role: data.role || "",
-                    role_label: data.role_label || "",
-                    department_name: data.department_name || "",
-                    initials: data.initials || getInitials(data.name || "User"),
-                    profile_image_url: data.profile_image_url || ""
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || "Failed to load user information.");
+                }
+
+                if (!active) return;
+
+                setUser(normalizeUserPayload(data));
+            } catch (error) {
+                console.error("Unable to load top bar user:", error);
+
+                if (!active) return;
+
+                setUser(FALLBACK_USER);
+            } finally {
+                if (active) {
+                    setUserLoaded(true);
+                }
+            }
+        }
+
+        function applyProfileUpdate(detail) {
+            if (!detail) {
+                loadUser();
+                return;
+            }
+
+            setUser(normalizeUserPayload(detail));
+            setUserLoaded(true);
+        }
+
+        loadUser();
+        window.addEventListener("profile-updated", (event) => applyProfileUpdate(event.detail));
+
+        return () => {
+            active = false;
+            window.removeEventListener("profile-updated", (event) => applyProfileUpdate(event.detail));
+        };
+    }, []);
+
+    // Fix the event listener cleanup by using stable handlers.
+    React.useEffect(() => {
+        let active = true;
+
+        async function loadUser() {
+            try {
+                const response = await fetch(TOPBAR_USER_API, {
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json"
+                    }
                 });
 
-                setUserLoaded(true);
-            } catch (_) {
+                const data = await parseJsonResponse(response);
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || "Failed to load user information.");
+                }
+
+                if (!active) return;
+
+                setUser(normalizeUserPayload(data));
+            } catch (error) {
+                console.error("Unable to load top bar user:", error);
+
+                if (!active) return;
+
+                setUser(FALLBACK_USER);
+            } finally {
                 if (active) setUserLoaded(true);
             }
         }
 
-        function onProfileUpdated(e) {
-            const d = e.detail;
-            if (!d) {
-                load();
+        function handleProfileUpdated(event) {
+            const detail = event?.detail;
+
+            if (!detail) {
+                loadUser();
                 return;
             }
 
-            setUser({
-                name: d.name || "User",
-                nickname: d.nickname || "",
-                gender: d.gender || "",
-                email: d.email || "",
-                role: d.role || "",
-                role_label: d.role_label || "",
-                department_name: d.department_name || "",
-                initials: d.initials || getInitials(d.name || "User"),
-                profile_image_url: d.profile_image_url || ""
-            });
-
+            setUser(normalizeUserPayload(detail));
             setUserLoaded(true);
         }
 
-        load();
-        window.addEventListener("profile-updated", onProfileUpdated);
+        loadUser();
+        window.addEventListener("profile-updated", handleProfileUpdated);
 
         return () => {
             active = false;
-            window.removeEventListener("profile-updated", onProfileUpdated);
+            window.removeEventListener("profile-updated", handleProfileUpdated);
         };
     }, []);
 
-    const greetingMeta = getGreetingMeta(now);
-    const greetingText = buildGreeting(user, now);
-    const roleText = getRoleLabel(user);
-    const todayText = getFriendlyDate(now);
-    const secondaryText = user.department_name
-        ? `${roleText} • ${user.department_name}`
-        : roleText;
+const greetingMeta = getGreetingMeta(now);
+const greetingText = buildGreeting(user, now);
+const todayText = getFriendlyDate(now);
 
-    return (
-        <header className="topbar">
-            <div className="topbar-left">
+return (
+    <header className="topbar">
+        <div className="topbar-left">
+            <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
                 <div
-                    className="d-flex align-items-center gap-3"
-                    style={{ minWidth: 0 }}
+                    className="d-inline-flex align-items-center justify-content-center shadow-sm"
+                    style={{
+                        width: "56px",
+                        height: "56px",
+                        borderRadius: "18px",
+                        background:
+                            "linear-gradient(135deg, rgba(255,193,7,0.18), rgba(13,110,253,0.12))",
+                        border: "1px solid var(--bs-border-color)",
+                        flexShrink: 0
+                    }}
                 >
+                    <i
+                        className={`bi ${greetingMeta.icon}`}
+                        style={{ fontSize: "24px" }}
+                        aria-hidden="true"
+                    ></i>
+                </div>
+
+                <div style={{ minWidth: 0 }}>
                     <div
-                        className="d-inline-flex align-items-center justify-content-center shadow-sm"
+                        className="d-flex align-items-center flex-wrap gap-2 mb-1"
+                        style={{ minWidth: 0 }}
+                    >
+                        <span
+                            className="badge rounded-pill text-body-emphasis"
+                            style={{
+                                background: "var(--bs-tertiary-bg)",
+                                border: "1px solid var(--bs-border-color)",
+                                padding: "6px 10px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                letterSpacing: "0.04em"
+                            }}
+                        >
+                            <i className={`bi ${greetingMeta.icon} me-1`} aria-hidden="true"></i>
+                            {greetingMeta.chip}
+                        </span>
+
+                        <span
+                            className="text-body-secondary"
+                            style={{ fontSize: "12px", fontWeight: 600 }}
+                        >
+                            {todayText}
+                        </span>
+                    </div>
+
+                    <h1
+                        className="mb-1 fw-bold text-body"
                         style={{
-                            width: "56px",
-                            height: "56px",
-                            borderRadius: "18px",
-                            background: "linear-gradient(135deg, rgba(255,193,7,0.18), rgba(13,110,253,0.12))",
-                            border: "1px solid var(--bs-border-color)",
-                            flexShrink: 0
+                            fontSize: "28px",
+                            lineHeight: 1.1,
+                            letterSpacing: "-0.02em",
+                            margin: 0,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: "100%"
                         }}
                     >
-                        <i
-                            className={`bi ${greetingMeta.icon}`}
-                            style={{
-                                fontSize: "24px"
-                            }}
-                        ></i>
-                    </div>
-
-                    <div style={{ minWidth: 0 }}>
-                        <div
-                            className="d-flex align-items-center flex-wrap gap-2 mb-1"
-                            style={{ minWidth: 0 }}
-                        >
-                            <span
-                                className="badge rounded-pill text-body-emphasis"
-                                style={{
-                                    background: "var(--bs-tertiary-bg)",
-                                    border: "1px solid var(--bs-border-color)",
-                                    padding: "6px 10px",
-                                    fontSize: "11px",
-                                    fontWeight: 700,
-                                    letterSpacing: "0.04em"
-                                }}
-                            >
-                                <i className={`bi ${greetingMeta.icon} me-1`}></i>
-                                {greetingMeta.chip}
-                            </span>
-
-                            <span
-                                className="text-body-secondary"
-                                style={{ fontSize: "12px", fontWeight: 600 }}
-                            >
-                                {todayText}
-                            </span>
-                        </div>
-
-                        <h1
-                            className="mb-1 fw-bold text-body"
-                            style={{
-                                fontSize: "28px",
-                                lineHeight: 1.1,
-                                letterSpacing: "-0.02em",
-                                margin: 0,
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                maxWidth: "100%"
-                            }}
-                        >
-                            {greetingText}
-                        </h1>
-                    </div>
+                        {greetingText}
+                    </h1>
                 </div>
             </div>
+        </div>
 
-            <div className="topbar-right">
-                <DarkModeToggle dark={dark} onToggle={() => setDark((v) => !v)} />
-                <div className="topbar-sep"></div>
-                <NotificationBell />
-                <div className="topbar-sep"></div>
-                <UserChip user={user} userLoaded={userLoaded} />
-            </div>
-        </header>
-    );
+        <div className="topbar-right">
+            <DarkModeToggle dark={dark} onToggle={() => setDark((value) => !value)} />
+            <div className="topbar-sep"></div>
+            <NotificationBell />
+            <div className="topbar-sep"></div>
+            <UserChip user={user} userLoaded={userLoaded} />
+        </div>
+    </header>
+);
 }
 
 const sileoRoot = document.getElementById("sileo-root");
@@ -586,6 +726,7 @@ if (sileoRoot && !sileoRoot.dataset.mounted) {
 }
 
 const topbarRoot = document.getElementById("topbar-root");
-if (topbarRoot) {
+if (topbarRoot && !topbarRoot.dataset.mounted) {
+    topbarRoot.dataset.mounted = "true";
     createRoot(topbarRoot).render(<TopBar />);
 }
