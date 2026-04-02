@@ -18,18 +18,39 @@ require_once '../../config/db.php';
 
 $userId = (int) $_SESSION['user_id'];
 
+function getInitials(string $name): string
+{
+    $parts = preg_split('/\s+/', trim($name));
+    $parts = array_filter($parts);
+
+    if (empty($parts)) {
+        return 'U';
+    }
+
+    $initials = '';
+    foreach (array_slice($parts, 0, 2) as $part) {
+        $initials .= strtoupper(substr($part, 0, 1));
+    }
+
+    return $initials ?: 'U';
+}
+
 function respondProfile(PDO $conn, int $userId, string $message = 'Profile updated successfully'): void
 {
     $stmt = $conn->prepare("
         SELECT
             u.id,
             u.name,
+            u.nickname,
             u.email,
             u.contact,
             u.address,
             u.profile_image,
             u.department_id,
             u.role,
+            u.gender,
+            u.date_of_birth,
+            u.employee_id,
             d.name AS department_name
         FROM users u
         LEFT JOIN departments d ON d.id = u.department_id
@@ -48,6 +69,8 @@ function respondProfile(PDO $conn, int $userId, string $message = 'Profile updat
     $row['profile_image_url'] = !empty($row['profile_image'])
         ? 'uploads/profiles/' . $row['profile_image']
         : null;
+
+    $row['initials'] = getInitials($row['name'] ?? '');
 
     echo json_encode([
         'success' => $message,
@@ -68,9 +91,12 @@ try {
     }
 
     $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+    $nickname = isset($_POST['nickname']) ? trim($_POST['nickname']) : '';
     $email = isset($_POST['email']) ? trim($_POST['email']) : '';
     $contact = isset($_POST['contact']) ? trim($_POST['contact']) : '';
     $address = isset($_POST['address']) ? trim($_POST['address']) : '';
+    $gender = isset($_POST['gender']) ? trim($_POST['gender']) : '';
+    $dateOfBirth = isset($_POST['date_of_birth']) ? trim($_POST['date_of_birth']) : '';
 
     if ($name === '' || $email === '') {
         http_response_code(422);
@@ -88,6 +114,22 @@ try {
         http_response_code(422);
         echo json_encode(['error' => 'Contact number contains invalid characters.']);
         exit;
+    }
+
+    $allowedGenders = ['Male', 'Female', 'Rather not say'];
+    if ($gender !== '' && !in_array($gender, $allowedGenders, true)) {
+        http_response_code(422);
+        echo json_encode(['error' => 'Invalid gender selected.']);
+        exit;
+    }
+
+    if ($dateOfBirth !== '') {
+        $date = DateTime::createFromFormat('Y-m-d', $dateOfBirth);
+        if (!$date || $date->format('Y-m-d') !== $dateOfBirth) {
+            http_response_code(422);
+            echo json_encode(['error' => 'Invalid date of birth.']);
+            exit;
+        }
     }
 
     $removeProfileImage = isset($_POST['remove_profile_image']) && $_POST['remove_profile_image'] === '1';
@@ -151,28 +193,44 @@ try {
             exit;
         }
 
+        if (!empty($profileImageFilename) && $profileImageFilename !== $newFilename) {
+            $oldFile = $uploadDir . $profileImageFilename;
+            if (is_file($oldFile)) {
+                @unlink($oldFile);
+            }
+        }
+
         $profileImageFilename = $newFilename;
     }
 
+    $nicknameValue = ($nickname === '') ? null : $nickname;
     $contactValue = ($contact === '') ? null : $contact;
     $addressValue = ($address === '') ? null : $address;
+    $genderValue = ($gender === '') ? null : $gender;
+    $dateOfBirthValue = ($dateOfBirth === '') ? null : $dateOfBirth;
 
     $update = $conn->prepare("
         UPDATE users
         SET
             name = :name,
+            nickname = :nickname,
             email = :email,
             contact = :contact,
             address = :address,
+            gender = :gender,
+            date_of_birth = :date_of_birth,
             profile_image = :profile_image
         WHERE id = :id
         LIMIT 1
     ");
 
     $update->bindValue(':name', $name, PDO::PARAM_STR);
+    $update->bindValue(':nickname', $nicknameValue, $nicknameValue === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
     $update->bindValue(':email', $email, PDO::PARAM_STR);
     $update->bindValue(':contact', $contactValue, $contactValue === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
     $update->bindValue(':address', $addressValue, $addressValue === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $update->bindValue(':gender', $genderValue, $genderValue === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $update->bindValue(':date_of_birth', $dateOfBirthValue, $dateOfBirthValue === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
     $update->bindValue(':profile_image', $profileImageFilename, $profileImageFilename === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
     $update->bindValue(':id', $userId, PDO::PARAM_INT);
     $update->execute();

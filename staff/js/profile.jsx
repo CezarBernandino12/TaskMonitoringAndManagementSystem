@@ -25,85 +25,6 @@ async function parseJsonResponse(response) {
     }
 }
 
-function getCurrentTheme() {
-    const attrTheme = document.documentElement.getAttribute("data-theme");
-    if (attrTheme === "dark" || attrTheme === "light") return attrTheme;
-
-    const bsTheme = document.documentElement.getAttribute("data-bs-theme");
-    if (bsTheme === "dark" || bsTheme === "light") return bsTheme;
-
-    const storedTheme = localStorage.getItem("dashboard-theme");
-    return storedTheme === "dark" ? "dark" : "light";
-}
-
-function getToasterOptions(theme) {
-    const isDark = theme === "dark";
-
-    return {
-        fill: isDark ? "#111111" : "#ffffff",
-        roundness: 15,
-        styles: {
-            title: isDark
-                ? "text-white! text-[16px] font-semibold! leading-none!"
-                : "text-[#111111]! text-[16px] font-semibold! leading-none!",
-            description: isDark
-                ? "text-[#a1a1aa]! text-[15px]! leading-[1.45]!"
-                : "text-[#3f3f46]! text-[15px]! leading-[1.45]!",
-            badge: isDark
-                ? "bg-[#0ea5e9]/15! text-[#38bdf8]!"
-                : "bg-[#e0f2fe]! text-[#0284c7]!",
-            button: isDark
-                ? "bg-white/10! text-white! hover:bg-white/15!"
-                : "bg-black/5! text-[#111111]! hover:bg-black/10!"
-        }
-    };
-}
-
-function useSileoTheme() {
-    const [theme, setTheme] = React.useState(getCurrentTheme);
-
-    React.useEffect(() => {
-        function syncTheme(e) {
-            const nextTheme = e?.detail?.theme;
-            if (nextTheme === "dark" || nextTheme === "light") {
-                setTheme(nextTheme);
-                return;
-            }
-
-            setTheme(getCurrentTheme());
-        }
-
-        const observer = new MutationObserver(() => {
-            setTheme(getCurrentTheme());
-        });
-
-        window.addEventListener("dashboard-theme-changed", syncTheme);
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ["data-theme", "data-bs-theme"]
-        });
-
-        return () => {
-            window.removeEventListener("dashboard-theme-changed", syncTheme);
-            observer.disconnect();
-        };
-    }, []);
-
-    return theme;
-}
-
-function ProfileToaster() {
-    const theme = useSileoTheme();
-
-    return (
-        <Toaster
-            position="top-center"
-            offset={{ top: 10 }}
-            options={getToasterOptions(theme)}
-        />
-    );
-}
-
 function Avatar({ src, name, size = 74 }) {
     if (src) {
         return (
@@ -216,9 +137,12 @@ function ProfilePage() {
     const [profile, setProfile] = React.useState(null);
     const [form, setForm] = React.useState({
         full_name: "",
+        nickname: "",
         email: "",
         contact: "",
-        address: ""
+        address: "",
+        gender: "",
+        date_of_birth: ""
     });
 
     const [loading, setLoading] = React.useState(true);
@@ -235,9 +159,12 @@ function ProfilePage() {
         setProfile(data);
         setForm({
             full_name: data.name || "",
+            nickname: data.nickname || "",
             email: data.email || "",
             contact: data.contact || "",
-            address: data.address || ""
+            address: data.address || "",
+            gender: data.gender || "",
+            date_of_birth: data.date_of_birth || ""
         });
         setPreviewUrl(data.profile_image_url || "");
         setRemoveImage(false);
@@ -376,9 +303,12 @@ function ProfilePage() {
 
         const formData = new FormData();
         formData.append("name", form.full_name.trim());
+        formData.append("nickname", form.nickname.trim());
         formData.append("email", form.email.trim());
         formData.append("contact", form.contact.trim());
         formData.append("address", form.address.trim());
+        formData.append("gender", form.gender);
+        formData.append("date_of_birth", form.date_of_birth);
 
         if (removeImage) {
             formData.append("remove_profile_image", "1");
@@ -446,11 +376,8 @@ function ProfilePage() {
     const displayName = form.full_name.trim() || profile?.name || "User";
     const role = profile?.role || "—";
     const departmentName = profile?.department_name || "—";
-
-    const staticEmployeeId = profile?.employee_id || "SJ53862";
-    const staticDepartmentId = profile?.department_id || "DPT-001";
-    const staticGender = profile?.gender || "Male";
-    const staticDateOfBirth = profile?.date_of_birth || "November 21, 2003";
+    const employeeId = profile?.employee_id || "—";
+    const departmentId = profile?.department_id || "—";
 
     if (loading) {
         return (
@@ -567,13 +494,13 @@ function ProfilePage() {
                                                     <InfoItem label="Role" value={role} />
                                                 </div>
                                                 <div className="col-6">
-                                                    <InfoItem label="Employee ID" value={staticEmployeeId} />
+                                                    <InfoItem label="Employee ID" value={employeeId} />
                                                 </div>
                                                 <div className="col-6">
                                                     <InfoItem label="Department" value={departmentName} />
                                                 </div>
                                                 <div className="col-6">
-                                                    <InfoItem label="Department ID" value={staticDepartmentId} />
+                                                    <InfoItem label="Department ID" value={departmentId} />
                                                 </div>
                                             </div>
                                         </div>
@@ -597,11 +524,11 @@ function ProfilePage() {
                                             </div>
 
                                             <div className="col-12 col-md-6">
-                                                <InfoItem label="Date of birth" value={staticDateOfBirth} />
+                                                <InfoItem label="Date of birth" value={form.date_of_birth} />
                                             </div>
 
                                             <div className="col-12 col-md-6">
-                                                <InfoItem label="Gender" value={staticGender} />
+                                                <InfoItem label="Gender" value={form.gender} />
                                             </div>
 
                                             <div className="col-12">
@@ -639,11 +566,11 @@ function ProfilePage() {
                                                 </div>
 
                                                 <div className="col-12 col-md-6 col-xl-6">
-                                                    <InfoItem label="Employee ID" value={staticEmployeeId} />
+                                                    <InfoItem label="Employee ID" value={employeeId} />
                                                 </div>
 
                                                 <div className="col-12 col-md-6 col-xl-6">
-                                                    <InfoItem label="Department ID" value={staticDepartmentId} />
+                                                    <InfoItem label="Department ID" value={departmentId} />
                                                 </div>
                                             </div>
                                         </CardSection>
@@ -746,7 +673,9 @@ function ProfilePage() {
                                                 </div>
 
                                                 <div className="col-12 col-md-6">
-                                                    <label className="form-label fw-semibold text-body">Nickname</label>
+                                                    <label className="form-label fw-semibold text-body">
+                                                        Nickname
+                                                    </label>
                                                     <input
                                                         type="text"
                                                         className="form-control"
@@ -764,13 +693,15 @@ function ProfilePage() {
                                                 </div>
 
                                                 <div className="col-12 col-md-6">
-                                                    <label className="form-label fw-semibold text-body">Date of birth</label>
+                                                    <label className="form-label fw-semibold text-body">
+                                                        Date of birth
+                                                    </label>
                                                     <input
-                                                        type="text"
+                                                        type="date"
                                                         className="form-control"
-                                                        value={staticDateOfBirth}
-                                                        readOnly
-                                                        disabled
+                                                        name="date_of_birth"
+                                                        value={form.date_of_birth}
+                                                        onChange={handleChange}
                                                         style={{
                                                             minHeight: "58px",
                                                             borderRadius: "16px",
@@ -781,24 +712,32 @@ function ProfilePage() {
                                                 </div>
 
                                                 <div className="col-12 col-md-6">
-                                                    <label className="form-label fw-semibold text-body">Gender</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-control"
-                                                        value={staticGender}
-                                                        readOnly
-                                                        disabled
+                                                    <label className="form-label fw-semibold text-body">
+                                                        Gender
+                                                    </label>
+                                                    <select
+                                                        className="form-select"
+                                                        name="gender"
+                                                        value={form.gender}
+                                                        onChange={handleChange}
                                                         style={{
                                                             minHeight: "58px",
                                                             borderRadius: "16px",
                                                             paddingInline: "18px",
                                                             fontSize: "16px"
                                                         }}
-                                                    />
+                                                    >
+                                                        <option value="">Select gender</option>
+                                                        <option value="Male">Male</option>
+                                                        <option value="Female">Female</option>
+                                                        <option value="Rather not say">Rather not say</option>
+                                                    </select>
                                                 </div>
 
                                                 <div className="col-12">
-                                                    <label className="form-label fw-semibold text-body">Address</label>
+                                                    <label className="form-label fw-semibold text-body">
+                                                        Address
+                                                    </label>
                                                     <textarea
                                                         className="form-control"
                                                         name="address"
@@ -843,7 +782,7 @@ function ProfilePage() {
 
                                                 <div className="col-12 col-md-6">
                                                     <label className="form-label fw-semibold text-body">
-                                                        Contact number <span className="text-danger">*</span>
+                                                        Contact number
                                                     </label>
                                                     <input
                                                         type="text"
