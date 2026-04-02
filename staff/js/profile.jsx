@@ -1,5 +1,14 @@
 import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
+import { sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
+
+
+function showProfileToast(title, description) {
+    sileo.info({
+        title,
+        description
+    });
+}
 
 function getInitials(name) {
     if (!name) return "U";
@@ -208,6 +217,14 @@ function ProfileEditorStyles() {
                 --profile-selected-text: #9ec5fe;
             }
 
+            [data-bs-theme="dark"] .profile-edit-chip {
+                border-color: rgba(255,255,255,0.10);
+                background: rgba(255,255,255,0.05);
+                box-shadow:
+                    inset 0 1px 0 rgba(255,255,255,0.04),
+                    0 1px 2px rgba(0,0,0,0.22);
+            }
+
             .profile-edit-panel {
                 background: var(--profile-panel-bg);
                 border: 1px solid var(--profile-panel-border);
@@ -228,7 +245,7 @@ function ProfileEditorStyles() {
             .profile-form-textarea,
             .profile-picker-trigger,
             .profile-select-trigger {
-                width: 100%;
+                width: 60%;
                 max-width: none;
                 border: 1px solid var(--profile-control-border) !important;
                 border-radius: 16px !important;
@@ -305,7 +322,7 @@ function ProfileEditorStyles() {
             .profile-phone-field {
                 display: flex;
                 align-items: stretch;
-                width: 100%;
+                width: 60%;
                 max-width: none;
                 min-height: 48px;
                 border: 1px solid var(--profile-control-border);
@@ -363,7 +380,7 @@ function ProfileEditorStyles() {
 
             .profile-phone-input {
                 flex: 1;
-                width: 100%;
+                width: 40%;
                 min-height: 48px;
                 border: 0 !important;
                 outline: 0 !important;
@@ -631,25 +648,28 @@ function ProfileEditorStyles() {
             .profile-edit-chip {
                 display: inline-flex;
                 align-items: center;
-                gap: 10px;
-                padding: 8px 12px;
+                gap: 8px;
+                width: fit-content;
+                min-height: 32px;
+                padding: 0 14px;
                 margin-bottom: 14px;
+                border: 1px solid color-mix(in srgb, var(--bs-border-color) 82%, transparent 18%);
                 border-radius: 999px;
-                background: var(--profile-soft-hover);
+                background: color-mix(in srgb, var(--bs-body-bg) 86%, var(--bs-tertiary-bg) 14%);
                 color: var(--profile-control-text);
-                font-size: 13px;
+                font-size: 14px;
                 font-weight: 700;
                 line-height: 1;
+                box-shadow:
+                    inset 0 1px 0 rgba(255,255,255,0.05),
+                    0 1px 2px rgba(0,0,0,0.06);
             }
 
-            .profile-edit-chip i,
-            .profile-label-with-icon i {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                line-height: 1;
-                flex-shrink: 0;
+            .profile-edit-chip i {
+                font-size: 14px;
+                color: var(--profile-control-text);
             }
+
 
             .profile-edit-chip i {
                 font-size: 14px;
@@ -659,6 +679,16 @@ function ProfileEditorStyles() {
                 display: inline-flex;
                 align-items: center;
                 gap: 10px;
+            }
+
+            .profile-short-field {
+                max-width: 250px;
+            }
+
+            @media (max-width: 767.98px) {
+                .profile-short-field {
+                    max-width: 100%;
+                }
             }
 
             @media (max-width: 575.98px) {
@@ -769,13 +799,6 @@ function CardSection({ title, onEdit, children, bodyClassName = "" }) {
     );
 }
 
-function AlertMessage({ kind = "danger", children }) {
-    return (
-        <div className={`alert alert-${kind} mb-4`} role="alert">
-            {children}
-        </div>
-    );
-}
 
 function CustomDatePicker({ value, onChange, name = "date_of_birth" }) {
     const [open, setOpen] = React.useState(false);
@@ -1185,13 +1208,19 @@ function ProfilePage() {
         const maxSize = 15 * 1024 * 1024;
 
         if (!allowedTypes.includes(file.type)) {
-            setPageError("Please upload a PNG, JPEG, or WEBP image.");
+            const message = "Please upload a PNG, JPEG, or WEBP image.";
+            setPageError(message);
+            showProfileToast("Upload failed", message);
+
             if (fileInputRef.current) fileInputRef.current.value = "";
             return;
         }
 
         if (file.size > maxSize) {
-            setPageError("Please upload an image under 15MB.");
+            const message = "Please upload an image under 15MB.";
+            setPageError(message);
+            showProfileToast("Upload failed", message);
+
             if (fileInputRef.current) fileInputRef.current.value = "";
             return;
         }
@@ -1199,11 +1228,18 @@ function ProfilePage() {
         setPageError("");
         setSelectedImage(file);
         setRemoveImage(false);
+
+        showProfileToast(
+            "Image ready",
+            "Your new profile image has been selected and is ready to save."
+        );
     }
 
     function handleRemoveImage() {
         if (!previewUrl && !selectedImage) {
-            setPageError("There is no profile picture set yet.");
+            const message = "There is no profile picture set yet.";
+            setPageError(message);
+            showProfileToast("Nothing to remove", message);
             return;
         }
 
@@ -1215,6 +1251,11 @@ function ProfilePage() {
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
+
+        showProfileToast(
+            "Profile image removed",
+            "Your current profile picture will be removed when you save changes."
+        );
     }
 
     async function handleSubmit(event) {
@@ -1289,9 +1330,21 @@ function ProfilePage() {
                     detail: data.profile
                 })
             );
+
+            showProfileToast(
+                "Profile updated",
+                "Your account details were saved successfully."
+            );
         } catch (error) {
             console.error(error);
-            setPageError(error.message || "Something went wrong.");
+
+            const message = error.message || "Something went wrong.";
+            setPageError(message);
+
+            showProfileToast(
+                "Update failed",
+                message
+            );
         } finally {
             setSaving(false);
         }
@@ -1349,22 +1402,6 @@ function ProfilePage() {
                             ></div>
                             <span>Loading profile...</span>
                         </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (pageError && !profile) {
-        return (
-            <div className="w-100 pb-4">
-                <ProfileEditorStyles />
-                <div
-                    className="card border shadow-sm bg-body"
-                    style={{ borderRadius: "20px" }}
-                >
-                    <div className="card-body p-4">
-                        <AlertMessage>{pageError}</AlertMessage>
                     </div>
                 </div>
             </div>
@@ -1446,8 +1483,6 @@ function ProfilePage() {
                             </>
                         )}
                     </div>
-
-                    {pageError && profile ? <AlertMessage>{pageError}</AlertMessage> : null}
 
                     {!isEditing ? (
                         <>
@@ -1702,11 +1737,13 @@ function ProfilePage() {
                                                     <span>Date of birth</span>
                                                 </label>
 
-                                                <CustomDatePicker
-                                                    value={form.date_of_birth}
-                                                    onChange={handleChange}
-                                                    name="date_of_birth"
-                                                />
+                                                <div className="profile-short-field">
+                                                    <CustomDatePicker
+                                                        value={form.date_of_birth}
+                                                        onChange={handleChange}
+                                                        name="date_of_birth"
+                                                    />
+                                                </div>
                                             </div>
 
                                             <div className="col-12 col-md-6">
@@ -1721,11 +1758,13 @@ function ProfilePage() {
                                                     <span>Gender</span>
                                                 </label>
 
-                                                <CustomGenderSelect
-                                                    value={form.gender}
-                                                    onChange={handleChange}
-                                                    name="gender"
-                                                />
+                                                <div className="profile-short-field">
+                                                    <CustomGenderSelect
+                                                        value={form.gender}
+                                                        onChange={handleChange}
+                                                        name="gender"
+                                                    />
+                                                </div>
                                             </div>
 
                                             <div className="col-12">

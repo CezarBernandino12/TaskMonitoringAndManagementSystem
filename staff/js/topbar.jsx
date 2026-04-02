@@ -112,25 +112,14 @@ function normalizeUserPayload(data = {}) {
     };
 }
 
-function getToasterOptions(theme) {
-    const isDark = theme === "dark";
-
+function getToasterOptions() {
     return {
-        fill: isDark ? "#18181b" : "#ffffff",
+        fill: "#000000",
         roundness: 15,
         styles: {
-            title: isDark
-                ? "text-[#f4f4f5]! text-[20px] font-semibold! leading-none!"
-                : "text-[#111827]! text-[20px] font-semibold! leading-none!",
-            description: isDark
-                ? "text-[#d4d4d8]! text-[16px]! leading-[1.45]!"
-                : "text-[#52525b]! text-[16px]! leading-[1.45]!",
-            badge: isDark
-                ? "bg-[#163d22]! text-[#86efac]!"
-                : "bg-[#e8f7ec]! text-[#166534]!",
-            button: isDark
-                ? "bg-white/10! text-white! hover:bg-white/15!"
-                : "bg-black/10! text-black! hover:bg-black/15!"
+            description: "text-[#d1d5db]! text-[16px]! leading-[1.45]!",
+            badge: "bg-white/10! text-white!",
+            button: "bg-white/10! text-white! hover:bg-white/15!"
         }
     };
 }
@@ -189,16 +178,7 @@ function SileoRootStyles() {
             #sileo-root [data-sileo-description] {
                 font-size: 15px;
                 font-weight: 500;
-            }
-
-            [data-theme="light"] #sileo-root [data-sileo-description],
-            [data-bs-theme="light"] #sileo-root [data-sileo-description] {
-                color: #5A9690 !important;
-            }
-
-            [data-theme="dark"] #sileo-root [data-sileo-description],
-            [data-bs-theme="dark"] #sileo-root [data-sileo-description] {
-                color: #7dd3c7 !important;
+                color: #d1d5db !important;
             }
         `}</style>
     );
@@ -214,7 +194,7 @@ function ThemeToaster() {
                 key={theme}
                 position="top-center"
                 offset={{ top: 10 }}
-                options={getToasterOptions(theme)}
+                options={getToasterOptions()}
             />
         </>
     );
