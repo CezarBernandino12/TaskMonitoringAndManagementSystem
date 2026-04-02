@@ -3,7 +3,7 @@
     --shell-gap: 12px;
     --sidebar-expanded-w: 250px;
     --sidebar-collapsed-w: 108px;
-    --topbar-content-gap: 18px;
+    --topbar-content-gap: 50px;
     --topbar-bottom: calc(var(--shell-edge) + var(--topbar-height, 78px));
     --topbar-stack: calc(var(--topbar-bottom) + var(--topbar-content-gap));
     --page-bottom-space: 48px;

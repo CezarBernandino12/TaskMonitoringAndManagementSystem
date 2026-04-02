@@ -90,16 +90,90 @@ function ThemeToaster() {
     );
 }
 
-function getGreetingByTime(date = new Date()) {
-    const hour = date.getHours();
+function getInitials(name) {
+    if (!name) return "U";
 
-    if (hour < 12) return "Good Morning";
-    if (hour < 18) return "Good Afternoon";
-    return "Good Evening";
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "U";
+
+    return parts
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join("");
 }
 
-function getDisplayName(name) {
-    return name && name.trim() ? name.trim() : "User";
+function getGreetingMeta(date = new Date()) {
+    const hour = date.getHours();
+
+    if (hour < 12) {
+        return {
+            label: "Good Morning",
+            icon: "bi-sunrise-fill",
+            chip: "Morning"
+        };
+    }
+
+    if (hour < 18) {
+        return {
+            label: "Good Afternoon",
+            icon: "bi-brightness-high-fill",
+            chip: "Afternoon"
+        };
+    }
+
+    return {
+        label: "Good Evening",
+        icon: "bi-moon-stars-fill",
+        chip: "Evening"
+    };
+}
+
+function getHonorific(gender) {
+    const value = (gender || "").trim().toLowerCase();
+
+    if (value === "male") return "Mr.";
+    if (value === "female") return "Ma'am";
+    return "";
+}
+
+function getPreferredName(user) {
+    const nickname = user?.nickname?.trim();
+    if (nickname) return nickname;
+
+    const name = user?.name?.trim();
+    return name || "User";
+}
+
+function getDisplayName(user) {
+    const nickname = user?.nickname?.trim();
+    if (nickname) return nickname;
+
+    const name = user?.name?.trim();
+    return name || "User";
+}
+
+function getRoleLabel(user) {
+    if (user?.role_label?.trim()) return user.role_label.trim();
+    if (user?.role?.trim()) {
+        return user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    }
+    return "User";
+}
+
+function buildGreeting(user, date = new Date()) {
+    const meta = getGreetingMeta(date);
+    const title = getHonorific(user?.gender);
+    const preferredName = getPreferredName(user);
+
+    return `${meta.label}, ${title ? `${title} ` : ""}${preferredName}`;
+}
+
+function getFriendlyDate(date = new Date()) {
+    return new Intl.DateTimeFormat(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric"
+    }).format(date);
 }
 
 function getStoredTheme() {
@@ -207,23 +281,57 @@ function UserChip({ user, userLoaded }) {
     }, [user.profile_image_url]);
 
     const hasImage = user.profile_image_url && !imgFailed;
-    const initials = user.initials || "U";
-    const name = user.name || "User";
+    const initials = user.initials || getInitials(user.name || user.nickname || "U");
+    const displayName = getDisplayName(user);
     const email = user.email || "";
+    const roleText = getRoleLabel(user);
 
     return (
         <div className="topbar-user-wrap" aria-label="Current user">
-            <div className="topbar-user-chip">
+            <div
+                className="topbar-user-chip"
+                style={{
+                    padding: "8px 12px",
+                    borderRadius: "18px",
+                    background: "var(--bs-tertiary-bg)",
+                    border: "1px solid var(--bs-border-color)",
+                    boxShadow: "0 6px 18px rgba(0,0,0,0.05)"
+                }}
+            >
                 <div className="topbar-user-avatar">
                     {hasImage
-                        ? <img src={user.profile_image_url} alt={name} onError={() => setImgFailed(true)} />
+                        ? <img src={user.profile_image_url} alt={displayName} onError={() => setImgFailed(true)} />
                         : <span className="topbar-user-initials">{initials}</span>
                     }
                     <span className="topbar-online-dot"></span>
                 </div>
 
-                <div className="topbar-user-info">
-                    <span className="topbar-user-email">{userLoaded ? email : ""}</span>
+                <div className="topbar-user-info" style={{ minWidth: 0 }}>
+                    <div
+                        className="fw-bold text-body"
+                        style={{
+                            fontSize: "14px",
+                            lineHeight: 1.1,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                        }}
+                    >
+                        {displayName}
+                    </div>
+
+                    <div
+                        className="text-body-secondary"
+                        style={{
+                            fontSize: "12px",
+                            lineHeight: 1.2,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                        }}
+                    >
+                        {userLoaded ? `${email}` : ""}
+                    </div>
                 </div>
             </div>
         </div>
@@ -235,6 +343,8 @@ function TopBar() {
     const [now, setNow] = React.useState(() => new Date());
     const [user, setUser] = React.useState({
         name: "",
+        nickname: "",
+        gender: "",
         email: "",
         role: "",
         role_label: "",
@@ -294,11 +404,13 @@ function TopBar() {
 
                 setUser({
                     name: data.name || "User",
+                    nickname: data.nickname || "",
+                    gender: data.gender || "",
                     email: data.email || "",
                     role: data.role || "",
                     role_label: data.role_label || "",
                     department_name: data.department_name || "",
-                    initials: data.initials || "U",
+                    initials: data.initials || getInitials(data.name || "User"),
                     profile_image_url: data.profile_image_url || ""
                 });
 
@@ -317,11 +429,13 @@ function TopBar() {
 
             setUser({
                 name: d.name || "User",
+                nickname: d.nickname || "",
+                gender: d.gender || "",
                 email: d.email || "",
                 role: d.role || "",
                 role_label: d.role_label || "",
                 department_name: d.department_name || "",
-                initials: d.initials || "U",
+                initials: d.initials || getInitials(d.name || "User"),
                 profile_image_url: d.profile_image_url || ""
             });
 
@@ -337,13 +451,84 @@ function TopBar() {
         };
     }, []);
 
-    const greetingText = `${getGreetingByTime(now)}, ${getDisplayName(user.name)}`;
+    const greetingMeta = getGreetingMeta(now);
+    const greetingText = buildGreeting(user, now);
+    const roleText = getRoleLabel(user);
+    const todayText = getFriendlyDate(now);
+    const secondaryText = user.department_name
+        ? `${roleText} • ${user.department_name}`
+        : roleText;
 
     return (
         <header className="topbar">
             <div className="topbar-left">
-                <div className="topbar-greeting">
-                    <h1 className="topbar-greeting-title">{greetingText}</h1>
+                <div
+                    className="d-flex align-items-center gap-3"
+                    style={{ minWidth: 0 }}
+                >
+                    <div
+                        className="d-inline-flex align-items-center justify-content-center shadow-sm"
+                        style={{
+                            width: "56px",
+                            height: "56px",
+                            borderRadius: "18px",
+                            background: "linear-gradient(135deg, rgba(255,193,7,0.18), rgba(13,110,253,0.12))",
+                            border: "1px solid var(--bs-border-color)",
+                            flexShrink: 0
+                        }}
+                    >
+                        <i
+                            className={`bi ${greetingMeta.icon}`}
+                            style={{
+                                fontSize: "24px"
+                            }}
+                        ></i>
+                    </div>
+
+                    <div style={{ minWidth: 0 }}>
+                        <div
+                            className="d-flex align-items-center flex-wrap gap-2 mb-1"
+                            style={{ minWidth: 0 }}
+                        >
+                            <span
+                                className="badge rounded-pill text-body-emphasis"
+                                style={{
+                                    background: "var(--bs-tertiary-bg)",
+                                    border: "1px solid var(--bs-border-color)",
+                                    padding: "6px 10px",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                    letterSpacing: "0.04em"
+                                }}
+                            >
+                                <i className={`bi ${greetingMeta.icon} me-1`}></i>
+                                {greetingMeta.chip}
+                            </span>
+
+                            <span
+                                className="text-body-secondary"
+                                style={{ fontSize: "12px", fontWeight: 600 }}
+                            >
+                                {todayText}
+                            </span>
+                        </div>
+
+                        <h1
+                            className="mb-1 fw-bold text-body"
+                            style={{
+                                fontSize: "28px",
+                                lineHeight: 1.1,
+                                letterSpacing: "-0.02em",
+                                margin: 0,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                maxWidth: "100%"
+                            }}
+                        >
+                            {greetingText}
+                        </h1>
+                    </div>
                 </div>
             </div>
 
