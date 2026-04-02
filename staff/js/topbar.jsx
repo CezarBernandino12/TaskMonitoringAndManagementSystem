@@ -21,21 +21,21 @@ function getToasterOptions(theme) {
     const isDark = theme === "dark";
 
     return {
-        fill: isDark ? "#111111" : "#ffffff",
+        fill: isDark ? "#000000" : "#ffffff",
         roundness: 15,
         styles: {
             title: isDark
-                ? "text-[#f4f4f5]! text-[20px] font-semibold! leading-none!"
-                : "text-[#111111]! text-[20px] font-semibold! leading-none!",
+                ? "text-[#111111]! text-[20px] font-semibold! leading-none!"
+                : "text-[#f4f4f5]! text-[20px] font-semibold! leading-none!",
             description: isDark
-                ? "text-[#d4d4d8]! text-[18px]! leading-[1.45]!"
-                : "text-[#52525b]! text-[18px]! leading-[1.45]!",
+                ? "text-[#52525b]! text-[18px]! leading-[1.45]!"
+                : "text-[#d4d4d8]! text-[18px]! leading-[1.45]!",
             badge: isDark
-                ? "bg-[#1f3b22]! text-[#32d74b]!"
-                : "bg-[#e8f7ec]! text-[#1f8f38]!",
+                ? "bg-[#e8f7ec]! text-[#1f8f38]!"
+                : "bg-[#1f3b22]! text-[#32d74b]!",
             button: isDark
-                ? "bg-white/10! text-white! hover:bg-white/15!"
-                : "bg-dark-subtle! text-dark! hover:bg-secondary-subtle!"
+                ? "bg-black/10! text-black! hover:bg-black/15!"
+                : "bg-white/10! text-white! hover:bg-white/15!"
         }
     };
 }
@@ -78,6 +78,7 @@ function ThemeToaster() {
 
     return (
         <Toaster
+            key={theme}
             position="top-center"
             offset={{ top: 10 }}
             options={getToasterOptions(theme)}
