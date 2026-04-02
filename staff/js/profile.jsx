@@ -1,6 +1,6 @@
 import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
+import { sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
 
 function getInitials(name) {
     if (!name) return "U";
@@ -900,12 +900,6 @@ function ProfilePage() {
             </div>
         </div>
     );
-}
-
-const sileoRoot = document.getElementById("sileo-root");
-if (sileoRoot && !sileoRoot.dataset.mounted) {
-    sileoRoot.dataset.mounted = "true";
-    createRoot(sileoRoot).render(<ProfileToaster />);
 }
 
 const profileRoot = document.getElementById("root");

@@ -30,11 +30,11 @@ function getToasterOptions(theme) {
         roundness: 15,
         styles: {
             title: isDark
-                ? "text-[#32d74b]! text-[20px] font-semibold! leading-none!"
+                ? "text-[#f4f4f5]! text-[20px] font-semibold! leading-none!"
                 : "text-[#111111]! text-[20px] font-semibold! leading-none!",
             description: isDark
-                ? "text-[#a1a1aa]! text-[18px]! leading-[1.45]!"
-                : "text-[#3f3f46]! text-[18px]! leading-[1.45]!",
+                ? "text-[#d4d4d8]! text-[18px]! leading-[1.45]!"
+                : "text-[#52525b]! text-[18px]! leading-[1.45]!",
             badge: isDark
                 ? "bg-[#1f3b22]! text-[#32d74b]!"
                 : "bg-[#e8f7ec]! text-[#1f8f38]!",

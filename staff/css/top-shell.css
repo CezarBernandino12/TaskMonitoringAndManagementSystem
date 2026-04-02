@@ -32,12 +32,24 @@ body {
     pointer-events: auto;
 }
 
+[data-theme="light"] #sileo-root [data-sileo-title] {
+    font-size: 16px;
+}
+
 [data-theme="light"] #sileo-root [data-sileo-description] {
-    color: #000000 !important;
+    color: #5A9690!important;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+[data-theme="dark"] #sileo-root [data-sileo-title] {
+    font-size: 16px;
 }
 
 [data-theme="dark"] #sileo-root [data-sileo-description] {
-    color: #3f3f46 !important;
+    color: #5A9690 !important;
+    font-size: 15px;
+    font-weight: 500;
 }
 
 .app-shell,
