@@ -1,6 +1,6 @@
 import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-import { sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
+import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
 
 function getInitials(name) {
     if (!name) return "U";
@@ -152,6 +152,86 @@ function getCalendarDays(viewDate) {
     });
 }
 
+const THEME_KEY = "dashboard-theme";
+
+function getCurrentTheme() {
+    const attrTheme = document.documentElement.getAttribute("data-theme");
+    if (attrTheme === "dark" || attrTheme === "light") return attrTheme;
+
+    const bsTheme = document.documentElement.getAttribute("data-bs-theme");
+    if (bsTheme === "dark" || bsTheme === "light") return bsTheme;
+
+    const storedTheme = localStorage.getItem(THEME_KEY);
+    return storedTheme === "dark" ? "dark" : "light";
+}
+
+function getToasterOptions(theme) {
+    const isDark = theme === "dark";
+
+    return {
+        fill: isDark ? "#111111" : "#ffffff",
+        roundness: 15,
+        styles: {
+            title: isDark
+                ? "text-[#f4f4f5]! text-[20px] font-semibold! leading-none!"
+                : "text-[#111111]! text-[20px] font-semibold! leading-none!",
+            description: isDark
+                ? "text-[#d4d4d8]! text-[18px]! leading-[1.45]!"
+                : "text-[#52525b]! text-[18px]! leading-[1.45]!",
+            badge: isDark
+                ? "bg-[#1f3b22]! text-[#32d74b]!"
+                : "bg-[#e8f7ec]! text-[#1f8f38]!",
+            button: isDark
+                ? "bg-white/10! text-white! hover:bg-white/15!"
+                : "bg-dark-subtle! text-dark! hover:bg-secondary-subtle!"
+        }
+    };
+}
+
+function useSileoTheme() {
+    const [theme, setTheme] = React.useState(getCurrentTheme);
+
+    React.useEffect(() => {
+        function syncTheme(e) {
+            const nextTheme = e?.detail?.theme;
+            if (nextTheme === "dark" || nextTheme === "light") {
+                setTheme(nextTheme);
+                return;
+            }
+
+            setTheme(getCurrentTheme());
+        }
+
+        const observer = new MutationObserver(() => {
+            setTheme(getCurrentTheme());
+        });
+
+        window.addEventListener("dashboard-theme-changed", syncTheme);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["data-theme", "data-bs-theme"]
+        });
+
+        return () => {
+            window.removeEventListener("dashboard-theme-changed", syncTheme);
+            observer.disconnect();
+        };
+    }, []);
+
+    return theme;
+}
+
+function ThemeToaster() {
+    const theme = useSileoTheme();
+
+    return (
+        <Toaster
+            position="top-center"
+            offset={{ top: 10 }}
+            options={getToasterOptions(theme)}
+        />
+    );
+}
 
 function ProfileEditorStyles() {
     return (
@@ -1742,6 +1822,12 @@ function ProfilePage() {
             </div>
         </div>
     );
+}
+
+const sileoRoot = document.getElementById("sileo-root");
+if (sileoRoot && !sileoRoot.dataset.mounted) {
+    sileoRoot.dataset.mounted = "true";
+    createRoot(sileoRoot).render(<ThemeToaster />);
 }
 
 const profileRoot = document.getElementById("root");
