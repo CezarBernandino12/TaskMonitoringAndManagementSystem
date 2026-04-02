@@ -169,7 +169,7 @@ function getToasterOptions(theme) {
     const isDark = theme === "dark";
 
     return {
-        fill: isDark ? "#000000" : "#000000",
+        fill: isDark ? "#000000" : "#ffffff",
         roundness: 15,
         styles: {
             title: isDark
