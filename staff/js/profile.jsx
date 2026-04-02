@@ -1,6 +1,5 @@
 import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
 
 function getInitials(name) {
     if (!name) return "U";
@@ -151,76 +150,6 @@ function getCalendarDays(viewDate) {
         return date;
     });
 }
-
-const THEME_KEY = "dashboard-theme";
-
-function getCurrentTheme() {
-    const attrTheme = document.documentElement.getAttribute("data-theme");
-    if (attrTheme === "dark" || attrTheme === "light") return attrTheme;
-
-    const bsTheme = document.documentElement.getAttribute("data-bs-theme");
-    if (bsTheme === "dark" || bsTheme === "light") return bsTheme;
-
-    const storedTheme = localStorage.getItem(THEME_KEY);
-    return storedTheme === "dark" ? "dark" : "light";
-}
-
-function getToasterOptions(theme) {
-    const isDark = theme === "dark";
-
-    return {
-        fill: isDark ? "#ffffff" : "#ffffff",
-        roundness: 15,
-        styles: {
-            title: isDark
-                ? "text-[#111111]! text-[20px] font-semibold! leading-none!"
-                : "text-[#f4f4f5]! text-[20px] font-semibold! leading-none!",
-            description: isDark
-                ? "text-[#52525b]! text-[18px]! leading-[1.45]!"
-                : "text-[#d4d4d8]! text-[18px]! leading-[1.45]!",
-            badge: isDark
-                ? "bg-[#e8f7ec]! text-[#1f8f38]!"
-                : "bg-[#1f3b22]! text-[#32d74b]!",
-            button: isDark
-                ? "bg-black/10! text-black! hover:bg-black/15!"
-                : "bg-white/10! text-white! hover:bg-white/15!"
-        }
-    };
-}
-
-function useSileoTheme() {
-    const [theme, setTheme] = React.useState(getCurrentTheme);
-
-    React.useEffect(() => {
-        function syncTheme(e) {
-            const nextTheme = e?.detail?.theme;
-            if (nextTheme === "dark" || nextTheme === "light") {
-                setTheme(nextTheme);
-                return;
-            }
-
-            setTheme(getCurrentTheme());
-        }
-
-        const observer = new MutationObserver(() => {
-            setTheme(getCurrentTheme());
-        });
-
-        window.addEventListener("dashboard-theme-changed", syncTheme);
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ["data-theme", "data-bs-theme"]
-        });
-
-        return () => {
-            window.removeEventListener("dashboard-theme-changed", syncTheme);
-            observer.disconnect();
-        };
-    }, []);
-
-    return theme;
-}
-
 
 function ProfileEditorStyles() {
     return (
@@ -1185,39 +1114,27 @@ function ProfilePage() {
         const maxSize = 15 * 1024 * 1024;
 
         if (!allowedTypes.includes(file.type)) {
-            sileo.error({
-                title: "Invalid image type",
-                description: "Please upload a PNG, JPEG, or WEBP image."
-            });
+            setPageError("Please upload a PNG, JPEG, or WEBP image.");
             return;
         }
 
         if (file.size > maxSize) {
-            sileo.error({
-                title: "Image too large",
-                description: "Please upload an image under 15MB."
-            });
+            setPageError("Please upload an image under 15MB.");
             return;
         }
 
+        setPageError("");
         setSelectedImage(file);
         setRemoveImage(false);
-
-        sileo.info({
-            title: "Picture selected",
-            description: "Click Save changes to upload the new image."
-        });
     };
 
     const handleRemoveImage = () => {
         if (!previewUrl && !selectedImage) {
-            sileo.info({
-                title: "No picture to remove",
-                description: "There is no profile picture set yet."
-            });
+            setPageError("There is no profile picture set yet.");
             return;
         }
 
+        setPageError("");
         setSelectedImage(null);
         setPreviewUrl("");
 
@@ -1226,11 +1143,6 @@ function ProfilePage() {
         }
 
         setRemoveImage(true);
-
-        sileo.warning({
-            title: "Picture removed from preview",
-            description: "Click Save changes to permanently delete it."
-        });
     };
 
     const handleSubmit = async (e) => {
@@ -1263,46 +1175,23 @@ function ProfilePage() {
                 formData.append("profile_image", selectedImage);
             }
 
-            const request = fetch("php/update_profile.php", {
+            const res = await fetch("php/update_profile.php", {
                 method: "POST",
                 body: formData,
                 credentials: "same-origin"
-            }).then(async (res) => {
-                const data = await parseJsonResponse(res);
-
-                if (!res.ok || data.error) {
-                    throw new Error(data.error || "Failed to update profile");
-                }
-
-                return data;
             });
 
-            const data = await sileo.promise(request, {
-                loading: {
-                    title: "Saving profile...",
-                    description:
-                        activeSection === "contact"
-                            ? "Updating your contact information."
-                            : selectedImage
-                                ? "Uploading your profile picture."
-                                : removeImage
-                                    ? "Removing your profile picture."
-                                    : "Updating your personal information."
-                },
-                success: {
-                    title: "Profile updated",
-                    description: "Your changes were saved successfully."
-                },
-                error: (err) => ({
-                    title: "Update failed",
-                    description: err.message || "Something went wrong."
-                })
-            });
+            const data = await parseJsonResponse(res);
+
+            if (!res.ok || data.error) {
+                throw new Error(data.error || "Failed to update profile");
+            }
 
             hydrateForm(data.profile);
             setSelectedImage(null);
             setRemoveImage(false);
             setActiveSection(null);
+            setPageError("");
 
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
@@ -1812,7 +1701,6 @@ function ProfilePage() {
         </div>
     );
 }
-
 
 const profileRoot = document.getElementById("root");
 if (profileRoot) {

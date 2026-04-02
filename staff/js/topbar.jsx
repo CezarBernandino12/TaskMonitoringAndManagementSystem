@@ -73,16 +73,56 @@ function useSileoTheme() {
     return theme;
 }
 
+function SileoRootStyles() {
+    return (
+        <style>{`
+            #sileo-root {
+                position: fixed;
+                inset: 0;
+                z-index: 5000;
+                pointer-events: none;
+            }
+
+            #sileo-root > * {
+                pointer-events: auto;
+            }
+
+            [data-theme="light"] #sileo-root [data-sileo-title] {
+                font-size: 16px;
+            }
+
+            [data-theme="light"] #sileo-root [data-sileo-description] {
+                color: #5A9690 !important;
+                font-size: 15px;
+                font-weight: 500;
+            }
+
+            [data-theme="dark"] #sileo-root [data-sileo-title] {
+                font-size: 16px;
+            }
+
+            [data-theme="dark"] #sileo-root [data-sileo-description] {
+                color: #5A9690 !important;
+                font-size: 15px;
+                font-weight: 500;
+            }
+        `}</style>
+    );
+}
+
 function ThemeToaster() {
     const theme = useSileoTheme();
 
     return (
-        <Toaster
-            key={theme}
-            position="top-center"
-            offset={{ top: 10 }}
-            options={getToasterOptions(theme)}
-        />
+        <>
+            <SileoRootStyles />
+            <Toaster
+                key={theme}
+                position="top-center"
+                offset={{ top: 10 }}
+                options={getToasterOptions(theme)}
+            />
+        </>
     );
 }
 
