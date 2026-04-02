@@ -13,9 +13,6 @@ function SupervisorDashboard() {
         'Other': '#ffe082',     // soft buttery yellow
         'Extra': '#fff8e1'      // pale warm near-white
 
-
-
-
     };
 
     /* ---------- Fetch Department Tasks ---------- */
