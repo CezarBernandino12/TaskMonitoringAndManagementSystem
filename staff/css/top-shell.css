@@ -29,23 +29,14 @@ body {
     pointer-events: auto;
 }
 
-[data-theme="light"] #sileo-root [data-sileo-title] {
-    font-size: 16px !important;
-}
-
-[data-theme="dark"] #sileo-root [data-sileo-title] {
-    font-size: 16px !important;
-}
 
 [data-theme="light"] #sileo-root [data-sileo-description] {
     color: #ffffff !important;
-    font-size: 15px !important;
 }
+
 
 [data-theme="dark"] #sileo-root [data-sileo-description] {
     color: #3f3f46 !important;
-    font-size: 15px !important;
-    
 }
 
 /* hide only the area directly behind the topbar */
