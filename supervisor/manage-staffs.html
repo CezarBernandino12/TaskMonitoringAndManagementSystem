@@ -18,22 +18,30 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap" rel="stylesheet">
 
+    <!-- Keep these because sidebar.jsx still uses global React -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <style>
+        #manage-staffs-root {
+            width: 100%;
+            min-height: 240px;
+        }
+    </style>
+
     <script>
         (function () {
-            const root = document.documentElement;
+            const docRoot = document.documentElement;
 
             const isCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
             if (isCollapsed) {
-                root.classList.add("sidebar-collapsed-init");
+                docRoot.classList.add("sidebar-collapsed-init");
             }
 
             const theme = localStorage.getItem("dashboard-theme") || "light";
-            root.setAttribute("data-theme", theme);
-            root.setAttribute("data-bs-theme", theme);
+            docRoot.setAttribute("data-theme", theme);
+            docRoot.setAttribute("data-bs-theme", theme);
         })();
     </script>
 </head>
@@ -57,7 +65,11 @@
         </div>
     </div>
 
-    <script type="text/babel" src="js/sidebar.jsx"></script>
+    <script
+        type="text/babel"
+        data-presets="react"
+        src="js/sidebar.jsx"
+    ></script>
 
     <script
         type="text/babel"
@@ -66,6 +78,11 @@
         src="js/topbar.jsx"
     ></script>
 
-    <script type="text/babel" src="js/manage-staff.jsx"></script>
+    <script
+        type="text/babel"
+        data-type="module"
+        data-presets="react"
+        src="js/manage-staff.jsx"
+    ></script>
 </body>
 </html>
