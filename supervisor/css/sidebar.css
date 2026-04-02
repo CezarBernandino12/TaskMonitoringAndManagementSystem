@@ -1,5 +1,5 @@
 /* STICKY SIDEBAR COLUMN */
-.supervisor-sidebar-col {
+.staff-sidebar-col {
     position: sticky;
     top: 16px;
     align-self: flex-start;
@@ -14,7 +14,7 @@
     display: flex;
     flex-direction: column;
     padding: 24px 18px 22px;
-    background: #ffffff;
+    background: #f8f8ff;
     border: 1px solid #ececec;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
@@ -22,7 +22,7 @@
     min-width: 250px;
     transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
     overflow: visible;
-    z-index: 5;
+    z-index: 350;
 }
 
 .dashboard-sidebar.collapsed {
@@ -711,7 +711,7 @@
 }
 
 /* ---------- RESPONSIVE LAYOUT HELPERS ---------- */
-.supervisor-sidebar-col {
+.staff-sidebar-col {
     position: sticky;
     top: 16px;
     align-self: flex-start;
@@ -946,7 +946,7 @@ body.sidebar-mobile-open {
 
 /* ---------- TABLET ---------- */
 @media (min-width: 768px) and (max-width: 991.98px) {
-    .supervisor-sidebar-col {
+    .staff-sidebar-col {
         position: sticky;
         top: 12px;
         height: calc(100vh - 24px);
@@ -975,7 +975,7 @@ body.sidebar-mobile-open {
 
 /* ---------- MOBILE ---------- */
 @media (max-width: 767.98px) {
-    .supervisor-sidebar-col {
+    .staff-sidebar-col {
         position: static;
         top: auto;
         height: auto;
@@ -1207,7 +1207,7 @@ body.sidebar-mobile-open {
 }
 
 @media (max-width: 576px) {
-    .supervisor-sidebar-col {
+    .staff-sidebar-col {
         position: static;
         top: auto;
         height: auto;
@@ -1235,5 +1235,49 @@ body.sidebar-mobile-open {
 
     .logout-btn {
         width: 100%;
+    }
+}
+@media (min-width: 768px) {
+    .sidebar-toggle {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateX(50%) scale(0.96);
+        transition:
+            opacity 0.2s ease,
+            visibility 0.2s ease,
+            transform 0.25s ease,
+            background 0.25s ease;
+    }
+
+    .dashboard-sidebar:hover .sidebar-toggle {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translateX(50%) scale(1);
+    }
+
+    /* remove the extra hover bridge on collapsed mode */
+    .dashboard-sidebar.collapsed::after {
+        content: none;
+    }
+}
+@media (min-width: 768px) {
+    .staff-sidebar-col {
+        position: sticky;
+        top: 16px;
+        align-self: flex-start;
+        height: calc(100vh - 32px);
+        overflow: visible;
+    }
+
+    .dashboard-sidebar {
+        height: 100%;
+        overflow: visible;
+    }
+
+    .sidebar-inner {
+        height: 100%;
+        overflow: visible;
     }
 }
