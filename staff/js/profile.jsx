@@ -593,11 +593,15 @@ function ProfilePage() {
                                             </div>
 
                                             <div className="col-12 col-md-6">
-                                                <InfoItem label="Gender" value={staticGender} />
+                                                <InfoItem label="Nickname" value={form.nickname} />
                                             </div>
 
                                             <div className="col-12 col-md-6">
                                                 <InfoItem label="Date of birth" value={staticDateOfBirth} />
+                                            </div>
+
+                                            <div className="col-12 col-md-6">
+                                                <InfoItem label="Gender" value={staticGender} />
                                             </div>
 
                                             <div className="col-12">
@@ -721,7 +725,7 @@ function ProfilePage() {
                                             <div className="border-top my-4"></div>
 
                                             <div className="row g-4">
-                                                <div className="col-12">
+                                                <div className="col-12 col-md-6">
                                                     <label className="form-label fw-semibold text-body">
                                                         Full name <span className="text-danger">*</span>
                                                     </label>
@@ -742,13 +746,14 @@ function ProfilePage() {
                                                 </div>
 
                                                 <div className="col-12 col-md-6">
-                                                    <label className="form-label fw-semibold text-body">Gender</label>
+                                                    <label className="form-label fw-semibold text-body">Nickname</label>
                                                     <input
                                                         type="text"
                                                         className="form-control"
-                                                        value={staticGender}
-                                                        readOnly
-                                                        disabled
+                                                        name="nickname"
+                                                        value={form.nickname}
+                                                        onChange={handleChange}
+                                                        placeholder="Enter nickname"
                                                         style={{
                                                             minHeight: "58px",
                                                             borderRadius: "16px",
@@ -764,6 +769,23 @@ function ProfilePage() {
                                                         type="text"
                                                         className="form-control"
                                                         value={staticDateOfBirth}
+                                                        readOnly
+                                                        disabled
+                                                        style={{
+                                                            minHeight: "58px",
+                                                            borderRadius: "16px",
+                                                            paddingInline: "18px",
+                                                            fontSize: "16px"
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <label className="form-label fw-semibold text-body">Gender</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        value={staticGender}
                                                         readOnly
                                                         disabled
                                                         style={{
