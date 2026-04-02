@@ -519,16 +519,49 @@ function ProfileEditorStyles() {
             background: rgba(37, 99, 235, 0.10);
             color: #2563eb;
         }
-        .profile-edit-shell {
-            position: relative;
-            margin-top: 14px;
-        }
+
         @media (max-width: 575.98px) {
             .profile-picker-popup {
                 width: min(280px, calc(100vw - 24px));
                 max-width: min(280px, calc(100vw - 24px));
             }
         }
+        .profile-edit-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+    border-radius: 999px;
+    background: rgba(17, 24, 39, 0.05);
+    color: var(--bs-body-color);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.profile-edit-chip i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.profile-label-with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-label-with-icon i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+}
                 `}</style>
             );
 }
@@ -1214,8 +1247,13 @@ function ProfilePage() {
                         ) : (
                             <>
                                 <div className="profile-edit-chip">
-                                    <i className={`bi ${activeSection === "contact" ? "bi-envelope-paper" : "bi-person-vcard"}`}></i>
-                                    {activeSection === "contact" ? "Contact editor" : "Profile editor"}
+                                    <i
+                                        className={`bi ${activeSection === "contact" ? "bi-envelope-paper" : "bi-person-vcard"}`}
+                                        aria-hidden="true"
+                                    ></i>
+                                    <span>
+                                        {activeSection === "contact" ? "Contact editor" : "Profile editor"}
+                                    </span>
                                 </div>
 
                                 <h4
@@ -1475,9 +1513,12 @@ function ProfilePage() {
                                             </div>
 
                                             <div className="col-12 col-md-6">
-                                                <label className="form-label text-body" style={labelStyle}>
-                                                 <i className="bi bi-calendar3 text-body-secondary"></i>
-                                                    Date of birth
+                                                <label
+                                                    className="form-label text-body profile-label-with-icon"
+                                                    style={labelStyle}
+                                                >
+                                                    <i className="bi bi-calendar3 text-body-secondary" aria-hidden="true"></i>
+                                                    <span>Date of birth</span>
                                                 </label>
                                                 <CustomDatePicker
                                                     value={form.date_of_birth}
@@ -1487,9 +1528,12 @@ function ProfilePage() {
                                             </div>
 
                                             <div className="col-12 col-md-6">
-                                                <label className="form-label text-body" style={labelStyle}>
-                                                <i className="bi bi-person-badge text-body-secondary"></i>
-                                                    Gender
+                                                <label
+                                                    className="form-label text-body profile-label-with-icon"
+                                                    style={labelStyle}
+                                                >
+                                                    <i className="bi bi-person-badge text-body-secondary" aria-hidden="true"></i>
+                                                    <span>Gender</span>
                                                 </label>
                                                 <CustomGenderSelect
                                                     value={form.gender}
