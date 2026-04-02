@@ -63,6 +63,65 @@ function formatReadableDate(value) {
     });
 }
 
+function getPhilippineLocalNumber(value) {
+    if (!value) return "";
+
+    const digits = String(value).replace(/\D/g, "");
+
+    if (digits.startsWith("63")) {
+        return digits.slice(2, 12);
+    }
+
+    if (digits.startsWith("0")) {
+        return digits.slice(0, 11);
+    }
+
+    return digits.slice(0, 10);
+}
+
+function normalizePhilippineNumberForSave(value) {
+    const digits = String(value || "").replace(/\D/g, "");
+
+    if (!digits) return "";
+
+    let local = digits;
+
+    if (local.startsWith("63")) {
+        local = local.slice(2);
+    }
+
+    if (local.startsWith("0")) {
+        local = local.slice(1);
+    }
+
+    local = local.slice(0, 10);
+
+    return local ? `+63${local}` : "";
+}
+
+function formatPhilippineNumberDisplay(value) {
+    const digits = String(value || "").replace(/\D/g, "");
+
+    if (!digits) return "—";
+
+    let normalized = digits;
+
+    if (normalized.startsWith("0")) {
+        normalized = `63${normalized.slice(1)}`;
+    }
+
+    if (!normalized.startsWith("63")) {
+        normalized = `63${normalized}`;
+    }
+
+    const local = normalized.slice(2);
+
+    if (!local) return "+63";
+    if (local.length <= 3) return `+63 ${local}`;
+    if (local.length <= 6) return `+63 ${local.slice(0, 3)} ${local.slice(3)}`;
+    return `+63 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6, 10)}`;
+}
+
 function getYearOptions(centerYear) {
     const startYear = 1950;
     const endYear = new Date().getFullYear();
@@ -83,7 +142,6 @@ function getCalendarDays(viewDate) {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
     const firstOfMonth = new Date(year, month, 1);
-
     const mondayIndex = (firstOfMonth.getDay() + 6) % 7;
     const start = new Date(year, month, 1 - mondayIndex);
 
@@ -94,476 +152,514 @@ function getCalendarDays(viewDate) {
     });
 }
 
+
 function ProfileEditorStyles() {
-  return (
-    <style>{`
-        .profile-picker-year-menu {
-            margin-top: 10px;
-            max-height: 220px;
-            overflow-y: auto;
-            scrollbar-width: none;      /* Firefox */
-            -ms-overflow-style: none;   /* IE/Edge */
-        }
+    return (
+        <style>{`
+            .profile-edit-shell {
+                --profile-panel-bg: linear-gradient(
+                    180deg,
+                    color-mix(in srgb, var(--bs-body-bg) 92%, white 8%) 0%,
+                    color-mix(in srgb, var(--bs-body-bg) 96%, black 4%) 100%
+                );
+                --profile-panel-border: color-mix(in srgb, var(--bs-border-color) 78%, transparent 22%);
+                --profile-panel-shadow: 0 18px 40px rgba(15, 23, 42, 0.10);
+                --profile-panel-inset: inset 0 1px 0 rgba(255,255,255,0.05);
 
-        .profile-picker-year-menu::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-            display: none;
-        }
+                --profile-control-bg: color-mix(in srgb, var(--bs-body-bg) 88%, var(--bs-tertiary-bg) 12%);
+                --profile-control-bg-hover: color-mix(in srgb, var(--bs-body-bg) 82%, var(--bs-tertiary-bg) 18%);
+                --profile-control-bg-focus: color-mix(in srgb, var(--bs-body-bg) 90%, white 10%);
+                --profile-control-border: color-mix(in srgb, var(--bs-border-color) 80%, transparent 20%);
+                --profile-control-border-hover: color-mix(in srgb, var(--bs-border-color) 100%, var(--bs-body-color) 18%);
+                --profile-control-border-focus: color-mix(in srgb, var(--bs-primary) 38%, var(--bs-border-color) 62%);
+                --profile-control-text: var(--bs-body-color);
+                --profile-control-placeholder: var(--bs-secondary-color);
 
-        .profile-picker-year-menu::-webkit-scrollbar-thumb {
-            background: transparent;
-        }
-
-        .profile-picker-year-menu::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-
-        .profile-picker-title {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--bs-body-color);
-            letter-spacing: -0.01em;
-        }
-
-        .profile-picker-title-month {
-            font-weight: 700;
-        }
-
-        .profile-picker-year-trigger {
-            border: 0;
-            background: transparent;
-            padding: 0;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font: inherit;
-            color: inherit;
-            cursor: pointer;
-        }
-
-        .profile-picker-year-trigger i {
-            font-size: 11px;
-        }
-
-        .profile-picker-year-menu {
-            position: absolute;
-            top: calc(100% + 8px);
-            left: 0;
-            z-index: 80;
-            width: 110px;
-            max-height: 220px;
-            overflow-y: auto;
-            padding: 6px;
-            background: var(--bs-body-bg);
-            border: 1px solid rgba(17, 24, 39, 0.08);
-            border-radius: 14px;
-            box-shadow: 0 16px 34px rgba(17, 24, 39, 0.12);
-        }
-
-        .profile-picker-year-option {
-            width: 100%;
-            border: 0;
-            background: transparent;
-            text-align: left;
-            padding: 8px 10px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--bs-body-color);
-            transition: background 0.18s ease, color 0.18s ease;
-        }
-
-        .profile-picker-year-option:hover {
-            background: rgba(17, 24, 39, 0.05);
-        }
-
-        .profile-picker-year-option.is-selected {
-            background: rgba(37, 99, 235, 0.10);
-            color: #2563eb;
-        }
-
-        .profile-picker-shell {
-            position: relative;
-            max-width: 280px;
-        }
-
-        .profile-picker-trigger,
-        .profile-select-trigger {
-            width: 100%;
-            min-height: 52px;
-            max-width: 280px;
-            border: 1px solid rgba(17, 24, 39, 0.08);
-            border-radius: 18px;
-            background: var(--bs-body-bg);
-            box-shadow: 0 10px 24px rgba(17, 24, 39, 0.05);
-            padding: 0 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--bs-body-color);
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-        }
-
-        .profile-picker-popup {
-            width: 280px;
-            max-width: 280px;
-            padding: 14px 14px 10px;
-            border-radius: 20px;
-            box-shadow: 0 16px 34px rgba(17, 24, 39, 0.10);
-        }
-
-        .profile-picker-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-
-        .profile-picker-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--bs-body-color);
-            letter-spacing: -0.01em;
-        }
-
-        .profile-picker-nav {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-        }
-
-        .profile-picker-nav button {
-            width: 28px;
-            height: 28px;
-            border: 0;
-            background: transparent;
-            border-radius: 999px;
-            color: var(--bs-body-color);
-            font-size: 16px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s ease, transform 0.2s ease;
-        }
-
-        .profile-picker-nav button:hover {
-            background: rgba(17, 24, 39, 0.05);
-        }
-
-        .profile-picker-weekdays,
-        .profile-picker-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-        }
-
-        .profile-picker-weekdays {
-            margin-bottom: 2px;
-        }
-
-        .profile-picker-weekday {
-            text-align: center;
-            font-size: 10px;
-            font-weight: 600;
-            color: #6b7280;
-            padding: 4px 0;
-        }
-
-        .profile-picker-day {
-            position: relative;
-            width: 32px;
-            height: 32px;
-            margin: 1px auto;
-            border: 0;
-            background: transparent;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 500;
-            color: #2f3137;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-        }
-
-        .profile-picker-day:hover {
-            background: rgba(17, 24, 39, 0.05);
-        }
-
-        .profile-picker-day.is-outside {
-            color: #c6c7cc;
-        }
-
-        .profile-picker-day.is-selected {
-            color: #2563eb;
-            box-shadow: inset 0 0 0 2px #2563eb;
-            font-weight: 700;
-            background: transparent;
-        }
-
-        .profile-picker-day.is-today {
-            color: #ef4444;
-            font-weight: 700;
-        }
-
-        .profile-picker-day.is-today::after {
-            content: "";
-            position: absolute;
-            bottom: 3px;
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: #ef4444;
-        }
-
-        @media (max-width: 575.98px) {
-            .profile-picker-popup {
-                width: min(280px, calc(100vw - 24px));
-                max-width: min(280px, calc(100vw - 24px));
+                --profile-prefix-bg: color-mix(in srgb, var(--bs-tertiary-bg) 78%, var(--bs-body-bg) 22%);
+                --profile-popup-bg: color-mix(in srgb, var(--bs-body-bg) 94%, var(--bs-tertiary-bg) 6%);
+                --profile-muted: var(--bs-secondary-color);
+                --profile-soft-hover: color-mix(in srgb, var(--bs-body-color) 8%, transparent 92%);
+                --profile-soft-selected: color-mix(in srgb, var(--bs-primary) 12%, transparent 88%);
+                --profile-selected-text: var(--bs-primary);
+                --profile-today: #ef4444;
             }
-        }
-        .profile-picker-shell {
-        position: relative;
-        width: 100%;
-        max-width: 280px;
-        }
 
-        .profile-picker-trigger,
-        .profile-select-trigger {
-            width: 100%;
-            min-height: 52px;
-            max-width: 280px;
-            border: 1px solid rgba(17, 24, 39, 0.08);
-            border-radius: 18px;
-            background: var(--bs-body-bg);
-            box-shadow: 0 10px 24px rgba(17, 24, 39, 0.05);
-            padding: 0 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--bs-body-color);
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-        }
+            [data-bs-theme="dark"] .profile-edit-shell {
+                --profile-panel-bg: linear-gradient(180deg, rgba(20, 25, 34, 0.96) 0%, rgba(15, 20, 28, 0.98) 100%);
+                --profile-panel-border: rgba(255,255,255,0.08);
+                --profile-panel-shadow: 0 24px 48px rgba(0,0,0,0.28);
+                --profile-panel-inset: inset 0 1px 0 rgba(255,255,255,0.04);
 
-        .profile-picker-trigger:hover,
-        .profile-select-trigger:hover {
-            border-color: rgba(17, 24, 39, 0.14);
-            box-shadow: 0 12px 28px rgba(17, 24, 39, 0.07);
-        }
+                --profile-control-bg: rgba(255,255,255,0.04);
+                --profile-control-bg-hover: rgba(255,255,255,0.06);
+                --profile-control-bg-focus: rgba(255,255,255,0.08);
+                --profile-control-border: rgba(255,255,255,0.10);
+                --profile-control-border-hover: rgba(255,255,255,0.18);
+                --profile-control-border-focus: rgba(110,168,254,0.55);
+                --profile-control-text: #f8f9fa;
+                --profile-control-placeholder: rgba(255,255,255,0.45);
 
-        .profile-picker-trigger.is-empty,
-        .profile-select-trigger.is-empty {
-            color: var(--bs-secondary-color);
-            font-weight: 500;
-        }
-
-        .profile-picker-popup,
-        .profile-select-popup {
-            position: absolute;
-            top: calc(100% + 10px);
-            left: 0;
-            z-index: 70;
-            background: var(--bs-body-bg);
-            border: 1px solid rgba(17, 24, 39, 0.08);
-            border-radius: 22px;
-            box-shadow: 0 16px 34px rgba(17, 24, 39, 0.10);
-            box-sizing: border-box;
-        }
-
-        .profile-picker-popup {
-            width: 280px;
-            max-width: 280px;
-            padding: 14px 12px 10px;
-            overflow: hidden;
-        }
-
-        .profile-select-popup {
-            width: 100%;
-            min-width: 220px;
-            padding: 8px;
-        }
-
-        .profile-picker-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-
-        .profile-picker-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--bs-body-color);
-            letter-spacing: -0.01em;
-        }
-
-        .profile-picker-nav {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-        }
-
-        .profile-picker-nav button {
-            width: 28px;
-            height: 28px;
-            border: 0;
-            background: transparent;
-            border-radius: 999px;
-            color: var(--bs-body-color);
-            font-size: 16px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s ease, transform 0.2s ease;
-        }
-
-        .profile-picker-nav button:hover {
-            background: rgba(17, 24, 39, 0.05);
-        }
-
-        .profile-picker-weekdays,
-        .profile-picker-grid {
-            display: grid;
-            grid-template-columns: repeat(7, minmax(0, 1fr));
-            width: 100%;
-        }
-
-        .profile-picker-weekdays {
-            margin-bottom: 2px;
-        }
-
-        .profile-picker-weekday {
-            text-align: center;
-            font-size: 10px;
-            font-weight: 600;
-            color: #6b7280;
-            padding: 4px 0;
-        }
-
-        .profile-picker-day {
-            position: relative;
-            width: 30px;
-            height: 30px;
-            margin: 1px auto;
-            border: 0;
-            background: transparent;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 500;
-            color: #2f3137;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-        }
-
-        .profile-picker-day:hover {
-            background: rgba(17, 24, 39, 0.05);
-        }
-
-        .profile-picker-day.is-outside {
-            color: #c6c7cc;
-        }
-
-        .profile-picker-day.is-selected {
-            color: #2563eb;
-            box-shadow: inset 0 0 0 2px #2563eb;
-            font-weight: 700;
-            background: transparent;
-        }
-
-        .profile-picker-day.is-today {
-            color: #ef4444;
-            font-weight: 700;
-        }
-
-        .profile-picker-day.is-today::after {
-            content: "";
-            position: absolute;
-            bottom: 3px;
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: #ef4444;
-        }
-
-        .profile-select-option {
-            width: 100%;
-            border: 0;
-            background: transparent;
-            text-align: left;
-            padding: 12px 14px;
-            border-radius: 14px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--bs-body-color);
-            transition: background 0.18s ease, color 0.18s ease;
-        }
-
-        .profile-select-option:hover {
-            background: rgba(17, 24, 39, 0.05);
-        }
-
-        .profile-select-option.is-selected {
-            background: rgba(37, 99, 235, 0.10);
-            color: #2563eb;
-        }
-
-        @media (max-width: 575.98px) {
-            .profile-picker-popup {
-                width: min(280px, calc(100vw - 24px));
-                max-width: min(280px, calc(100vw - 24px));
+                --profile-prefix-bg: rgba(255,255,255,0.05);
+                --profile-popup-bg: rgba(18, 23, 32, 0.98);
+                --profile-muted: rgba(255,255,255,0.68);
+                --profile-soft-hover: rgba(255,255,255,0.08);
+                --profile-soft-selected: rgba(110,168,254,0.18);
+                --profile-selected-text: #9ec5fe;
             }
-        }
-        .profile-edit-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    margin-bottom: 14px;
-    border-radius: 999px;
-    background: rgba(17, 24, 39, 0.05);
-    color: var(--bs-body-color);
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1;
-}
 
-.profile-edit-chip i {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    line-height: 1;
-    flex-shrink: 0;
-}
+            .profile-edit-panel {
+                background: var(--profile-panel-bg);
+                border: 1px solid var(--profile-panel-border);
+                border-radius: 24px;
+                box-shadow: var(--profile-panel-shadow), var(--profile-panel-inset);
+            }
 
-.profile-label-with-icon {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-}
+            .profile-field-label,
+            .profile-edit-panel .form-label {
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.03em;
+                color: var(--profile-muted);
+                margin-bottom: 10px;
+            }
 
-.profile-label-with-icon i {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    flex-shrink: 0;
-}
-                `}</style>
-            );
+            .profile-form-control,
+            .profile-form-textarea,
+            .profile-picker-trigger,
+            .profile-select-trigger {
+                max-width: 70%;
+                border: 1px solid var(--profile-control-border) !important;
+                border-radius: 16px !important;
+                background: var(--profile-control-bg) !important;
+                color: var(--profile-control-text) !important;
+                box-shadow:
+                    inset 0 1px 0 rgba(255,255,255,0.03),
+                    0 1px 2px rgba(0,0,0,0.10);
+                transition:
+                    border-color 0.22s ease,
+                    box-shadow 0.22s ease,
+                    background-color 0.22s ease,
+                    transform 0.16s ease;
+            }
+
+            .profile-form-control,
+            .profile-picker-trigger,
+            .profile-select-trigger {
+                min-height: 48px;
+                padding: 0 18px !important;
+                font-size: 15px;
+                font-weight: 500;
+                line-height: 1.2;
+            }
+
+            .profile-form-textarea {
+                min-height: 140px;
+                padding: 16px 18px !important;
+                font-size: 15px;
+                line-height: 1.65;
+                resize: vertical;
+            }
+
+            .profile-form-control::placeholder,
+            .profile-form-textarea::placeholder,
+            .profile-phone-input::placeholder {
+                color: var(--profile-control-placeholder);
+                font-weight: 400;
+            }
+
+            .profile-form-control:hover,
+            .profile-form-textarea:hover,
+            .profile-picker-trigger:hover,
+            .profile-select-trigger:hover {
+                border-color: var(--profile-control-border-hover) !important;
+                background: var(--profile-control-bg-hover) !important;
+                box-shadow:
+                    inset 0 1px 0 rgba(255,255,255,0.04),
+                    0 4px 12px rgba(0,0,0,0.12);
+            }
+
+            .profile-form-control:focus,
+            .profile-form-control:focus-visible,
+            .profile-form-textarea:focus,
+            .profile-form-textarea:focus-visible,
+            .profile-picker-trigger:focus-visible,
+            .profile-select-trigger:focus-visible {
+                outline: none !important;
+                border-color: var(--profile-control-border-focus) !important;
+                background: var(--profile-control-bg-focus) !important;
+                box-shadow:
+                    0 0 0 4px color-mix(in srgb, var(--bs-primary) 18%, transparent 82%),
+                    0 10px 24px rgba(0,0,0,0.14),
+                    inset 0 1px 0 rgba(255,255,255,0.04) !important;
+            }
+
+            .profile-form-control:disabled,
+            .profile-form-textarea:disabled {
+                background: color-mix(in srgb, var(--bs-body-bg) 84%, var(--bs-secondary-bg) 16%) !important;
+                color: var(--profile-muted) !important;
+                cursor: not-allowed;
+            }
+
+            .profile-phone-field {
+                display: flex;
+                align-items: stretch;
+                max-height: 48px;
+                max-width: 70%;
+                border: 1px solid var(--profile-control-border);
+                border-radius: 18px;
+                background: var(--profile-control-bg);
+                box-shadow:
+                    inset 0 1px 0 rgba(255,255,255,0.03),
+                    0 1px 2px rgba(0,0,0,0.10);
+                transition: border-color 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease;
+                overflow: hidden;
+            }
+
+            .profile-phone-field:hover {
+                border-color: var(--profile-control-border-hover);
+                background: var(--profile-control-bg-hover);
+                box-shadow:
+                    inset 0 1px 0 rgba(255,255,255,0.04),
+                    0 4px 12px rgba(0,0,0,0.12);
+            }
+
+            .profile-phone-field:focus-within {
+                border-color: var(--profile-control-border-focus);
+                background: var(--profile-control-bg-focus);
+                box-shadow:
+                    0 0 0 4px color-mix(in srgb, var(--bs-primary) 18%, transparent 82%),
+                    0 10px 24px rgba(0,0,0,0.14),
+                    inset 0 1px 0 rgba(255,255,255,0.04);
+            }
+
+            .profile-phone-prefix {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                padding: 0 16px;
+                background: var(--profile-prefix-bg);
+                border-right: 1px solid var(--profile-control-border);
+                color: var(--profile-control-text);
+                font-weight: 700;
+                flex-shrink: 0;
+            }
+
+            .profile-phone-flag {
+                width: 20px;
+                height: 14px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+
+            .profile-phone-code {
+                font-size: 15px;
+                letter-spacing: 0.01em;
+            }
+
+            .profile-phone-input {
+                flex: 1;
+                width: 100%;
+                min-height: 48px;
+                border: 0 !important;
+                outline: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                padding: 20px 10px !important;
+                font-size: 15px;
+                font-weight: 500;
+                color: var(--profile-control-text);
+            }
+
+            .profile-phone-input:focus,
+            .profile-phone-input:focus-visible {
+                outline: none !important;
+                box-shadow: none !important;
+            }
+
+            .profile-picker-shell {
+                position: relative;
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .profile-picker-trigger,
+            .profile-select-trigger {
+                max-width: 280px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+            }
+
+            .profile-picker-trigger.is-empty,
+            .profile-select-trigger.is-empty {
+                color: var(--profile-control-placeholder);
+                font-weight: 500;
+            }
+
+            .profile-picker-trigger i,
+            .profile-select-trigger i {
+                font-size: 12px;
+                color: var(--profile-muted);
+                transition: transform 0.2s ease, color 0.2s ease;
+            }
+
+            .profile-picker-trigger[aria-expanded="true"] i,
+            .profile-select-trigger[aria-expanded="true"] i {
+                transform: rotate(180deg);
+                color: var(--profile-control-text);
+            }
+
+            .profile-picker-popup,
+            .profile-select-popup {
+                position: absolute;
+                top: calc(100% + 10px);
+                left: 0;
+                z-index: 70;
+                background: var(--profile-popup-bg);
+                border: 1px solid var(--profile-control-border);
+                border-radius: 20px;
+                box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+                box-sizing: border-box;
+                backdrop-filter: blur(10px);
+            }
+
+            .profile-picker-popup {
+                width: 280px;
+                max-width: 280px;
+                padding: 14px 12px 10px;
+                overflow: hidden;
+            }
+
+            .profile-select-popup {
+                width: 100%;
+                min-width: 220px;
+                padding: 8px;
+            }
+
+            .profile-picker-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 10px;
+            }
+
+            .profile-picker-title {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--profile-control-text);
+                letter-spacing: -0.01em;
+            }
+
+            .profile-picker-title-month {
+                font-weight: 700;
+            }
+
+            .profile-picker-year-trigger {
+                border: 0;
+                background: transparent;
+                padding: 0;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font: inherit;
+                color: inherit;
+                cursor: pointer;
+            }
+
+            .profile-picker-year-trigger i {
+                font-size: 11px;
+            }
+
+            .profile-picker-year-menu {
+                position: absolute;
+                top: calc(100% + 8px);
+                left: 0;
+                z-index: 80;
+                width: 110px;
+                max-height: 220px;
+                overflow-y: auto;
+                margin-top: 10px;
+                padding: 6px;
+                background: var(--profile-popup-bg);
+                border: 1px solid var(--profile-control-border);
+                border-radius: 14px;
+                box-shadow: 0 16px 34px rgba(0,0,0,0.20);
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+
+            .profile-picker-year-menu::-webkit-scrollbar {
+                width: 0;
+                height: 0;
+                display: none;
+            }
+
+            .profile-picker-year-option,
+            .profile-select-option {
+                width: 100%;
+                border: 0;
+                background: transparent;
+                text-align: left;
+                border-radius: 14px;
+                color: var(--profile-control-text);
+                transition: background 0.18s ease, color 0.18s ease;
+            }
+
+            .profile-picker-year-option {
+                padding: 8px 10px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+
+            .profile-select-option {
+                padding: 12px 14px;
+                font-size: 14px;
+                font-weight: 600;
+            }
+
+            .profile-picker-year-option:hover,
+            .profile-select-option:hover,
+            .profile-picker-nav button:hover,
+            .profile-picker-day:hover {
+                background: var(--profile-soft-hover);
+            }
+
+            .profile-picker-year-option.is-selected,
+            .profile-select-option.is-selected {
+                background: var(--profile-soft-selected);
+                color: var(--profile-selected-text);
+            }
+
+            .profile-picker-nav {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+            }
+
+            .profile-picker-nav button {
+                width: 28px;
+                height: 28px;
+                border: 0;
+                background: transparent;
+                border-radius: 999px;
+                color: var(--profile-control-text);
+                font-size: 16px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.2s ease, transform 0.2s ease;
+            }
+
+            .profile-picker-weekdays,
+            .profile-picker-grid {
+                display: grid;
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+                width: 100%;
+            }
+
+            .profile-picker-weekdays {
+                margin-bottom: 2px;
+            }
+
+            .profile-picker-weekday {
+                text-align: center;
+                font-size: 10px;
+                font-weight: 600;
+                color: var(--profile-muted);
+                padding: 4px 0;
+            }
+
+            .profile-picker-day {
+                position: relative;
+                width: 30px;
+                height: 30px;
+                margin: 1px auto;
+                border: 0;
+                background: transparent;
+                border-radius: 999px;
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--profile-control-text);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+            }
+
+            .profile-picker-day.is-outside {
+                color: color-mix(in srgb, var(--profile-muted) 65%, transparent 35%);
+            }
+
+            .profile-picker-day.is-selected {
+                color: var(--profile-selected-text);
+                box-shadow: inset 0 0 0 2px currentColor;
+                font-weight: 700;
+                background: transparent;
+            }
+
+            .profile-picker-day.is-today {
+                color: var(--profile-today);
+                font-weight: 700;
+            }
+
+            .profile-picker-day.is-today::after {
+                content: "";
+                position: absolute;
+                bottom: 3px;
+                width: 4px;
+                height: 4px;
+                border-radius: 50%;
+                background: var(--profile-today);
+            }
+
+            .profile-edit-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                margin-bottom: 14px;
+                border-radius: 999px;
+                background: var(--profile-soft-hover);
+                color: var(--profile-control-text);
+                font-size: 13px;
+                font-weight: 700;
+                line-height: 1;
+            }
+
+            .profile-edit-chip i,
+            .profile-label-with-icon i {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+                flex-shrink: 0;
+            }
+
+            .profile-edit-chip i {
+                font-size: 14px;
+            }
+
+            .profile-label-with-icon {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            @media (max-width: 575.98px) {
+                .profile-picker-popup {
+                    width: min(280px, calc(100vw - 24px));
+                    max-width: min(280px, calc(100vw - 24px));
+                }
+            }
+        `}</style>
+    );
 }
 
 function Avatar({ src, name, size = 74 }) {
@@ -658,9 +754,7 @@ function CardSection({ title, onEdit, children, bodyClassName = "" }) {
                     ) : null}
                 </div>
 
-                <div className="border-top mt-3 pt-4">
-                    {children}
-                </div>
+                <div className="border-top mt-3 pt-4">{children}</div>
             </div>
         </div>
     );
@@ -686,7 +780,7 @@ function CustomDatePicker({ value, onChange, name = "date_of_birth" }) {
         if (selectedDate) {
             setViewDate(selectedDate);
         }
-    }, [value]);
+    }, [selectedDate]);
 
     React.useEffect(() => {
         function handleOutside(e) {
@@ -853,7 +947,8 @@ function CustomGenderSelect({ value, onChange, name = "gender" }) {
         return () => document.removeEventListener("mousedown", handleOutside);
     }, []);
 
-    const current = options.find((opt) => opt.value === value)?.label || "Select gender";
+    const current =
+        options.find((opt) => opt.value === value)?.label || "Select gender";
 
     return (
         <div className="profile-picker-shell" ref={rootRef}>
@@ -921,7 +1016,7 @@ function ProfilePage() {
             full_name: data.name || "",
             nickname: data.nickname || "",
             email: data.email || "",
-            contact: data.contact || "",
+            contact: getPhilippineLocalNumber(data.contact),
             address: data.address || "",
             gender: data.gender || "",
             date_of_birth: data.date_of_birth || ""
@@ -929,6 +1024,22 @@ function ProfilePage() {
         setPreviewUrl(data.profile_image_url || "");
         setRemoveImage(false);
     }, []);
+
+    const resetEditor = React.useCallback(
+        (nextSection = null) => {
+            if (profile) hydrateForm(profile);
+            setSelectedImage(null);
+            setRemoveImage(false);
+            setPageError("");
+
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+
+            setActiveSection(nextSection);
+        },
+        [profile, hydrateForm]
+    );
 
     React.useEffect(() => {
         let mounted = true;
@@ -977,31 +1088,28 @@ function ProfilePage() {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        let nextValue = value;
+
+        if (name === "contact") {
+            nextValue = value.replace(/\D/g, "").slice(0, 11);
+        }
 
         setForm((prev) => ({
             ...prev,
-            [name]: value
+            [name]: nextValue
         }));
     };
 
     const handleStartEdit = (section) => {
-        if (profile) hydrateForm(profile);
-        setSelectedImage(null);
-        setRemoveImage(false);
-        setPageError("");
-        setActiveSection(section);
+        resetEditor(section);
     };
 
     const handleCancelEdit = () => {
-        if (profile) hydrateForm(profile);
-        setSelectedImage(null);
-        setRemoveImage(false);
-        setPageError("");
-        setActiveSection(null);
+        resetEditor(null);
     };
 
     const handleImageChange = (e) => {
-        const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+        const file = e.target.files?.[0] || null;
         if (!file) return;
 
         const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
@@ -1061,38 +1169,45 @@ function ProfilePage() {
         setSaving(true);
         setPageError("");
 
-        const formData = new FormData();
-        formData.append("name", form.full_name.trim());
-        formData.append("nickname", form.nickname.trim());
-        formData.append("email", form.email.trim());
-        formData.append("contact", form.contact.trim());
-        formData.append("address", form.address.trim());
-        formData.append("gender", form.gender);
-        formData.append("date_of_birth", form.date_of_birth);
+        try {
+            const normalizedContact = normalizePhilippineNumberForSave(form.contact);
+            const localDigits = normalizedContact.replace(/^\+63/, "");
 
-        if (removeImage) {
-            formData.append("remove_profile_image", "1");
-        }
-
-        if (selectedImage) {
-            formData.append("profile_image", selectedImage);
-        }
-
-        const request = fetch("php/update_profile.php", {
-            method: "POST",
-            body: formData,
-            credentials: "same-origin"
-        }).then(async (res) => {
-            const data = await parseJsonResponse(res);
-
-            if (!res.ok || data.error) {
-                throw new Error(data.error || "Failed to update profile");
+            if (form.contact && localDigits.length !== 10) {
+                throw new Error("Please enter a valid Philippine mobile number.");
             }
 
-            return data;
-        });
+            const formData = new FormData();
+            formData.append("name", form.full_name.trim());
+            formData.append("nickname", form.nickname.trim());
+            formData.append("email", form.email.trim());
+            formData.append("contact", normalizedContact);
+            formData.append("address", form.address.trim());
+            formData.append("gender", form.gender);
+            formData.append("date_of_birth", form.date_of_birth);
 
-        try {
+            if (removeImage) {
+                formData.append("remove_profile_image", "1");
+            }
+
+            if (selectedImage) {
+                formData.append("profile_image", selectedImage);
+            }
+
+            const request = fetch("php/update_profile.php", {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin"
+            }).then(async (res) => {
+                const data = await parseJsonResponse(res);
+
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || "Failed to update profile");
+                }
+
+                return data;
+            });
+
             const data = await sileo.promise(request, {
                 loading: {
                     title: "Saving profile...",
@@ -1120,6 +1235,10 @@ function ProfilePage() {
             setRemoveImage(false);
             setActiveSection(null);
 
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+
             window.dispatchEvent(
                 new CustomEvent("profile-updated", {
                     detail: data.profile
@@ -1141,24 +1260,11 @@ function ProfilePage() {
     const isEditing = activeSection !== null;
 
     const labelStyle = {
-        fontSize: "13px",
+        fontSize: "12px",
         fontWeight: 700,
-        letterSpacing: "0.01em",
-        marginBottom: "12px"
-    };
-
-    const fieldStyle = {
-        minHeight: "54px",
-        borderRadius: "18px",
-        paddingInline: "16px",
-        fontSize: "15px"
-    };
-
-    const textareaStyle = {
-        minHeight: "124px",
-        borderRadius: "18px",
-        padding: "15px 16px",
-        fontSize: "15px"
+        letterSpacing: "0.03em",
+        marginBottom: "10px",
+        color: "#374151"
     };
 
     const primaryButtonStyle = {
@@ -1280,9 +1386,7 @@ function ProfilePage() {
                         )}
                     </div>
 
-                    {pageError && profile ? (
-                        <AlertMessage>{pageError}</AlertMessage>
-                    ) : null}
+                    {pageError && profile ? <AlertMessage>{pageError}</AlertMessage> : null}
 
                     {!isEditing ? (
                         <>
@@ -1365,7 +1469,10 @@ function ProfilePage() {
                                             </div>
 
                                             <div className="col-12 col-md-6">
-                                                <InfoItem label="Date of birth" value={form.date_of_birth} />
+                                                <InfoItem
+                                                    label="Date of birth"
+                                                    value={formatReadableDate(form.date_of_birth) || "—"}
+                                                />
                                             </div>
 
                                             <div className="col-12 col-md-6">
@@ -1387,7 +1494,10 @@ function ProfilePage() {
                                         >
                                             <div className="row g-4">
                                                 <div className="col-12 col-md-6">
-                                                    <InfoItem label="Contact number" value={form.contact} />
+                                                    <InfoItem
+                                                        label="Contact number"
+                                                        value={formatPhilippineNumberDisplay(form.contact)}
+                                                    />
                                                 </div>
 
                                                 <div className="col-12 col-md-6">
@@ -1461,7 +1571,7 @@ function ProfilePage() {
                                                     type="button"
                                                     className="btn btn-dark fw-semibold d-inline-flex align-items-center gap-2"
                                                     style={softIconButtonStyle}
-                                                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                                                    onClick={() => fileInputRef.current?.click()}
                                                 >
                                                     <i className="bi bi-cloud-arrow-up"></i>
                                                     Upload image
@@ -1493,7 +1603,6 @@ function ProfilePage() {
                                                     value={form.full_name}
                                                     onChange={handleChange}
                                                     required
-                                                    style={fieldStyle}
                                                 />
                                             </div>
 
@@ -1508,7 +1617,6 @@ function ProfilePage() {
                                                     value={form.nickname}
                                                     onChange={handleChange}
                                                     placeholder="Enter nickname"
-                                                    style={fieldStyle}
                                                 />
                                             </div>
 
@@ -1553,8 +1661,7 @@ function ProfilePage() {
                                                     value={form.address}
                                                     onChange={handleChange}
                                                     placeholder="Enter address"
-                                                    style={textareaStyle}
-                                                ></textarea>
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -1573,7 +1680,6 @@ function ProfilePage() {
                                                 value={form.email}
                                                 onChange={handleChange}
                                                 required
-                                                style={fieldStyle}
                                             />
                                         </div>
 
@@ -1581,15 +1687,31 @@ function ProfilePage() {
                                             <label className="form-label text-body" style={labelStyle}>
                                                 Contact number
                                             </label>
-                                            <input
-                                                type="text"
-                                                className="form-control profile-form-control"
-                                                name="contact"
-                                                value={form.contact}
-                                                onChange={handleChange}
-                                                placeholder="Enter contact number"
-                                                style={fieldStyle}
-                                            />
+
+                                            <div className="profile-phone-field">
+                                                <div className="profile-phone-prefix" aria-hidden="true">
+                                                    <span
+                                                        className="profile-phone-flag profile-phone-flag-emoji"
+                                                        role="img"
+                                                        aria-label="Philippines"
+                                                    >
+                                                        🇵🇭
+                                                    </span>
+                                                    <span className="profile-phone-code">+63</span>
+                                                </div>
+
+                                                <input
+                                                    type="text"
+                                                    className="profile-phone-input"
+                                                    name="contact"
+                                                    value={form.contact}
+                                                    onChange={handleChange}
+                                                    inputMode="numeric"
+                                                    autoComplete="tel-national"
+                                                    placeholder="963 025 7890"
+                                                    aria-label="Philippine contact number"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
