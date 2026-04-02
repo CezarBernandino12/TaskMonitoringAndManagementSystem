@@ -169,7 +169,7 @@ function getToasterOptions(theme) {
     const isDark = theme === "dark";
 
     return {
-        fill: isDark ? "#000000" : "#ffffff",
+        fill: isDark ? "#ffffff" : "#ffffff",
         roundness: 15,
         styles: {
             title: isDark
@@ -221,18 +221,6 @@ function useSileoTheme() {
     return theme;
 }
 
-function ThemeToaster() {
-    const theme = useSileoTheme();
-
-    return (
-        <Toaster
-            key={theme}
-            position="top-center"
-            offset={{ top: 10 }}
-            options={getToasterOptions(theme)}
-        />
-    );
-}
 
 function ProfileEditorStyles() {
     return (
