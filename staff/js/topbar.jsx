@@ -302,7 +302,7 @@ function getTaskDueMeta(deadlineStr) {
     if (diffDays < 0) {
         return {
             label: "Overdue",
-            icon: "bi-exclamation-triangle",
+            icon: "bi-exclamation-circle",
             iconColor: "notif-red",
             time: "Past deadline"
         };
@@ -311,7 +311,7 @@ function getTaskDueMeta(deadlineStr) {
     if (diffDays === 0) {
         return {
             label: "Due Today",
-            icon: "bi-alarm",
+            icon: "bi-calendar2-check",
             iconColor: "notif-amber",
             time: "Today"
         };
@@ -320,7 +320,7 @@ function getTaskDueMeta(deadlineStr) {
     if (diffDays === 1) {
         return {
             label: "Due Tomorrow",
-            icon: "bi-calendar-event",
+            icon: "bi-calendar2-event",
             iconColor: "notif-blue",
             time: "Tomorrow"
         };
