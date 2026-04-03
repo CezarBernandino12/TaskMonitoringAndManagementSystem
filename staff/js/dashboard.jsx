@@ -278,10 +278,11 @@ function DueSoon({ tasks }) {
 }
 
 function TaskTable({ tasks, loading, error, onRetry }) {
-    const [selectedTask, setSelectedTask] = React.useState(null);
     const [isFilterOpen, setIsFilterOpen] = React.useState(false);
     const [statusFilter, setStatusFilter] = React.useState("All");
     const filterRef = React.useRef(null);
+    const [selectedTaskIds, setSelectedTaskIds] = React.useState([]);
+    const checkAllRef = React.useRef(null);
 
     const filterOptions = ["All", "Ongoing", "Completed", "Overdue", "Other"];
 
@@ -301,6 +302,44 @@ function TaskTable({ tasks, loading, error, onRetry }) {
         return task.normalizedStatus === normalizeText(statusFilter);
     });
 
+    const visibleTaskIds = filteredTasks.map(task => task.id);
+    const selectedVisibleCount = visibleTaskIds.filter(id => selectedTaskIds.includes(id)).length;
+
+    const allVisibleSelected =
+        visibleTaskIds.length > 0 && selectedVisibleCount === visibleTaskIds.length;
+
+    const someVisibleSelected =
+        selectedVisibleCount > 0 && !allVisibleSelected;
+
+    React.useEffect(() => {
+        if (!checkAllRef.current) return;
+        checkAllRef.current.indeterminate = someVisibleSelected;
+    }, [someVisibleSelected]);
+
+    React.useEffect(() => {
+        setSelectedTaskIds(prev =>
+            prev.filter(id => tasks.some(task => task.id === id))
+        );
+    }, [tasks]);
+
+    const toggleTaskSelection = (taskId) => {
+        setSelectedTaskIds(prev =>
+            prev.includes(taskId)
+                ? prev.filter(id => id !== taskId)
+                : [...prev, taskId]
+        );
+    };
+
+    const toggleSelectAllVisible = () => {
+        setSelectedTaskIds(prev => {
+            if (allVisibleSelected) {
+                return prev.filter(id => !visibleTaskIds.includes(id));
+            }
+
+            const merged = new Set([...prev, ...visibleTaskIds]);
+            return Array.from(merged);
+        });
+    };
     return (
         <>
             <section className="task-board">
@@ -348,14 +387,42 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                 </div>
 
                 <div className="task-board-strip">
-                    <span className="task-board-filter-state">Showing: {statusFilter}</span>
-                    <span className="task-board-count">{filteredTasks.length}</span>
+                    <div
+                        className="task-board-check-all"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <label className="task-checkbox-wrap" onClick={(event) => event.stopPropagation()}>
+                            <input
+                                ref={checkAllRef}
+                                type="checkbox"
+                                className="task-checkbox-input"
+                                checked={allVisibleSelected}
+                                onChange={toggleSelectAllVisible}
+                                aria-label={`Select all ${statusFilter === "All" ? "" : statusFilter.toLowerCase() + " "}tasks`}
+                            />
+                            <span className="task-checkbox-ui"></span>
+                        </label>
+
+                        <span className="task-board-check-all-text">Check All</span>
+                    </div>
+
+                    <div className="task-board-strip-meta">
+                        <span className="task-board-filter-state">Showing: {statusFilter}</span>
+                        <span className="task-board-count">{filteredTasks.length}</span>
+
+                        {selectedVisibleCount > 0 && (
+                            <span className="task-board-selected-count">
+                                {selectedVisibleCount} selected
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 <div className="task-board-table-wrap">
                     <table className="table task-board-table align-middle mb-0">
                         <thead>
                             <tr>
+                                <th className="task-board-checkbox-col"></th>
                                 <th>
                                     <span className="task-board-th">
                                         <i className="bi bi-card-list"></i>
@@ -392,11 +459,11 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="5" className="task-board-empty">Loading tasks...</td>
+                                    <td colSpan="6" className="task-board-empty">Loading tasks...</td>
                                 </tr>
                             ) : error ? (
                                 <tr>
-                                    <td colSpan="5" className="task-board-empty">
+                                    <td colSpan="6" className="task-board-empty">
                                         <div className="task-board-feedback">
                                             <div className="task-board-error">{error}</div>
                                             <button type="button" className="task-action-btn" onClick={onRetry}>
@@ -407,7 +474,7 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                                 </tr>
                             ) : filteredTasks.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className="task-board-empty">
+                                    <td colSpan="6" className="task-board-empty">
                                         No {statusFilter === "All" ? "" : statusFilter.toLowerCase() + " "}tasks found
                                     </td>
                                 </tr>
@@ -415,41 +482,55 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                                 filteredTasks.map(task => (
                                     <tr
                                         key={task.id}
-                                        className="task-board-row"
-                                        onClick={() => setSelectedTask(task)}
+                                        className={`task-board-row ${selectedTaskIds.includes(task.id) ? "is-selected" : ""}`}
+                                        onClick={() => toggleTaskSelection(task.id)}
                                     >
-                                        <td>
+                                    <td
+                                        className="task-board-checkbox-col"
+                                        onClick={(event) => event.stopPropagation()}
+                                    >
+                                        <label className="task-checkbox-wrap" onClick={(event) => event.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                className="task-checkbox-input"
+                                                checked={selectedTaskIds.includes(task.id)}
+                                                onChange={() => toggleTaskSelection(task.id)}
+                                                aria-label={`Select ${task.title}`}
+                                            />
+                                            <span className="task-checkbox-ui"></span>
+                                        </label>
+                                    </td>
+
+                                    <td>
                                         <div className="task-board-name-cell">
                                             <div className="task-board-name-copy">
-                                            <div className="task-board-task-title">{task.title}</div>
+                                                <div className="task-board-task-title">{task.title}</div>
                                             </div>
                                         </div>
-                                        </td>
+                                    </td>
 
-                                        <td className="task-board-date">{formatDate(task.start_date)}</td>
-                                        <td className="task-board-date">{formatDate(task.deadline)}</td>
+                                    <td className="task-board-date">{formatDate(task.start_date)}</td>
+                                    <td className="task-board-date">{formatDate(task.deadline)}</td>
 
-                                        <td>
-                                            <span className={`task-pill task-status-pill ${getStatusTone(task.normalizedStatus)}`}>
-                                                {task.status}
-                                            </span>
-                                        </td>
+                                    <td>
+                                        <span className={`task-pill task-status-pill ${getStatusTone(task.normalizedStatus)}`}>
+                                            {task.status}
+                                        </span>
+                                    </td>
 
-                                        <td>
-                                            <span className={`task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
-                                                <i className="bi bi-flag-fill"></i>
-                                                {getPriorityLabel(task.normalizedPriority)}
-                                            </span>
-                                        </td>
-                                    </tr>
+                                    <td>
+                                        <span className={`task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
+                                            <i className="bi bi-flag-fill"></i>
+                                            {getPriorityLabel(task.normalizedPriority)}
+                                        </span>
+                                    </td>
+                                </tr>
                                 ))
                             )}
                         </tbody>
                     </table>
                 </div>
             </section>
-
-            <TaskDetailModal task={selectedTask} onClose={() => setSelectedTask(null)} />
         </>
     );
 }
@@ -464,94 +545,5 @@ function getPriorityLabel(priority = "") {
     return "Normal Priority";
 }
 
-function TaskDetailModal({ task, onClose }) {
-    React.useEffect(() => {
-        if (!task) return;
-
-        const handleEscape = (event) => {
-            if (event.key === "Escape") onClose();
-        };
-
-        document.addEventListener("keydown", handleEscape);
-        document.body.style.overflow = "hidden";
-
-        return () => {
-            document.removeEventListener("keydown", handleEscape);
-            document.body.style.overflow = "";
-        };
-    }, [task, onClose]);
-
-    if (!task) return null;
-
-    return (
-        <div className="task-modal-backdrop" onClick={onClose}>
-            <div
-                className="task-modal"
-                onClick={(event) => event.stopPropagation()}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="task-modal-title"
-            >
-                <div className="task-modal-header">
-                    <div>
-                        <h5 id="task-modal-title" className="task-modal-title">{task.title}</h5>
-                        <div className="task-modal-subtitle">
-                            <span className={`task-pill task-status-pill ${getStatusTone(task.normalizedStatus)}`}>
-                                {task.status}
-                            </span>
-                                <span className={`task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
-                                    <i className="bi bi-flag-fill"></i>
-                                    {getPriorityLabel(task.normalizedPriority)}
-                                </span>
-                        </div>
-                    </div>
-
-                    <button
-                        type="button"
-                        className="task-modal-close"
-                        onClick={onClose}
-                        aria-label="Close"
-                    >
-                        <i className="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <div className="task-modal-body">
-                    <div className="task-modal-grid">
-                        <div className="task-detail-card">
-                            <div className="task-detail-label">Start Date</div>
-                            <div className="task-detail-value">{formatDate(task.start_date)}</div>
-                        </div>
-
-                        <div className="task-detail-card">
-                            <div className="task-detail-label">Due Date</div>
-                            <div className="task-detail-value">{formatDate(task.deadline)}</div>
-                        </div>
-
-                        <div className="task-detail-card">
-                            <div className="task-detail-label">Project</div>
-                            <div className="task-detail-value">{task.project_name || "-"}</div>
-                        </div>
-
-                        <div className="task-detail-card">
-                            <div className="task-detail-label">Assignee</div>
-                            <div className="task-detail-value">{task.assignee || "-"}</div>
-                        </div>
-                    </div>
-
-                    <div className="task-detail-section">
-                        <div className="task-detail-label">Description</div>
-                        <div className="task-detail-text">{task.description || "No description provided."}</div>
-                    </div>
-
-                    <div className="task-detail-section">
-                        <div className="task-detail-label">Remarks</div>
-                        <div className="task-detail-text">{task.remarks || "No remarks provided."}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
