@@ -419,19 +419,11 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                                         onClick={() => setSelectedTask(task)}
                                     >
                                         <td>
-                                            <div className="task-board-name-cell">
-                                                <span className="task-board-grip">
-                                                    <i className="bi bi-grip-vertical"></i>
-                                                </span>
-
-                                                <span className={`task-board-check ${task.isCompleted ? "is-checked" : ""}`}>
-                                                    {task.isCompleted && <i className="bi bi-check2"></i>}
-                                                </span>
-
-                                                <div className="task-board-name-copy">
-                                                    <div className="task-board-task-title">{task.title}</div>
-                                                </div>
+                                        <div className="task-board-name-cell">
+                                            <div className="task-board-name-copy">
+                                            <div className="task-board-task-title">{task.title}</div>
                                             </div>
+                                        </div>
                                         </td>
 
                                         <td className="task-board-date">{formatDate(task.start_date)}</td>
@@ -444,9 +436,9 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                                         </td>
 
                                         <td>
-                                            <span className={`task-pill task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
-                                                <i className="bi bi-flag"></i>
-                                                {task.priority}
+                                            <span className={`task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
+                                                <i className="bi bi-flag-fill"></i>
+                                                {getPriorityLabel(task.normalizedPriority)}
                                             </span>
                                         </td>
                                     </tr>
@@ -460,6 +452,16 @@ function TaskTable({ tasks, loading, error, onRetry }) {
             <TaskDetailModal task={selectedTask} onClose={() => setSelectedTask(null)} />
         </>
     );
+}
+
+function getPriorityLabel(priority = "") {
+    const normalized = normalizeText(priority);
+
+    if (normalized === "high") return "High Priority";
+    if (normalized === "medium") return "Normal Priority";
+    if (normalized === "low") return "Low Priority";
+
+    return "Normal Priority";
 }
 
 function TaskDetailModal({ task, onClose }) {
@@ -497,10 +499,10 @@ function TaskDetailModal({ task, onClose }) {
                             <span className={`task-pill task-status-pill ${getStatusTone(task.normalizedStatus)}`}>
                                 {task.status}
                             </span>
-                            <span className={`task-pill task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
-                                <i className="bi bi-flag"></i>
-                                {task.priority}
-                            </span>
+                                <span className={`task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
+                                    <i className="bi bi-flag-fill"></i>
+                                    {getPriorityLabel(task.normalizedPriority)}
+                                </span>
                         </div>
                     </div>
 
