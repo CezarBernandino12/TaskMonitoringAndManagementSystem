@@ -287,17 +287,55 @@ function DarkModeToggle({ dark, onToggle }) {
 }
 
 const TASKS_API = "php/get_tasks.php";
+const MANILA_TIMEZONE = "Asia/Manila";
 
-function getPhilippineToday() {
-    return new Date(
-        new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
-    );
+function getTodayYMDInManila() {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: MANILA_TIMEZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).formatToParts(new Date());
+
+    const year = parts.find((p) => p.type === "year")?.value;
+    const month = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+
+    return `${year}-${month}-${day}`;
 }
 
-function getTaskDueMeta(deadlineStr) {
-    const todayPH = getPhilippineToday();
-    const deadline = new Date(deadlineStr + "T00:00:00");
-    const diffDays = Math.ceil((deadline - todayPH) / (1000 * 60 * 60 * 24));
+function parseYMDToUTC(dateStr) {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatTaskDate(dateStr) {
+    const date = parseYMDToUTC(dateStr);
+    if (!date) return "";
+
+    return new Intl.DateTimeFormat("en-US", {
+        timeZone: "UTC",
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    }).format(date);
+}
+
+function normalizeStatus(status = "") {
+    return String(status).trim().toLowerCase();
+}
+
+function getTaskDueMeta(task) {
+    if (!task?.deadline) return null;
+    if (normalizeStatus(task.status) === "completed") return null;
+
+    const todayUTC = parseYMDToUTC(getTodayYMDInManila());
+    const deadlineUTC = parseYMDToUTC(task.deadline);
+
+    if (!todayUTC || !deadlineUTC) return null;
+
+    const diffDays = Math.ceil((deadlineUTC - todayUTC) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
         return {
@@ -331,22 +369,30 @@ function getTaskDueMeta(deadlineStr) {
 
 function buildTaskNotifications(tasks = []) {
     return tasks
-        .filter((task) => String(task.status).toLowerCase() !== "completed")
         .map((task) => {
-            const meta = getTaskDueMeta(task.deadline);
+            const meta = getTaskDueMeta(task);
             if (!meta) return null;
 
             return {
-                id: `task-${task.id}`,
+                id: `task-${task.id ?? task.title ?? Math.random()}`,
                 icon: meta.icon,
                 iconColor: meta.iconColor,
                 title: meta.label,
-                desc: `${task.title}${task.deadline ? ` • Due ${task.deadline}` : ""}`,
+                desc: `${task.title || "Untitled Task"}${task.deadline ? ` • ${formatTaskDate(task.deadline)}` : ""}`,
                 time: meta.time,
                 unread: true
             };
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .sort((a, b) => {
+            const priority = {
+                "Overdue": 0,
+                "Due Today": 1,
+                "Due Tomorrow": 2
+            };
+
+            return (priority[a.title] ?? 99) - (priority[b.title] ?? 99);
+        });
 }
 
 function NotificationBell() {
