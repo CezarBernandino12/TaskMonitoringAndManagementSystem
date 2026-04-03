@@ -1,3 +1,53 @@
+.calendar-has-tasks {
+    position: relative;
+}
+/* Modern Calendar Custom Styles */
+.modern-calendar {
+    max-width: 420px;
+    margin: 0 auto;
+}
+.calendar-table {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(255, 184, 77, 0.08);
+}
+.calendar-table th {
+    background: #ffe7b3;
+    color: #cc7a00;
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+}
+.calendar-table td {
+    height: 48px;
+    vertical-align: middle;
+    font-size: 1.1rem;
+    border: none;
+    transition: background 0.2s, color 0.2s;
+}
+.calendar-table td.bg-warning {
+    background: #ffb84d !important;
+    color: #fff !important;
+    border-radius: 50%;
+}
+.calendar-table td:hover:not(.bg-warning) {
+    background: #fff0b3;
+    cursor: pointer;
+    color: #cc7a00;
+    border-radius: 50%;
+}
+.modern-calendar .btn-primary {
+    background: #ff9900;
+    border: none;
+    padding: 0.25rem 0.75rem;
+    font-size: 1.1rem;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(255, 184, 77, 0.12);
+}
+.modern-calendar .btn-primary:focus, .modern-calendar .btn-primary:hover {
+    background: #ffb84d;
+    color: #cc7a00;
+}
 
     body {
         background-color: #fffaf3;

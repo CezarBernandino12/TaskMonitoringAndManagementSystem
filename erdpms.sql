@@ -338,5 +338,61 @@ COMMIT;
 
 
 
+
 -- CEZAR
-ALTER TABLE `users` ADD `first_name` VARCHAR(255) NOT NULL AFTER `name`, ADD `last_name` VARCHAR(255) NOT NULL AFTER `first_name`, ADD `middle_initial` CHAR(1) NULL DEFAULT NULL AFTER `last_name`;
+
+CREATE TABLE IF NOT EXISTS events (
+    id          INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+    title       VARCHAR(255)    NOT NULL,
+    description TEXT            DEFAULT NULL,
+    location    VARCHAR(255)    DEFAULT NULL,
+    start_date  DATE            NOT NULL,
+    end_date    DATE            NOT NULL,
+    status      ENUM(
+                    'Upcoming',
+                    'Ongoing',
+                    'Completed',
+                    'Cancelled'
+                )               NOT NULL DEFAULT 'Upcoming',
+    priority    ENUM(
+                    'High',
+                    'Medium',
+                    'Low'
+                )               NOT NULL DEFAULT 'Medium',
+    created_by  INT UNSIGNED    NOT NULL,           -- FK → users.id
+    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    KEY idx_events_dates   (start_date, end_date),
+    KEY idx_events_status  (status),
+    KEY idx_events_created (created_by),
+
+    CONSTRAINT fk_events_created_by
+        FOREIGN KEY (created_by) REFERENCES users (id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS event_employees (
+    event_id    INT UNSIGNED    NOT NULL,
+    user_id     INT UNSIGNED    NOT NULL,
+
+    PRIMARY KEY (event_id, user_id),
+    KEY idx_ee_user (user_id),
+
+    CONSTRAINT fk_ee_event
+        FOREIGN KEY (event_id) REFERENCES events (id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_ee_user
+        FOREIGN KEY (user_id)  REFERENCES users (id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+
