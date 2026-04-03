@@ -9,7 +9,7 @@
     --text-secondary: #4b5563;
     --text-muted: #9ca3af;
 
-    --topbar-bg: rgba(255, 255, 255, 0.92);
+    --topbar-bg: #f8f8ff;
     --topbar-border: rgba(17, 24, 39, 0.06);
     --topbar-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
     --topbar-height: 69px;
