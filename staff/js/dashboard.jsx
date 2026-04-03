@@ -1,3 +1,16 @@
+import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
+window.sileo = sileo;
+
+
+function showSileoToast(payload) {
+    if (window.sileo?.info) {
+        window.sileo.info(payload);
+        return;
+    }
+
+    console.warn("Sileo is not ready yet.", payload);
+}
+
 const MANILA_TIMEZONE = "Asia/Manila";
 
 function getTodayYMDInManila() {
@@ -162,38 +175,80 @@ function App() {
         return resultText;
     };
 
-    const handleBulkUpdateStatus = async (taskIds, nextStatus) => {
-        const previousTasks = tasks;
-        const scrollY = window.scrollY;
-        setError("");
+const handleBulkUpdateStatus = async (taskIds, nextStatus) => {
+    const previousTasks = tasks;
+    const scrollY = window.scrollY;
+    setError("");
 
-        setTasks(prev =>
-            prev.map(task =>
-                taskIds.includes(task.id)
-                    ? normalizeTask({ ...task, status: nextStatus })
-                    : task
-            )
+    setTasks(prev =>
+        prev.map(task =>
+            taskIds.includes(task.id)
+                ? normalizeTask({ ...task, status: nextStatus })
+                : task
+        )
+    );
+
+    try {
+        await Promise.all(
+            taskIds.map(taskId => updateTaskStatusOnServer(taskId, nextStatus))
         );
 
-        try {
-            await Promise.all(
-                taskIds.map(taskId => updateTaskStatusOnServer(taskId, nextStatus))
-            );
+        await fetchTasks({ showLoader: false });
 
-            await fetchTasks({ showLoader: false });
-
-            window.requestAnimationFrame(() => {
-                window.scrollTo({
-                    top: scrollY,
-                    behavior: "auto"
-                });
+        window.requestAnimationFrame(() => {
+            window.scrollTo({
+                top: scrollY,
+                behavior: "auto"
             });
-        } catch (err) {
-            console.error("Bulk status update failed:", err);
-            setTasks(previousTasks);
-            setError(err.message || "Unable to save status update.");
+        });
+
+        const normalizedStatus = normalizeText(nextStatus);
+
+        if (normalizedStatus === "completed") {
+            window.sileo?.success({
+                title: "Status updated",
+                description: `${taskIds.length} ${taskIds.length === 1 ? "task was" : "tasks were"} marked as Completed.`
+            });
+        } else if (normalizedStatus === "ongoing") {
+            window.sileo?.info({
+                title: "Status updated",
+                description: `${taskIds.length} ${taskIds.length === 1 ? "task was" : "tasks were"} moved to Ongoing.`
+            });
+        } else {
+            window.sileo?.info({
+                title: "Status updated",
+                description: `${taskIds.length} ${taskIds.length === 1 ? "task was" : "tasks were"} updated to ${nextStatus}.`
+            });
         }
-    };
+    } catch (err) {
+        console.error("Bulk status update failed:", err);
+        setTasks(previousTasks);
+        setError(err.message || "Unable to save status update.");
+
+        window.sileo?.error({
+            title: "Update failed",
+            description: err.message || "Unable to save task status."
+        });
+    }
+};
+
+const handleBulkDelete = (taskIds) => {
+    try {
+        setTasks(prev => prev.filter(task => !taskIds.includes(task.id)));
+
+        window.sileo?.error({
+            title: "Tasks deleted",
+            description: `${taskIds.length} ${taskIds.length === 1 ? "task has" : "tasks have"} been removed.`
+        });
+    } catch (err) {
+        console.error("Bulk delete failed:", err);
+
+        window.sileo?.error({
+            title: "Delete failed",
+            description: "Unable to delete selected tasks."
+        });
+    }
+};
 
     const handleBulkUpdatePriority = (taskIds, nextPriority) => {
         setTasks(prev =>
@@ -203,11 +258,13 @@ function App() {
                     : task
             )
         );
+
+        sileo.info({
+            title: "Priority updated",
+            description: `${taskIds.length} ${taskIds.length === 1 ? "task was" : "tasks were"} updated to ${nextPriority}.`
+        });
     };
 
-    const handleBulkDelete = (taskIds) => {
-        setTasks(prev => prev.filter(task => !taskIds.includes(task.id)));
-    };
 
     return (
         <>
@@ -880,5 +937,6 @@ function BulkActionBar({
         </div>
     );
 }
+
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
