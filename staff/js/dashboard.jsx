@@ -190,36 +190,73 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
 }
 
 function TaskSummary({ tasks }) {
-    const total     = tasks.length;
-    const ongoing   = tasks.filter(t => t.status === "Ongoing").length;
+    const total = tasks.length;
+    const ongoing = tasks.filter(t => t.status === "Ongoing").length;
     const completed = tasks.filter(t => t.status === "Completed").length;
-    const overdue   = tasks.filter(t => t.is_overdue).length;
+    const overdue = tasks.filter(t => t.is_overdue).length;
+
+    const stats = [
+        {
+            key: "total",
+            title: "Total Tasks",
+            value: total,
+            icon: "bi-card-checklist",
+            pillClass: "stats-pill-neutral",
+            pillText: "Live",
+            metaText: "current count"
+        },
+        {
+            key: "ongoing",
+            title: "Ongoing",
+            value: ongoing,
+            icon: "bi-arrow-repeat",
+            pillClass: "stats-pill-info",
+            pillText: "Open",
+            metaText: "active tasks"
+        },
+        {
+            key: "completed",
+            title: "Completed",
+            value: completed,
+            icon: "bi-check2-circle",
+            pillClass: "stats-pill-success",
+            pillText: "Done",
+            metaText: "finished tasks"
+        },
+        {
+            key: "overdue",
+            title: "Overdue",
+            value: overdue,
+            icon: "bi-exclamation-triangle",
+            pillClass: "stats-pill-danger",
+            pillText: "Alert",
+            metaText: "needs attention"
+        }
+    ];
 
     return (
-        <div className="row mb-4">
-            <div className="col-md-3">
-                <div className="card summary-card text-center p-3">
-                    <h5>Total Tasks</h5>
-                    <h3>{total}</h3>
-                </div>
-            </div>
-            <div className="col-md-3">
-                <div className="card summary-card text-center p-3">
-                    <h5>Ongoing</h5>
-                    <h3>{ongoing}</h3>
-                </div>
-            </div>
-            <div className="col-md-3">
-                <div className="card summary-card text-center p-3">
-                    <h5>Completed</h5>
-                    <h3>{completed}</h3>
-                </div>
-            </div>
-            <div className="col-md-3">
-                <div className="card summary-card text-center p-3">
-                    <h5>Overdue</h5>
-                    <h3>{overdue}</h3>
-                </div>
+        <div className="stats-strip mb-4">
+            <div className="stats-strip-inner">
+                {stats.map((item) => (
+                    <div className="stats-metric" key={item.key}>
+                        <div className="stats-icon">
+                            <i className={`bi ${item.icon}`}></i>
+                        </div>
+
+                        <div className="stats-label">{item.title}</div>
+
+                        <div className="stats-bottom">
+                            <div className="stats-value">{item.value}</div>
+
+                            <div className="stats-trend">
+                                <span className={`stats-pill ${item.pillClass}`}>
+                                    {item.pillText}
+                                </span>
+                                <span className="stats-meta">{item.metaText}</span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
