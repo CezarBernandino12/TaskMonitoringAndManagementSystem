@@ -5,66 +5,53 @@
   <title>President Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Use jsdelivr consistently (same as all other report pages) -->
   <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
-
-  <!-- Chart.js loaded in <head> so it is always available when React renders -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
-    body {
-      background-color: #fffaf3;
-      color: #333;
-      font-family: Arial, sans-serif;
-    }
+    body { background-color: #fffaf3; color: #333; font-family: Arial, sans-serif; }
+
     .card {
-      border-radius: 12px;
-      background: #ffffff;
-      border: 1px solid #ffb84d;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      color: #222;
+      border-radius: 12px; background: #ffffff;
+      border: 1px solid #ffb84d; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: #222;
     }
-    .sidebar-orange {
-      background: #fff;
-      color: #ff9900;
-      border-right: 1px solid #ffe0b2;
-      box-shadow: 2px 0 8px rgba(255, 153, 0, 0.04);
-    }
-    .sidebar-orange .nav-link {
-      color: #cc7a00 !important;
-      border-radius: 8px;
-      margin-bottom: 2px;
-      transition: 0.2s;
-      font-weight: 500;
-      padding: 10px 18px;
-    }
-    .sidebar-orange .nav-link.active,
-    .sidebar-orange .nav-link:hover {
-      background: linear-gradient(90deg, #ff9900 60%, #ff8800 100%);
-      color: #fff !important;
-    }
-    .summary-card {
-      background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
-      border: 1px solid #ffb84d;
-      color: #cc7a00;
-    }
+
+    .sidebar-orange { background: #fff; color: #ff9900; border-right: 1px solid #ffe0b2; box-shadow: 2px 0 8px rgba(255,153,0,0.04); }
+    .sidebar-orange .nav-link { color: #cc7a00 !important; border-radius: 8px; margin-bottom: 2px; transition: 0.2s; font-weight: 500; padding: 10px 18px; }
+    .sidebar-orange .nav-link:hover { background: linear-gradient(90deg,#ff9900 60%,#ff8800 100%); color:#fff !important; }
+
+    .health-ring-wrap { position: relative; width: 160px; height: 160px; margin: 0 auto; }
+    .health-ring-wrap canvas { position: absolute; inset: 0; }
+    .health-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+
+    .snapshot-card { border-left: 4px solid #ffb84d; transition: transform .15s, box-shadow .15s; cursor: pointer; text-decoration: none; color: inherit; }
+    .snapshot-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); border-left-color: #ff9900; }
+
+    .risk-bar { height: 8px; border-radius: 4px; background: #f0f0f0; overflow: hidden; }
+    .risk-bar-fill { height: 100%; border-radius: 4px; background: #dc3545; transition: width .4s; }
+
+    .performer-rank { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .rank-1 { background: #FFD700; color: #7a5900; }
+    .rank-2 { background: #C0C0C0; color: #444; }
+    .rank-3 { background: #CD7F32; color: #fff; }
+    .rank-other { background: #f0f0f0; color: #666; }
+
+    .trend-up   { color: #dc3545; }
+    .trend-down { color: #28a745; }
+    .trend-flat { color: #6c757d; }
   </style>
 </head>
 <body>
-
 <div id="root"></div>
 
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
 // ====================================================================
-// SIDEBAR — extracted as a proper component so useState is called at
-// the top level. Fixes the Rules of Hooks violation in the original.
+// SIDEBAR
 // ====================================================================
 function Sidebar() {
     const [showReports, setShowReports] = useState(false);
@@ -72,14 +59,10 @@ function Sidebar() {
         <nav className="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
             <div className="sidebar-orange d-flex flex-column p-3 gap-2 min-vh-100">
                 <a href="dashboard.html" className="nav-link fw-semibold">Dashboard</a>
-                <a
-                    href="#"
-                    className="nav-link fw-semibold d-flex justify-content-between align-items-center"
-                    onClick={e => { e.preventDefault(); setShowReports(p => !p); }}
-                    style={{ cursor: 'pointer' }}
-                >
+                <a href="#" className="nav-link fw-semibold d-flex justify-content-between align-items-center"
+                    onClick={e => { e.preventDefault(); setShowReports(p => !p); }} style={{ cursor:'pointer' }}>
                     <span>Reports</span>
-                    <span style={{ fontSize: '1.1em' }}>{showReports ? '▼' : '▶'}</span>
+                    <span style={{ fontSize:'1.1em' }}>{showReports ? '▼' : '▶'}</span>
                 </a>
                 {showReports && (
                     <div style={{ marginLeft: 12 }}>
@@ -97,348 +80,295 @@ function Sidebar() {
 }
 
 // ====================================================================
-// FILTER OPTIONS
+// ORG HEALTH RING — doughnut showing ongoing / overdue / completed today
 // ====================================================================
-const FILTERS = [
-    { label: 'Today',        value: 'daily'     },
-    { label: 'This Week',    value: 'weekly'    },
-    { label: 'This Month',   value: 'monthly'   },
-    { label: 'This Quarter', value: 'quarterly' },
-    { label: 'This Year',    value: 'annually'  },
-];
+function HealthRing({ ongoing, overdue, completedToday, overallRate }) {
+    const ref      = useRef(null);
+    const chartRef = useRef(null);
+
+    useEffect(() => {
+        if (chartRef.current) chartRef.current.destroy();
+        chartRef.current = new Chart(ref.current, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed today', 'Ongoing', 'Overdue'],
+                datasets: [{
+                    data: [completedToday, ongoing, overdue],
+                    backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                }]
+            },
+            options: {
+                cutout: '72%',
+                responsive: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: {
+                    label: ctx => ` ${ctx.label}: ${ctx.parsed}`
+                }}}
+            }
+        });
+        return () => { if (chartRef.current) chartRef.current.destroy(); };
+    }, [ongoing, overdue, completedToday]);
+
+    return (
+        <div className="health-ring-wrap">
+            <canvas ref={ref} width="160" height="160"></canvas>
+            <div className="health-ring-label">
+                <span style={{ fontSize: 26, fontWeight: 700, color: '#333' }}>{overallRate}%</span>
+                <span style={{ fontSize: 11, color: '#888' }}>all-time rate</span>
+            </div>
+        </div>
+    );
+}
+
+// ====================================================================
+// OVERDUE TREND SPARKLINE — 4-week mini line chart
+// ====================================================================
+function OverdueTrend({ trend }) {
+    const ref      = useRef(null);
+    const chartRef = useRef(null);
+
+    useEffect(() => {
+        if (!trend.length) return;
+        if (chartRef.current) chartRef.current.destroy();
+        chartRef.current = new Chart(ref.current, {
+            type: 'line',
+            data: {
+                labels: trend.map(t => t.label),
+                datasets: [{
+                    data: trend.map(t => t.count),
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220,53,69,0.08)',
+                    pointBackgroundColor: '#dc3545',
+                    pointRadius: 4,
+                    tension: 0.3,
+                    fill: true,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                    y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } }
+                }
+            }
+        });
+        return () => { if (chartRef.current) chartRef.current.destroy(); };
+    }, [trend]);
+
+    // Trend direction: compare last week to first week
+    let trendIcon = null;
+    if (trend.length >= 2) {
+        const first = trend[0].count;
+        const last  = trend[trend.length - 1].count;
+        if (last > first)      trendIcon = <span className="trend-up   ms-2 fw-semibold">↑ Increasing</span>;
+        else if (last < first) trendIcon = <span className="trend-down ms-2 fw-semibold">↓ Decreasing</span>;
+        else                   trendIcon = <span className="trend-flat ms-2 fw-semibold">→ Stable</span>;
+    }
+
+    return (
+        <div>
+            <div className="d-flex align-items-center mb-2">
+                <h6 className="mb-0">Overdue trend (last 4 weeks)</h6>
+                {trendIcon}
+            </div>
+            <div style={{ height: 100 }}>
+                <canvas ref={ref}></canvas>
+            </div>
+        </div>
+    );
+}
 
 // ====================================================================
 // DASHBOARD
 // ====================================================================
 function Dashboard() {
-    const [filter, setFilter]           = useState('monthly');
-    const [showFilter, setShowFilter]   = useState(false);
-    const [stats, setStats]             = useState({
-        total_departments: '—',
-        total_tasks:       '—',
-        completed_tasks:   '—',
-        ongoing_tasks:     '—',
-        overdue_tasks:     '—',
-        completion_rate:   '—',
-    });
-    const [departments, setDepartments] = useState([]);
-    const [dateLabel, setDateLabel]     = useState('');
+    const [data, setData]       = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError]     = useState(null);
 
-    const chartRef      = useRef(null);
-    const chartInstance = useRef(null);
-
-    // ----------------------------------------------------------------
-    // Fetch stats + departments whenever filter changes
-    // ----------------------------------------------------------------
     useEffect(() => {
-        const enc = encodeURIComponent(filter);
-
-        fetch('php/get_dashboard_stats.php?filter=' + enc)
+        fetch('php/get_dashboard.php')
             .then(r => r.json())
-            .then(data => {
-                if (data.error) { console.error('Stats error:', data.error); return; }
-                setStats(data);
+            .then(d => {
+                if (d.error) throw new Error(d.error);
+                setData(d);
+                setLoading(false);
             })
-            .catch(err => console.error(err));
+            .catch(err => { setError(err.message); setLoading(false); });
+    }, []);
 
-        fetch('php/get_department_performance_filtered.php?filter=' + enc)
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) { console.error('Dept error:', data.error); return; }
-                setDepartments(Array.isArray(data.departments) ? data.departments : []);
-                setDateLabel(data.date_label || '');
-            })
-            .catch(err => console.error(err));
-    }, [filter]);
+    if (loading) return (
+        <div className="container-fluid py-4"><div className="row"><Sidebar />
+            <main className="col-md-10 ms-sm-auto px-4 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+                <div className="text-center text-muted">
+                    <div className="spinner-border mb-3" role="status"></div>
+                    <div>Loading dashboard…</div>
+                </div>
+            </main>
+        </div></div>
+    );
 
-    // ----------------------------------------------------------------
-    // Build / rebuild the bar chart whenever departments data changes
-    // ----------------------------------------------------------------
-    useEffect(() => {
-        if (!chartRef.current || departments.length === 0) return;
+    if (error) return (
+        <div className="container-fluid py-4"><div className="row"><Sidebar />
+            <main className="col-md-10 ms-sm-auto px-4">
+                <div className="alert alert-danger mt-4">Error: {error}</div>
+            </main>
+        </div></div>
+    );
 
-        if (chartInstance.current) chartInstance.current.destroy();
+    const { org_health, overdue_trend, at_risk, top_performers, snapshots, month_label } = data;
 
-        chartInstance.current = new Chart(chartRef.current, {
-            type: 'bar',
-            data: {
-                labels: departments.map(d => d.department),
-                datasets: [
-                    {
-                        label: 'Total Tasks',
-                        data: departments.map(d => d.total_tasks),
-                        backgroundColor: '#ffd27f',
-                        borderColor: '#ffb84d',
-                        borderWidth: 1,
-                        borderRadius: 4,
-                    },
-                    {
-                        label: 'Completed',
-                        data: departments.map(d => d.completed),
-                        backgroundColor: '#b6e388',
-                        borderColor: '#7ed957',
-                        borderWidth: 1,
-                        borderRadius: 4,
-                    },
-                    {
-                        label: 'Ongoing',
-                        data: departments.map(d => d.ongoing),
-                        backgroundColor: '#ffe066',
-                        borderColor: '#ffd700',
-                        borderWidth: 1,
-                        borderRadius: 4,
-                    },
-                    {
-                        label: 'Overdue',
-                        data: departments.map(d => d.overdue),
-                        backgroundColor: '#ffb3b3',
-                        borderColor: '#ff4d4d',
-                        borderWidth: 1,
-                        borderRadius: 4,
-                    },
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: {
-                        callbacks: {
-                            afterBody: (items) => {
-                                const dept = departments[items[0]?.dataIndex];
-                                return dept ? `Completion rate: ${dept.completion_percent}%` : '';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                }
-            }
-        });
-
-        return () => {
-            if (chartInstance.current) chartInstance.current.destroy();
-        };
-    }, [departments]);
-
-    // ----------------------------------------------------------------
-    // Close filter dropdown on outside click
-    // ----------------------------------------------------------------
-    useEffect(() => {
-        if (!showFilter) return;
-        const handler = (e) => {
-            if (!e.target.closest('.filter-dropdown')) setShowFilter(false);
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [showFilter]);
-
-    // ----------------------------------------------------------------
-    // Department/s with the most overdue tasks
-    // ----------------------------------------------------------------
-    const overdueList = departments.filter(d => d.overdue > 0);
-    let topOverdue = [];
-    if (overdueList.length > 0) {
-        const maxOverdue = Math.max(...overdueList.map(d => d.overdue));
-        topOverdue = overdueList.filter(d => d.overdue === maxOverdue);
-    }
-
-    const activeFilterLabel = FILTERS.find(f => f.value === filter)?.label || 'Filter';
-
-    // ----------------------------------------------------------------
-    // RENDER
-    // ----------------------------------------------------------------
     return (
         <div className="container-fluid py-4">
             <div className="row">
-
                 <Sidebar />
 
                 <main className="col-md-10 ms-sm-auto px-4">
 
                     {/* Header */}
-                    <div className="mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
-                        <div>
-                            <h3 className="mb-0">President Dashboard</h3>
-                            <p className="text-muted mb-0">Department Performance Overview · {dateLabel}</p>
-                        </div>
-
-                        {/* Period filter */}
-                        <div className="position-relative filter-dropdown">
-                            <button
-                                className="btn btn-outline-warning fw-semibold px-4 py-2 rounded-pill shadow-sm"
-                                style={{ minWidth: 160 }}
-                                onClick={() => setShowFilter(v => !v)}
-                                aria-haspopup="listbox"
-                                aria-expanded={showFilter}
-                            >
-                                <span className="me-2">{activeFilterLabel}</span>
-                                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
-                                    <path d="M7 10l5 5 5-5" stroke="#ff9900" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                            </button>
-                            {showFilter && (
-                                <ul
-                                    className="dropdown-menu show mt-2 shadow rounded-3 border-0 w-100"
-                                    style={{ minWidth: 160, zIndex: 1000 }}
-                                    role="listbox"
-                                >
-                                    {FILTERS.map(opt => (
-                                        <li key={opt.value}>
-                                            <button
-                                                className={`dropdown-item py-2${filter === opt.value ? ' fw-bold' : ''}`}
-                                                style={{
-                                                    borderRadius: 8,
-                                                    backgroundColor: filter === opt.value ? 'rgba(255,165,0,0.15)' : 'transparent',
-                                                    color: filter === opt.value ? '#cc8400' : 'inherit',
-                                                }}
-                                                onClick={() => { setFilter(opt.value); setShowFilter(false); }}
-                                                role="option"
-                                                aria-selected={filter === opt.value}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
+                    <div className="mb-4">
+                        <h3 className="mb-0">President Dashboard</h3>
+                        <p className="text-muted mb-0">Real-time organization overview · {new Date().toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</p>
                     </div>
 
-                    {/* Summary cards — now shows 5 cards including ongoing and overdue */}
+                    {/* ── Row 1: Org Health + Overdue Trend ── */}
                     <div className="row mb-4">
-                        <div className="col-md-2">
-                            <div className="card summary-card text-center p-3">
-                                <h6>Departments</h6>
-                                <h3>{stats.total_departments}</h3>
+
+                        {/* Org health ring */}
+                        <div className="col-md-4">
+                            <div className="card p-3 h-100">
+                                <h6 className="mb-3 fw-semibold">Organization Health</h6>
+                                <HealthRing
+                                    ongoing={org_health.ongoing}
+                                    overdue={org_health.overdue}
+                                    completedToday={org_health.completed_today}
+                                    overallRate={org_health.overall_rate}
+                                />
+                                {/* Legend */}
+                                <div className="d-flex justify-content-center gap-3 mt-3" style={{ fontSize: 13 }}>
+                                    <span><span style={{ background:'#28a745', borderRadius:3, display:'inline-block', width:10, height:10, marginRight:4 }}></span>Done today: <strong>{org_health.completed_today}</strong></span>
+                                    <span><span style={{ background:'#ffc107', borderRadius:3, display:'inline-block', width:10, height:10, marginRight:4 }}></span>Ongoing: <strong>{org_health.ongoing}</strong></span>
+                                    <span><span style={{ background:'#dc3545', borderRadius:3, display:'inline-block', width:10, height:10, marginRight:4 }}></span>Overdue: <strong>{org_health.overdue}</strong></span>
+                                </div>
+                                <div className="text-center mt-2" style={{ fontSize: 12, color: '#888' }}>
+                                    Based on all {org_health.total_active} active tasks
+                                </div>
                             </div>
                         </div>
-                        <div className="col-md-2">
-                            <div className="card summary-card text-center p-3">
-                                <h6>Total Tasks</h6>
-                                <h3>{stats.total_tasks}</h3>
+
+                        {/* Overdue trend sparkline */}
+                        <div className="col-md-4">
+                            <div className="card p-3 h-100">
+                                <OverdueTrend trend={overdue_trend} />
+                                <p className="text-muted mt-2 mb-0" style={{ fontSize: 12 }}>
+                                    Counts tasks whose deadline fell within each week and are still incomplete.
+                                    A decreasing trend means the team is catching up.
+                                </p>
                             </div>
                         </div>
-                        <div className="col-md-2">
-                            <div className="card summary-card text-center p-3">
-                                <h6>Completed</h6>
-                                <h3 className="text-success">{stats.completed_tasks}</h3>
-                            </div>
-                        </div>
-                        <div className="col-md-2">
-                            <div className="card summary-card text-center p-3">
-                                <h6>Ongoing</h6>
-                                <h3 className="text-warning">{stats.ongoing_tasks}</h3>
-                            </div>
-                        </div>
-                        <div className="col-md-2">
-                            <div className="card summary-card text-center p-3">
-                                <h6>Overdue</h6>
-                                <h3 className="text-danger">{stats.overdue_tasks}</h3>
-                            </div>
-                        </div>
-                        <div className="col-md-2">
-                            <div className="card summary-card text-center p-3">
-                                <h6>Completion Rate</h6>
-                                <h3>{stats.completion_rate}</h3>
+
+                        {/* Departments at risk */}
+                        <div className="col-md-4">
+                            <div className="card p-3 h-100">
+                                <h6 className="mb-3 fw-semibold">Departments at Risk</h6>
+                                <p className="text-muted mb-3" style={{ fontSize: 12 }}>Ranked by overdue rate (overdue ÷ total tasks). Rate is fairer than raw count.</p>
+                                {at_risk.length === 0 ? (
+                                    <div className="text-center text-success py-2">
+                                        <div style={{ fontSize: 28 }}>✓</div>
+                                        No departments at risk
+                                    </div>
+                                ) : (
+                                    <div className="d-flex flex-column gap-2">
+                                        {at_risk.map((dept, i) => (
+                                            <div key={dept.department}>
+                                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                                    <span style={{ fontSize: 13, fontWeight: 500 }}>{dept.department}</span>
+                                                    <span style={{ fontSize: 12, color: dept.overdue_rate >= 50 ? '#dc3545' : '#856404', fontWeight: 600 }}>
+                                                        {dept.overdue_rate}% overdue
+                                                    </span>
+                                                </div>
+                                                <div className="risk-bar">
+                                                    <div className="risk-bar-fill" style={{ width: `${dept.overdue_rate}%`, opacity: 0.7 + (i === 0 ? 0.3 : 0) }}></div>
+                                                </div>
+                                                <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                                                    {dept.overdue} of {dept.total} tasks overdue
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Department performance bar chart */}
-                    <div className="card p-3 mb-4">
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                            <h5 className="mb-0">Department Performance</h5>
-                            <span className="text-muted small">{dateLabel}</span>
-                        </div>
-                        {departments.length === 0 ? (
-                            <p className="text-muted text-center py-4">No data available for this period.</p>
-                        ) : (
-                            <div style={{ height: 320 }}>
-                                <canvas ref={chartRef}></canvas>
+                    {/* ── Row 2: Top performers + Report snapshots ── */}
+                    <div className="row mb-4">
+
+                        {/* Top performers this month */}
+                        <div className="col-md-5">
+                            <div className="card p-3 h-100">
+                                <h6 className="mb-1 fw-semibold">Top Performers</h6>
+                                <p className="text-muted mb-3" style={{ fontSize: 12 }}>Most tasks completed this month · {month_label}</p>
+                                {top_performers.length === 0 ? (
+                                    <div className="text-center text-muted py-3">No completions recorded this month yet.</div>
+                                ) : (
+                                    <div className="d-flex flex-column gap-2">
+                                        {top_performers.map((p, i) => (
+                                            <div key={p.name} className="d-flex align-items-center gap-3 p-2 rounded" style={{ background: i === 0 ? 'rgba(255,215,0,0.08)' : 'transparent' }}>
+                                                <div className={`performer-rank ${i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other'}`}>
+                                                    {i + 1}
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: 500, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                                    <div style={{ fontSize: 12, color: '#888' }}>{p.department}</div>
+                                                </div>
+                                                <div style={{ fontWeight: 700, fontSize: 18, color: '#28a745', minWidth: 32, textAlign: 'right' }}>
+                                                    {p.completed_this_month}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
+                        </div>
 
-                    {/* Departments with most overdue tasks */}
-                    <div className="card p-3 mb-4">
-                        <h5 className="mb-2">Department{topOverdue.length !== 1 ? 's' : ''} with Most Overdue Tasks</h5>
-                        {topOverdue.length === 0 ? (
-                            <p className="text-muted mb-0">No overdue tasks in this period.</p>
-                        ) : (
-                            <ul className="mb-0">
-                                {topOverdue.map((dept, idx) => (
-                                    <li key={dept.department + idx}>
-                                        <strong>{dept.department}</strong> — {dept.overdue} overdue task{dept.overdue !== 1 ? 's' : ''}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-
-                    {/* Department performance table */}
-                    <div className="card p-3">
-                        <h5 className="mb-3">
-                            Department Performance Table
-                            <span className="text-muted small ms-2">{dateLabel}</span>
-                        </h5>
-                        <div className="table-responsive">
-                            <table className="table table-bordered table-hover align-middle">
-                                <thead className="table-light">
-                                    <tr>
-                                        <th>Department</th>
-                                        <th>Total Tasks</th>
-                                        <th>Completed</th>
-                                        <th>Ongoing</th>
-                                        <th>Overdue</th>
-                                        <th>Completion Rate</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {departments.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="6" className="text-center text-muted">No data available for this period.</td>
-                                        </tr>
-                                    ) : (
-                                        departments.map((dept, idx) => {
-                                            const rate = dept.completion_percent;
-                                            return (
-                                                <tr key={dept.department + idx}>
-                                                    <td style={{ fontWeight: 500 }}>{dept.department}</td>
-                                                    <td>{dept.total_tasks}</td>
-                                                    <td>{dept.completed}</td>
-                                                    <td>{dept.ongoing}</td>
-                                                    <td className="text-danger fw-bold">{dept.overdue}</td>
-                                                    <td>
-                                                        {dept.total_tasks === 0 ? (
-                                                            <span className="text-muted" style={{ fontSize: '0.9em' }}>No tasks yet</span>
-                                                        ) : rate === 0 ? (
-                                                            <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>0% — None completed</span>
-                                                        ) : (
-                                                            <div className="d-flex align-items-center gap-2">
-                                                                <span style={{ minWidth: 36 }}>{rate}%</span>
-                                                                <div className="progress flex-grow-1" style={{ height: 18 }}>
-                                                                    <div
-                                                                        className="progress-bar bg-success"
-                                                                        role="progressbar"
-                                                                        style={{ width: `${rate}%` }}
-                                                                        aria-valuenow={rate}
-                                                                        aria-valuemin="0"
-                                                                        aria-valuemax="100"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
+                        {/* Report snapshots */}
+                        <div className="col-md-7">
+                            <h6 className="fw-semibold mb-3">Report Snapshots</h6>
+                            <div className="d-flex flex-column gap-2">
+                                {snapshots.map(snap => {
+                                    const rate = snap.data.total > 0
+                                        ? Math.round((snap.data.completed / snap.data.total) * 100)
+                                        : 0;
+                                    return (
+                                        <a key={snap.label} href={snap.href} className="card snapshot-card p-3 d-flex flex-row align-items-center gap-3" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div className="d-flex align-items-baseline gap-2">
+                                                    <span style={{ fontWeight: 600, fontSize: 15 }}>{snap.label}</span>
+                                                    <span style={{ fontSize: 12, color: '#888' }}>{snap.sub}</span>
+                                                </div>
+                                                <div className="d-flex gap-3 mt-1" style={{ fontSize: 13 }}>
+                                                    <span><strong>{snap.data.total}</strong> tasks</span>
+                                                    <span className="text-success"><strong>{snap.data.completed}</strong> completed</span>
+                                                    {snap.data.overdue > 0 && (
+                                                        <span className="text-danger"><strong>{snap.data.overdue}</strong> overdue</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right', minWidth: 80 }}>
+                                                <div style={{ fontSize: 22, fontWeight: 700, color: rate >= 70 ? '#28a745' : rate >= 40 ? '#cc8400' : '#dc3545' }}>
+                                                    {rate}%
+                                                </div>
+                                                <div style={{ fontSize: 11, color: '#888' }}>completion</div>
+                                            </div>
+                                            <div style={{ color: '#ffb84d', fontSize: 18 }}>›</div>
+                                        </a>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
@@ -450,6 +380,5 @@ function Dashboard() {
 
 ReactDOM.createRoot(document.getElementById('root')).render(<Dashboard />);
 </script>
-
 </body>
 </html>

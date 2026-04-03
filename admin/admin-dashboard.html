@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body { background-color: #fffaf3; color: #333; font-family: Arial, sans-serif; }
+
+    .card {
+      border-radius: 12px; background: #fff;
+      border: 1px solid #ffb84d; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: #222;
+    }
+
+    /* Sidebar */
+    .sidebar-orange { background: #fff; border-right: 1px solid #ffe0b2; box-shadow: 2px 0 8px rgba(255,153,0,0.04); }
+    .sidebar-orange .nav-link { color: #cc7a00 !important; border-radius: 8px; margin-bottom: 2px; transition: 0.2s; font-weight: 500; padding: 10px 18px; font-size: 14px; }
+    .sidebar-orange .nav-link:hover { background: linear-gradient(90deg,#ff9900 60%,#ff8800 100%); color: #fff !important; }
+    .sidebar-orange .nav-link.active { background: linear-gradient(90deg,#ff9900 60%,#ff8800 100%); color: #fff !important; }
+    .sidebar-section { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: #bbb; text-transform: uppercase; padding: 8px 18px 4px; margin-top: 4px; }
+    .sidebar-logo { font-size: 18px; font-weight: 700; color: #cc7a00; padding: 16px 18px 12px; border-bottom: 1px solid #ffe0b2; margin-bottom: 8px; letter-spacing: -.3px; }
+
+    /* Stat cards */
+    .stat-card { border-left: 4px solid #ffb84d; }
+    .stat-card.blue   { border-left-color: #0d6efd; }
+    .stat-card.green  { border-left-color: #28a745; }
+    .stat-card.orange { border-left-color: #ff9900; }
+    .stat-card.red    { border-left-color: #dc3545; }
+    .stat-card.purple { border-left-color: #6f42c1; }
+    .stat-card.teal   { border-left-color: #0dcaf0; }
+
+    /* Role badge */
+    .role-badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+    .role-admin      { background: #fff3cd; color: #856404; }
+    .role-supervisor { background: #cfe2ff; color: #084298; }
+    .role-staff      { background: #d1e7dd; color: #0a3622; }
+    .role-president  { background: #f8d7da; color: #842029; }
+
+    /* Active badge */
+    .active-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .dot-active   { background: #28a745; }
+    .dot-inactive { background: #dc3545; }
+
+    /* Ring */
+    .ring-wrap { position: relative; width: 140px; height: 140px; margin: 0 auto; }
+    .ring-wrap canvas { position: absolute; inset: 0; }
+    .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+
+    /* No-tasks alert row */
+    .alert-row { background: #fff8f0; border-left: 3px solid #ff9900; border-radius: 6px; padding: 8px 12px; font-size: 13px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ====================================================================
+// SIDEBAR — admin-specific navigation
+// ====================================================================
+function Sidebar() {
+    const [showUsers,   setShowUsers]   = useState(false);
+    const [showReports, setShowReports] = useState(false);
+
+    const NavGroup = ({ label, open, onToggle, children }) => (
+        <>
+            <a href="#" className="nav-link fw-semibold d-flex justify-content-between align-items-center"
+               onClick={e => { e.preventDefault(); onToggle(); }} style={{ cursor: 'pointer' }}>
+                <span>{label}</span>
+                <span style={{ fontSize: '1em' }}>{open ? '▼' : '▶'}</span>
+            </a>
+            {open && <div style={{ marginLeft: 12 }}>{children}</div>}
+        </>
+    );
+
+    return (
+        <nav className="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
+            <div className="sidebar-orange d-flex flex-column min-vh-100">
+
+                <div className="sidebar-logo">⚙ Admin Panel</div>
+
+                {/* Overview */}
+                <div className="sidebar-section">Overview</div>
+                <a href="admin-dashboard.html" className="nav-link active">Dashboard</a>
+
+                {/* User Management */}
+                <div className="sidebar-section">User Management</div>
+                <NavGroup label="Users" open={showUsers} onToggle={() => setShowUsers(p => !p)}>
+                    <a href="users.html"            className="nav-link">All Users</a>
+                    <a href="add-user.html"         className="nav-link">Add User</a>
+                    <a href="inactive-users.html"   className="nav-link">Inactive Users</a>
+                </NavGroup>
+                <a href="departments.html"  className="nav-link">Departments</a>
+                <a href="supervisors.html"  className="nav-link">Supervisors</a>
+
+                {/* Task Management */}
+                <div className="sidebar-section">Task Management</div>
+                <a href="all-tasks.html"    className="nav-link">All Tasks</a>
+                <a href="assign-task.html"  className="nav-link">Assign Task</a>
+
+                {/* Reports */}
+                <div className="sidebar-section">Reports</div>
+                <NavGroup label="Reports" open={showReports} onToggle={() => setShowReports(p => !p)}>
+                    <a href="daily-reports.html"     className="nav-link">Daily</a>
+                    <a href="weekly-reports.html"    className="nav-link">Weekly</a>
+                    <a href="monthly-reports.html"   className="nav-link">Monthly</a>
+                    <a href="quarterly-reports.html" className="nav-link">Quarterly</a>
+                    <a href="annual-reports.html"    className="nav-link">Annually</a>
+                </NavGroup>
+
+                {/* Account */}
+                <div className="sidebar-section">Account</div>
+                <a href="profile.html"  className="nav-link">Profile</a>
+                <a href="logout.php"    className="nav-link text-danger">Log Out</a>
+
+            </div>
+        </nav>
+    );
+}
+
+// ====================================================================
+// TASK RING — doughnut of completed / ongoing / overdue
+// ====================================================================
+function TaskRing({ completed, ongoing, overdue, rate }) {
+    const ref = useRef(null);
+    const chartInst = useRef(null);
+
+    useEffect(() => {
+        if (chartInst.current) chartInst.current.destroy();
+        chartInst.current = new Chart(ref.current, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'Ongoing', 'Overdue'],
+                datasets: [{ data: [completed, ongoing, overdue], backgroundColor: ['#28a745','#ffc107','#dc3545'], borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: { cutout: '72%', responsive: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } } } }
+        });
+        return () => { if (chartInst.current) chartInst.current.destroy(); };
+    }, [completed, ongoing, overdue]);
+
+    return (
+        <div className="ring-wrap">
+            <canvas ref={ref} width="140" height="140"></canvas>
+            <div className="ring-label">
+                <span style={{ fontSize: 24, fontWeight: 700 }}>{rate}%</span>
+                <span style={{ fontSize: 10, color: '#888' }}>completion</span>
+            </div>
+        </div>
+    );
+}
+
+// ====================================================================
+// ROLE PIE — shows user count by role
+// ====================================================================
+function RolePie({ roles }) {
+    const ref = useRef(null);
+    const chartInst = useRef(null);
+    const COLORS = ['#ff9900','#0d6efd','#28a745','#6f42c1','#0dcaf0'];
+
+    useEffect(() => {
+        if (!roles.length) return;
+        if (chartInst.current) chartInst.current.destroy();
+        chartInst.current = new Chart(ref.current, {
+            type: 'pie',
+            data: {
+                labels: roles.map(r => r.role.charAt(0).toUpperCase() + r.role.slice(1)),
+                datasets: [{ data: roles.map(r => r.count), backgroundColor: COLORS.slice(0, roles.length), borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: { responsive: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8 } } } }
+        });
+        return () => { if (chartInst.current) chartInst.current.destroy(); };
+    }, [roles]);
+
+    return <canvas ref={ref} width="200" height="200"></canvas>;
+}
+
+// ====================================================================
+// HELPERS
+// ====================================================================
+function roleBadge(role) {
+    const cls = { admin: 'role-admin', supervisor: 'role-supervisor', staff: 'role-staff', president: 'role-president' }[role] ?? 'role-staff';
+    return <span className={`role-badge ${cls}`}>{role}</span>;
+}
+
+function timeAgo(dateStr) {
+    const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    if (diff < 60)   return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+}
+
+// ====================================================================
+// ADMIN DASHBOARD
+// ====================================================================
+function AdminDashboard() {
+    const [data, setData]       = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError]     = useState(null);
+
+    useEffect(() => {
+        fetch('php/get_admin_dashboard.php')
+            .then(r => r.json())
+            .then(d => {
+                if (d.error) throw new Error(d.error);
+                setData(d);
+                setLoading(false);
+            })
+            .catch(err => { setError(err.message); setLoading(false); });
+    }, []);
+
+    if (loading) return (
+        <div className="container-fluid py-4"><div className="row"><Sidebar />
+            <main className="col-md-10 ms-sm-auto px-4 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+                <div className="text-center text-muted">
+                    <div className="spinner-border mb-3" role="status"></div>
+                    <div>Loading dashboard…</div>
+                </div>
+            </main>
+        </div></div>
+    );
+
+    if (error) return (
+        <div className="container-fluid py-4"><div className="row"><Sidebar />
+            <main className="col-md-10 ms-sm-auto px-4">
+                <div className="alert alert-danger mt-4">Error: {error}</div>
+            </main>
+        </div></div>
+    );
+
+    const { overview, task_snapshot, recent_users, departments, roles, no_tasks } = data;
+
+    return (
+        <div className="container-fluid py-4">
+            <div className="row">
+                <Sidebar />
+
+                <main className="col-md-10 ms-sm-auto px-4">
+
+                    {/* Header */}
+                    <div className="mb-4">
+                        <h3 className="mb-0">Admin Dashboard</h3>
+                        <p className="text-muted mb-0">
+                            System overview · {new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
+                    </div>
+
+                    {/* ── Row 1: System stat cards ── */}
+                    <div className="row mb-4 g-3">
+                        {[
+                            { label: 'Active Users',    value: overview.total_active_users,   cls: 'blue'   },
+                            { label: 'Inactive Users',  value: overview.total_inactive_users, cls: 'red'    },
+                            { label: 'Staff',           value: overview.total_staff,          cls: 'green'  },
+                            { label: 'Supervisors',     value: overview.total_supervisors,    cls: 'purple' },
+                            { label: 'Departments',     value: overview.total_departments,    cls: 'teal'   },
+                            { label: 'Total Tasks',     value: overview.total_tasks,          cls: 'orange' },
+                        ].map(s => (
+                            <div className="col-md-2" key={s.label}>
+                                <div className={`card stat-card ${s.cls} p-3 text-center`}>
+                                    <div className="text-muted mb-1" style={{ fontSize: 12 }}>{s.label}</div>
+                                    <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* ── Row 2: Task ring + Role pie + No-task alert ── */}
+                    <div className="row mb-4 g-3">
+
+                        {/* Task status ring */}
+                        <div className="col-md-3">
+                            <div className="card p-3 h-100 text-center">
+                                <h6 className="fw-semibold mb-3">Task Status (All Time)</h6>
+                                <TaskRing
+                                    completed={task_snapshot.completed}
+                                    ongoing={task_snapshot.ongoing}
+                                    overdue={task_snapshot.overdue}
+                                    rate={task_snapshot.overall_rate}
+                                />
+                                <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap" style={{ fontSize: 12 }}>
+                                    <span><span className="active-dot dot-active"></span>Done: <strong>{task_snapshot.completed}</strong></span>
+                                    <span style={{ color:'#cc8400' }}>●<strong> {task_snapshot.ongoing}</strong> ongoing</span>
+                                    <span className="text-danger">●<strong> {task_snapshot.overdue}</strong> overdue</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Role distribution pie */}
+                        <div className="col-md-3">
+                            <div className="card p-3 h-100 text-center">
+                                <h6 className="fw-semibold mb-2">User Roles</h6>
+                                <p className="text-muted mb-3" style={{ fontSize: 12 }}>Active accounts only</p>
+                                <RolePie roles={roles} />
+                            </div>
+                        </div>
+
+                        {/* Staff with no tasks assigned */}
+                        <div className="col-md-6">
+                            <div className="card p-3 h-100">
+                                <h6 className="fw-semibold mb-1">Staff with No Tasks Assigned</h6>
+                                <p className="text-muted mb-3" style={{ fontSize: 12 }}>
+                                    Active staff members who have no tasks at all — may need follow-up.
+                                </p>
+                                {no_tasks.length === 0 ? (
+                                    <div className="text-center text-success py-3">
+                                        <div style={{ fontSize: 24 }}>✓</div>
+                                        All active staff have tasks assigned.
+                                    </div>
+                                ) : (
+                                    <div className="d-flex flex-column gap-2" style={{ maxHeight: 200, overflowY: 'auto' }}>
+                                        {no_tasks.map(u => (
+                                            <div key={u.id} className="alert-row d-flex align-items-center justify-content-between">
+                                                <div>
+                                                    <div style={{ fontWeight: 500, fontSize: 13 }}>{u.name}</div>
+                                                    <div style={{ fontSize: 11, color: '#888' }}>{u.department}</div>
+                                                </div>
+                                                <a href={`assign-task.html?user=${u.id}`} className="btn btn-sm btn-outline-warning" style={{ fontSize: 11 }}>
+                                                    Assign Task
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Row 3: Department summary table ── */}
+                    <div className="card p-3 mb-4">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h6 className="fw-semibold mb-0">Department Summary</h6>
+                            <a href="departments.html" className="btn btn-sm btn-outline-warning" style={{ fontSize: 12 }}>Manage Departments</a>
+                        </div>
+                        <div className="table-responsive">
+                            <table className="table table-bordered table-hover align-middle mb-0">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Staff</th>
+                                        <th>Total Tasks</th>
+                                        <th>Completed</th>
+                                        <th>Overdue</th>
+                                        <th>Completion Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {departments.length === 0 ? (
+                                        <tr><td colSpan="6" className="text-center text-muted">No departments found.</td></tr>
+                                    ) : departments.map(dept => {
+                                        const rate = dept.completion_rate;
+                                        return (
+                                            <tr key={dept.id}>
+                                                <td style={{ fontWeight: 500 }}>{dept.department}</td>
+                                                <td>{dept.staff_count}</td>
+                                                <td>{dept.total_tasks}</td>
+                                                <td>{dept.completed}</td>
+                                                <td className={dept.overdue > 0 ? 'text-danger fw-bold' : ''}>{dept.overdue}</td>
+                                                <td>
+                                                    {dept.total_tasks === 0 ? (
+                                                        <span className="text-muted" style={{ fontSize: '0.9em' }}>No tasks yet</span>
+                                                    ) : rate === 0 ? (
+                                                        <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>0% — None completed</span>
+                                                    ) : (
+                                                        <div className="d-flex align-items-center gap-2">
+                                                            <span style={{ minWidth: 36, fontSize: 13 }}>{rate}%</span>
+                                                            <div className="progress flex-grow-1" style={{ height: 16 }}>
+                                                                <div className="progress-bar bg-success" style={{ width: `${rate}%` }} aria-valuenow={rate} aria-valuemin="0" aria-valuemax="100" />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* ── Row 4: Recently registered users ── */}
+                    <div className="card p-3">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h6 className="fw-semibold mb-0">Recently Registered Users</h6>
+                            <a href="users.html" className="btn btn-sm btn-outline-warning" style={{ fontSize: 12 }}>View All Users</a>
+                        </div>
+                        <div className="table-responsive">
+                            <table className="table table-bordered table-hover align-middle mb-0">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Department</th>
+                                        <th>Status</th>
+                                        <th>Registered</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recent_users.length === 0 ? (
+                                        <tr><td colSpan="6" className="text-center text-muted">No users found.</td></tr>
+                                    ) : recent_users.map(u => (
+                                        <tr key={u.id}>
+                                            <td style={{ fontWeight: 500 }}>{u.name}</td>
+                                            <td style={{ fontSize: 13, color: '#555' }}>{u.email}</td>
+                                            <td>{roleBadge(u.role)}</td>
+                                            <td style={{ fontSize: 13 }}>{u.department}</td>
+                                            <td>
+                                                <span>
+                                                    <span className={`active-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}`}></span>
+                                                    <span style={{ fontSize: 12 }}>{u.is_active ? 'Active' : 'Inactive'}</span>
+                                                </span>
+                                            </td>
+                                            <td style={{ fontSize: 12, color: '#888' }}>{timeAgo(u.created_at)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </main>
+            </div>
+        </div>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<AdminDashboard />);
+</script>
+</body>
+</html>
