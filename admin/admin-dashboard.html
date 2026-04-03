@@ -93,13 +93,9 @@ function Sidebar() {
 
                 {/* User Management */}
                 <div className="sidebar-section">User Management</div>
-                <NavGroup label="Users" open={showUsers} onToggle={() => setShowUsers(p => !p)}>
-                    <a href="users.html"            className="nav-link">All Users</a>
-                    <a href="add-user.html"         className="nav-link">Add User</a>
-                    <a href="inactive-users.html"   className="nav-link">Inactive Users</a>
-                </NavGroup>
+               
+                <a href="users.html"  className="nav-link">Manage Users</a>
                 <a href="departments.html"  className="nav-link">Departments</a>
-                <a href="supervisors.html"  className="nav-link">Supervisors</a>
 
                 {/* Task Management */}
                 <div className="sidebar-section">Task Management</div>
