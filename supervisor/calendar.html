@@ -5,67 +5,67 @@
     <title>Supervisor Calendar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="../imgs/psi.png">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="css/sidebar.css">
+
     <link rel="stylesheet" href="css/calendar.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/topbar.css">
+    <link rel="stylesheet" href="css/top-shell.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <script>
         (function () {
+            const root = document.documentElement;
+
             const isCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
             if (isCollapsed) {
-                document.documentElement.classList.add("sidebar-collapsed-init");
+                root.classList.add("sidebar-collapsed-init");
             }
+
+            const theme = localStorage.getItem("dashboard-theme") || "light";
+            root.setAttribute("data-theme", theme);
+            root.setAttribute("data-bs-theme", theme);
         })();
     </script>
-
-
 </head>
-<body>
+<body class="bg-body">
+    <div id="sileo-root"></div>
 
-<div class="container-fluid py-4">
-    <div class="row g-4 align-items-start">
-        <aside class="col-12 col-md-4 col-lg-3 col-xl-2 supervisor-sidebar-col">
-            <div id="sidebar-root"></div>
-        </aside>
+    <div class="app-shell">
+        <header class="app-topbar">
+            <div id="topbar-root"></div>
+        </header>
 
-        <main class="col-12 col-md-8 col-lg-9 col-xl-10 px-md-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3>Calendar</h3>
-            </div>
+        <div class="app-body">
+            <aside class="app-sidebar-col">
+                <div id="sidebar-root"></div>
+            </aside>
 
-            <div id="react-modal-root"></div>
-            <div id="calendar-page-root"></div>
-        </main>
-    </div>
-</div>
-
-<script type="text/babel" src="js/sidebar.jsx"></script>
-
-<script type="text/babel">
-function CalendarPage() {
-    return (
-        <div className="card p-3" style={{ borderColor: '#ffb366' }}>
-            <div
-                style={{
-                    height: '300px',
-                    background: '#fff3e0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '8px'
-                }}
-            >
-                <span style={{ color: '#ff7f2a' }}>Calendar / Gantt Chart here</span>
-            </div>
+            <main class="app-main-col">
+                <div id="react-modal-root"></div>
+                <div id="calendar-page-root"></div>
+            </main>
         </div>
-    );
-}
+    </div>
 
-ReactDOM.createRoot(document.getElementById('calendar-page-root')).render(<CalendarPage />);
-</script>
+    <script type="text/babel" src="js/sidebar.jsx"></script>
 
+    <script
+        type="text/babel"
+        data-type="module"
+        data-presets="react"
+        src="js/topbar.jsx"
+    ></script>
+
+    <script type="text/babel" src="js/calendar.jsx"></script>
 </body>
 </html>

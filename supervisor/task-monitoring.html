@@ -5,452 +5,68 @@
     <title>Task Monitoring</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="../imgs/psi.png">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="css/sidebar.css">
+
     <link rel="stylesheet" href="css/task-monitoring.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/topbar.css">
+    <link rel="stylesheet" href="css/top-shell.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
         (function () {
+            const root = document.documentElement;
+
             const isCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
             if (isCollapsed) {
-                document.documentElement.classList.add("sidebar-collapsed-init");
+                root.classList.add("sidebar-collapsed-init");
             }
+
+            const theme = localStorage.getItem("dashboard-theme") || "light";
+            root.setAttribute("data-theme", theme);
+            root.setAttribute("data-bs-theme", theme);
         })();
     </script>
-
 </head>
-<body>
+<body class="bg-body">
+    <div id="sileo-root"></div>
 
+    <div class="app-shell">
+        <header class="app-topbar">
+            <div id="topbar-root"></div>
+        </header>
 
-<div class="container-fluid py-4">
-    <div class="row g-4 align-items-start">
-        <aside class="col-12 col-md-4 col-lg-3 col-xl-2">
-            <div id="sidebar-root"></div>
-        </aside>
+        <div class="app-body">
+            <aside class="app-sidebar-col">
+                <div id="sidebar-root"></div>
+            </aside>
 
-        <main class="col-md-10 ms-sm-auto px-4">
-
-
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3>Task Monitoring</h3>
-    </div>
-  <div id="react-modal-root"></div>
-  <div id="task-monitoring-page-root"></div>
-
- 
-
-
-
-</div>
-
-    </main>
-  </div>
-
-
-<script type="text/babel" src="js/sidebar.jsx"></script>
-  <script type="text/babel">
-/* ---------------- Task Monitoring ---------------- */
-function TaskMonitoring() {
-    const [tasks, setTasks] = React.useState([]);
-    const [staffData, setStaffData] = React.useState([]);
-    const [search, setSearch] = React.useState("");
-
-
-        const statusColorMap = {
-        'Ongoing': '#ffe066',   // sunny golden yellow
-        'Completed': '#b6e388', // vibrant fresh green
-        'Overdue': '#ffb3b3',   // lively red
-        'Other': '#ffe082',     // soft buttery yellow
-        'Extra': '#fff8e1'      // pale warm near-white
-
-
-    };
-
-    /* ---------- Fetch Department Tasks ---------- */
-    const fetchTasks = async () => {
-        try {
-            const res = await fetch("http://localhost/taskmanagement/supervisor/php/get_department_tasks.php");
-            const data = await res.json();
-            setTasks(data);
-        } catch (err) {
-            console.error("Failed to load tasks", err);
-        }
-    };
-
-    /* ---------- Fetch Staff Performance ---------- */
- const fetchStaffPerformance = async () => {
-    try {
-        const res = await fetch("http://localhost/taskmanagement/supervisor/php/get_staff_performance.php");
-        const data = await res.json();
-        setStaffData(data);
-    } catch (err) {
-        console.error("Failed to load staff performance", err);
-    }
-};
-
-React.useEffect(() => {
-    fetchTasks();
-    fetchStaffPerformance();
-}, []);
-
-// Pie Chart Effect
-React.useEffect(() => {
-    if (!tasks.length) return;
-
-    // Count status occurrences
-    const statusCounts = {};
-    tasks.forEach(t => {
-        const status = t.status?.trim();
-        if (!status) return;
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
-    });
-
-
-
-    const labels = Object.keys(statusCounts);
-    const data = Object.values(statusCounts);
-
-    // Map colors safely
-    const backgroundColors = labels.map(label => {
-        const normalized = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
-        return statusColorMap[normalized] || '#e0e0e0'; // fallback
-    });
-
-    const ctx = document.getElementById('taskStatusPieChart');
-
-    if (ctx) {
-        // Destroy previous chart if exists
-        if (window.taskStatusPieChartInstance) {
-            window.taskStatusPieChartInstance.destroy();
-        }
-
-        window.taskStatusPieChartInstance = new window.Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: backgroundColors,
-                    borderColor: '#fffaf3', // matches your theme
-                    borderWidth: 3,
-                    hoverOffset: 6
-                }],
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#a67c52', // softer text color
-                            font: { size: 13 }
-                        }
-                    }
-                },
-                layout: {
-                    padding: 10
-                }
-            }
-        });
-    }
-}, [tasks]);
-
-    // Gantt Chart Effect
-    React.useEffect(() => {
-        if (!tasks.length) return;
-        const ctx = document.getElementById('ganttChartCanvas');
-        if (!ctx) return;
-        // Destroy previous chart if exists
-        if (window.ganttChartInstance) {
-            window.ganttChartInstance.destroy();
-        }
-        // Prepare data for Gantt chart
-        // Sort tasks by start date
-        const sortedTasks = [...tasks].sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-        const labels = sortedTasks.map(t => t.title);
-        const startDates = sortedTasks.map(t => new Date(t.start_date));
-        const endDates = sortedTasks.map(t => new Date(t.deadline));
-        // Calculate durations in days
-        const minDate = Math.min(...startDates.map(d => d.getTime()));
-        const maxDate = Math.max(...endDates.map(d => d.getTime()));
-        const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-        // Each bar starts at (start - minDate), length = (end - start)
-        const data = sortedTasks.map(t => {
-            const start = new Date(t.start_date).getTime();
-            const end = new Date(t.deadline).getTime();
-            return {
-                x: (start - minDate) / (1000 * 60 * 60 * 24),
-                x2: (end - minDate) / (1000 * 60 * 60 * 24),
-                y: t.title,
-                status: t.status
-            };
-        });
-        // Color by status
-        const statusColorMap = {
-            'Ongoing': '#ffe066',
-            'Completed': '#b6e388',
-            'Overdue': '#ffb3b3',
-            'Other': '#ffe082',
-            'Extra': '#fff8e1'
-        };
-        // Chart.js v3+ bar chart with custom barStart/barEnd plugin
-        window.ganttChartInstance = new window.Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Task Duration',
-                    data: data.map(d => ({ x: d.x, x2: d.x2, y: d.y, status: d.status })),
-                    backgroundColor: data.map(d => statusColorMap[d.status] || '#e0e0e0'),
-                    borderRadius: 6,
-                    borderSkipped: false,
-                    barPercentage: 0.8,
-                    categoryPercentage: 0.9,
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const d = context.raw;
-                                const start = new Date(minDate + d.x * 24 * 60 * 60 * 1000);
-                                const end = new Date(minDate + d.x2 * 24 * 60 * 60 * 1000);
-                                return `${d.y}: ${start.toLocaleDateString()} - ${end.toLocaleDateString()} (${d.status})`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        min: 0,
-                        max: totalDays,
-                        title: { display: true, text: 'Timeline (days)' },
-                        ticks: {
-                            callback: function(value) {
-                                const date = new Date(minDate + value * 24 * 60 * 60 * 1000);
-                                return date.toLocaleDateString();
-                            },
-                            autoSkip: true,
-                            maxTicksLimit: 10
-                        },
-                        grid: { color: '#ffe7b3' }
-                    },
-                    y: {
-                        title: { display: false },
-                        grid: { color: '#ffe7b3' }
-                    }
-                }
-            },
-            plugins: [{
-                // Custom plugin to draw bars from x to x2
-                id: 'ganttBar',
-                beforeDatasetsDraw(chart) {
-                    const { ctx, data, chartArea, scales } = chart;
-                    if (!data.datasets.length) return;
-                    ctx.save();
-                    data.datasets[0].data.forEach((d, i) => {
-                        const y = scales.y.getPixelForValue(d.y);
-                        const xStart = scales.x.getPixelForValue(d.x);
-                        const xEnd = scales.x.getPixelForValue(d.x2);
-                        ctx.beginPath();
-                        ctx.fillStyle = data.datasets[0].backgroundColor[i];
-                        ctx.strokeStyle = '#fff';
-                        ctx.lineWidth = 2;
-                        ctx.roundRect(xStart, y - 12, xEnd - xStart, 24, 6);
-                        ctx.fill();
-                        ctx.stroke();
-                    });
-                    ctx.restore();
-                }
-            }]
-        });
-    }, [tasks]);
-
-    /* ---------- Filter Tasks for Search ---------- */
-    const filteredTasks = tasks.filter(t => 
-        t.title.toLowerCase().includes(search.toLowerCase()) ||
-        t.assigned_name.toLowerCase().includes(search.toLowerCase())
-    );
-
-    /* ---------- Calculate Summary Card Counts ---------- */
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.status === "Completed").length;
-    const ongoingTasks = tasks.filter(t => t.status !== "Completed").length;
-    const overdueTasks = tasks.filter(t => t.is_overdue).length;
-
-    /* ---------- Helper: Task Row ---------- */
-  const renderTaskRow = (task) => (
-    <tr key={task.id}>
-      <td>{task.title}</td>
-      <td>{task.assigned_name}</td>
-      <td>{formatDate(task.start_date)}</td>
-       <td>{formatDate(task.deadline)}</td>
-      <td
-        style={{
-          backgroundColor: statusColorMap[task.status] || '#ffffff',
-          color: '#000',
-          textAlign: 'center',
-          padding: '4px 8px',
-          borderRadius: '4px'
-        }}
-      >
-        {task.status}
-      </td>
-      <td>{task.priority}</td>
-    </tr>
-  );
-
-
-    /* ---------- Render ---------- */
-    return (
-        <div className="container-fluid py-4">
-            
-            {/* ---------------- Summary Cards ---------------- */}
-            <div className="row mb-4">
-                <div className="col-md-3">
-                    <div className="card summary-card text-center p-3">
-                        <h6>Total Tasks</h6>
-                        <h3>{totalTasks}</h3>
-                    </div>
-                </div>
-                <div className="col-md-3">
-                    <div className="card summary-card text-center p-3">
-                        <h6>Ongoing</h6>
-                        <h3>{ongoingTasks}</h3>
-                    </div>
-                </div>
-                <div className="col-md-3">
-                    <div className="card summary-card text-center p-3">
-                        <h6>Completed</h6>
-                        <h3>{completedTasks}</h3>
-                    </div>
-                </div>
-                <div className="col-md-3">
-                    <div className="card summary-card text-center p-3">
-                        <h6>Overdue</h6>
-                        <h3>{overdueTasks}</h3>
-                    </div>
-                </div>
-            </div>
-
-            {/* ---------------- Task Status Pie Chart & Gantt Chart Row ---------------- */}
-            <div className="row mb-4 justify-content-center align-items-start">
-                <div className="col-md-5">
-                    <div className="card p-3 mb-4" style={{ maxWidth: '420px', margin: '0 auto' }}>
-                        <h5>Task Status Distribution</h5>
-                        <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                            <canvas id="taskStatusPieChart" width="200" height="200"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-md-7">
-                    <div className="card p-3 mb-4" style={{ minHeight: '260px', overflowX: 'auto' }}>
-                        <h5>Gantt Chart</h5>
-                        <canvas id="ganttChartCanvas" height="380"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            {/* ---------------- Department Tasks Table ---------------- */}
-            <div className="card p-3 mb-4">
-                <div className="d-flex justify-content-between mb-2">
-                    <h5>All Department Tasks</h5>
-                    <input 
-                        type="text" 
-                        className="form-control w-25" 
-                        placeholder="Search..." 
-                        value={search} 
-                        onChange={e => setSearch(e.target.value)}
-                    />
-                </div>
-
-                <table className="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Task</th>
-                            <th>Assigned To</th>
-                            <th>Start</th>
-                            <th>Due</th>
-                            <th>Status</th>
-                            <th>Priority</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredTasks.length === 0 ? (
-                            <tr>
-                                <td colSpan="6">No tasks found</td>
-                            </tr>
-                        ) : (
-                            filteredTasks.map(renderTaskRow)
-                        )}
-                    </tbody>
-
-                    
-                </table>
-            </div>
-
-            {/* ---------------- Staff Performance Table ---------------- */}
-            <div className="card p-3 mb-4">
-                <h5>Staff Performance</h5>
-                <table className="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Staff Name</th>
-                            <th>Total Tasks</th>
-                            <th>Completed</th>
-                            <th>Ongoing</th>
-                            <th>Overdue</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {staffData.length === 0 ? (
-                            <tr>
-                                <td colSpan="5">No staff found</td>
-                            </tr>
-                        ) : (
-                            staffData.map((s, idx) => (
-                                <tr key={idx}>
-                                    <td>{s.name}</td>
-                                    <td>{s.total}</td>
-                                    <td>{s.completed}</td>
-                                    <td>{s.ongoing}</td>
-                                    <td>{s.overdue}</td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <main class="app-main-col">
+                <div id="react-modal-root"></div>
+                <div id="task-monitoring-page-root"></div>
+            </main>
         </div>
-    );
-}
+    </div>
 
+    <script type="text/babel" src="js/sidebar.jsx"></script>
 
+    <script
+        type="text/babel"
+        data-type="module"
+        data-presets="react"
+        src="js/topbar.jsx"
+    ></script>
 
-
-function formatDate(dateStr) {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
-}
-
-/* ---------------- Render the Dashboard ---------------- */
-ReactDOM.createRoot(document.getElementById('supervisor-dashboard-root')).render(<SupervisorDashboard />);
-</script>
-
+    <script type="text/babel" src="js/task-monitoring.jsx"></script>
 </body>
 </html>
