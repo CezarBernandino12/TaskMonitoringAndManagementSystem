@@ -105,8 +105,8 @@ function App() {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState("");
 
-    const fetchTasks = async () => {
-        setLoading(true);
+    const fetchTasks = async ({ showLoader = true } = {}) => {
+        if (showLoader) setLoading(true);
         setError("");
 
         try {
@@ -132,13 +132,82 @@ function App() {
             setError(err.message || "Unable to load tasks.");
             setTasks([]);
         } finally {
-            setLoading(false);
+            if (showLoader) setLoading(false);
         }
     };
 
     React.useEffect(() => {
         fetchTasks();
     }, []);
+
+    const updateTaskStatusOnServer = async (taskId, status) => {
+        const body = new URLSearchParams();
+        body.append("task_id", taskId);
+        body.append("status", status);
+
+        const response = await fetch("php/update_task_status.php", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+            },
+            body: body.toString()
+        });
+
+        const resultText = (await response.text()).trim();
+
+        if (!response.ok || !/successfully/i.test(resultText)) {
+            throw new Error(resultText || `Failed to update task ${taskId}.`);
+        }
+
+        return resultText;
+    };
+
+    const handleBulkUpdateStatus = async (taskIds, nextStatus) => {
+        const previousTasks = tasks;
+        const scrollY = window.scrollY;
+        setError("");
+
+        setTasks(prev =>
+            prev.map(task =>
+                taskIds.includes(task.id)
+                    ? normalizeTask({ ...task, status: nextStatus })
+                    : task
+            )
+        );
+
+        try {
+            await Promise.all(
+                taskIds.map(taskId => updateTaskStatusOnServer(taskId, nextStatus))
+            );
+
+            await fetchTasks({ showLoader: false });
+
+            window.requestAnimationFrame(() => {
+                window.scrollTo({
+                    top: scrollY,
+                    behavior: "auto"
+                });
+            });
+        } catch (err) {
+            console.error("Bulk status update failed:", err);
+            setTasks(previousTasks);
+            setError(err.message || "Unable to save status update.");
+        }
+    };
+
+    const handleBulkUpdatePriority = (taskIds, nextPriority) => {
+        setTasks(prev =>
+            prev.map(task =>
+                taskIds.includes(task.id)
+                    ? normalizeTask({ ...task, priority: nextPriority })
+                    : task
+            )
+        );
+    };
+
+    const handleBulkDelete = (taskIds) => {
+        setTasks(prev => prev.filter(task => !taskIds.includes(task.id)));
+    };
 
     return (
         <>
@@ -148,6 +217,9 @@ function App() {
                 loading={loading}
                 error={error}
                 onRetry={fetchTasks}
+                onBulkUpdateStatus={handleBulkUpdateStatus}
+                onBulkUpdatePriority={handleBulkUpdatePriority}
+                onBulkDelete={handleBulkDelete}
             />
         </>
     );
@@ -277,11 +349,23 @@ function DueSoon({ tasks }) {
     );
 }
 
-function TaskTable({ tasks, loading, error, onRetry }) {
+function TaskTable({
+    tasks,
+    loading,
+    error,
+    onRetry,
+    onBulkUpdateStatus,
+    onBulkUpdatePriority,
+    onBulkDelete
+}) {
+    const ITEMS_PER_PAGE = 10;
+
+    const [selectedTaskIds, setSelectedTaskIds] = React.useState([]);
     const [isFilterOpen, setIsFilterOpen] = React.useState(false);
     const [statusFilter, setStatusFilter] = React.useState("All");
+    const [currentPage, setCurrentPage] = React.useState(1);
+
     const filterRef = React.useRef(null);
-    const [selectedTaskIds, setSelectedTaskIds] = React.useState([]);
     const checkAllRef = React.useRef(null);
 
     const filterOptions = ["All", "Ongoing", "Completed", "Overdue", "Other"];
@@ -302,7 +386,21 @@ function TaskTable({ tasks, loading, error, onRetry }) {
         return task.normalizedStatus === normalizeText(statusFilter);
     });
 
-    const visibleTaskIds = filteredTasks.map(task => task.id);
+    const totalPages = Math.max(1, Math.ceil(filteredTasks.length / ITEMS_PER_PAGE));
+    const pageStartIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const currentPageTasks = filteredTasks.slice(pageStartIndex, pageStartIndex + ITEMS_PER_PAGE);
+
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [statusFilter]);
+
+    React.useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    const visibleTaskIds = currentPageTasks.map(task => task.id);
     const selectedVisibleCount = visibleTaskIds.filter(id => selectedTaskIds.includes(id)).length;
 
     const allVisibleSelected =
@@ -340,6 +438,36 @@ function TaskTable({ tasks, loading, error, onRetry }) {
             return Array.from(merged);
         });
     };
+
+    const clearSelection = () => {
+        setSelectedTaskIds([]);
+    };
+
+    const getPaginationItems = () => {
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, index) => index + 1);
+        }
+
+        const items = [1];
+        const start = Math.max(2, currentPage - 1);
+        const end = Math.min(totalPages - 1, currentPage + 1);
+
+        if (start > 2) items.push("left-ellipsis");
+
+        for (let page = start; page <= end; page += 1) {
+            items.push(page);
+        }
+
+        if (end < totalPages - 1) items.push("right-ellipsis");
+
+        items.push(totalPages);
+        return items;
+    };
+
+    const paginationItems = getPaginationItems();
+    const pageFrom = filteredTasks.length === 0 ? 0 : pageStartIndex + 1;
+    const pageTo = Math.min(pageStartIndex + ITEMS_PER_PAGE, filteredTasks.length);
+
     return (
         <>
             <section className="task-board">
@@ -391,14 +519,17 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                         className="task-board-check-all"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <label className="task-checkbox-wrap" onClick={(event) => event.stopPropagation()}>
+                        <label
+                            className="task-checkbox-wrap"
+                            onClick={(event) => event.stopPropagation()}
+                        >
                             <input
                                 ref={checkAllRef}
                                 type="checkbox"
                                 className="task-checkbox-input"
                                 checked={allVisibleSelected}
                                 onChange={toggleSelectAllVisible}
-                                aria-label={`Select all ${statusFilter === "All" ? "" : statusFilter.toLowerCase() + " "}tasks`}
+                                aria-label={`Select all ${statusFilter === "All" ? "" : statusFilter.toLowerCase() + " "}tasks on this page`}
                             />
                             <span className="task-checkbox-ui"></span>
                         </label>
@@ -410,9 +541,9 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                         <span className="task-board-filter-state">Showing: {statusFilter}</span>
                         <span className="task-board-count">{filteredTasks.length}</span>
 
-                        {selectedVisibleCount > 0 && (
+                        {selectedTaskIds.length > 0 && (
                             <span className="task-board-selected-count">
-                                {selectedVisibleCount} selected
+                                {selectedTaskIds.length} selected
                             </span>
                         )}
                     </div>
@@ -466,7 +597,11 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                                     <td colSpan="6" className="task-board-empty">
                                         <div className="task-board-feedback">
                                             <div className="task-board-error">{error}</div>
-                                            <button type="button" className="task-action-btn" onClick={onRetry}>
+                                            <button
+                                                type="button"
+                                                className="task-action-btn"
+                                                onClick={() => onRetry()}
+                                            >
                                                 Retry
                                             </button>
                                         </div>
@@ -479,58 +614,122 @@ function TaskTable({ tasks, loading, error, onRetry }) {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredTasks.map(task => (
+                                currentPageTasks.map(task => (
                                     <tr
                                         key={task.id}
                                         className={`task-board-row ${selectedTaskIds.includes(task.id) ? "is-selected" : ""}`}
                                         onClick={() => toggleTaskSelection(task.id)}
                                     >
-                                    <td
-                                        className="task-board-checkbox-col"
-                                        onClick={(event) => event.stopPropagation()}
-                                    >
-                                        <label className="task-checkbox-wrap" onClick={(event) => event.stopPropagation()}>
-                                            <input
-                                                type="checkbox"
-                                                className="task-checkbox-input"
-                                                checked={selectedTaskIds.includes(task.id)}
-                                                onChange={() => toggleTaskSelection(task.id)}
-                                                aria-label={`Select ${task.title}`}
-                                            />
-                                            <span className="task-checkbox-ui"></span>
-                                        </label>
-                                    </td>
+                                        <td
+                                            className="task-board-checkbox-col"
+                                            onClick={(event) => event.stopPropagation()}
+                                        >
+                                            <label
+                                                className="task-checkbox-wrap"
+                                                onClick={(event) => event.stopPropagation()}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    className="task-checkbox-input"
+                                                    checked={selectedTaskIds.includes(task.id)}
+                                                    onChange={() => toggleTaskSelection(task.id)}
+                                                    aria-label={`Select ${task.title}`}
+                                                />
+                                                <span className="task-checkbox-ui"></span>
+                                            </label>
+                                        </td>
 
-                                    <td>
-                                        <div className="task-board-name-cell">
-                                            <div className="task-board-name-copy">
-                                                <div className="task-board-task-title">{task.title}</div>
+                                        <td>
+                                            <div className="task-board-name-cell">
+                                                <div className="task-board-name-copy">
+                                                    <div className="task-board-task-title">{task.title}</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
+                                        </td>
 
-                                    <td className="task-board-date">{formatDate(task.start_date)}</td>
-                                    <td className="task-board-date">{formatDate(task.deadline)}</td>
+                                        <td className="task-board-date">{formatDate(task.start_date)}</td>
+                                        <td className="task-board-date">{formatDate(task.deadline)}</td>
 
-                                    <td>
-                                        <span className={`task-pill task-status-pill ${getStatusTone(task.normalizedStatus)}`}>
-                                            {task.status}
-                                        </span>
-                                    </td>
+                                        <td>
+                                            <span className={`task-pill task-status-pill ${getStatusTone(task.normalizedStatus)}`}>
+                                                {task.status}
+                                            </span>
+                                        </td>
 
-                                    <td>
-                                        <span className={`task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
-                                            <i className="bi bi-flag-fill"></i>
-                                            {getPriorityLabel(task.normalizedPriority)}
-                                        </span>
-                                    </td>
-                                </tr>
+                                        <td>
+                                            <span className={`task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
+                                                <i className="bi bi-flag-fill"></i>
+                                                {getPriorityLabel(task.normalizedPriority)}
+                                            </span>
+                                        </td>
+                                    </tr>
                                 ))
                             )}
                         </tbody>
                     </table>
                 </div>
+
+                {!loading && !error && filteredTasks.length > 0 && (
+                    <div className="task-board-pagination">
+
+                        <div className="task-board-pagination-controls">
+                            <button
+                                type="button"
+                                className="task-page-btn task-page-nav"
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                aria-label="Previous page"
+                            >
+                                <i className="bi bi-chevron-left"></i>
+                            </button>
+
+                            {paginationItems.map(item =>
+                                typeof item === "number" ? (
+                                    <button
+                                        key={item}
+                                        type="button"
+                                        className={`task-page-btn ${currentPage === item ? "is-active" : ""}`}
+                                        onClick={() => setCurrentPage(item)}
+                                        aria-current={currentPage === item ? "page" : undefined}
+                                    >
+                                        {item}
+                                    </button>
+                                ) : (
+                                    <span key={item} className="task-page-ellipsis">…</span>
+                                )
+                            )}
+
+                            <button
+                                type="button"
+                                className="task-page-btn task-page-nav"
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                                aria-label="Next page"
+                            >
+                                <i className="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                )}
             </section>
+
+            {selectedTaskIds.length > 0 && (
+                <BulkActionBar
+                    selectedCount={selectedTaskIds.length}
+                    selectedTaskIds={selectedTaskIds}
+                    onUpdateStatus={(ids, status) => {
+                        onBulkUpdateStatus(ids, status);
+                    }}
+                    onUpdatePriority={(ids, priority) => {
+                        onBulkUpdatePriority(ids, priority);
+                    }}
+                    onDelete={(ids) => {
+                        onBulkDelete(ids);
+                        clearSelection();
+                    }}
+                    onClearSelection={clearSelection}
+                />
+            )}
         </>
     );
 }
@@ -545,5 +744,141 @@ function getPriorityLabel(priority = "") {
     return "Normal Priority";
 }
 
+function BulkActionBar({
+    selectedCount,
+    selectedTaskIds,
+    onUpdateStatus,
+    onUpdatePriority,
+    onDelete,
+    onClearSelection
+}) {
+    const [openMenu, setOpenMenu] = React.useState("");
+    const barRef = React.useRef(null);
+
+    React.useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (barRef.current && !barRef.current.contains(event.target)) {
+                setOpenMenu("");
+            }
+        };
+
+        document.addEventListener("mousedown", handleOutsideClick);
+        return () => document.removeEventListener("mousedown", handleOutsideClick);
+    }, []);
+
+    const statusOptions = ["Ongoing", "Completed"];
+    const priorityOptions = ["High", "Medium", "Low"];
+
+    return (
+        <div className="bulk-action-bar" ref={barRef}>
+            <div className="bulk-action-main">
+                <div className="bulk-action-count">{selectedCount}</div>
+
+                <div className="bulk-action-copy">
+                    <div className="bulk-action-title">
+                        {selectedCount === 1 ? "Task selected" : "Tasks selected"}
+                    </div>
+                    <div className="bulk-action-subtitle">Manage selected items</div>
+                </div>
+            </div>
+
+            <div className="bulk-action-actions">
+                <div className="bulk-action-group">
+                    <button
+                        type="button"
+                        className={`bulk-action-tool ${openMenu === "status" ? "is-open" : ""}`}
+                        onClick={() => setOpenMenu(prev => prev === "status" ? "" : "status")}
+                    >
+                        <span className="bulk-action-tool-icon">
+                            <i className="bi bi-check2-square"></i>
+                        </span>
+                        <span className="bulk-action-tool-label-row">
+                            <span className="bulk-action-tool-label">Update status</span>
+                            <i className={`bi ${openMenu === "status" ? "bi-chevron-up" : "bi-chevron-down"} bulk-action-tool-caret`}></i>
+                        </span>
+                    </button>
+
+                    {openMenu === "status" && (
+                        <div className="bulk-action-menu">
+                            {statusOptions.map(option => (
+                                <button
+                                    key={option}
+                                    type="button"
+                                    className="bulk-action-menu-item"
+                                    onClick={() => {
+                                        onUpdateStatus(selectedTaskIds, option);
+                                        setOpenMenu("");
+                                    }}
+                                >
+                                    {option}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="bulk-action-group">
+                    <button
+                        type="button"
+                        className={`bulk-action-tool ${openMenu === "priority" ? "is-open" : ""}`}
+                        onClick={() => setOpenMenu(prev => prev === "priority" ? "" : "priority")}
+                    >
+                        <span className="bulk-action-tool-icon">
+                            <i className="bi bi-flag"></i>
+                        </span>
+                        <span className="bulk-action-tool-label-row">
+                            <span className="bulk-action-tool-label">Update priority</span>
+                            <i className={`bi ${openMenu === "priority" ? "bi-chevron-up" : "bi-chevron-down"} bulk-action-tool-caret`}></i>
+                        </span>
+                    </button>
+
+                    {openMenu === "priority" && (
+                        <div className="bulk-action-menu">
+                            {priorityOptions.map(option => (
+                                <button
+                                    key={option}
+                                    type="button"
+                                    className="bulk-action-menu-item"
+                                    onClick={() => {
+                                        onUpdatePriority(selectedTaskIds, option);
+                                        setOpenMenu("");
+                                    }}
+                                >
+                                    {option}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <button
+                    type="button"
+                    className="bulk-action-tool is-danger"
+                    onClick={() => {
+                        onDelete(selectedTaskIds);
+                        onClearSelection();
+                    }}
+                >
+                    <span className="bulk-action-tool-icon">
+                        <i className="bi bi-trash3"></i>
+                    </span>
+                    <span className="bulk-action-tool-label-row">
+                        <span className="bulk-action-tool-label">Delete</span>
+                    </span>
+                </button>
+            </div>
+
+            <button
+                type="button"
+                className="bulk-action-close"
+                onClick={onClearSelection}
+                aria-label="Close bulk actions"
+                title="Close"
+            >
+                <i className="bi bi-x-lg"></i>
+            </button>
+        </div>
+    );
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
