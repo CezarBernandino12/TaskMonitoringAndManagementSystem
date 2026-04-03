@@ -207,6 +207,17 @@ function SupervisorSidebar() {
         "reports.html"
     ];
 
+        // Reports submenu pages
+        const reportsPages = [
+            "daily-reports.html",
+            "weekly-reports.html",
+            "monthly-reports.html"
+        ];
+
+        const isReportsActive = (fileName) => currentPage === fileName.toLowerCase();
+        const isAnyReportActive = reportsPages.some(isReportsActive);
+        const [reportsOpen, setReportsOpen] = React.useState(isAnyReportActive);
+
     const isActivePage = (fileName) => currentPage === fileName.toLowerCase();
     const isManagementActive = managementPages.some(isActivePage);
 
@@ -242,6 +253,9 @@ function SupervisorSidebar() {
         if (isManagementActive) {
             setManagementOpen(true);
         }
+            if (isAnyReportActive) {
+                setReportsOpen(true);
+            }
     }, [isManagementActive]);
 
     React.useEffect(() => {
@@ -370,6 +384,10 @@ function SupervisorSidebar() {
         setManagementOpen((prev) => !prev);
     };
 
+        const toggleReports = () => {
+            setReportsOpen((prev) => !prev);
+        };
+
     const openLogoutModal = (e) => {
         e.preventDefault();
         setShowLogoutModal(true);
@@ -478,6 +496,8 @@ function SupervisorSidebar() {
                         </div>
                     </div>
 
+                        {/* Reports Section - removed divider above */}
+                  
                     <div className="sidebar-divider"></div>
                     <div className="sidebar-section-label">MAIN</div>
 
@@ -505,17 +525,11 @@ function SupervisorSidebar() {
                         onNavigate={handleNavigate}
                     />
 
-                    <SidebarLink
-                        href="gantt-chart.html"
-                        icon="bi-bar-chart-line"
-                        label="Gantt Chart"
-                        isActive={isActivePage("gantt-chart.html")}
-                        onNavigate={handleNavigate}
-                    />
+
 
                     <div className="sidebar-divider mt-3"></div>
 
-                    <div className="sidebar-management-wrap">
+                    <div className="sidebar-management-wrap" style={{border: 'none', boxShadow: 'none'}}> 
                         <button
                             type="button"
                             className={`sidebar-section-label-toggle management-toggle ${managementOpen ? "open" : ""} ${isManagementActive ? "active" : ""} ${!isMobile && collapsed ? "collapsed-trigger" : ""}`}
@@ -558,16 +572,75 @@ function SupervisorSidebar() {
                                 onNavigate={handleNavigate}
                             />
 
-                            <SidebarLink
-                                href="reports.html"
-                                icon="bi-file-earmark-text"
-                                label="Reports"
-                                isActive={isActivePage("reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
+                           
                         </div>
                     </div>
+
+                    {/* Reports Section placed here, no divider above */}
+                    <div className="sidebar-management-wrap">
+                            <button
+                                type="button"
+                                className={`sidebar-section-label-toggle reports-toggle ${reportsOpen ? "open" : ""} ${isAnyReportActive ? "active" : ""} ${!isMobile && collapsed ? "collapsed-trigger" : ""}`}
+                                onClick={toggleReports}
+                                aria-expanded={reportsOpen}
+                                aria-controls="reportsSubmenu"
+                            >
+                                {!isMobile && collapsed && (
+                                    <span className="reports-toggle-icon">
+                                        <i className="bi bi-file-earmark-bar-graph"></i>
+                                    </span>
+                                )}
+                                <span className="sidebar-section-label-text">REPORTS</span>
+                                <span className="sidebar-section-label-chevron">
+                                    <i className="bi bi-chevron-down"></i>
+                                </span>
+                            </button>
+                            <div
+                                id="reportsSubmenu"
+                                className={`sidebar-submenu ${reportsOpen ? "open" : ""} ${!isMobile && collapsed ? "collapsed-popout" : ""}`}
+                            >
+                                <SidebarLink
+                                    href="daily-reports.html"
+                                    icon="bi-calendar-day"
+                                    label="Daily"
+                                    isActive={isActivePage("daily-reports.html")}
+                                    extraClass="sidebar-sublink"
+                                    onNavigate={handleNavigate}
+                                />
+                                <SidebarLink
+                                    href="weekly-reports.html"
+                                    icon="bi-calendar-week"
+                                    label="Weekly"
+                                    isActive={isActivePage("weekly-reports.html")}
+                                    extraClass="sidebar-sublink"
+                                    onNavigate={handleNavigate}
+                                />
+                                <SidebarLink
+                                    href="monthly-reports.html"
+                                    icon="bi-calendar-month"
+                                    label="Monthly"
+                                    isActive={isActivePage("monthly-reports.html")}
+                                    extraClass="sidebar-sublink"
+                                    onNavigate={handleNavigate}
+                                />
+                                <SidebarLink
+                                    href="quarterly-reports.html"
+                                    icon="bi-calendar2-range"
+                                    label="Quarterly"
+                                    isActive={isActivePage("quarterly-reports.html")}
+                                    extraClass="sidebar-sublink"
+                                    onNavigate={handleNavigate}
+                                />
+                                <SidebarLink
+                                    href="annual-reports.html"
+                                    icon="bi-calendar2-check"
+                                    label="Annual"
+                                    isActive={isActivePage("annual-reports.html")}
+                                    extraClass="sidebar-sublink"
+                                    onNavigate={handleNavigate}
+                                />
+                            </div>
+                        </div>
 
                     <div className="sidebar-divider mt-3"></div>
                     <div className="sidebar-section-label">SETTINGS</div>
@@ -590,6 +663,7 @@ function SupervisorSidebar() {
                             onClick={openLogoutModal}
                         />
                     </div>
+
                 </div>
             </nav>
 
