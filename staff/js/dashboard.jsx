@@ -26,7 +26,7 @@ function App() {
     return (
         <>
             <TaskSummary tasks={tasks} />
-            <TaskTable tasks={tasks} refreshTasks={fetchTasks} />
+            <TaskTable tasks={tasks} />
         </>
     );
 }
@@ -84,109 +84,10 @@ function TaskTable({ tasks, refreshTasks }) {
                     )}
                 </tbody>
             </table>
-
-            {showDetailModal && selectedTask && (
-                <TaskDetailModal
-                    show={showDetailModal}
-                    task={selectedTask}
-                    onClose={() => setShowDetailModal(false)}
-                    refreshTasks={refreshTasks}
-                />
-            )}
         </>
     );
 }
 
-function TaskDetailModal({ show, task, onClose, refreshTasks }) {
-    const [status, setStatus] = React.useState(task.status);
-
-    React.useEffect(() => {
-        setStatus(task.status);
-    }, [task]);
-
-    if (!show || !task) return null;
-
-    const handleStatusChange = (e) => {
-        setStatus(e.target.value);
-    };
-
-    const handleSave = async () => {
-        try {
-            const formData = new FormData();
-            formData.append("task_id", task.id);
-            formData.append("status", status);
-
-            const res = await fetch("php/update_task_status.php", {
-                method: "POST",
-                body: formData
-            });
-
-            const result = await res.text();
-            alert(result);
-
-            onClose();
-            refreshTasks();
-        } catch (error) {
-            alert("Failed to update task");
-            console.error(error);
-        }
-    };
-
-    const handleDelete = async () => {
-        if (!confirm("Are you sure you want to delete this task?")) return;
-
-        try {
-            const formData = new FormData();
-            formData.append("task_id", task.id);
-
-            const res = await fetch("php/delete_task.php", {
-                method: "POST",
-                body: formData
-            });
-
-            const result = await res.text();
-            alert(result);
-
-            onClose();
-            refreshTasks();
-        } catch (error) {
-            alert("Failed to delete task");
-            console.error(error);
-        }
-    };
-
-    return (
-        <div className="modal fade show" style={{ display: 'block', background: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-            <div className="modal-dialog">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title">Task Details</h5>
-                        <button type="button" className="btn-close" onClick={onClose}></button>
-                    </div>
-                    <div className="modal-body">
-                        <div className="mb-2"><strong>Title:</strong> {task.title}</div>
-                        <div className="mb-2"><strong>Description:</strong> {task.description || "-"}</div>
-                        <div className="mb-2"><strong>Start Date:</strong> {task.start_date}</div>
-                        <div className="mb-2"><strong>Deadline:</strong> {task.deadline}</div>
-                        <div className="mb-2"><strong>Priority:</strong> {task.priority}</div>
-                        <div className="mb-2">
-                            <strong>Status:</strong>
-                            <select className="form-select mt-1" value={status} onChange={handleStatusChange}>
-                                <option value="Ongoing">Ongoing</option>
-                                <option value="Completed">Completed</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div className="modal-footer">
-                        <button className="btn btn-danger" onClick={handleDelete}>Delete</button>
-                        <button className="btn btn-primary" onClick={handleSave}>Save</button>
-                        <button className="btn btn-secondary" onClick={onClose}>Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 function TaskSummary({ tasks }) {
     const total = tasks.length;
