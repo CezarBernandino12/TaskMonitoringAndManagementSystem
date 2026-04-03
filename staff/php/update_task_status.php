@@ -14,7 +14,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        // 🔍 Get task deadline first
         $stmt = $conn->prepare("SELECT deadline FROM tasks WHERE id = :id");
         $stmt->bindParam(':id', $task_id, PDO::PARAM_INT);
         $stmt->execute();
@@ -28,28 +27,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $now = new DateTime();
         $deadline = new DateTime($task['deadline']);
 
-        // 🔥 Force overdue if past deadline date and not completed
         $nowDate = $now->format('Y-m-d');
         $deadlineDate = $deadline->format('Y-m-d');
+
         if ($deadlineDate < $nowDate && $status !== 'Completed') {
             $status = 'Overdue';
         }
 
-        // ✅ Handle update
         if ($status === 'Completed') {
             $completed_at = $now->format('Y-m-d H:i:s');
 
             $stmt = $conn->prepare("
-                UPDATE tasks 
-                SET status = :status, completed_at = :completed_at 
+                UPDATE tasks
+                SET status = :status, completed_at = :completed_at
                 WHERE id = :id
             ");
             $stmt->bindParam(':completed_at', $completed_at);
 
         } else {
             $stmt = $conn->prepare("
-                UPDATE tasks 
-                SET status = :status 
+                UPDATE tasks
+                SET status = :status, completed_at = NULL
                 WHERE id = :id
             ");
         }

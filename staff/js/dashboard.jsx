@@ -232,39 +232,128 @@ const handleBulkUpdateStatus = async (taskIds, nextStatus) => {
     }
 };
 
-const handleBulkDelete = (taskIds) => {
-    try {
-        setTasks(prev => prev.filter(task => !taskIds.includes(task.id)));
+const updateTaskPriorityOnServer = async (taskId, priority) => {
+    const body = new URLSearchParams();
+    body.append("task_id", taskId);
+    body.append("priority", priority);
 
-        window.sileo?.error({
+    const response = await fetch("php/update_task_priority.php", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+        },
+        body: body.toString()
+    });
+
+    const resultText = (await response.text()).trim();
+
+    if (!response.ok || !/successfully/i.test(resultText)) {
+        throw new Error(resultText || `Failed to update priority for task ${taskId}.`);
+    }
+
+    return resultText;
+};
+
+const deleteTaskOnServer = async (taskId) => {
+    const body = new URLSearchParams();
+    body.append("task_id", taskId);
+
+    const response = await fetch("php/delete_task.php", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+        },
+        body: body.toString()
+    });
+
+    const resultText = (await response.text()).trim();
+
+    if (!response.ok || !/successfully/i.test(resultText)) {
+        throw new Error(resultText || `Failed to delete task ${taskId}.`);
+    }
+
+    return resultText;
+};
+
+const handleBulkDelete = async (taskIds) => {
+    const previousTasks = tasks;
+    const scrollY = window.scrollY;
+    setError("");
+
+    setTasks(prev => prev.filter(task => !taskIds.includes(task.id)));
+
+    try {
+        await Promise.all(
+            taskIds.map(taskId => deleteTaskOnServer(taskId))
+        );
+
+        await fetchTasks({ showLoader: false });
+
+        window.requestAnimationFrame(() => {
+            window.scrollTo({
+                top: scrollY,
+                behavior: "auto"
+            });
+        });
+
+        window.sileo?.success({
             title: "Tasks deleted",
             description: `${taskIds.length} ${taskIds.length === 1 ? "task has" : "tasks have"} been removed.`
         });
     } catch (err) {
         console.error("Bulk delete failed:", err);
+        setTasks(previousTasks);
+        setError(err.message || "Unable to delete selected tasks.");
 
         window.sileo?.error({
             title: "Delete failed",
-            description: "Unable to delete selected tasks."
+            description: err.message || "Unable to delete selected tasks."
         });
     }
 };
 
-    const handleBulkUpdatePriority = (taskIds, nextPriority) => {
-        setTasks(prev =>
-            prev.map(task =>
-                taskIds.includes(task.id)
-                    ? normalizeTask({ ...task, priority: nextPriority })
-                    : task
-            )
+const handleBulkUpdatePriority = async (taskIds, nextPriority) => {
+    const previousTasks = tasks;
+    const scrollY = window.scrollY;
+    setError("");
+
+    setTasks(prev =>
+        prev.map(task =>
+            taskIds.includes(task.id)
+                ? normalizeTask({ ...task, priority: nextPriority })
+                : task
+        )
+    );
+
+    try {
+        await Promise.all(
+            taskIds.map(taskId => updateTaskPriorityOnServer(taskId, nextPriority))
         );
 
-        sileo.info({
+        await fetchTasks({ showLoader: false });
+
+        window.requestAnimationFrame(() => {
+            window.scrollTo({
+                top: scrollY,
+                behavior: "auto"
+            });
+        });
+
+        window.sileo?.info({
             title: "Priority updated",
             description: `${taskIds.length} ${taskIds.length === 1 ? "task was" : "tasks were"} updated to ${nextPriority}.`
         });
-    };
+    } catch (err) {
+        console.error("Bulk priority update failed:", err);
+        setTasks(previousTasks);
+        setError(err.message || "Unable to save priority update.");
 
+        window.sileo?.error({
+            title: "Update failed",
+            description: err.message || "Unable to save task priority."
+        });
+    }
+};
 
     return (
         <>
