@@ -1,0 +1,104 @@
+body {
+    background: var(--bs-tertiary-bg);
+}
+
+.page-title {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.soft-card {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    background: var(--bs-body-bg);
+}
+
+.summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.department-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.department-name {
+    font-weight: 800;
+    margin: 0;
+}
+
+.department-subtext {
+    color: var(--bs-secondary-color);
+    margin: 0;
+    font-size: 0.92rem;
+}
+
+.staff-table td,
+.staff-table th {
+    vertical-align: middle;
+}
+
+.empty-state {
+    border: 1px dashed var(--bs-border-color);
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    background: var(--bs-body-bg);
+}
+
+.manage-staffs-page {
+    min-height: calc(100vh - 130px);
+}
+
+.department-card + .department-card {
+    margin-top: 1rem;
+}
+
+.avatar-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    background: rgba(13, 110, 253, 0.12);
+    color: var(--bs-primary);
+    flex-shrink: 0;
+}
+
+.staff-row-main {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 220px;
+}
+
+.toolbar-wrap {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.toolbar-wrap .form-control,
+.toolbar-wrap .form-select {
+    min-width: 180px;
+}
+
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 1.7rem;
+    }
+}

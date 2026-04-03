@@ -529,7 +529,7 @@ function SupervisorSidebar() {
                                 </span>
                             )}
 
-                            <span className="sidebar-section-label-text">MANAGEMENT</span>
+                            <span className="sidebar-section-label-text">STAFF MANAGEMENT</span>
 
                             <span className="sidebar-section-label-chevron">
                                 <i className="bi bi-chevron-down"></i>
