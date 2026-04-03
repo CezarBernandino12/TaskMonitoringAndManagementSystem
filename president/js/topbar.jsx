@@ -286,115 +286,16 @@ function DarkModeToggle({ dark, onToggle }) {
     );
 }
 
-const TASKS_API = "php/get_tasks.php";
-
-function getPhilippineToday() {
-    return new Date(
-        new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
-    );
-}
-
-function getTaskDueMeta(deadlineStr) {
-    const todayPH = getPhilippineToday();
-    const deadline = new Date(deadlineStr + "T00:00:00");
-    const diffDays = Math.ceil((deadline - todayPH) / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) {
-        return {
-            label: "Overdue",
-            icon: "bi-exclamation-triangle",
-            iconColor: "notif-red",
-            time: "Past deadline"
-        };
-    }
-
-    if (diffDays === 0) {
-        return {
-            label: "Due Today",
-            icon: "bi-alarm",
-            iconColor: "notif-amber",
-            time: "Today"
-        };
-    }
-
-    if (diffDays === 1) {
-        return {
-            label: "Due Tomorrow",
-            icon: "bi-calendar-event",
-            iconColor: "notif-blue",
-            time: "Tomorrow"
-        };
-    }
-
-    return null;
-}
-
-function buildTaskNotifications(tasks = []) {
-    return tasks
-        .filter((task) => String(task.status).toLowerCase() !== "completed")
-        .map((task) => {
-            const meta = getTaskDueMeta(task.deadline);
-            if (!meta) return null;
-
-            return {
-                id: `task-${task.id}`,
-                icon: meta.icon,
-                iconColor: meta.iconColor,
-                title: meta.label,
-                desc: `${task.title}${task.deadline ? ` • Due ${task.deadline}` : ""}`,
-                time: meta.time,
-                unread: true
-            };
-        })
-        .filter(Boolean);
-}
-
 function NotificationBell() {
     const [open, setOpen] = React.useState(false);
-    const [notifications, setNotifications] = React.useState([]);
     const panelRef = React.useRef(null);
     const btnRef = React.useRef(null);
     const panelId = React.useId();
 
-    React.useEffect(() => {
-        let active = true;
-
-        async function loadNotifications() {
-            try {
-                const response = await fetch(TASKS_API, {
-                    credentials: "same-origin",
-                    headers: {
-                        Accept: "application/json"
-                    }
-                });
-
-                const data = await parseJsonResponse(response);
-
-                if (!response.ok) {
-                    throw new Error("Failed to load task notifications.");
-                }
-
-                if (!active) return;
-
-                const items = buildTaskNotifications(Array.isArray(data) ? data : []);
-                setNotifications(items);
-            } catch (error) {
-                console.error("Unable to load task notifications:", error);
-                if (!active) return;
-                setNotifications([]);
-            }
-        }
-
-        loadNotifications();
-        const intervalId = window.setInterval(loadNotifications, 60000);
-
-        return () => {
-            active = false;
-            window.clearInterval(intervalId);
-        };
-    }, []);
-
-    const unreadCount = notifications.length;
+    const unreadCount = React.useMemo(
+        () => STATIC_NOTIFICATIONS.filter((item) => item.unread).length,
+        []
+    );
 
     React.useEffect(() => {
         if (!open) return undefined;
@@ -461,28 +362,34 @@ function NotificationBell() {
                     </div>
 
                     <div className="notif-list">
-                        {notifications.length === 0 ? (
-                            <div className="notif-empty">No due-soon tasks</div>
-                        ) : (
-                            notifications.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className={`notif-item ${item.unread ? "unread" : ""}`}
-                                >
-                                    <div className={`notif-item-icon ${item.iconColor}`}>
-                                        <i className={`bi ${item.icon}`}></i>
-                                    </div>
-
-                                    <div className="notif-item-body">
-                                        <div className="notif-item-title">{item.title}</div>
-                                        <div className="notif-item-desc">{item.desc}</div>
-                                        <div className="notif-item-time">{item.time}</div>
-                                    </div>
-
-                                    {item.unread && <span className="notif-unread-dot"></span>}
+                        {STATIC_NOTIFICATIONS.map((item) => (
+                            <div
+                                key={item.id}
+                                className={`notif-item ${item.unread ? "unread" : ""}`}
+                            >
+                                <div className={`notif-item-icon ${item.iconColor}`}>
+                                    <i className={`bi ${item.icon}`}></i>
                                 </div>
-                            ))
-                        )}
+
+                                <div className="notif-item-body">
+                                    <div className="notif-item-title">{item.title}</div>
+                                    <div className="notif-item-desc">{item.desc}</div>
+                                    <div className="notif-item-time">{item.time}</div>
+                                </div>
+
+                                {item.unread && <span className="notif-unread-dot"></span>}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="notif-panel-footer">
+                        <button
+                            type="button"
+                            className="notif-view-all btn btn-link p-0 text-decoration-none"
+                            onClick={() => setOpen(false)}
+                        >
+                            View all notifications
+                        </button>
                     </div>
                 </div>
             )}

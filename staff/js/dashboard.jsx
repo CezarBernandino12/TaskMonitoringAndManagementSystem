@@ -26,7 +26,6 @@ function App() {
     return (
         <>
             <TaskSummary tasks={tasks} />
-            <DueSoon tasks={tasks} />
             <TaskTable tasks={tasks} refreshTasks={fetchTasks} />
         </>
     );
