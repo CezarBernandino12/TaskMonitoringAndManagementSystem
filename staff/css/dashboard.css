@@ -352,6 +352,28 @@ body {
     padding: 0 10px;
 }
 
+.task-board-description {
+    font-size: 13px;
+    line-height: 1.45;
+    color: #667085;
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.task-board-description.is-empty {
+    color: #98a2b3;
+    font-style: italic;
+}
+
+[data-theme="dark"] .task-board-description {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .task-board-description.is-empty {
+    color: #64748b;
+}
 /* ===== table shell ===== */
 .task-board-table-wrap {
     border: 1px solid var(--panel-border);

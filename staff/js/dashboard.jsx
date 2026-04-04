@@ -1,4 +1,22 @@
+import React from "https://esm.sh/react@18.3.1";
+import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
+import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
+
+window.sileo = sileo;
+
 const MANILA_TIMEZONE = "Asia/Manila";
+const ITEMS_PER_PAGE = 10;
+
+function showSileoToast(type = "info", payload = {}) {
+    const toastMethod = window.sileo?.[type] || window.sileo?.info;
+
+    if (typeof toastMethod === "function") {
+        toastMethod(payload);
+        return;
+    }
+
+    console.warn("Sileo is not ready yet.", { type, payload });
+}
 
 function getTodayYMDInManila() {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -8,15 +26,16 @@ function getTodayYMDInManila() {
         day: "2-digit"
     }).formatToParts(new Date());
 
-    const year = parts.find(p => p.type === "year")?.value;
-    const month = parts.find(p => p.type === "month")?.value;
-    const day = parts.find(p => p.type === "day")?.value;
+    const year = parts.find(part => part.type === "year")?.value;
+    const month = parts.find(part => part.type === "month")?.value;
+    const day = parts.find(part => part.type === "day")?.value;
 
     return `${year}-${month}-${day}`;
 }
 
 function parseYMDToUTC(dateStr) {
     if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+
     const [year, month, day] = dateStr.split("-").map(Number);
     return new Date(Date.UTC(year, month - 1, day));
 }
@@ -50,19 +69,40 @@ function normalizeStatus(status = "", deadline = "") {
 
 function normalizePriority(priority = "") {
     const normalized = normalizeText(priority);
+
     if (normalized === "high") return "high";
     if (normalized === "medium") return "medium";
     if (normalized === "low") return "low";
     return "medium";
 }
 
-function normalizeTask(task = {}) {
+function buildTaskId(task = {}, index = 0) {
+    if (task.id !== undefined && task.id !== null && String(task.id).trim() !== "") {
+        return String(task.id).trim();
+    }
+
+    const parts = [
+        task.project_name,
+        task.title,
+        task.assignee,
+        task.start_date,
+        task.deadline,
+        task.description,
+        task.remarks
+    ]
+        .map(value => normalizeText(value))
+        .filter(Boolean);
+
+    return parts.length > 0 ? parts.join("::") : `task-${index + 1}`;
+}
+
+function normalizeTask(task = {}, index = 0) {
     const normalizedStatus = normalizeStatus(task.status, task.deadline);
     const normalizedPriority = normalizePriority(task.priority);
 
     return {
         ...task,
-        id: task.id ?? `${task.title || "task"}-${task.deadline || Math.random()}`,
+        id: buildTaskId(task, index),
         title: task.title || "Untitled Task",
         description: task.description || "",
         remarks: task.remarks || "",
@@ -77,6 +117,46 @@ function normalizeTask(task = {}) {
         isCompleted: normalizedStatus === "completed",
         isOverdue: normalizedStatus === "overdue"
     };
+}
+
+function normalizeTasks(taskList = []) {
+    const seenIds = new Map();
+
+    return taskList.map((task, index) => {
+        const normalizedTask = normalizeTask(task, index);
+        const count = seenIds.get(normalizedTask.id) || 0;
+        seenIds.set(normalizedTask.id, count + 1);
+
+        if (count === 0) return normalizedTask;
+
+        return {
+            ...normalizedTask,
+            id: `${normalizedTask.id}__${count + 1}`
+        };
+    });
+}
+
+async function parseMutationResponse(response, fallbackMessage) {
+    const rawText = (await response.text()).trim();
+    let parsed = null;
+
+    try {
+        parsed = rawText ? JSON.parse(rawText) : null;
+    } catch {
+        parsed = null;
+    }
+
+    const parsedStatus = normalizeText(parsed?.status);
+    const parsedSuccess = parsed?.success === true || parsedStatus === "success" || parsedStatus === "ok";
+    const textSuccess = /^success\b/i.test(rawText) || /successfully/i.test(rawText);
+    const success = response.ok && (parsedSuccess || textSuccess);
+    const message = parsed?.message || rawText || fallbackMessage;
+
+    if (!success) {
+        throw new Error(message || fallbackMessage);
+    }
+
+    return message;
 }
 
 const priorityToneMap = {
@@ -100,12 +180,23 @@ function getStatusTone(status = "") {
     return statusToneMap[normalizeText(status)] || "status-other";
 }
 
+function getPriorityLabel(priority = "") {
+    const normalized = normalizeText(priority);
+
+    if (normalized === "high") return "High Priority";
+    if (normalized === "medium") return "Normal Priority";
+    if (normalized === "low") return "Low Priority";
+
+    return "Normal Priority";
+}
+
 function App() {
     const [tasks, setTasks] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState("");
+    const [isMutating, setIsMutating] = React.useState(false);
 
-    const fetchTasks = async ({ showLoader = true } = {}) => {
+    const fetchTasks = React.useCallback(async ({ showLoader = true, throwOnError = false, signal } = {}) => {
         if (showLoader) setLoading(true);
         setError("");
 
@@ -113,7 +204,8 @@ function App() {
             const response = await fetch("php/get_tasks.php", {
                 headers: {
                     Accept: "application/json"
-                }
+                },
+                signal
             });
 
             if (!response.ok) {
@@ -126,19 +218,33 @@ function App() {
                 throw new Error("The server did not return a valid task list.");
             }
 
-            setTasks(data.map(normalizeTask));
+            setTasks(normalizeTasks(data));
+            return data;
         } catch (err) {
+            if (err?.name === "AbortError") {
+                return null;
+            }
+
             console.error("Error fetching tasks:", err);
             setError(err.message || "Unable to load tasks.");
             setTasks([]);
+
+            if (throwOnError) {
+                throw err;
+            }
+
+            return null;
         } finally {
             if (showLoader) setLoading(false);
         }
-    };
+    }, []);
 
     React.useEffect(() => {
-        fetchTasks();
-    }, []);
+        const controller = new AbortController();
+        fetchTasks({ signal: controller.signal });
+
+        return () => controller.abort();
+    }, [fetchTasks]);
 
     const updateTaskStatusOnServer = async (taskId, status) => {
         const body = new URLSearchParams();
@@ -153,34 +259,61 @@ function App() {
             body: body.toString()
         });
 
-        const resultText = (await response.text()).trim();
+        return parseMutationResponse(response, `Failed to update task ${taskId}.`);
+    };
 
-        if (!response.ok || !/successfully/i.test(resultText)) {
-            throw new Error(resultText || `Failed to update task ${taskId}.`);
-        }
+    const updateTaskPriorityOnServer = async (taskId, priority) => {
+        const body = new URLSearchParams();
+        body.append("task_id", taskId);
+        body.append("priority", priority);
 
-        return resultText;
+        const response = await fetch("php/update_task_priority.php", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+            },
+            body: body.toString()
+        });
+
+        return parseMutationResponse(response, `Failed to update priority for task ${taskId}.`);
+    };
+
+    const deleteTaskOnServer = async (taskId) => {
+        const body = new URLSearchParams();
+        body.append("task_id", taskId);
+
+        const response = await fetch("php/delete_task.php", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+            },
+            body: body.toString()
+        });
+
+        return parseMutationResponse(response, `Failed to delete task ${taskId}.`);
+    };
+
+    const finalizeMutation = async () => {
+        await fetchTasks({ showLoader: false, throwOnError: true });
     };
 
     const handleBulkUpdateStatus = async (taskIds, nextStatus) => {
-        const previousTasks = tasks;
+        if (taskIds.length === 0) return;
+
         const scrollY = window.scrollY;
         setError("");
-
-        setTasks(prev =>
-            prev.map(task =>
-                taskIds.includes(task.id)
-                    ? normalizeTask({ ...task, status: nextStatus })
-                    : task
-            )
-        );
+        setIsMutating(true);
 
         try {
-            await Promise.all(
+            const results = await Promise.allSettled(
                 taskIds.map(taskId => updateTaskStatusOnServer(taskId, nextStatus))
             );
 
-            await fetchTasks({ showLoader: false });
+            await finalizeMutation();
+
+            const failedCount = results.filter(result => result.status === "rejected").length;
+            const successCount = results.length - failedCount;
+            const normalizedStatus = normalizeText(nextStatus);
 
             window.requestAnimationFrame(() => {
                 window.scrollTo({
@@ -188,35 +321,162 @@ function App() {
                     behavior: "auto"
                 });
             });
+
+            if (failedCount === 0) {
+                const description = normalizedStatus === "completed"
+                    ? `${successCount} ${successCount === 1 ? "task was" : "tasks were"} marked as Completed.`
+                    : normalizedStatus === "ongoing"
+                        ? `${successCount} ${successCount === 1 ? "task was" : "tasks were"} moved to Ongoing.`
+                        : `${successCount} ${successCount === 1 ? "task was" : "tasks were"} updated to ${nextStatus}.`;
+
+                showSileoToast(normalizedStatus === "completed" ? "success" : "info", {
+                    title: "Status updated",
+                    description
+                });
+                return;
+            }
+
+            const firstFailure = results.find(result => result.status === "rejected");
+            const failureMessage = firstFailure?.reason?.message || "Some tasks could not be updated.";
+            const composedMessage = `${successCount} succeeded, ${failedCount} failed. ${failureMessage}`;
+
+            setError(composedMessage);
+            showSileoToast("error", {
+                title: "Partial update",
+                description: composedMessage
+            });
         } catch (err) {
             console.error("Bulk status update failed:", err);
-            setTasks(previousTasks);
-            setError(err.message || "Unable to save status update.");
+            const message = err.message || "Unable to refresh tasks after saving the status update.";
+            setError(message);
+            showSileoToast("error", {
+                title: "Update failed",
+                description: message
+            });
+        } finally {
+            setIsMutating(false);
         }
     };
 
-    const handleBulkUpdatePriority = (taskIds, nextPriority) => {
-        setTasks(prev =>
-            prev.map(task =>
-                taskIds.includes(task.id)
-                    ? normalizeTask({ ...task, priority: nextPriority })
-                    : task
-            )
-        );
+    const handleBulkUpdatePriority = async (taskIds, nextPriority) => {
+        if (taskIds.length === 0) return;
+
+        const scrollY = window.scrollY;
+        setError("");
+        setIsMutating(true);
+
+        try {
+            const results = await Promise.allSettled(
+                taskIds.map(taskId => updateTaskPriorityOnServer(taskId, nextPriority))
+            );
+
+            await finalizeMutation();
+
+            const failedCount = results.filter(result => result.status === "rejected").length;
+            const successCount = results.length - failedCount;
+
+            window.requestAnimationFrame(() => {
+                window.scrollTo({
+                    top: scrollY,
+                    behavior: "auto"
+                });
+            });
+
+            if (failedCount === 0) {
+                showSileoToast("info", {
+                    title: "Priority updated",
+                    description: `${successCount} ${successCount === 1 ? "task was" : "tasks were"} updated to ${nextPriority}.`
+                });
+                return;
+            }
+
+            const firstFailure = results.find(result => result.status === "rejected");
+            const failureMessage = firstFailure?.reason?.message || "Some tasks could not be updated.";
+            const composedMessage = `${successCount} succeeded, ${failedCount} failed. ${failureMessage}`;
+
+            setError(composedMessage);
+            showSileoToast("error", {
+                title: "Partial update",
+                description: composedMessage
+            });
+        } catch (err) {
+            console.error("Bulk priority update failed:", err);
+            const message = err.message || "Unable to refresh tasks after saving the priority update.";
+            setError(message);
+            showSileoToast("error", {
+                title: "Update failed",
+                description: message
+            });
+        } finally {
+            setIsMutating(false);
+        }
     };
 
-    const handleBulkDelete = (taskIds) => {
-        setTasks(prev => prev.filter(task => !taskIds.includes(task.id)));
+    const handleBulkDelete = async (taskIds) => {
+        if (taskIds.length === 0) return;
+
+        const scrollY = window.scrollY;
+        setError("");
+        setIsMutating(true);
+
+        try {
+            const results = await Promise.allSettled(
+                taskIds.map(taskId => deleteTaskOnServer(taskId))
+            );
+
+            await finalizeMutation();
+
+            const failedCount = results.filter(result => result.status === "rejected").length;
+            const successCount = results.length - failedCount;
+
+            window.requestAnimationFrame(() => {
+                window.scrollTo({
+                    top: scrollY,
+                    behavior: "auto"
+                });
+            });
+
+            if (failedCount === 0) {
+                showSileoToast("success", {
+                    title: "Tasks deleted",
+                    description: `${successCount} ${successCount === 1 ? "task has" : "tasks have"} been removed.`
+                });
+                return;
+            }
+
+            const firstFailure = results.find(result => result.status === "rejected");
+            const failureMessage = firstFailure?.reason?.message || "Some tasks could not be deleted.";
+            const composedMessage = `${successCount} deleted, ${failedCount} failed. ${failureMessage}`;
+
+            setError(composedMessage);
+            showSileoToast("error", {
+                title: "Partial delete",
+                description: composedMessage
+            });
+        } catch (err) {
+            console.error("Bulk delete failed:", err);
+            const message = err.message || "Unable to refresh tasks after deleting selected tasks.";
+            setError(message);
+            showSileoToast("error", {
+                title: "Delete failed",
+                description: message
+            });
+        } finally {
+            setIsMutating(false);
+        }
     };
 
     return (
         <>
+            <Toaster />
             <TaskSummary tasks={tasks} />
+            <DueSoon tasks={tasks} />
             <TaskTable
                 tasks={tasks}
                 loading={loading}
                 error={error}
-                onRetry={fetchTasks}
+                isMutating={isMutating}
+                onRetry={() => fetchTasks()}
                 onBulkUpdateStatus={handleBulkUpdateStatus}
                 onBulkUpdatePriority={handleBulkUpdatePriority}
                 onBulkDelete={handleBulkDelete}
@@ -311,7 +571,7 @@ function DueSoon({ tasks }) {
         return diffDays === 0 || diffDays === 1;
     });
 
-    const getDueLabel = (deadlineStr) => {
+    const getDueLabel = deadlineStr => {
         const deadline = parseYMDToUTC(deadlineStr);
         if (!deadline || !today) return "";
 
@@ -320,46 +580,18 @@ function DueSoon({ tasks }) {
         if (diffDays === 1) return "Due Tomorrow";
         return "";
     };
-
-    return (
-        <section className="due-soon-card mb-4">
-            <div className="due-soon-head">
-                <h5 className="due-soon-title">
-                    <i className="bi bi-alarm"></i>
-                    Due Soon
-                </h5>
-            </div>
-
-            {dueSoonTasks.length === 0 ? (
-                <div className="due-soon-empty">No upcoming deadlines</div>
-            ) : (
-                <ul className="due-soon-list">
-                    {dueSoonTasks.map(task => (
-                        <li key={task.id} className="due-soon-item">
-                            <div className="due-soon-copy">
-                                <div className="due-soon-task">{task.title}</div>
-                                <div className="due-soon-date">{formatDate(task.deadline)}</div>
-                            </div>
-                            <span className="due-soon-badge">{getDueLabel(task.deadline)}</span>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </section>
-    );
 }
 
 function TaskTable({
     tasks,
     loading,
     error,
+    isMutating,
     onRetry,
     onBulkUpdateStatus,
     onBulkUpdatePriority,
     onBulkDelete
 }) {
-    const ITEMS_PER_PAGE = 10;
-
     const [selectedTaskIds, setSelectedTaskIds] = React.useState([]);
     const [isFilterOpen, setIsFilterOpen] = React.useState(false);
     const [statusFilter, setStatusFilter] = React.useState("All");
@@ -371,7 +603,7 @@ function TaskTable({
     const filterOptions = ["All", "Ongoing", "Completed", "Overdue", "Other"];
 
     React.useEffect(() => {
-        const handleOutsideClick = (event) => {
+        const handleOutsideClick = event => {
             if (filterRef.current && !filterRef.current.contains(event.target)) {
                 setIsFilterOpen(false);
             }
@@ -400,32 +632,33 @@ function TaskTable({
         }
     }, [currentPage, totalPages]);
 
-    const visibleTaskIds = currentPageTasks.map(task => task.id);
-    const selectedVisibleCount = visibleTaskIds.filter(id => selectedTaskIds.includes(id)).length;
-
-    const allVisibleSelected =
-        visibleTaskIds.length > 0 && selectedVisibleCount === visibleTaskIds.length;
-
-    const someVisibleSelected =
-        selectedVisibleCount > 0 && !allVisibleSelected;
+    React.useEffect(() => {
+        const allowedIds = new Set(filteredTasks.map(task => task.id));
+        setSelectedTaskIds(prev => prev.filter(id => allowedIds.has(id)));
+    }, [statusFilter, tasks]);
 
     React.useEffect(() => {
         if (!checkAllRef.current) return;
+
+        const visibleTaskIds = currentPageTasks.map(task => task.id);
+        const selectedVisibleCount = visibleTaskIds.filter(id => selectedTaskIds.includes(id)).length;
+        const allVisibleSelected = visibleTaskIds.length > 0 && selectedVisibleCount === visibleTaskIds.length;
+        const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+
         checkAllRef.current.indeterminate = someVisibleSelected;
-    }, [someVisibleSelected]);
+    }, [currentPageTasks, selectedTaskIds]);
 
-    React.useEffect(() => {
-        setSelectedTaskIds(prev =>
-            prev.filter(id => tasks.some(task => task.id === id))
-        );
-    }, [tasks]);
+    const visibleTaskIds = currentPageTasks.map(task => task.id);
+    const selectedVisibleCount = visibleTaskIds.filter(id => selectedTaskIds.includes(id)).length;
+    const allVisibleSelected = visibleTaskIds.length > 0 && selectedVisibleCount === visibleTaskIds.length;
+    const selectedTasks = tasks.filter(task => selectedTaskIds.includes(task.id));
 
-    const toggleTaskSelection = (taskId) => {
-        setSelectedTaskIds(prev =>
+    const toggleTaskSelection = taskId => {
+        setSelectedTaskIds(prev => (
             prev.includes(taskId)
                 ? prev.filter(id => id !== taskId)
                 : [...prev, taskId]
-        );
+        ));
     };
 
     const toggleSelectAllVisible = () => {
@@ -465,8 +698,6 @@ function TaskTable({
     };
 
     const paginationItems = getPaginationItems();
-    const pageFrom = filteredTasks.length === 0 ? 0 : pageStartIndex + 1;
-    const pageTo = Math.min(pageStartIndex + ITEMS_PER_PAGE, filteredTasks.length);
 
     return (
         <>
@@ -484,6 +715,7 @@ function TaskTable({
                                 onClick={() => setIsFilterOpen(prev => !prev)}
                                 aria-haspopup="menu"
                                 aria-expanded={isFilterOpen}
+                                disabled={loading || isMutating}
                             >
                                 <span className="task-filter-btn-inner">
                                     <i className="bi bi-filter"></i>
@@ -503,6 +735,7 @@ function TaskTable({
                                                 setStatusFilter(option);
                                                 setIsFilterOpen(false);
                                             }}
+                                            disabled={isMutating}
                                         >
                                             <span>{option}</span>
                                             {statusFilter === option && <i className="bi bi-check2"></i>}
@@ -517,11 +750,11 @@ function TaskTable({
                 <div className="task-board-strip">
                     <div
                         className="task-board-check-all"
-                        onClick={(event) => event.stopPropagation()}
+                        onClick={event => event.stopPropagation()}
                     >
                         <label
                             className="task-checkbox-wrap"
-                            onClick={(event) => event.stopPropagation()}
+                            onClick={event => event.stopPropagation()}
                         >
                             <input
                                 ref={checkAllRef}
@@ -529,7 +762,8 @@ function TaskTable({
                                 className="task-checkbox-input"
                                 checked={allVisibleSelected}
                                 onChange={toggleSelectAllVisible}
-                                aria-label={`Select all ${statusFilter === "All" ? "" : statusFilter.toLowerCase() + " "}tasks on this page`}
+                                aria-label={`Select all ${statusFilter === "All" ? "" : `${statusFilter.toLowerCase()} `}tasks on this page`}
+                                disabled={loading || isMutating || currentPageTasks.length === 0}
                             />
                             <span className="task-checkbox-ui"></span>
                         </label>
@@ -562,8 +796,8 @@ function TaskTable({
                                 </th>
                                 <th>
                                     <span className="task-board-th">
-                                        <i className="bi bi-calendar-event"></i>
-                                        Start
+                                        <i className="bi bi-text-paragraph"></i>
+                                        Description
                                     </span>
                                 </th>
                                 <th>
@@ -600,7 +834,8 @@ function TaskTable({
                                             <button
                                                 type="button"
                                                 className="task-action-btn"
-                                                onClick={() => onRetry()}
+                                                onClick={onRetry}
+                                                disabled={isMutating}
                                             >
                                                 Retry
                                             </button>
@@ -610,7 +845,7 @@ function TaskTable({
                             ) : filteredTasks.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="task-board-empty">
-                                        No {statusFilter === "All" ? "" : statusFilter.toLowerCase() + " "}tasks found
+                                        No {statusFilter === "All" ? "" : `${statusFilter.toLowerCase()} `}tasks found
                                     </td>
                                 </tr>
                             ) : (
@@ -618,15 +853,19 @@ function TaskTable({
                                     <tr
                                         key={task.id}
                                         className={`task-board-row ${selectedTaskIds.includes(task.id) ? "is-selected" : ""}`}
-                                        onClick={() => toggleTaskSelection(task.id)}
+                                        onClick={() => {
+                                            if (!isMutating) {
+                                                toggleTaskSelection(task.id);
+                                            }
+                                        }}
                                     >
                                         <td
                                             className="task-board-checkbox-col"
-                                            onClick={(event) => event.stopPropagation()}
+                                            onClick={event => event.stopPropagation()}
                                         >
                                             <label
                                                 className="task-checkbox-wrap"
-                                                onClick={(event) => event.stopPropagation()}
+                                                onClick={event => event.stopPropagation()}
                                             >
                                                 <input
                                                     type="checkbox"
@@ -634,6 +873,7 @@ function TaskTable({
                                                     checked={selectedTaskIds.includes(task.id)}
                                                     onChange={() => toggleTaskSelection(task.id)}
                                                     aria-label={`Select ${task.title}`}
+                                                    disabled={isMutating}
                                                 />
                                                 <span className="task-checkbox-ui"></span>
                                             </label>
@@ -647,7 +887,21 @@ function TaskTable({
                                             </div>
                                         </td>
 
-                                        <td className="task-board-date">{formatDate(task.start_date)}</td>
+                                        <td>
+                                            {task.description ? (
+                                                <div
+                                                    className="task-board-description"
+                                                    title={task.description}
+                                                >
+                                                    {task.description}
+                                                </div>
+                                            ) : (
+                                                <div className="task-board-description is-empty">
+                                                    No description
+                                                </div>
+                                            )}
+                                        </td>
+
                                         <td className="task-board-date">{formatDate(task.deadline)}</td>
 
                                         <td>
@@ -671,19 +925,18 @@ function TaskTable({
 
                 {!loading && !error && filteredTasks.length > 0 && (
                     <div className="task-board-pagination">
-
                         <div className="task-board-pagination-controls">
                             <button
                                 type="button"
                                 className="task-page-btn task-page-nav"
                                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
+                                disabled={currentPage === 1 || isMutating}
                                 aria-label="Previous page"
                             >
                                 <i className="bi bi-chevron-left"></i>
                             </button>
 
-                            {paginationItems.map(item =>
+                            {paginationItems.map(item => (
                                 typeof item === "number" ? (
                                     <button
                                         key={item}
@@ -691,19 +944,20 @@ function TaskTable({
                                         className={`task-page-btn ${currentPage === item ? "is-active" : ""}`}
                                         onClick={() => setCurrentPage(item)}
                                         aria-current={currentPage === item ? "page" : undefined}
+                                        disabled={isMutating}
                                     >
                                         {item}
                                     </button>
                                 ) : (
                                     <span key={item} className="task-page-ellipsis">…</span>
                                 )
-                            )}
+                            ))}
 
                             <button
                                 type="button"
                                 className="task-page-btn task-page-nav"
                                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
+                                disabled={currentPage === totalPages || isMutating}
                                 aria-label="Next page"
                             >
                                 <i className="bi bi-chevron-right"></i>
@@ -713,18 +967,21 @@ function TaskTable({
                 )}
             </section>
 
-            {selectedTaskIds.length > 0 && (
+            {selectedTasks.length > 0 && (
                 <BulkActionBar
-                    selectedCount={selectedTaskIds.length}
-                    selectedTaskIds={selectedTaskIds}
-                    onUpdateStatus={(ids, status) => {
-                        onBulkUpdateStatus(ids, status);
+                    selectedCount={selectedTasks.length}
+                    selectedTaskIds={selectedTasks.map(task => task.id)}
+                    isDisabled={isMutating}
+                    onUpdateStatus={async (ids, status) => {
+                        await onBulkUpdateStatus(ids, status);
+                        clearSelection();
                     }}
-                    onUpdatePriority={(ids, priority) => {
-                        onBulkUpdatePriority(ids, priority);
+                    onUpdatePriority={async (ids, priority) => {
+                        await onBulkUpdatePriority(ids, priority);
+                        clearSelection();
                     }}
-                    onDelete={(ids) => {
-                        onBulkDelete(ids);
+                    onDelete={async ids => {
+                        await onBulkDelete(ids);
                         clearSelection();
                     }}
                     onClearSelection={clearSelection}
@@ -734,19 +991,10 @@ function TaskTable({
     );
 }
 
-function getPriorityLabel(priority = "") {
-    const normalized = normalizeText(priority);
-
-    if (normalized === "high") return "High Priority";
-    if (normalized === "medium") return "Normal Priority";
-    if (normalized === "low") return "Low Priority";
-
-    return "Normal Priority";
-}
-
 function BulkActionBar({
     selectedCount,
     selectedTaskIds,
+    isDisabled,
     onUpdateStatus,
     onUpdatePriority,
     onDelete,
@@ -756,7 +1004,7 @@ function BulkActionBar({
     const barRef = React.useRef(null);
 
     React.useEffect(() => {
-        const handleOutsideClick = (event) => {
+        const handleOutsideClick = event => {
             if (barRef.current && !barRef.current.contains(event.target)) {
                 setOpenMenu("");
             }
@@ -765,6 +1013,12 @@ function BulkActionBar({
         document.addEventListener("mousedown", handleOutsideClick);
         return () => document.removeEventListener("mousedown", handleOutsideClick);
     }, []);
+
+    React.useEffect(() => {
+        if (isDisabled) {
+            setOpenMenu("");
+        }
+    }, [isDisabled]);
 
     const statusOptions = ["Ongoing", "Completed"];
     const priorityOptions = ["High", "Medium", "Low"];
@@ -787,7 +1041,12 @@ function BulkActionBar({
                     <button
                         type="button"
                         className={`bulk-action-tool ${openMenu === "status" ? "is-open" : ""}`}
-                        onClick={() => setOpenMenu(prev => prev === "status" ? "" : "status")}
+                        onClick={() => {
+                            if (!isDisabled) {
+                                setOpenMenu(prev => (prev === "status" ? "" : "status"));
+                            }
+                        }}
+                        disabled={isDisabled}
                     >
                         <span className="bulk-action-tool-icon">
                             <i className="bi bi-check2-square"></i>
@@ -805,10 +1064,11 @@ function BulkActionBar({
                                     key={option}
                                     type="button"
                                     className="bulk-action-menu-item"
-                                    onClick={() => {
-                                        onUpdateStatus(selectedTaskIds, option);
+                                    onClick={async () => {
                                         setOpenMenu("");
+                                        await onUpdateStatus(selectedTaskIds, option);
                                     }}
+                                    disabled={isDisabled}
                                 >
                                     {option}
                                 </button>
@@ -821,7 +1081,12 @@ function BulkActionBar({
                     <button
                         type="button"
                         className={`bulk-action-tool ${openMenu === "priority" ? "is-open" : ""}`}
-                        onClick={() => setOpenMenu(prev => prev === "priority" ? "" : "priority")}
+                        onClick={() => {
+                            if (!isDisabled) {
+                                setOpenMenu(prev => (prev === "priority" ? "" : "priority"));
+                            }
+                        }}
+                        disabled={isDisabled}
                     >
                         <span className="bulk-action-tool-icon">
                             <i className="bi bi-flag"></i>
@@ -839,10 +1104,11 @@ function BulkActionBar({
                                     key={option}
                                     type="button"
                                     className="bulk-action-menu-item"
-                                    onClick={() => {
-                                        onUpdatePriority(selectedTaskIds, option);
+                                    onClick={async () => {
                                         setOpenMenu("");
+                                        await onUpdatePriority(selectedTaskIds, option);
                                     }}
+                                    disabled={isDisabled}
                                 >
                                     {option}
                                 </button>
@@ -854,10 +1120,10 @@ function BulkActionBar({
                 <button
                     type="button"
                     className="bulk-action-tool is-danger"
-                    onClick={() => {
-                        onDelete(selectedTaskIds);
-                        onClearSelection();
+                    onClick={async () => {
+                        await onDelete(selectedTaskIds);
                     }}
+                    disabled={isDisabled}
                 >
                     <span className="bulk-action-tool-icon">
                         <i className="bi bi-trash3"></i>
@@ -874,6 +1140,7 @@ function BulkActionBar({
                 onClick={onClearSelection}
                 aria-label="Close bulk actions"
                 title="Close"
+                disabled={isDisabled}
             >
                 <i className="bi bi-x-lg"></i>
             </button>
@@ -881,4 +1148,14 @@ function BulkActionBar({
     );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+    throw new Error('Root element with id "root" was not found.');
+}
+
+createRoot(rootElement).render(
+    <React.StrictMode>
+        <App />
+    </React.StrictMode>
+);

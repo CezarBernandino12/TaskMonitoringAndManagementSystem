@@ -1,108 +1,50 @@
-.calendar-has-tasks {
-    position: relative;
-}
-/* Modern Calendar Custom Styles */
-.modern-calendar {
-    max-width: 420px;
-    margin: 0 auto;
-}
-.calendar-table {
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(255, 184, 77, 0.08);
-}
-.calendar-table th {
-    background: #ffe7b3;
-    color: #cc7a00;
-    font-weight: 600;
-    font-size: 1rem;
-    border: none;
-}
-.calendar-table td {
-    height: 48px;
-    vertical-align: middle;
-    font-size: 1.1rem;
-    border: none;
-    transition: background 0.2s, color 0.2s;
-}
-.calendar-table td.bg-warning {
-    background: #ffb84d !important;
-    color: #fff !important;
-    border-radius: 50%;
-}
-.calendar-table td:hover:not(.bg-warning) {
-    background: #fff0b3;
-    cursor: pointer;
-    color: #cc7a00;
-    border-radius: 50%;
-}
-.modern-calendar .btn-primary {
-    background: #ff9900;
-    border: none;
-    padding: 0.25rem 0.75rem;
-    font-size: 1.1rem;
-    border-radius: 50%;
-    box-shadow: 0 1px 4px rgba(255, 184, 77, 0.12);
-}
-.modern-calendar .btn-primary:focus, .modern-calendar .btn-primary:hover {
-    background: #ffb84d;
-    color: #cc7a00;
+/* ============================================================
+   CALENDAR — matches second photo design
+   All visual styles are handled inline in calendar.jsx.
+   This file only resets old orange/yellow overrides.
+   ============================================================ */
+
+/* Reset old conflicting overrides */
+#calendarRoot .btn-primary,
+#calendarRoot .table thead,
+#calendarRoot .table th,
+#calendarRoot .card,
+#calendarRoot .summary-card,
+#calendarRoot .overdue,
+#calendarRoot .form-control:focus,
+#calendarRoot h3,
+#calendarRoot h5,
+#calendarRoot h6 {
+    all: unset;
 }
 
-    body {
-        background-color: #ffff;
-        color: #333; 
-        font-family: Arial, sans-serif;
-    }
+/* Scrollbar */
+#calendarRoot ::-webkit-scrollbar { width:5px; height:5px; }
+#calendarRoot ::-webkit-scrollbar-track { background:transparent; }
+#calendarRoot ::-webkit-scrollbar-thumb { background:#E0E0E0; border-radius:3px; }
+#calendarRoot ::-webkit-scrollbar-thumb:hover { background:#BDBDBD; }
 
-    .card {
-        border-radius: 12px;
-        background: #ffffff;
-        border: 1px solid #ffb84d; 
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); 
-        color: #222; 
-    }
+/* Input focus ring */
+#calendarRoot input:focus,
+#calendarRoot select:focus,
+#calendarRoot textarea:focus {
+    outline: none !important;
+    border-color: #FF6B4E !important;
+    box-shadow: 0 0 0 2px rgba(255,107,78,.18) !important;
+}
 
-    .overdue {
-        background-color: #fff0b3 !important; 
-        color: #665200; 
-    }
+/* Checkbox accent */
+#calendarRoot input[type="checkbox"] {
+    accent-color: #FF6B4E;
+}
 
-    .btn-primary {
-        background-color: #ff9900;
-        border-color: #ff9900;
-        color: #fff;
-    }
+/* Nav button hover */
+#calendarRoot button[style*="background:#F5F5F5"]:hover {
+    background: #EBEBEB !important;
+}
 
-    .btn-primary:hover, .btn-primary:focus {
-        background-color: #ffb84d;
-        border-color: #ffb84d;
-        color: #333; 
-    }
-
-    .table thead {
-        background: #ffe7b3;
-    }
-
-    .table th {
-        color: #cc7a00;
-    }
-
-    .table-hover tbody tr:hover {
-        background: #fff0b3;
-    }
-
-    .form-control:focus {
-        border-color: #ffb84d;
-        box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
-    }
-
-    h3, h5, h6 {
-        color: #cc7a00; /* darker headings */
-    }
-
-    .summary-card {
-        background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
-        border: 1px solid #ffb84d;
-        color: #cc7a00;
-    }
+/* Ensure calendarRoot fills available space */
+#calendarRoot {
+    min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}

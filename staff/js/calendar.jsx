@@ -1,338 +1,188 @@
-
 const { useState, useEffect, useRef } = React;
 
 // ====================================================================
 // CONSTANTS
 // ====================================================================
-const DAYS_OF_WEEK   = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTH_NAMES    = ["January","February","March","April","May","June",
-                        "July","August","September","October","November","December"];
-const STATUS_COLORS  = {
-    Upcoming:   { bg: '#0d6efd', text: '#fff' },
-    Ongoing:    { bg: '#28a745', text: '#fff' },
-    Completed:  { bg: '#6c757d', text: '#fff' },
-    Cancelled:  { bg: '#dc3545', text: '#fff' },
+const DAY_ABBR    = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTH_NAMES = ["January","February","March","April","May","June",
+                     "July","August","September","October","November","December"];
+
+const STATUS_CFG = {
+    Upcoming:  { bg:'#FDECEA', text:'#C0392B', badge:'#E74C3C', icon:'📋', filter:'#FF8A80' },
+    Ongoing:   { bg:'#EAF7EC', text:'#1E8449', badge:'#27AE60', icon:'↗',  filter:'#69F0AE' },
+    Completed: { bg:'#EEE8F8', text:'#5B2C9B', badge:'#7D3C98', icon:'✓',  filter:'#CE93D8' },
+    Cancelled: { bg:'#FEF9E7', text:'#B7770D', badge:'#F39C12', icon:'🔔', filter:'#FFD54F' },
 };
-const PRIORITY_COLORS = {
-    High:   '#dc3545',
-    Medium: '#ffc107',
-    Low:    '#198754',
-};
+const PRIORITY_COLORS = { High:'#E74C3C', Medium:'#F39C12', Low:'#27AE60' };
 
 // ====================================================================
 // HELPERS
 // ====================================================================
-function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
-function getFirstDayOfMonth(year, month) { return new Date(year, month, 1).getDay(); }
-function toDateStr(year, month, day) {
-    return `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-}
-function formatDateDisplay(dateStr) {
-    if (!dateStr) return '—';
-    const [y, m, d] = dateStr.split('-');
-    return `${MONTH_NAMES[parseInt(m) - 1]} ${parseInt(d)}, ${y}`;
-}
-function isSameOrBefore(a, b) { return a <= b; }
-function isSameOrAfter(a, b) { return a >= b; }
+function getDaysInMonth(y,m)  { return new Date(y,m+1,0).getDate(); }
+function getFirstDay(y,m)     { return new Date(y,m,1).getDay(); }
+function toDateStr(y,m,d)     { return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function fmtShort(s)          { if(!s)return'—'; const[y,mo,d]=s.split('-'); return `${MONTH_NAMES[+mo-1].slice(0,3)} ${+d}, ${y}`; }
+function fmtLong(s)           { if(!s)return'—'; const[y,mo,d]=s.split('-'); return `${MONTH_NAMES[+mo-1]} ${+d}, ${y}`; }
 
 // ====================================================================
-// EVENT BADGE — small pill used in calendar cells
-// ====================================================================
-function EventPill({ event }) {
-    const color = STATUS_COLORS[event.status] ?? STATUS_COLORS['Upcoming'];
-    return (
-        <div style={{
-            background: color.bg,
-            color: color.text,
-            borderRadius: 3,
-            fontSize: 10,
-            padding: '1px 5px',
-            marginTop: 1,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: '100%',
-            cursor: 'pointer',
-        }}>
-            {event.title}
-        </div>
-    );
-}
-
-// ====================================================================
-// EVENT FORM MODAL — create or edit an event (MarketingHR only)
+// EVENT FORM MODAL
 // ====================================================================
 function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     const isEdit = !!event?.id;
-    const blank  = {
-        title: '', description: '', location: '',
-        start_date: '', end_date: '', status: 'Upcoming',
-        priority: 'Medium', tagged_employees: [],
-    };
-    const [form, setForm]       = useState(event ? { ...event, tagged_employees: event.tagged_employees ?? [] } : blank);
-    const [saving, setSaving]   = useState(false);
-    const [deleting, setDelete] = useState(false);
-    const [error, setError]     = useState(null);
-    const [empSearch, setEmpSearch] = useState('');
+    const blank  = { title:'', description:'', location:'', start_date:'', end_date:'', status:'Upcoming', priority:'Medium', tagged_employees:[] };
+    const [form,   setForm]   = useState(event ? {...event, tagged_employees:event.tagged_employees??[]} : blank);
+    const [saving, setSaving] = useState(false);
+    const [deling, setDeling] = useState(false);
+    const [error,  setError]  = useState(null);
+    const [empQ,   setEmpQ]   = useState('');
 
-    const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+    const set = (k,v) => setForm(f=>({...f,[k]:v}));
+    const toggleEmp = id => set('tagged_employees',
+        form.tagged_employees.includes(id)
+            ? form.tagged_employees.filter(e=>e!==id)
+            : [...form.tagged_employees,id]);
 
-    const toggleEmployee = (id) => {
-        set('tagged_employees',
-            form.tagged_employees.includes(id)
-                ? form.tagged_employees.filter(e => e !== id)
-                : [...form.tagged_employees, id]
-        );
-    };
+    const filtered = employees.filter(e=>`${e.name} ${e.department}`.toLowerCase().includes(empQ.toLowerCase()));
 
-    const filteredEmployees = employees.filter(e =>
-        `${e.name} ${e.department}`.toLowerCase().includes(empSearch.toLowerCase())
-    );
-
-    const handleSave = () => {
-        if (!form.title.trim())      { setError('Title is required.');               return; }
-        if (!form.start_date)        { setError('Start date is required.');          return; }
-        if (!form.end_date)          { setError('End date is required.');            return; }
-        if (form.end_date < form.start_date) { setError('End date must be on or after start date.'); return; }
-        setSaving(true);
-        setError(null);
-        fetch('php/save_event.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form),
-        })
-        .then(r => r.json())
-        .then(d => {
-            if (d.error) throw new Error(d.error);
-            onSave(d.event);
-        })
-        .catch(e => { setError(e.message); setSaving(false); });
+    const save = () => {
+        if(!form.title.trim())             { setError('Title is required.'); return; }
+        if(!form.start_date)               { setError('Start date is required.'); return; }
+        if(!form.end_date)                 { setError('End date is required.'); return; }
+        if(form.end_date<form.start_date)  { setError('End must be on or after start.'); return; }
+        setSaving(true); setError(null);
+        fetch('php/save_event.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)})
+            .then(r=>r.json()).then(d=>{ if(d.error)throw new Error(d.error); onSave(d.event); })
+            .catch(e=>{ setError(e.message); setSaving(false); });
     };
 
-    const handleDelete = () => {
-        if (!window.confirm('Delete this event? This cannot be undone.')) return;
-        setDelete(true);
-        fetch('php/delete_event.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: form.id }),
-        })
-        .then(r => r.json())
-        .then(d => {
-            if (d.error) throw new Error(d.error);
-            onDelete(form.id);
-        })
-        .catch(e => { setError(e.message); setDelete(false); });
+    const del = () => {
+        if(!window.confirm('Delete this event?')) return;
+        setDeling(true);
+        fetch('php/delete_event.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:form.id})})
+            .then(r=>r.json()).then(d=>{ if(d.error)throw new Error(d.error); onDelete(form.id); })
+            .catch(e=>{ setError(e.message); setDeling(false); });
     };
 
-    const backdropClick = (e) => { if (e.target === e.currentTarget) onClose(); };
+    const cfg = STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming;
 
     return (
-        <div onClick={backdropClick} style={{
-            position:'fixed', inset:0, background:'rgba(0,0,0,0.5)',
-            zIndex:1060, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem',
-        }}>
-            <div style={{
-                background:'#fff', borderRadius:12, width:'100%', maxWidth:620,
-                maxHeight:'90vh', display:'flex', flexDirection:'column',
-                boxShadow:'0 8px 32px rgba(0,0,0,0.22)',
-            }}>
-                {/* Header */}
-                <div style={{ padding:'1rem 1.25rem', borderBottom:'1px solid #dee2e6', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
-                    <h5 style={{ margin:0, fontWeight:600 }}>{isEdit ? 'Edit Event' : 'New Event'}</h5>
-                    <button className="btn-close" onClick={onClose} />
+        <div onClick={e=>{if(e.target===e.currentTarget)onClose();}} style={S.backdrop}>
+            <div style={{...S.modal,maxWidth:560}}>
+                <div style={{...S.mHead,background:cfg.bg,borderBottom:`2px solid ${cfg.badge}33`}}>
+                    <span style={{fontWeight:700,fontSize:15,color:cfg.text}}>{isEdit?'Edit Event':'New Event'}</span>
+                    <button className="btn-close" onClick={onClose} style={{fontSize:11}}/>
                 </div>
-
-                {/* Body */}
-                <div style={{ overflowY:'auto', padding:'1.25rem', flex:1 }}>
-                    {error && <div className="alert alert-danger py-2">{error}</div>}
-
-                    {/* Title */}
-                    <div className="mb-3">
-                        <label className="form-label fw-semibold">Title <span className="text-danger">*</span></label>
-                        <input className="form-control" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Event title" />
+                <div style={S.mBody}>
+                    {error && <div style={S.errBox}>{error}</div>}
+                    <Fg label="Title *"><input style={S.inp} value={form.title} onChange={e=>set('title',e.target.value)} placeholder="Event title"/></Fg>
+                    <Fg label="Description"><textarea style={{...S.inp,resize:'vertical'}} rows={3} value={form.description} onChange={e=>set('description',e.target.value)} placeholder="Optional details…"/></Fg>
+                    <Fg label="Location"><input style={S.inp} value={form.location} onChange={e=>set('location',e.target.value)} placeholder="Venue or link"/></Fg>
+                    <div style={{display:'flex',gap:12}}>
+                        <Fg label="Start Date *" style={{flex:1}}><input type="date" style={S.inp} value={form.start_date} onChange={e=>set('start_date',e.target.value)}/></Fg>
+                        <Fg label="End Date *"   style={{flex:1}}><input type="date" style={S.inp} value={form.end_date}   onChange={e=>set('end_date',  e.target.value)}/></Fg>
                     </div>
-
-                    {/* Description */}
-                    <div className="mb-3">
-                        <label className="form-label fw-semibold">Description</label>
-                        <textarea className="form-control" rows={3} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optional details…" />
-                    </div>
-
-                    {/* Location */}
-                    <div className="mb-3">
-                        <label className="form-label fw-semibold">Location</label>
-                        <input className="form-control" value={form.location} onChange={e => set('location', e.target.value)} placeholder="Venue or link" />
-                    </div>
-
-                    {/* Dates */}
-                    <div className="row mb-3">
-                        <div className="col">
-                            <label className="form-label fw-semibold">Start Date <span className="text-danger">*</span></label>
-                            <input type="date" className="form-control" value={form.start_date} onChange={e => set('start_date', e.target.value)} />
-                        </div>
-                        <div className="col">
-                            <label className="form-label fw-semibold">End Date <span className="text-danger">*</span></label>
-                            <input type="date" className="form-control" value={form.end_date} onChange={e => set('end_date', e.target.value)} />
-                        </div>
-                    </div>
-
-                    {/* Status + Priority */}
-                    <div className="row mb-3">
-                        <div className="col">
-                            <label className="form-label fw-semibold">Status</label>
-                            <select className="form-select" value={form.status} onChange={e => set('status', e.target.value)}>
-                                {Object.keys(STATUS_COLORS).map(s => <option key={s}>{s}</option>)}
+                    <div style={{display:'flex',gap:12}}>
+                        <Fg label="Status" style={{flex:1}}>
+                            <select style={S.inp} value={form.status} onChange={e=>set('status',e.target.value)}>
+                                {Object.keys(STATUS_CFG).map(s=><option key={s}>{s}</option>)}
                             </select>
-                        </div>
-                        <div className="col">
-                            <label className="form-label fw-semibold">Priority</label>
-                            <select className="form-select" value={form.priority} onChange={e => set('priority', e.target.value)}>
+                        </Fg>
+                        <Fg label="Priority" style={{flex:1}}>
+                            <select style={S.inp} value={form.priority} onChange={e=>set('priority',e.target.value)}>
                                 <option>High</option><option>Medium</option><option>Low</option>
                             </select>
-                        </div>
+                        </Fg>
                     </div>
-
-                    {/* Employee Tagging */}
-                    <div className="mb-3">
-                        <label className="form-label fw-semibold">Tag Employees</label>
-                        <input
-                            className="form-control form-control-sm mb-2"
-                            placeholder="Search by name or department…"
-                            value={empSearch}
-                            onChange={e => setEmpSearch(e.target.value)}
-                        />
-                        <div style={{ maxHeight:180, overflowY:'auto', border:'1px solid #dee2e6', borderRadius:6, padding:'0.25rem 0.5rem' }}>
-                            {filteredEmployees.length === 0 ? (
-                                <div className="text-muted small py-2 text-center">No employees found.</div>
-                            ) : filteredEmployees.map(emp => {
-                                const checked = form.tagged_employees.includes(emp.id);
-                                return (
-                                    <div key={emp.id}
-                                        onClick={() => toggleEmployee(emp.id)}
-                                        style={{
-                                            display:'flex', alignItems:'center', gap:8, padding:'5px 4px',
-                                            borderRadius:4, cursor:'pointer',
-                                            background: checked ? '#e8f4fd' : 'transparent',
-                                        }}
-                                    >
-                                        <input type="checkbox" readOnly checked={checked} style={{ pointerEvents:'none' }} />
-                                        <span style={{ fontSize:13 }}>
-                                            <strong>{emp.name}</strong>
-                                            <span className="text-muted ms-1">— {emp.department}</span>
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                    <Fg label="Tag Employees">
+                        <input style={{...S.inp,marginBottom:6}} placeholder="Search…" value={empQ} onChange={e=>setEmpQ(e.target.value)}/>
+                        <div style={{maxHeight:148,overflowY:'auto',border:'1px solid #EBEBEB',borderRadius:8,padding:'4px 8px'}}>
+                            {filtered.length===0
+                                ? <div style={{color:'#aaa',fontSize:12,padding:'6px 0',textAlign:'center'}}>No employees found.</div>
+                                : filtered.map(emp=>{
+                                    const chk=form.tagged_employees.includes(emp.id);
+                                    return (
+                                        <div key={emp.id} onClick={()=>toggleEmp(emp.id)} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 4px',borderRadius:6,cursor:'pointer',background:chk?cfg.bg:'transparent'}}>
+                                            <input type="checkbox" readOnly checked={chk} style={{pointerEvents:'none',accentColor:cfg.badge}}/>
+                                            <span style={{fontSize:13}}><strong>{emp.name}</strong> <span style={{color:'#aaa'}}>— {emp.department}</span></span>
+                                        </div>
+                                    );
+                                })
+                            }
                         </div>
-                        {form.tagged_employees.length > 0 && (
-                            <div className="mt-2 d-flex gap-1 flex-wrap">
-                                {form.tagged_employees.map(id => {
-                                    const emp = employees.find(e => e.id === id);
-                                    return emp ? (
-                                        <span key={id} className="badge bg-primary" style={{ fontSize:11 }}>
-                                            {emp.name}
-                                            <span
-                                                style={{ marginLeft:5, cursor:'pointer', opacity:0.75 }}
-                                                onClick={() => toggleEmployee(id)}
-                                            >✕</span>
+                        {form.tagged_employees.length>0&&(
+                            <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:8}}>
+                                {form.tagged_employees.map(id=>{
+                                    const emp=employees.find(e=>e.id===id);
+                                    return emp?(
+                                        <span key={id} style={{background:cfg.bg,color:cfg.text,border:`1px solid ${cfg.badge}44`,borderRadius:20,fontSize:11,padding:'2px 10px'}}>
+                                            {emp.name} <span onClick={()=>toggleEmp(id)} style={{marginLeft:4,cursor:'pointer',opacity:.7}}>✕</span>
                                         </span>
-                                    ) : null;
+                                    ):null;
                                 })}
                             </div>
                         )}
-                    </div>
+                    </Fg>
                 </div>
-
-                {/* Footer */}
-                <div style={{ padding:'0.75rem 1.25rem', borderTop:'1px solid #dee2e6', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
-                    <div>
-                        {isEdit && (
-                            <button className="btn btn-sm btn-outline-danger" onClick={handleDelete} disabled={deleting}>
-                                {deleting ? 'Deleting…' : 'Delete Event'}
-                            </button>
-                        )}
-                    </div>
-                    <div className="d-flex gap-2">
-                        <button className="btn btn-sm btn-secondary" onClick={onClose}>Cancel</button>
-                        <button className="btn btn-sm btn-primary" onClick={handleSave} disabled={saving}>
-                            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Event'}
-                        </button>
+                <div style={S.mFoot}>
+                    <div>{isEdit&&<button onClick={del} disabled={deling} style={S.btnDanger}>{deling?'Deleting…':'Delete'}</button>}</div>
+                    <div style={{display:'flex',gap:8}}>
+                        <button onClick={onClose} style={S.btnGhost}>Cancel</button>
+                        <button onClick={save} disabled={saving} style={{...S.btnPrimary,background:cfg.badge}}>{saving?'Saving…':isEdit?'Save Changes':'Create Event'}</button>
                     </div>
                 </div>
             </div>
         </div>
     );
 }
+function Fg({ label, children, style }) {
+    return (
+        <div style={{marginBottom:14,...style}}>
+            <div style={{fontSize:11,fontWeight:600,color:'#999',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:4}}>{label}</div>
+            {children}
+        </div>
+    );
+}
 
 // ====================================================================
-// EVENT DETAIL MODAL — read-only view for non-MarketingHr users
+// EVENT DETAIL MODAL
 // ====================================================================
 function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
-    const color    = STATUS_COLORS[event.status] ?? STATUS_COLORS['Upcoming'];
-    const pColor   = PRIORITY_COLORS[event.priority] ?? '#6c757d';
-    const tagged   = (event.tagged_employees ?? [])
-        .map(id => employees.find(e => e.id === id))
-        .filter(Boolean);
-
-    const backdropClick = (e) => { if (e.target === e.currentTarget) onClose(); };
-
+    const cfg    = STATUS_CFG[event.status] ?? STATUS_CFG.Upcoming;
+    const pColor = PRIORITY_COLORS[event.priority] ?? '#888';
+    const tagged = (event.tagged_employees??[]).map(id=>employees.find(e=>e.id===id)).filter(Boolean);
     return (
-        <div onClick={backdropClick} style={{
-            position:'fixed', inset:0, background:'rgba(0,0,0,0.5)',
-            zIndex:1060, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem',
-        }}>
-            <div style={{
-                background:'#fff', borderRadius:12, width:'100%', maxWidth:520,
-                boxShadow:'0 8px 32px rgba(0,0,0,0.22)',
-            }}>
-                {/* Coloured header strip */}
-                <div style={{ background: color.bg, borderRadius:'12px 12px 0 0', padding:'1rem 1.25rem', color: color.text, display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+        <div onClick={e=>{if(e.target===e.currentTarget)onClose();}} style={S.backdrop}>
+            <div style={{...S.modal,maxWidth:440,overflow:'hidden'}}>
+                <div style={{background:cfg.bg,padding:'1.125rem 1.5rem',borderBottom:`2px solid ${cfg.badge}33`,display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
                     <div>
-                        <h5 style={{ margin:0, fontWeight:700 }}>{event.title}</h5>
-                        <small style={{ opacity:0.85 }}>{formatDateDisplay(event.start_date)} – {formatDateDisplay(event.end_date)}</small>
+                        <div style={{fontWeight:700,fontSize:16,color:cfg.text}}>{event.title}</div>
+                        <div style={{fontSize:12,color:'#999',marginTop:2}}>{fmtShort(event.start_date)} – {fmtShort(event.end_date)}</div>
                     </div>
-                    <button className="btn-close btn-close-white" onClick={onClose} style={{ marginTop:2 }} />
+                    <button className="btn-close" onClick={onClose} style={{fontSize:11}}/>
                 </div>
-
-                {/* Body */}
-                <div style={{ padding:'1.25rem' }}>
-                    <div className="d-flex gap-2 mb-3 flex-wrap">
-                        <span className="badge" style={{ background: color.bg, color: color.text }}>{event.status}</span>
-                        <span className="badge" style={{ background: pColor, color: event.priority === 'Medium' ? '#333' : '#fff' }}>{event.priority} Priority</span>
+                <div style={{padding:'1.125rem 1.5rem'}}>
+                    <div style={{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap'}}>
+                        <span style={{...S.chip,background:cfg.bg,color:cfg.text,border:`1px solid ${cfg.badge}33`}}>{cfg.icon} {event.status}</span>
+                        <span style={{...S.chip,color:pColor,border:`1px solid ${pColor}44`}}>● {event.priority}</span>
                     </div>
-
-                    {event.description && (
-                        <p style={{ fontSize:14, color:'#444', marginBottom:'0.75rem' }}>{event.description}</p>
-                    )}
-
-                    {event.location && (
-                        <div style={{ fontSize:13, color:'#555', marginBottom:'0.75rem' }}>
-                            📍 {event.location}
-                        </div>
-                    )}
-
-                    {/* Tagged employees */}
-                    {tagged.length > 0 && (
-                        <div style={{ marginTop:'0.5rem' }}>
-                            <div style={{ fontSize:12, fontWeight:600, color:'#888', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.05em' }}>Tagged Employees</div>
-                            <div className="d-flex gap-2 flex-wrap">
-                                {tagged.map(emp => (
-                                    <span key={emp.id} style={{ fontSize:12, background:'#f0f4ff', border:'1px solid #c7d7f5', borderRadius:20, padding:'2px 10px', color:'#2856c8' }}>
-                                        {emp.name} <span style={{ color:'#888' }}>· {emp.department}</span>
+                    {event.description&&<p style={{fontSize:13,color:'#555',marginBottom:10}}>{event.description}</p>}
+                    {event.location&&<div style={{fontSize:13,color:'#666',marginBottom:10}}>📍 {event.location}</div>}
+                    {tagged.length>0&&(
+                        <div style={{marginTop:8}}>
+                            <div style={{fontSize:11,fontWeight:600,color:'#bbb',marginBottom:6,textTransform:'uppercase',letterSpacing:'.05em'}}>Tagged</div>
+                            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                                {tagged.map(emp=>(
+                                    <span key={emp.id} style={{fontSize:12,background:'#F5F5F5',borderRadius:20,padding:'2px 10px',color:'#444'}}>
+                                        {emp.name} <span style={{color:'#aaa'}}>· {emp.department}</span>
                                     </span>
                                 ))}
                             </div>
                         </div>
                     )}
                 </div>
-
-                {/* Footer */}
-                <div style={{ padding:'0.75rem 1.25rem', borderTop:'1px solid #dee2e6', display:'flex', justifyContent:'flex-end', gap:8 }}>
-                    {canEdit && (
-                        <button className="btn btn-sm btn-outline-primary" onClick={onEdit}>Edit Event</button>
-                    )}
-                    <button className="btn btn-sm btn-secondary" onClick={onClose}>Close</button>
+                <div style={{...S.mFoot,justifyContent:'flex-end',gap:8}}>
+                    {canEdit&&<button onClick={onEdit} style={S.btnGhost}>Edit Event</button>}
+                    <button onClick={onClose} style={{...S.btnPrimary,background:cfg.badge}}>Close</button>
                 </div>
             </div>
         </div>
@@ -340,47 +190,33 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
 }
 
 // ====================================================================
-// DAY EVENTS MODAL — shows all events on a clicked day
+// DAY EVENTS MODAL
 // ====================================================================
-function DayEventsModal({ dateStr, events, employees, canEdit, onSelectEvent, onClose }) {
-    const backdropClick = (e) => { if (e.target === e.currentTarget) onClose(); };
+function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
     return (
-        <div onClick={backdropClick} style={{
-            position:'fixed', inset:0, background:'rgba(0,0,0,0.4)',
-            zIndex:1055, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem',
-        }}>
-            <div style={{
-                background:'#fff', borderRadius:12, width:'100%', maxWidth:440,
-                maxHeight:'80vh', display:'flex', flexDirection:'column',
-                boxShadow:'0 8px 32px rgba(0,0,0,0.2)',
-            }}>
-                <div style={{ padding:'0.875rem 1.25rem', borderBottom:'1px solid #dee2e6', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
-                    <h6 style={{ margin:0, fontWeight:600 }}>{formatDateDisplay(dateStr)}</h6>
-                    <button className="btn-close" onClick={onClose} />
+        <div onClick={e=>{if(e.target===e.currentTarget)onClose();}} style={S.backdrop}>
+            <div style={{...S.modal,maxWidth:360}}>
+                <div style={S.mHead}>
+                    <span style={{fontWeight:700,fontSize:14,color:'#222'}}>{fmtLong(dateStr)}</span>
+                    <button className="btn-close" onClick={onClose} style={{fontSize:11}}/>
                 </div>
-                <div style={{ overflowY:'auto', padding:'0.75rem 1rem', flex:1 }}>
-                    {events.map(ev => {
-                        const color = STATUS_COLORS[ev.status] ?? STATUS_COLORS['Upcoming'];
+                <div style={{padding:'0.75rem 1rem',maxHeight:'60vh',overflowY:'auto'}}>
+                    {events.map(ev=>{
+                        const cfg=STATUS_CFG[ev.status]??STATUS_CFG.Upcoming;
                         return (
-                            <div key={ev.id}
-                                onClick={() => onSelectEvent(ev)}
-                                style={{
-                                    display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
-                                    borderRadius:8, cursor:'pointer', marginBottom:6,
-                                    border:'1px solid #e9ecef', transition:'background 0.15s',
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background='#f8f9fa'}
-                                onMouseLeave={e => e.currentTarget.style.background=''}
+                            <div key={ev.id} onClick={()=>onSelectEvent(ev)} style={{
+                                display:'flex',alignItems:'center',gap:10,padding:'9px 10px',
+                                borderRadius:10,cursor:'pointer',marginBottom:4,border:'1px solid #F0F0F0',
+                            }}
+                            onMouseEnter={e=>e.currentTarget.style.background=cfg.bg}
+                            onMouseLeave={e=>e.currentTarget.style.background=''}
                             >
-                                <div style={{ width:10, height:10, borderRadius:'50%', background:color.bg, flexShrink:0 }} />
-                                <div style={{ flex:1, minWidth:0 }}>
-                                    <div style={{ fontWeight:500, fontSize:13 }}>{ev.title}</div>
-                                    <div style={{ fontSize:11, color:'#888' }}>
-                                        {formatDateDisplay(ev.start_date)} – {formatDateDisplay(ev.end_date)}
-                                        {ev.location ? ` · ${ev.location}` : ''}
-                                    </div>
+                                <div style={{width:9,height:9,borderRadius:'50%',background:cfg.badge,flexShrink:0}}/>
+                                <div style={{flex:1,minWidth:0}}>
+                                    <div style={{fontWeight:600,fontSize:13,color:'#222'}}>{ev.title}</div>
+                                    <div style={{fontSize:11,color:'#bbb'}}>{fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}</div>
                                 </div>
-                                <span className="badge" style={{ background:color.bg, color:color.text, fontSize:10 }}>{ev.status}</span>
+                                <span style={{...S.chip,background:cfg.bg,color:cfg.text,fontSize:10}}>{ev.status}</span>
                             </div>
                         );
                     })}
@@ -391,165 +227,109 @@ function DayEventsModal({ dateStr, events, employees, canEdit, onSelectEvent, on
 }
 
 // ====================================================================
-// SIDEBAR EVENT LIST / SUMMARY PANEL
+// FILTER SIDEBAR
 // ====================================================================
-function EventSidebar({ events, employees, currentMonth, currentYear, isMarketingHr, onSelectEvent, onNewEvent }) {
-    const [filter, setFilter]  = useState('all');   // all | mine | month
-    const [search, setSearch]  = useState('');
-    const [sortBy, setSortBy]  = useState('date');  // date | status | priority
-
-    // Events for the current displayed month
-    const monthStart = `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}-01`;
-    const lastDay    = getDaysInMonth(currentYear, currentMonth);
-    const monthEnd   = `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
-
-    const filtered = events
-        .filter(ev => {
-            if (filter === 'month') return ev.start_date <= monthEnd && ev.end_date >= monthStart;
-            return true;
-        })
-        .filter(ev => {
-            if (!search.trim()) return true;
-            return ev.title.toLowerCase().includes(search.toLowerCase()) ||
-                   (ev.location ?? '').toLowerCase().includes(search.toLowerCase()) ||
-                   (ev.description ?? '').toLowerCase().includes(search.toLowerCase());
-        })
-        .sort((a, b) => {
-            if (sortBy === 'status')   return a.status.localeCompare(b.status);
-            if (sortBy === 'priority') {
-                const order = { High:0, Medium:1, Low:2 };
-                return (order[a.priority] ?? 1) - (order[b.priority] ?? 1);
-            }
-            return a.start_date.localeCompare(b.start_date);
-        });
-
-    // Summary counts
-    const counts = events.reduce((acc, ev) => {
-        acc[ev.status] = (acc[ev.status] ?? 0) + 1;
-        return acc;
-    }, {});
-
+function FilterSidebar({ activeFilters, onToggle }) {
     return (
-        <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-
-            {/* Summary chips */}
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:12 }}>
-                {Object.entries(STATUS_COLORS).map(([status, col]) => (
-                    <div key={status} style={{
-                        background: col.bg, color: col.text,
-                        borderRadius:20, fontSize:11, padding:'2px 10px', fontWeight:500,
+        <div style={{
+            width:155,flexShrink:0,background:'#fff',
+            border:'1px solid #EBEBEB',borderRadius:14,
+            padding:'16px 14px',alignSelf:'flex-start',
+        }}>
+            <div style={{fontWeight:700,fontSize:13,color:'#111',marginBottom:14}}>Filters</div>
+            {Object.entries(STATUS_CFG).map(([status,cfg])=>{
+                const active=activeFilters.includes(status);
+                return (
+                    <div key={status} onClick={()=>onToggle(status)} style={{
+                        display:'flex',alignItems:'center',gap:9,
+                        marginBottom:12,cursor:'pointer',userSelect:'none',
                     }}>
-                        {counts[status] ?? 0} {status}
-                    </div>
-                ))}
-            </div>
-
-            {/* Controls */}
-            <input
-                className="form-control form-control-sm mb-2"
-                placeholder="Search events…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-            />
-            <div className="d-flex gap-2 mb-3">
-                <select className="form-select form-select-sm" value={filter} onChange={e => setFilter(e.target.value)}>
-                    <option value="all">All Events</option>
-                    <option value="month">This Month</option>
-                </select>
-                <select className="form-select form-select-sm" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                    <option value="date">By Date</option>
-                    <option value="status">By Status</option>
-                    <option value="priority">By Priority</option>
-                </select>
-            </div>
-
-            {/* New Event button — MarketingHr only */}
-            {isMarketingHr && (
-                <button className="btn btn-sm btn-primary w-100 mb-3" onClick={onNewEvent}>
-                    + New Event
-                </button>
-            )}
-
-            {/* Event list */}
-            <div style={{ overflowY:'auto', flex:1 }}>
-                {filtered.length === 0 ? (
-                    <div className="text-muted text-center small py-4">No events found.</div>
-                ) : filtered.map(ev => {
-                    const color  = STATUS_COLORS[ev.status] ?? STATUS_COLORS['Upcoming'];
-                    const pColor = PRIORITY_COLORS[ev.priority] ?? '#aaa';
-                    const tagged = (ev.tagged_employees ?? [])
-                        .map(id => employees.find(e => e.id === id))
-                        .filter(Boolean);
-
-                    return (
-                        <div key={ev.id}
-                            onClick={() => onSelectEvent(ev)}
-                            style={{
-                                border:'1px solid #e9ecef', borderRadius:8, padding:'10px 12px',
-                                marginBottom:8, cursor:'pointer', borderLeft:`4px solid ${color.bg}`,
-                                transition:'box-shadow 0.15s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
-                            onMouseLeave={e => e.currentTarget.style.boxShadow='none'}
-                        >
-                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:4 }}>
-                                <div style={{ fontWeight:600, fontSize:13, flex:1 }}>{ev.title}</div>
-                                <span style={{ fontSize:10, fontWeight:600, color: pColor, flexShrink:0 }}>
-                                    ● {ev.priority}
-                                </span>
-                            </div>
-                            <div style={{ fontSize:11, color:'#888', marginTop:2 }}>
-                                {formatDateDisplay(ev.start_date)}
-                                {ev.end_date !== ev.start_date ? ` – ${formatDateDisplay(ev.end_date)}` : ''}
-                            </div>
-                            {ev.location && <div style={{ fontSize:11, color:'#aaa', marginTop:1 }}>📍 {ev.location}</div>}
-                            <div style={{ display:'flex', gap:4, marginTop:5, flexWrap:'wrap', alignItems:'center' }}>
-                                <span className="badge" style={{ background:color.bg, color:color.text, fontSize:10 }}>{ev.status}</span>
-                                {tagged.length > 0 && (
-                                    <span style={{ fontSize:10, color:'#888' }}>
-                                        👤 {tagged.slice(0,2).map(e => e.name).join(', ')}{tagged.length > 2 ? ` +${tagged.length - 2}` : ''}
-                                    </span>
-                                )}
-                            </div>
+                        <div style={{
+                            width:18,height:18,borderRadius:5,flexShrink:0,
+                            background:active?cfg.filter:'#F0F0F0',
+                            border:`1.5px solid ${active?cfg.filter:'#DDD'}`,
+                            display:'flex',alignItems:'center',justifyContent:'center',
+                            transition:'all .15s',
+                        }}>
+                            {active&&<span style={{color:'#fff',fontSize:11,fontWeight:900,lineHeight:1}}>✓</span>}
                         </div>
-                    );
-                })}
-            </div>
+                        <span style={{fontSize:12.5,color:active?'#222':'#BBB',fontWeight:active?500:400,transition:'color .15s'}}>
+                            {status}
+                        </span>
+                    </div>
+                );
+            })}
         </div>
     );
 }
 
 // ====================================================================
-// MAIN CALENDAR COMPONENT
+// EVENT CARD — inside a calendar cell
+// ====================================================================
+function EventCard({ event, employees, onClick }) {
+    const cfg    = STATUS_CFG[event.status] ?? STATUS_CFG.Upcoming;
+    const tagged = (event.tagged_employees??[]).map(id=>employees.find(e=>e.id===id)).filter(Boolean);
+    return (
+        <div onClick={e=>{ e.stopPropagation(); onClick(event); }} style={{
+            background:cfg.bg,border:`1px solid ${cfg.badge}22`,
+            borderRadius:7,padding:'4px 7px',marginTop:3,cursor:'pointer',
+            transition:'opacity .12s',
+        }}
+        onMouseEnter={e=>e.currentTarget.style.opacity='.82'}
+        onMouseLeave={e=>e.currentTarget.style.opacity='1'}
+        >
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4}}>
+                <div style={{display:'flex',alignItems:'center',gap:4,minWidth:0,flex:1}}>
+                    <span style={{fontSize:10,flexShrink:0}}>{cfg.icon}</span>
+                    <span style={{fontSize:10.5,fontWeight:600,color:cfg.text,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                        {event.title}
+                    </span>
+                </div>
+                <div style={{
+                    background:cfg.badge,color:'#fff',borderRadius:10,
+                    minWidth:17,height:17,display:'flex',alignItems:'center',
+                    justifyContent:'center',fontSize:9,fontWeight:700,flexShrink:0,padding:'0 4px',
+                }}>
+                    ●
+                </div>
+            </div>
+            {tagged.length>0&&(
+                <div style={{fontSize:9.5,color:cfg.text,opacity:.72,marginTop:1.5,paddingLeft:14,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                    ↗ {tagged[0].name}{tagged.length>1?` +${tagged.length-1}`:''}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ====================================================================
+// MAIN CALENDAR
 // ====================================================================
 function Calendar() {
     const today = new Date();
-    const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-    const [currentYear,  setCurrentYear]  = useState(today.getFullYear());
+    const [month,  setMonth]  = useState(today.getMonth());
+    const [year,   setYear]   = useState(today.getFullYear());
+    const [view,   setView]   = useState('Month');
+    const [filters,setFilters]= useState(Object.keys(STATUS_CFG));
 
-    const [events,       setEvents]       = useState([]);
-    const [employees,    setEmployees]    = useState([]);
-    const [currentUser,  setCurrentUser]  = useState(null);   // { id, name, department, department_id }
+    const [events,      setEvents]    = useState([]);
+    const [employees,   setEmployees] = useState([]);
+    const [currentUser, setUser]      = useState(null);
 
-    // Modal state
-    const [dayModal,    setDayModal]    = useState(null);  // { dateStr, events[] }
-    const [detailEvent, setDetailEvent] = useState(null);  // event object for detail view
-    const [editEvent,   setEditEvent]   = useState(null);  // event object (or {}) for form
-    const [showForm,    setShowForm]    = useState(false);
+    const [dayModal,    setDayModal]  = useState(null);
+    const [detailEvent, setDetail]    = useState(null);
+    const [editEvent,   setEdit]      = useState(null);
+    const [showForm,    setShowForm]  = useState(false);
 
-    // Derived
-    const isMarketingHr  = currentUser?.department?.toLowerCase() === 'marketing' || currentUser?.department?.toLowerCase() === 'human resources';  
+    const isEditor = currentUser?.department?.toLowerCase()==='marketing'
+                  || currentUser?.department?.toLowerCase()==='human resources';
 
-    // ----------------------------------------------------------------
-    // Bootstrap: fetch current user, events, employees
-    // ----------------------------------------------------------------
-    useEffect(() => {
-        // Fetch current logged-in user
-        fetch('php/get_current_user.php')
-            .then(r => r.json())
-            .then(d => { if (!d.error) setCurrentUser(d); })
-            .catch(() => {});
+    useEffect(()=>{
+        fetch('php/get_current_user.php').then(r=>r.json()).then(d=>{ if(!d.error)setUser(d); }).catch(()=>{});
+        fetch('php/get_employees.php').then(r=>r.json()).then(d=>setEmployees(Array.isArray(d)?d:[])).catch(()=>{});
+    },[]);
 
+<<<<<<< HEAD
         // Fetch all employees (for tagging)
         fetch('php/get_employees.php')
             .then(r => r.json())
@@ -568,266 +348,221 @@ useEffect(() => {
             setEvents([]);
         });
 }, [currentUser]);
+=======
+    useEffect(()=>{
+        if(!currentUser) return;
+        const url=isEditor?'php/get_events.php':`php/get_events.php?user_id=${currentUser.id}`;
+        fetch(url).then(r=>r.json()).then(d=>setEvents(Array.isArray(d)?d:[])).catch(()=>{});
+    },[currentUser]);
 
-    // ----------------------------------------------------------------
-    // Helpers
-    // ----------------------------------------------------------------
-    function getEventsForDay(day) {
-        const dateStr = toDateStr(currentYear, currentMonth, day);
-        return events.filter(ev =>
-            isSameOrBefore(ev.start_date, dateStr) && isSameOrAfter(ev.end_date, dateStr)
-        );
-    }
+    const toggleFilter = s => setFilters(f=>f.includes(s)?f.filter(x=>x!==s):[...f,s]);
+>>>>>>> b2fc7422a3abc1bca76a3152ee139c82f92885a6
 
-    // ----------------------------------------------------------------
-    // Event CRUD callbacks
-    // ----------------------------------------------------------------
-    const handleSaveEvent = (savedEvent) => {
-        setEvents(prev => {
-            const idx = prev.findIndex(e => e.id === savedEvent.id);
-            return idx >= 0
-                ? prev.map(e => e.id === savedEvent.id ? savedEvent : e)
-                : [...prev, savedEvent];
-        });
-        setShowForm(false);
-        setEditEvent(null);
+    const getDay = dateStr =>
+        events.filter(ev=>ev.start_date<=dateStr&&ev.end_date>=dateStr&&filters.includes(ev.status));
+
+    const handleSave = saved => {
+        setEvents(p=>{ const i=p.findIndex(e=>e.id===saved.id); return i>=0?p.map(e=>e.id===saved.id?saved:e):[...p,saved]; });
+        setShowForm(false); setEdit(null);
+    };
+    const handleDel = id => {
+        setEvents(p=>p.filter(e=>e.id!==id));
+        setShowForm(false); setEdit(null);
     };
 
-    const handleDeleteEvent = (id) => {
-        setEvents(prev => prev.filter(e => e.id !== id));
-        setShowForm(false);
-        setEditEvent(null);
-    };
+    const prev = () => { setMonth(m=>{ if(m===0){setYear(y=>y-1);return 11;} return m-1; }); setDayModal(null); };
+    const next = () => { setMonth(m=>{ if(m===11){setYear(y=>y+1);return 0;} return m+1; }); setDayModal(null); };
 
-    // ----------------------------------------------------------------
-    // Navigation
-    // ----------------------------------------------------------------
-    const prevMonth = () => {
-        setCurrentMonth(m => {
-            if (m === 0) { setCurrentYear(y => y - 1); return 11; }
-            return m - 1;
-        });
-        setDayModal(null);
-    };
-    const nextMonth = () => {
-        setCurrentMonth(m => {
-            if (m === 11) { setCurrentYear(y => y + 1); return 0; }
-            return m + 1;
-        });
-        setDayModal(null);
-    };
-    const goToToday = () => {
-        setCurrentMonth(today.getMonth());
-        setCurrentYear(today.getFullYear());
-        setDayModal(null);
-    };
+    // ── Grid ─────────────────────────────────────────────────────────
+    const dim      = getDaysInMonth(year,month);
+    const firstDay = getFirstDay(year,month); // 0=Sun
+    let   cellArr  = [];
+    const rows     = [];
 
-    // ----------------------------------------------------------------
-    // Build calendar grid
-    // ----------------------------------------------------------------
-    const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-    const firstDay    = getFirstDayOfMonth(currentYear, currentMonth);
+    for(let i=0;i<firstDay;i++) cellArr.push(<td key={`e${i}`} style={G.empty}/>);
 
-    const calendarRows = [];
-    let cells = [];
+    for(let d=1;d<=dim;d++){
+        const dateStr    = toDateStr(year,month,d);
+        const dayEvs     = getDay(dateStr);
+        const colIndex   = (firstDay+d-1)%7;
+        const isToday    = d===today.getDate()&&month===today.getMonth()&&year===today.getFullYear();
+        const isSun      = colIndex===0;
+        const isFirstRow = d <= 7-firstDay;
+        const dayName    = DAY_ABBR[colIndex];
 
-    for (let i = 0; i < firstDay; i++) {
-        cells.push(
-            <td key={`empty-${i}`} style={{ background:'#fafafa', borderColor:'#f0f0f0' }}></td>
-        );
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-        const isToday   = d === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
-        const dateStr   = toDateStr(currentYear, currentMonth, d);
-        const dayEvents = getEventsForDay(d);
-
-        cells.push(
+        cellArr.push(
             <td key={d}
-                onClick={() => {
-                    if (dayEvents.length > 0) {
-                        setDayModal({ dateStr, events: dayEvents });
-                    } else if (isMarketingHr) {
-                        // MarketingHr can click an empty day to quickly create an event
-                        setEditEvent({ start_date: dateStr, end_date: dateStr });
-                        setShowForm(true);
-                    }
+                onClick={()=>{
+                    if(dayEvs.length>0) setDayModal({dateStr,events:dayEvs});
+                    else if(isEditor){ setEdit({start_date:dateStr,end_date:dateStr}); setShowForm(true); }
                 }}
-                style={{
-                    verticalAlign:'top', padding:'4px 5px', cursor: dayEvents.length > 0 || isMarketingHr ? 'pointer' : 'default',
-                    minWidth: 80, maxWidth: 120,
-                    background: isToday ? '#fff8e1' : '#fff',
-                    outline: isToday ? '2px solid #ffc107' : 'none',
-                    outlineOffset: -2,
-                    transition:'background 0.12s',
-                }}
-                onMouseEnter={e => { if (!isToday) e.currentTarget.style.background = '#f5f7ff'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = isToday ? '#fff8e1' : '#fff'; }}
+                style={{...G.cell,cursor:dayEvs.length>0||isEditor?'pointer':'default'}}
+                onMouseEnter={e=>{ if(!isToday)e.currentTarget.style.background='#FAFAFA'; }}
+                onMouseLeave={e=>{ e.currentTarget.style.background='#fff'; }}
             >
-                {/* Day number */}
-                <div style={{
-                    fontWeight: isToday ? 700 : 400,
-                    fontSize: 13,
-                    color: isToday ? '#e6a200' : '#333',
-                    marginBottom: 2,
-                    display:'flex', alignItems:'center', gap:4,
-                }}>
-                    {isToday && <span style={{ fontSize:9, background:'#ffc107', color:'#333', borderRadius:3, padding:'0 4px', fontWeight:700 }}>TODAY</span>}
-                    {d}
+                {/* Date number + day abbr on first row */}
+                <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:2}}>
+                    <span style={{
+                        display:'inline-flex',alignItems:'center',justifyContent:'center',
+                        width:24,height:24,borderRadius:'50%',
+                        fontSize:12,fontWeight:isToday?700:500,
+                        background:isToday?'#111':'transparent',
+                        color:isToday?'#fff':isSun?'#E53935':'#222',
+                        flexShrink:0,
+                    }}>{d}</span>
+                    {isFirstRow&&<span style={{fontSize:10,color:'#CCCCCC',fontWeight:500}}>{dayName}</span>}
                 </div>
-                {/* Event pills — show up to 2, then "+N more" */}
-                {dayEvents.slice(0, 2).map(ev => <EventPill key={ev.id} event={ev} />)}
-                {dayEvents.length > 2 && (
-                    <div style={{ fontSize:10, color:'#888', marginTop:1 }}>+{dayEvents.length - 2} more</div>
+                {dayEvs.slice(0,3).map(ev=>(
+                    <EventCard key={ev.id} event={ev} employees={employees}
+                        onClick={ev=>{ setDetail(ev); setDayModal(null); }}/>
+                ))}
+                {dayEvs.length>3&&(
+                    <div style={{fontSize:9.5,color:'#BBB',marginTop:3,paddingLeft:2}}>+{dayEvs.length-3} more</div>
                 )}
             </td>
         );
 
-        if (cells.length % 7 === 0 || d === daysInMonth) {
-            // Pad last row
-            if (d === daysInMonth && cells.length % 7 !== 0) {
-                const remaining = 7 - (cells.length % 7);
-                for (let p = 0; p < remaining; p++) {
-                    cells.push(<td key={`pad-${p}`} style={{ background:'#fafafa', borderColor:'#f0f0f0' }}></td>);
-                }
+        if(cellArr.length%7===0||d===dim){
+            if(d===dim&&cellArr.length%7!==0){
+                const rem=7-(cellArr.length%7);
+                for(let p=0;p<rem;p++) cellArr.push(<td key={`p${p}`} style={G.empty}/>);
             }
-            calendarRows.push(<tr key={`row-${d}`}>{cells}</tr>);
-            cells = [];
+            rows.push(<tr key={`r${d}`}>{cellArr}</tr>);
+            cellArr=[];
         }
     }
 
-    // ----------------------------------------------------------------
-    // RENDER
-    // ----------------------------------------------------------------
+    // ── Render ────────────────────────────────────────────────────────
     return (
-        <div style={{ display:'flex', gap:20, alignItems:'flex-start', padding:'1.25rem' }}>
+        <div style={{padding:'20px 24px',background:'#F7F8FA',minHeight:'100%',fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",boxSizing:'border-box'}}>
 
-            {/* ── CALENDAR ── */}
-            <div style={{ flex:'1 1 0', minWidth:0 }}>
+            {/* TOP BAR */}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+                <div style={{fontSize:28,fontWeight:800,color:'#111',letterSpacing:'-.02em'}}>Calendar</div>
 
-                {/* Header */}
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <button className="btn btn-sm btn-outline-secondary" onClick={prevMonth}>‹</button>
-                        <h5 style={{ margin:0, fontWeight:700, fontSize:'1.1rem' }}>
-                            {MONTH_NAMES[currentMonth]} {currentYear}
-                        </h5>
-                        <button className="btn btn-sm btn-outline-secondary" onClick={nextMonth}>›</button>
-                    </div>
-                    <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                        <button className="btn btn-sm btn-outline-primary" onClick={goToToday}>Today</button>
-                        {isMarketingHr && (
-                            <button
-                                className="btn btn-sm btn-primary"
-                                onClick={() => { setEditEvent({}); setShowForm(true); }}
-                            >
-                                + New Event
-                            </button>
-                        )}
-                        {currentUser && !isMarketingHr && (
-                            <span className="badge bg-secondary" style={{ fontSize:11 }}>View Only</span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Role notice for non-MarketingHr */}
-                {currentUser && !isMarketingHr && (
-                    <div className="alert alert-info py-2 mb-3" style={{ fontSize:12 }}>
-                        You are viewing events visible to your account. Only <strong>Marketing & HR</strong> staff can create or edit events.
-                    </div>
-                )}
-
-                {/* Calendar table */}
-                <div style={{ overflowX:'auto' }}>
-                    <table style={{
-                        width:'100%', borderCollapse:'collapse',
-                        border:'1px solid #dee2e6', borderRadius:8, overflow:'hidden',
-                        tableLayout:'fixed',
-                    }}>
-                        <thead>
-                            <tr style={{ background:'#f8f9fa' }}>
-                                {DAYS_OF_WEEK.map(d => (
-                                    <th key={d} style={{ textAlign:'center', padding:'8px 4px', fontSize:12, fontWeight:600, color:'#555', borderBottom:'1px solid #dee2e6' }}>
-                                        {d}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody style={{ border:'1px solid #dee2e6' }}>
-                            {calendarRows}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Legend */}
-                <div style={{ display:'flex', gap:12, marginTop:10, flexWrap:'wrap' }}>
-                    {Object.entries(STATUS_COLORS).map(([status, col]) => (
-                        <div key={status} style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'#555' }}>
-                            <div style={{ width:10, height:10, borderRadius:2, background:col.bg }} />
-                            {status}
-                        </div>
+                {/* Day / Week / Month toggle */}
+                <div style={{display:'flex',background:'#EFEFEF',borderRadius:10,padding:3,gap:2}}>
+                    {['Day','Week','Month'].map(v=>(
+                        <button key={v} onClick={()=>setView(v)} style={{
+                            background:view===v?'#111':'transparent',
+                            color:view===v?'#fff':'#666',border:'none',
+                            borderRadius:8,padding:'6px 20px',fontSize:13,fontWeight:600,cursor:'pointer',
+                            transition:'all .15s',
+                        }}>{v}</button>
                     ))}
                 </div>
+
+                {/* Add Event */}
+                {isEditor?(
+                    <button onClick={()=>{ setEdit({}); setShowForm(true); }} style={{
+                        background:'#FF6B4E',color:'#fff',border:'none',borderRadius:10,
+                        padding:'9px 22px',fontSize:13,fontWeight:700,cursor:'pointer',
+                        display:'flex',alignItems:'center',gap:6,
+                        boxShadow:'0 2px 10px rgba(255,107,78,.35)',transition:'opacity .15s',
+                    }}
+                    onMouseEnter={e=>e.currentTarget.style.opacity='.88'}
+                    onMouseLeave={e=>e.currentTarget.style.opacity='1'}
+                    >+ Add Event</button>
+                ):(
+                    <span style={{fontSize:11,background:'#EEE',borderRadius:8,padding:'7px 14px',color:'#999',fontWeight:500}}>View Only</span>
+                )}
             </div>
 
-            {/* ── SIDEBAR ── */}
-            <div style={{
-                width: 300, flexShrink: 0,
-                border:'1px solid #dee2e6', borderRadius:10,
-                padding:'1rem', background:'#fff',
-                maxHeight:'calc(100vh - 2.5rem)', display:'flex', flexDirection:'column',
-                position:'sticky', top:'1.25rem',
-            }}>
-                <h6 style={{ fontWeight:700, marginBottom:12 }}>Events</h6>
-                <EventSidebar
-                    events={events}
-                    employees={employees}
-                    currentMonth={currentMonth}
-                    currentYear={currentYear}
-                    isMarketingHr={isMarketingHr}
-                    onSelectEvent={(ev) => setDetailEvent(ev)}
-                    onNewEvent={() => { setEditEvent({}); setShowForm(true); }}
-                />
+            {/* BODY */}
+            <div style={{display:'flex',gap:16,alignItems:'flex-start'}}>
+
+                {/* Filter sidebar */}
+                <FilterSidebar activeFilters={filters} onToggle={toggleFilter}/>
+
+                {/* Calendar card */}
+                <div style={{flex:1,minWidth:0,background:'#fff',border:'1px solid #EBEBEB',borderRadius:14,overflow:'hidden'}}>
+
+                    {/* Calendar header */}
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 20px',borderBottom:'1px solid #F0F0F0'}}>
+                        <span style={{fontWeight:700,fontSize:17,color:'#111'}}>{MONTH_NAMES[month]} {year}</span>
+                        <div style={{display:'flex',gap:6}}>
+                            <button onClick={prev} style={G.navBtn}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
+                            </button>
+                            <button onClick={next} style={G.navBtn}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m9 18 6-6-6-6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    {currentUser&&!isEditor&&(
+                        <div style={{margin:'10px 16px 0',padding:'6px 12px',background:'#FEF9E7',borderRadius:8,fontSize:12,color:'#B7770D',fontWeight:500}}>
+                            View-only mode — Marketing & HR staff can create events.
+                        </div>
+                    )}
+
+                    {/* Grid */}
+                    <div style={{overflowX:'auto'}}>
+                        <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed',minWidth:520}}>
+                            <tbody>{rows}</tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
-            {/* ── MODALS ── */}
-
-            {/* Day click → list of events on that day */}
-            {dayModal && !detailEvent && !showForm && (
+            {/* MODALS */}
+            {dayModal&&!detailEvent&&!showForm&&(
                 <DayEventsModal
-                    dateStr={dayModal.dateStr}
-                    events={dayModal.events}
-                    employees={employees}
-                    canEdit={isMarketingHr}
-                    onSelectEvent={(ev) => { setDetailEvent(ev); setDayModal(null); }}
-                    onClose={() => setDayModal(null)}
+                    dateStr={dayModal.dateStr} events={dayModal.events}
+                    onSelectEvent={ev=>{ setDetail(ev); setDayModal(null); }}
+                    onClose={()=>setDayModal(null)}
                 />
             )}
-
-            {/* Event detail (read or edit entry point) */}
-            {detailEvent && !showForm && (
+            {detailEvent&&!showForm&&(
                 <EventDetailModal
-                    event={detailEvent}
-                    employees={employees}
-                    canEdit={isMarketingHr}
-                    onEdit={() => { setEditEvent(detailEvent); setDetailEvent(null); setShowForm(true); }}
-                    onClose={() => { setDetailEvent(null); setDayModal(null); }}
+                    event={detailEvent} employees={employees} canEdit={isEditor}
+                    onEdit={()=>{ setEdit(detailEvent); setDetail(null); setShowForm(true); }}
+                    onClose={()=>{ setDetail(null); setDayModal(null); }}
                 />
             )}
-
-            {/* Event form — MarketingHr only */}
-            {showForm && isMarketingHr && (
+            {showForm&&isEditor&&(
                 <EventFormModal
-                    event={editEvent}
-                    employees={employees}
-                    onSave={handleSaveEvent}
-                    onDelete={handleDeleteEvent}
-                    onClose={() => { setShowForm(false); setEditEvent(null); }}
+                    event={editEvent} employees={employees}
+                    onSave={handleSave} onDelete={handleDel}
+                    onClose={()=>{ setShowForm(false); setEdit(null); }}
                 />
             )}
         </div>
     );
 }
+
+// ── Grid cell styles ──────────────────────────────────────────────────
+const G = {
+    cell: {
+        verticalAlign:'top',padding:'6px 8px',
+        borderBottom:'1px solid #F0F0F0',borderRight:'1px solid #F0F0F0',
+        background:'#fff',minHeight:100,height:100,transition:'background .1s',
+    },
+    empty: {
+        borderBottom:'1px solid #F0F0F0',borderRight:'1px solid #F0F0F0',
+        background:'#FAFAFA',minHeight:100,height:100,
+    },
+    navBtn: {
+        background:'#F5F5F5',border:'1px solid #E8E8E8',borderRadius:8,
+        width:30,height:30,display:'inline-flex',alignItems:'center',
+        justifyContent:'center',cursor:'pointer',color:'#555',
+    },
+};
+
+// ── Shared style tokens ───────────────────────────────────────────────
+const S = {
+    backdrop: { position:'fixed',inset:0,background:'rgba(0,0,0,0.44)',zIndex:1060,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem' },
+    modal:    { background:'#fff',borderRadius:16,width:'100%',maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,.18)' },
+    mHead:    { padding:'1rem 1.5rem',borderBottom:'1px solid #F0F0F0',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0 },
+    mBody:    { overflowY:'auto',padding:'1.125rem 1.5rem',flex:1 },
+    mFoot:    { padding:'0.75rem 1.5rem',borderTop:'1px solid #F0F0F0',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0 },
+    inp:      { width:'100%',padding:'8px 11px',border:'1px solid #EBEBEB',borderRadius:8,fontSize:13,color:'#222',outline:'none',boxSizing:'border-box',fontFamily:'inherit',background:'#fff' },
+    chip:     { display:'inline-flex',alignItems:'center',borderRadius:20,padding:'2px 10px',fontSize:11,fontWeight:500 },
+    btnPrimary:{ background:'#FF6B4E',color:'#fff',border:'none',borderRadius:20,padding:'7px 18px',fontSize:13,fontWeight:600,cursor:'pointer' },
+    btnGhost:  { background:'#fff',color:'#555',border:'1px solid #E0E0E0',borderRadius:20,padding:'7px 18px',fontSize:13,fontWeight:500,cursor:'pointer' },
+    btnDanger: { background:'#fff',color:'#E74C3C',border:'1px solid #E74C3C44',borderRadius:20,padding:'7px 18px',fontSize:13,fontWeight:500,cursor:'pointer' },
+    errBox:    { background:'#FDECEA',border:'1px solid #F5C6C4',color:'#C0392B',borderRadius:8,padding:'8px 12px',fontSize:13,marginBottom:12 },
+};
 
 // ====================================================================
 // MOUNT
@@ -837,4 +572,3 @@ if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);
     root.render(<Calendar />);
 }
-
