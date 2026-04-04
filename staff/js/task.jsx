@@ -447,9 +447,35 @@ function App() {
     );
 }
 
+const TASKS_PER_PAGE = 5;
+
+function getPaginatedItems(items, currentPage, pageSize = TASKS_PER_PAGE) {
+    const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+    const safePage = Math.min(currentPage, totalPages);
+    const startIndex = (safePage - 1) * pageSize;
+
+    return {
+        totalPages,
+        currentPage: safePage,
+        items: items.slice(startIndex, startIndex + pageSize)
+    };
+}
+
 function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
     const [selectedTask, setSelectedTask] = React.useState(null);
     const [showDetailModal, setShowDetailModal] = React.useState(false);
+
+    const [collapsedLanes, setCollapsedLanes] = React.useState({
+        ongoing: false,
+        overdue: false,
+        completed: false
+    });
+
+    const [lanePages, setLanePages] = React.useState({
+        ongoing: 1,
+        overdue: 1,
+        completed: 1
+    });
 
     const filteredTasks = tasks.filter((task) => {
         const matchesDueDate = !dueDateFilter || task.deadline === dueDateFilter;
@@ -460,13 +486,35 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
         return matchesDueDate && matchesPriority;
     });
 
-    const ongoingTasks = filteredTasks.filter(task => getLaneKey(task) === "ongoing");
-    const overdueTasks = filteredTasks.filter(task => getLaneKey(task) === "overdue");
-    const completedTasks = filteredTasks.filter(task => getLaneKey(task) === "completed");
+    const ongoingTasks = filteredTasks.filter((task) => getLaneKey(task) === "ongoing");
+    const overdueTasks = filteredTasks.filter((task) => getLaneKey(task) === "overdue");
+    const completedTasks = filteredTasks.filter((task) => getLaneKey(task) === "completed");
+
+    React.useEffect(() => {
+        setLanePages({
+            ongoing: 1,
+            overdue: 1,
+            completed: 1
+        });
+    }, [dueDateFilter, priorityFilter, tasks]);
 
     const handleRowClick = (task) => {
         setSelectedTask(task);
         setShowDetailModal(true);
+    };
+
+    const handleToggleLane = (laneKey) => {
+        setCollapsedLanes((prev) => ({
+            ...prev,
+            [laneKey]: !prev[laneKey]
+        }));
+    };
+
+    const handlePageChange = (laneKey, page) => {
+        setLanePages((prev) => ({
+            ...prev,
+            [laneKey]: page
+        }));
     };
 
     return (
@@ -476,18 +524,30 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
                     laneKey="ongoing"
                     tasks={ongoingTasks}
                     onRowClick={handleRowClick}
+                    collapsed={collapsedLanes.ongoing}
+                    onToggle={() => handleToggleLane("ongoing")}
+                    currentPage={lanePages.ongoing}
+                    onPageChange={(page) => handlePageChange("ongoing", page)}
                 />
 
                 <TaskLane
                     laneKey="overdue"
                     tasks={overdueTasks}
                     onRowClick={handleRowClick}
+                    collapsed={collapsedLanes.overdue}
+                    onToggle={() => handleToggleLane("overdue")}
+                    currentPage={lanePages.overdue}
+                    onPageChange={(page) => handlePageChange("overdue", page)}
                 />
 
                 <TaskLane
                     laneKey="completed"
                     tasks={completedTasks}
                     onRowClick={handleRowClick}
+                    collapsed={collapsedLanes.completed}
+                    onToggle={() => handleToggleLane("completed")}
+                    currentPage={lanePages.completed}
+                    onPageChange={(page) => handlePageChange("completed", page)}
                 />
             </div>
 
@@ -503,14 +563,37 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
     );
 }
 
-function TaskLane({ laneKey, tasks, onRowClick }) {
+function TaskLane({
+    laneKey,
+    tasks,
+    onRowClick,
+    collapsed,
+    onToggle,
+    currentPage,
+    onPageChange
+}) {
     const meta = getLaneMeta(laneKey);
+
+    const {
+        items: paginatedTasks,
+        totalPages,
+        currentPage: safePage
+    } = getPaginatedItems(tasks, currentPage);
+
+    const startItem = tasks.length === 0 ? 0 : (safePage - 1) * TASKS_PER_PAGE + 1;
+    const endItem = Math.min(safePage * TASKS_PER_PAGE, tasks.length);
 
     return (
         <section className="task-lane-card">
             <div className="task-lane-head">
                 <div className="task-lane-head-left">
-                    <button type="button" className="task-lane-icon-btn" aria-label={`Open ${meta.title}`}>
+                    <button
+                        type="button"
+                        className={`task-lane-icon-btn ${collapsed ? "is-collapsed" : ""}`}
+                        aria-label={`${collapsed ? "Expand" : "Collapse"} ${meta.title}`}
+                        aria-expanded={!collapsed}
+                        onClick={onToggle}
+                    >
                         <i className="bi bi-chevron-down"></i>
                     </button>
 
@@ -519,75 +602,140 @@ function TaskLane({ laneKey, tasks, onRowClick }) {
                         {meta.title}
                     </span>
                 </div>
+
+                <div className="task-lane-head-right">
+                    <span className="task-lane-count">{tasks.length}</span>
+                </div>
             </div>
 
-            <div className="task-lane-grid">
-                <div className="task-lane-grid-head">
-                    <div>Task Name</div>
-                    <div>Task Description</div>
-                    <div>Start Date</div>
-                    <div>Due Date</div>
-                    <div>Priority</div>
-                    <div></div>
-                </div>
-
-                <div className="task-lane-grid-body">
-                    {tasks.length === 0 ? (
-                        <div className="task-lane-empty">
-                            No tasks found
+            {!collapsed && (
+                <>
+                    <div className="task-lane-grid">
+                        <div className="task-lane-grid-head">
+                            <div>Task Name</div>
+                            <div>Task Description</div>
+                            <div>Start Date</div>
+                            <div>Due Date</div>
+                            <div>Priority</div>
+                            <div></div>
                         </div>
-                    ) : (
-                        tasks.map(task => (
-                            <div
-                                key={task.id}
-                                className={`task-lane-row ${task.is_overdue ? "is-overdue" : ""}`}
-                                onClick={() => onRowClick(task)}
-                                role="button"
-                                tabIndex="0"
-                                onKeyDown={(event) => {
-                                    if (event.key === "Enter" || event.key === " ") {
-                                        event.preventDefault();
-                                        onRowClick(task);
-                                    }
-                                }}
-                            >
-                                <div className="task-lane-col task-lane-col-name">
-                                    <span className="task-lane-title">{task.title}</span>
-                                </div>
 
-                                <div className="task-lane-col task-lane-col-description">
-                                    {task.description ? (
-                                        <span className="task-description-text" title={task.description}>
-                                            {task.description}
-                                        </span>
-                                    ) : (
-                                        <span className="task-description-empty">
-                                            No description
-                                        </span>
-                                    )}
+                        <div className="task-lane-grid-body">
+                            {tasks.length === 0 ? (
+                                <div className="task-lane-empty">
+                                    No tasks found
                                 </div>
-                                <div className="task-lane-col task-lane-col-date">
-                                    {formatDate(task.start_date)}
-                                </div>
-                                <div className="task-lane-col task-lane-col-date">
-                                    {formatDate(task.deadline)}
-                                </div>
+                            ) : (
+                                paginatedTasks.map((task) => (
+                                    <div
+                                        key={task.id}
+                                        className={`task-lane-row ${task.is_overdue ? "is-overdue" : ""}`}
+                                        onClick={() => onRowClick(task)}
+                                        role="button"
+                                        tabIndex="0"
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter" || event.key === " ") {
+                                                event.preventDefault();
+                                                onRowClick(task);
+                                            }
+                                        }}
+                                    >
+                                        <div className="task-lane-col task-lane-col-name">
+                                            <span className="task-lane-title">{task.title}</span>
+                                        </div>
 
-                                <div className="task-lane-col task-lane-col-priority">
-                                    <span className={`task-priority-tag ${getPriorityClass(task.priority)}`}>
-                                        <i className="bi bi-flag-fill"></i>
-                                        {task.priority || "Low"}
-                                    </span>
-                                </div>
+                                        <div className="task-lane-col task-lane-col-description">
+                                            {task.description ? (
+                                                <span
+                                                    className="task-description-text"
+                                                    title={task.description}
+                                                >
+                                                    {task.description}
+                                                </span>
+                                            ) : (
+                                                <span className="task-description-empty">
+                                                    No description
+                                                </span>
+                                            )}
+                                        </div>
 
-                                <div className="task-lane-col task-lane-col-menu">
-                                    <i className="bi bi-three-dots"></i>
-                                </div>
+                                        <div className="task-lane-col task-lane-col-date">
+                                            {formatDate(task.start_date)}
+                                        </div>
+
+                                        <div className="task-lane-col task-lane-col-date">
+                                            {formatDate(task.deadline)}
+                                        </div>
+
+                                        <div className="task-lane-col task-lane-col-priority">
+                                            <span
+                                                className={`task-priority-tag ${getPriorityClass(task.priority)}`}
+                                            >
+                                                <i className="bi bi-flag-fill"></i>
+                                                {task.priority || "Low"}
+                                            </span>
+                                        </div>
+
+                                        <div className="task-lane-col task-lane-col-menu">
+                                            <i className="bi bi-three-dots"></i>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {tasks.length > 0 && totalPages > 1 && (
+                        <div className="task-lane-pagination">
+                            <div className="task-lane-page-summary">
+                                Showing {startItem}-{endItem} of {tasks.length}
                             </div>
-                        ))
+
+                            <div className="task-lane-pagination-controls">
+                                <button
+                                    type="button"
+                                    className="task-lane-page-nav"
+                                    onClick={() => onPageChange(safePage - 1)}
+                                    disabled={safePage === 1}
+                                    aria-label={`Previous ${meta.title} page`}
+                                >
+                                    <i className="bi bi-chevron-left"></i>
+                                </button>
+
+                                <div className="task-lane-pagination-pages">
+                                    {Array.from({ length: totalPages }, (_, index) => {
+                                        const page = index + 1;
+
+                                        return (
+                                            <button
+                                                key={page}
+                                                type="button"
+                                                className={`task-lane-page-btn ${
+                                                    page === safePage ? "is-active" : ""
+                                                }`}
+                                                onClick={() => onPageChange(page)}
+                                                aria-current={page === safePage ? "page" : undefined}
+                                            >
+                                                {page}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="task-lane-page-nav"
+                                    onClick={() => onPageChange(safePage + 1)}
+                                    disabled={safePage === totalPages}
+                                    aria-label={`Next ${meta.title} page`}
+                                >
+                                    <i className="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
                     )}
-                </div>
-            </div>
+                </>
+            )}
         </section>
     );
 }
