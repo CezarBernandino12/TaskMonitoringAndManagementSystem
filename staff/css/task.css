@@ -653,19 +653,24 @@ body {
     z-index: 3000;
     padding: 18px;
     backdrop-filter: blur(2px);
+    overflow-y: auto;
 }
 
 .task-modal-dialog {
     width: min(100%, 760px);
     margin: 0 auto;
+    position: relative;
+    overflow: visible;
 }
 
 .task-modal-card {
+    position: relative;
     background: var(--task-surface);
     border: 1px solid var(--task-border);
     border-radius: 20px;
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
-    overflow: hidden;
+    overflow: visible;
+    z-index: 1;
 }
 
 .task-modal-headerbar {
@@ -675,6 +680,8 @@ body {
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+    position: relative;
+    z-index: 1;
 }
 
 .task-modal-title {
@@ -692,26 +699,12 @@ body {
     color: #8a91a3;
 }
 
-.task-modal-close-btn {
-    width: 36px;
-    height: 36px;
-    border: 1px solid #e3e7f0;
-    border-radius: 10px;
-    background: #ffffff;
-    color: #5f677a;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.18s ease, border-color 0.18s ease;
-}
-
-.task-modal-close-btn:hover {
-    background: #f8faff;
-    border-color: #d7ddec;
-}
 
 .task-modal-body {
     padding: 18px 20px;
+    position: relative;
+    z-index: 2;
+    overflow: visible;
 }
 
 .task-modal-section-label {
@@ -726,24 +719,35 @@ body {
     border-radius: 18px;
     background: var(--task-surface);
     padding: 14px;
+    position: relative;
+    z-index: 3;
+    overflow: visible;
 }
 
 .task-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px 14px;
+    position: relative;
+    overflow: visible;
 }
 
 .task-form-field {
     min-width: 0;
+    position: relative;
+    overflow: visible;
 }
 
 .task-form-field-full {
     grid-column: 1 / -1;
+    position: relative;
+    overflow: visible;
 }
 
 .task-form-status-block {
     margin-top: 12px;
+    position: relative;
+    overflow: visible;
 }
 
 .task-form-label {
@@ -782,6 +786,8 @@ body {
     margin-top: 14px;
     padding-top: 14px;
     border-top: 1px solid var(--task-border-soft);
+    position: relative;
+    z-index: 1;
 }
 
 .task-btn {
@@ -810,6 +816,367 @@ body {
 .task-btn-danger {
     background: var(--task-danger-soft);
     color: var(--task-danger-text);
+}
+
+/* Custom modal pickers */
+
+.modal-picker-shell {
+    position: relative;
+    z-index: 20;
+}
+
+.modal-picker-shell:focus-within {
+    z-index: 200;
+}
+
+.modal-picker-trigger {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid #dfe4ef;
+    border-radius: 12px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 12px;
+    color: #243047;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.modal-picker-trigger:hover {
+    border-color: #cfd7e6;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.modal-picker-trigger.is-open {
+    border-color: #c8d2e6;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+}
+
+.modal-picker-trigger-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #243047;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modal-picker-trigger-text.is-placeholder {
+    color: #98a2b3;
+    font-weight: 600;
+}
+
+.modal-picker-trigger-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #8b96aa;
+    font-size: 13px;
+    flex: 0 0 auto;
+}
+
+/* Date picker */
+
+.modal-calendar-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 9999;
+    width: 292px;
+    max-width: min(292px, calc(100vw - 28px));
+    background: #ffffff;
+    border: 1px solid #e7ebf3;
+    border-radius: 16px;
+    padding: 12px 12px 10px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+}
+
+.modal-calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.modal-calendar-title {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #25314a;
+    cursor: default;
+}
+
+.modal-calendar-title i {
+    font-size: 10px;
+    color: #8f99ad;
+}
+
+.modal-calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.modal-calendar-nav-btn {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #8b96aa;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.modal-calendar-nav-btn:hover {
+    background: #f4f6fb;
+    color: #27324a;
+}
+
+.modal-calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 2px;
+}
+
+.modal-calendar-weekday {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 800;
+    color: #94a0b4;
+    padding: 4px 0;
+    letter-spacing: 0.01em;
+}
+
+.modal-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.modal-calendar-day {
+    position: relative;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #27324a;
+    font-size: 12px;
+    font-weight: 700;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.modal-calendar-day:hover {
+    background: #f5f7fb;
+}
+
+.modal-calendar-day.is-outside {
+    color: #c1c9d8;
+}
+
+.modal-calendar-day.is-today .modal-calendar-day-number {
+    color: #5b5fe8;
+}
+
+.modal-calendar-day.is-selected .modal-calendar-day-number {
+    color: #4154f1;
+    font-weight: 800;
+}
+
+.modal-calendar-day-dot {
+    position: absolute;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: #4154f1;
+}
+
+.modal-calendar-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 6px;
+}
+
+.modal-calendar-clear {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 11px;
+    font-weight: 800;
+    color: #6f48f3;
+}
+
+/* Priority picker */
+
+.modal-priority-trigger {
+    min-height: 40px;
+}
+
+.modal-priority-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 9999;
+    width: 100%;
+    min-width: 240px;
+    background: #ffffff;
+    border: 1px solid #dfe4ef;
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+}
+
+.modal-priority-option {
+    width: 100%;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    border-radius: 12px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: #3a4251;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.modal-priority-option:hover {
+    background: #f5f7fb;
+}
+
+.modal-priority-option.is-active {
+    background: #f3f5f9;
+    color: #1f2937;
+}
+
+.modal-priority-check {
+    margin-left: auto;
+    color: #5b5fe8;
+    font-size: 16px;
+}
+
+.modal-priority-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.modal-priority-chip i {
+    font-size: 12px;
+}
+
+.modal-priority-trigger .modal-priority-chip {
+    padding: 6px 11px;
+    font-size: 13px;
+}
+
+.priority-chip-low {
+    color: #17834f;
+}
+
+.priority-chip-medium {
+    color: #d38a10;
+}
+
+.priority-chip-high {
+    color: #e24b4b;
+}
+
+/* Status picker */
+
+.modal-status-trigger {
+    min-height: 40px;
+}
+
+.modal-status-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 9999;
+    width: 100%;
+    min-width: 220px;
+    background: #ffffff;
+    border: 1px solid #dfe4ef;
+    border-radius: 14px;
+    padding: 8px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+}
+
+.modal-status-option {
+    width: 100%;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    border-radius: 10px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.modal-status-option:hover {
+    background: #f5f7fb;
+}
+
+.modal-status-option.is-active {
+    background: #f3f5f9;
+}
+
+.modal-status-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.status-chip-ongoing {
+    color: #466fe0;
+}
+
+.status-chip-completed {
+    color: #1f9d57;
+}
+
+.modal-status-check {
+    color: #5b5fe8;
+    font-size: 16px;
+    flex: 0 0 auto;
+}
+
+.modal-status-trigger .modal-status-chip {
+    min-height: 26px;
+    padding: 0 11px;
 }
 
 /* Dark mode */
@@ -952,22 +1319,125 @@ body {
     border-color: rgba(124, 147, 255, 0.18);
     color: #bfd0ff;
 }
-
 [data-theme="dark"] .task-modal-card,
 [data-theme="dark"] .task-modal-panel {
     background: var(--task-surface);
     border-color: var(--task-border);
     box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+    overflow: visible;
 }
 
-[data-theme="dark"] .task-modal-close-btn {
+[data-theme="dark"] .modal-picker-trigger {
     background: rgba(255, 255, 255, 0.04);
     border-color: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    box-shadow: none;
+}
+
+[data-theme="dark"] .modal-picker-trigger:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+}
+
+[data-theme="dark"] .modal-picker-trigger.is-open {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(124, 147, 255, 0.24);
+    box-shadow: 0 0 0 3px rgba(124, 147, 255, 0.10);
+}
+
+[data-theme="dark"] .modal-picker-trigger-text {
+    color: #eef2ff;
+}
+
+[data-theme="dark"] .modal-picker-trigger-text.is-placeholder {
+    color: #93a0b8;
+}
+
+[data-theme="dark"] .modal-picker-trigger-icon {
+    color: #95a2bb;
+}
+
+[data-theme="dark"] .modal-calendar-popover,
+[data-theme="dark"] .modal-priority-popover,
+[data-theme="dark"] .modal-status-popover {
+    background: #111827;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .modal-calendar-title,
+[data-theme="dark"] .modal-calendar-day,
+[data-theme="dark"] .modal-priority-option,
+[data-theme="dark"] .modal-status-option {
     color: #e5e7eb;
 }
 
-[data-theme="dark"] .task-modal-close-btn:hover {
+[data-theme="dark"] .modal-calendar-title i,
+[data-theme="dark"] .modal-calendar-nav-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .modal-calendar-nav-btn:hover {
     background: rgba(255, 255, 255, 0.06);
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .modal-calendar-weekday {
+    color: #92a0b8;
+}
+
+[data-theme="dark"] .modal-calendar-day.is-outside {
+    color: #667289;
+}
+
+[data-theme="dark"] .modal-calendar-day:hover,
+[data-theme="dark"] .modal-priority-option:hover,
+[data-theme="dark"] .modal-status-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .modal-calendar-day.is-today .modal-calendar-day-number,
+[data-theme="dark"] .modal-calendar-day.is-selected .modal-calendar-day-number {
+    color: #9db1ff;
+}
+
+[data-theme="dark"] .modal-calendar-day-dot {
+    background: #9db1ff;
+}
+
+[data-theme="dark"] .modal-calendar-clear {
+    color: #b9c7ff;
+}
+
+[data-theme="dark"] .modal-priority-option.is-active,
+[data-theme="dark"] .modal-status-option.is-active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .priority-chip-low {
+    color: #86e0ad;
+}
+
+[data-theme="dark"] .priority-chip-medium {
+    color: #ffd27b;
+}
+
+[data-theme="dark"] .priority-chip-high {
+    color: #ff9d9d;
+}
+
+[data-theme="dark"] .status-chip-ongoing {
+    color: #a9bdff;
+}
+
+[data-theme="dark"] .status-chip-completed {
+    color: #89e4b0;
+}
+
+[data-theme="dark"] .modal-priority-check,
+[data-theme="dark"] .modal-status-check {
+    color: #9db1ff;
 }
 
 [data-theme="dark"] .task-form-control {

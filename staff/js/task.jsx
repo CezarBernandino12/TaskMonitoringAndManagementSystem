@@ -89,6 +89,260 @@ function formatDueDateChipLabel(value) {
     })}`;
 }
 
+function formatModalDateLabel(value, placeholder = "Select date") {
+    const parsed = parseYMD(value);
+    if (!parsed) return placeholder;
+
+    return parsed.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    });
+}
+
+function getPriorityMeta(priority = "") {
+    const normalized = normalizeText(priority);
+
+    if (normalized === "high") {
+        return {
+            label: "High",
+            chipClass: "priority-chip-high",
+            dotClass: "priority-dot-high"
+        };
+    }
+
+    if (normalized === "medium") {
+        return {
+            label: "Medium",
+            chipClass: "priority-chip-medium",
+            dotClass: "priority-dot-medium"
+        };
+    }
+
+    return {
+        label: "Low",
+        chipClass: "priority-chip-low",
+        dotClass: "priority-dot-low"
+    };
+}
+
+function ModalDatePicker({
+    label,
+    value,
+    onChange,
+    placeholder = "Select date"
+}) {
+    const [open, setOpen] = React.useState(false);
+    const selectedDate = parseYMD(value);
+    const [viewDate, setViewDate] = React.useState(selectedDate || new Date());
+    const rootRef = React.useRef(null);
+    const today = new Date();
+
+    const closePicker = React.useCallback(() => {
+        setOpen(false);
+    }, []);
+
+    useDismissiblePopup(rootRef, closePicker);
+
+    React.useEffect(() => {
+        if (selectedDate) {
+            setViewDate(selectedDate);
+        }
+    }, [selectedDate]);
+
+    const days = React.useMemo(() => getCalendarDays(viewDate), [viewDate]);
+
+    function handlePick(date) {
+        onChange(formatYMD(date));
+        closePicker();
+    }
+
+    function handleClear() {
+        onChange("");
+        closePicker();
+    }
+
+    return (
+        <div className="task-form-field">
+            <label className="form-label task-form-label">{label}</label>
+
+            <div className="modal-picker-shell" ref={rootRef}>
+                <button
+                    type="button"
+                    className={`modal-picker-trigger ${open ? "is-open" : ""} ${value ? "has-value" : ""}`}
+                    onClick={() => setOpen((current) => !current)}
+                    aria-expanded={open}
+                    aria-haspopup="dialog"
+                >
+                    <span className={`modal-picker-trigger-text ${value ? "" : "is-placeholder"}`}>
+                        {formatModalDateLabel(value, placeholder)}
+                    </span>
+
+                    <span className="modal-picker-trigger-icon">
+                        <i className="bi bi-calendar3"></i>
+                    </span>
+                </button>
+
+                {open && (
+                    <div className="modal-calendar-popover" role="dialog" aria-label={label}>
+                        <div className="modal-calendar-header">
+                            <button
+                                type="button"
+                                className="modal-calendar-title"
+                            >
+                                {formatCalendarMonth(viewDate)} {viewDate.getFullYear()}
+                                <i className="bi bi-chevron-down"></i>
+                            </button>
+
+                            <div className="modal-calendar-nav">
+                                <button
+                                    type="button"
+                                    className="modal-calendar-nav-btn"
+                                    onClick={() =>
+                                        setViewDate(
+                                            new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1)
+                                        )
+                                    }
+                                    aria-label="Previous month"
+                                >
+                                    <i className="bi bi-chevron-left"></i>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="modal-calendar-nav-btn"
+                                    onClick={() =>
+                                        setViewDate(
+                                            new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1)
+                                        )
+                                    }
+                                    aria-label="Next month"
+                                >
+                                    <i className="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="modal-calendar-weekdays">
+                            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                                <div key={day} className="modal-calendar-weekday">
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="modal-calendar-grid">
+                            {days.map((day) => {
+                                const isOutside = day.getMonth() !== viewDate.getMonth();
+                                const isSelected = isSameDay(day, selectedDate);
+                                const isToday = isSameDay(day, today);
+
+                                return (
+                                    <button
+                                        key={day.toISOString()}
+                                        type="button"
+                                        className={[
+                                            "modal-calendar-day",
+                                            isOutside ? "is-outside" : "",
+                                            isSelected ? "is-selected" : "",
+                                            !isSelected && isToday ? "is-today" : ""
+                                        ].join(" ").trim()}
+                                        onClick={() => handlePick(day)}
+                                    >
+                                        <span className="modal-calendar-day-number">
+                                            {day.getDate()}
+                                        </span>
+
+                                        {isSelected && <span className="modal-calendar-day-dot"></span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="modal-calendar-footer">
+                            <button
+                                type="button"
+                                className="modal-calendar-clear"
+                                onClick={handleClear}
+                            >
+                                All dates
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ModalPriorityPicker({ value, onChange }) {
+    const [open, setOpen] = React.useState(false);
+    const rootRef = React.useRef(null);
+
+    const options = ["Low", "Medium", "High"];
+    const currentMeta = getPriorityMeta(value);
+
+    const closeMenu = React.useCallback(() => {
+        setOpen(false);
+    }, []);
+
+    useDismissiblePopup(rootRef, closeMenu);
+
+    return (
+        <div className="task-form-field">
+            <label className="form-label task-form-label">Priority</label>
+
+            <div className="modal-picker-shell" ref={rootRef}>
+                <button
+                    type="button"
+                    className={`modal-picker-trigger modal-priority-trigger ${open ? "is-open" : ""}`}
+                    onClick={() => setOpen((current) => !current)}
+                    aria-expanded={open}
+                    aria-haspopup="listbox"
+                >
+                    <span className={`modal-priority-chip ${currentMeta.chipClass}`}>
+                        <i className="bi bi-flag-fill"></i>
+                        {currentMeta.label}
+                    </span>
+
+                    <span className="modal-picker-trigger-icon">
+                        <i className="bi bi-chevron-down"></i>
+                    </span>
+                </button>
+
+                {open && (
+                    <div className="modal-priority-popover" role="listbox" aria-label="Choose priority">
+                        {options.map((option) => {
+                            const meta = getPriorityMeta(option);
+                            const active = option === value;
+
+                            return (
+                                <button
+                                    key={option}
+                                    type="button"
+                                    className={`modal-priority-option ${active ? "is-active" : ""}`}
+                                    aria-selected={active}
+                                    onClick={() => {
+                                        onChange(option);
+                                        closeMenu();
+                                    }}
+                                >
+                                    <span className={`modal-priority-chip ${meta.chipClass}`}>
+                                        <i className="bi bi-flag-fill"></i>
+                                        {meta.label}
+                                    </span>
+
+                                    {active && <i className="bi bi-check2 modal-priority-check"></i>}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function formatPriorityChipLabel(value) {
     if (!value || value === "all") return "Priority";
     return `Priority ${value.charAt(0).toUpperCase()}${value.slice(1)}`;
@@ -733,40 +987,24 @@ function TaskFormFields({
                     />
                 </div>
 
-                <div className="task-form-field">
-                    <label className="form-label task-form-label">Priority</label>
-                    <select
-                        className="form-select task-form-control"
-                        value={priority}
-                        onChange={(e) => setPriority(e.target.value)}
-                    >
-                        {PRIORITY_OPTIONS.map((option) => (
-                            <option key={option} value={option}>
-                                {option}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                <ModalPriorityPicker
+                    value={priority}
+                    onChange={setPriority}
+                />
 
-                <div className="task-form-field">
-                    <label className="form-label task-form-label">Start Date</label>
-                    <input
-                        type="date"
-                        className="form-control task-form-control"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                    />
-                </div>
+                <ModalDatePicker
+                    label="Start Date"
+                    value={startDate}
+                    onChange={setStartDate}
+                    placeholder="Select start date"
+                />
 
-                <div className="task-form-field">
-                    <label className="form-label task-form-label">Due Date</label>
-                    <input
-                        type="date"
-                        className="form-control task-form-control"
-                        value={deadline}
-                        onChange={(e) => setDeadline(e.target.value)}
-                    />
-                </div>
+                <ModalDatePicker
+                    label="Due Date"
+                    value={deadline}
+                    onChange={setDeadline}
+                    placeholder="Select due date"
+                />
 
                 <div className="task-form-field task-form-field-full">
                     <label className="form-label task-form-label">
@@ -784,7 +1022,6 @@ function TaskFormFields({
         </>
     );
 }
-
 function TaskDetailModal({ show, task, onClose, refreshTasks }) {
     const [taskName, setTaskName] = React.useState("");
     const [description, setDescription] = React.useState("");
@@ -879,15 +1116,6 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
                                 Edit task information, update status, or remove task
                             </div>
                         </div>
-
-                        <button
-                            type="button"
-                            className="task-modal-close-btn"
-                            onClick={onClose}
-                            aria-label="Close modal"
-                        >
-                            <i className="bi bi-x-lg"></i>
-                        </button>
                     </div>
 
                     <div className="task-modal-body">
@@ -908,18 +1136,10 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
                             />
 
                             <div className="task-form-field task-form-field-full task-form-status-block">
-                                <label className="form-label task-form-label">Status</label>
-                                <select
-                                    className="form-select task-form-control"
+                                <ModalStatusPicker
                                     value={status}
-                                    onChange={(e) => setStatus(e.target.value)}
-                                >
-                                    {STATUS_OPTIONS.map((option) => (
-                                        <option key={option} value={option}>
-                                            {option}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={setStatus}
+                                />
                             </div>
 
                             <div className="task-modal-actions">
@@ -952,6 +1172,89 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
                 </div>
             </div>
         </div>
+    );
+}
+
+function getStatusMeta(status = "") {
+    const normalized = normalizeText(status);
+
+    if (normalized === "completed") {
+        return {
+            label: "Completed",
+            chipClass: "status-chip-completed"
+        };
+    }
+
+    return {
+        label: "Ongoing",
+        chipClass: "status-chip-ongoing"
+    };
+}
+
+function ModalStatusPicker({ value, onChange }) {
+    const [open, setOpen] = React.useState(false);
+    const rootRef = React.useRef(null);
+
+    const closeMenu = React.useCallback(() => {
+        setOpen(false);
+    }, []);
+
+    useDismissiblePopup(rootRef, closeMenu);
+
+    const currentMeta = getStatusMeta(value);
+
+    return (
+        <>
+            <label className="form-label task-form-label">Status</label>
+
+            <div className="modal-picker-shell" ref={rootRef}>
+                <button
+                    type="button"
+                    className={`modal-picker-trigger modal-status-trigger ${open ? "is-open" : ""}`}
+                    onClick={() => setOpen((current) => !current)}
+                    aria-expanded={open}
+                    aria-haspopup="listbox"
+                >
+                    <span className={`modal-status-chip ${currentMeta.chipClass}`}>
+                        {currentMeta.label}
+                    </span>
+
+                    <span className="modal-picker-trigger-icon">
+                        <i className={`bi ${open ? "bi-chevron-up" : "bi-chevron-down"}`}></i>
+                    </span>
+                </button>
+
+                {open && (
+                    <div className="modal-status-popover" role="listbox" aria-label="Choose status">
+                        {STATUS_OPTIONS.map((option) => {
+                            const meta = getStatusMeta(option);
+                            const active = option === value;
+
+                            return (
+                                <button
+                                    key={option}
+                                    type="button"
+                                    className={`modal-status-option ${active ? "is-active" : ""}`}
+                                    aria-selected={active}
+                                    onClick={() => {
+                                        onChange(option);
+                                        closeMenu();
+                                    }}
+                                >
+                                    <span className={`modal-status-chip ${meta.chipClass}`}>
+                                        {meta.label}
+                                    </span>
+
+                                    {active && (
+                                        <i className="bi bi-check2 modal-status-check"></i>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </>
     );
 }
 
