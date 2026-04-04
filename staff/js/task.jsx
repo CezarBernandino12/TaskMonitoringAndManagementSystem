@@ -1,4 +1,7 @@
-// js/task.jsx
+const API_BASE = "http://localhost/taskmanagement/staff/php";
+const TASKS_PER_PAGE = 5;
+const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
+const STATUS_OPTIONS = ["Ongoing", "Completed"];
 
 function normalizeText(value = "") {
     return String(value).trim().toLowerCase();
@@ -6,7 +9,8 @@ function normalizeText(value = "") {
 
 function formatDate(dateStr) {
     if (!dateStr) return "-";
-    const date = new Date(dateStr + "T00:00:00");
+
+    const date = new Date(`${dateStr}T00:00:00`);
     return date.toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
@@ -87,7 +91,6 @@ function formatDueDateChipLabel(value) {
 
 function formatPriorityChipLabel(value) {
     if (!value || value === "all") return "Priority";
-
     return `Priority ${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 }
 
@@ -104,8 +107,7 @@ function getLaneMeta(laneKey) {
         return {
             title: "Overdue",
             badgeClass: "task-lane-badge task-lane-badge-overdue",
-            dotClass: "task-lane-dot task-lane-dot-overdue",
-            iconClass: "bi-exclamation-circle"
+            dotClass: "task-lane-dot task-lane-dot-overdue"
         };
     }
 
@@ -113,16 +115,14 @@ function getLaneMeta(laneKey) {
         return {
             title: "Completed",
             badgeClass: "task-lane-badge task-lane-badge-completed",
-            dotClass: "task-lane-dot task-lane-dot-completed",
-            iconClass: "bi-check2-circle"
+            dotClass: "task-lane-dot task-lane-dot-completed"
         };
     }
 
     return {
         title: "Ongoing",
         badgeClass: "task-lane-badge task-lane-badge-ongoing",
-        dotClass: "task-lane-dot task-lane-dot-ongoing",
-        iconClass: "bi-arrow-repeat"
+        dotClass: "task-lane-dot task-lane-dot-ongoing"
     };
 }
 
@@ -134,33 +134,29 @@ function getPriorityClass(priority = "") {
     return "task-priority-low";
 }
 
+function getPaginatedItems(items, currentPage, pageSize = TASKS_PER_PAGE) {
+    const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+    const safePage = Math.min(Math.max(currentPage, 1), totalPages);
+    const startIndex = (safePage - 1) * pageSize;
 
-function TaskDateFilter({ value, onChange }) {
-    const [open, setOpen] = React.useState(false);
-    const [yearMenuOpen, setYearMenuOpen] = React.useState(false);
-    const selectedDate = parseYMD(value);
-    const [viewDate, setViewDate] = React.useState(selectedDate || new Date());
-    const rootRef = React.useRef(null);
-    const today = new Date();
+    return {
+        totalPages,
+        currentPage: safePage,
+        items: items.slice(startIndex, startIndex + pageSize)
+    };
+}
 
-    React.useEffect(() => {
-        if (selectedDate) {
-            setViewDate(selectedDate);
-        }
-    }, [value]);
-
+function useDismissiblePopup(rootRef, onClose) {
     React.useEffect(() => {
         function handleOutside(event) {
             if (rootRef.current && !rootRef.current.contains(event.target)) {
-                setOpen(false);
-                setYearMenuOpen(false);
+                onClose();
             }
         }
 
         function handleKeyDown(event) {
             if (event.key === "Escape") {
-                setOpen(false);
-                setYearMenuOpen(false);
+                onClose();
             }
         }
 
@@ -171,7 +167,29 @@ function TaskDateFilter({ value, onChange }) {
             document.removeEventListener("mousedown", handleOutside);
             document.removeEventListener("keydown", handleKeyDown);
         };
+    }, [rootRef, onClose]);
+}
+
+function TaskDateFilter({ value, onChange }) {
+    const [open, setOpen] = React.useState(false);
+    const [yearMenuOpen, setYearMenuOpen] = React.useState(false);
+    const selectedDate = parseYMD(value);
+    const [viewDate, setViewDate] = React.useState(selectedDate || new Date());
+    const rootRef = React.useRef(null);
+    const today = new Date();
+
+    const closeMenus = React.useCallback(() => {
+        setOpen(false);
+        setYearMenuOpen(false);
     }, []);
+
+    useDismissiblePopup(rootRef, closeMenus);
+
+    React.useEffect(() => {
+        if (selectedDate) {
+            setViewDate(selectedDate);
+        }
+    }, [selectedDate]);
 
     const days = React.useMemo(() => getCalendarDays(viewDate), [viewDate]);
     const years = React.useMemo(
@@ -181,14 +199,12 @@ function TaskDateFilter({ value, onChange }) {
 
     function pickDate(date) {
         onChange(formatYMD(date));
-        setOpen(false);
-        setYearMenuOpen(false);
+        closeMenus();
     }
 
     function clearDate() {
         onChange("");
-        setOpen(false);
-        setYearMenuOpen(false);
+        closeMenus();
     }
 
     function changeYear(year) {
@@ -329,27 +345,11 @@ function TaskPriorityFilter({ value, onChange }) {
         { value: "low", label: "Low" }
     ];
 
-    React.useEffect(() => {
-        function handleOutside(event) {
-            if (rootRef.current && !rootRef.current.contains(event.target)) {
-                setOpen(false);
-            }
-        }
-
-        function handleKeyDown(event) {
-            if (event.key === "Escape") {
-                setOpen(false);
-            }
-        }
-
-        document.addEventListener("mousedown", handleOutside);
-        document.addEventListener("keydown", handleKeyDown);
-
-        return () => {
-            document.removeEventListener("mousedown", handleOutside);
-            document.removeEventListener("keydown", handleKeyDown);
-        };
+    const closeMenu = React.useCallback(() => {
+        setOpen(false);
     }, []);
+
+    useDismissiblePopup(rootRef, closeMenu);
 
     return (
         <div className="task-toolbar-filter-shell" ref={rootRef}>
@@ -377,7 +377,7 @@ function TaskPriorityFilter({ value, onChange }) {
                             aria-selected={value === option.value}
                             onClick={() => {
                                 onChange(option.value);
-                                setOpen(false);
+                                closeMenu();
                             }}
                         >
                             <span>{option.label}</span>
@@ -395,20 +395,20 @@ function App() {
     const [dueDateFilter, setDueDateFilter] = React.useState("");
     const [priorityFilter, setPriorityFilter] = React.useState("all");
 
-    const fetchTasks = async () => {
+    const fetchTasks = React.useCallback(async () => {
         try {
-            const response = await fetch("http://localhost/taskmanagement/staff/php/get_tasks.php");
+            const response = await fetch("php/get_tasks.php");
             const data = await response.json();
             setTasks(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error:", error);
             setTasks([]);
         }
-    };
+    }, []);
 
     React.useEffect(() => {
         fetchTasks();
-    }, []);
+    }, [fetchTasks]);
 
     return (
         <div className="task-view">
@@ -428,7 +428,7 @@ function App() {
                 <button
                     type="button"
                     className="task-create-btn"
-                    onClick={() => document.getElementById("openReactModalBtn").click()}
+                    onClick={() => document.getElementById("openReactModalBtn")?.click()}
                 >
                     <i className="bi bi-plus-lg"></i>
                     <span>Add New Task</span>
@@ -445,20 +445,6 @@ function App() {
             />
         </div>
     );
-}
-
-const TASKS_PER_PAGE = 5;
-
-function getPaginatedItems(items, currentPage, pageSize = TASKS_PER_PAGE) {
-    const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
-    const safePage = Math.min(currentPage, totalPages);
-    const startIndex = (safePage - 1) * pageSize;
-
-    return {
-        totalPages,
-        currentPage: safePage,
-        items: items.slice(startIndex, startIndex + pageSize)
-    };
 }
 
 function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
@@ -486,9 +472,11 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
         return matchesDueDate && matchesPriority;
     });
 
-    const ongoingTasks = filteredTasks.filter((task) => getLaneKey(task) === "ongoing");
-    const overdueTasks = filteredTasks.filter((task) => getLaneKey(task) === "overdue");
-    const completedTasks = filteredTasks.filter((task) => getLaneKey(task) === "completed");
+    const laneTaskMap = {
+        ongoing: filteredTasks.filter((task) => getLaneKey(task) === "ongoing"),
+        overdue: filteredTasks.filter((task) => getLaneKey(task) === "overdue"),
+        completed: filteredTasks.filter((task) => getLaneKey(task) === "completed")
+    };
 
     React.useEffect(() => {
         setLanePages({
@@ -498,57 +486,40 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
         });
     }, [dueDateFilter, priorityFilter, tasks]);
 
-    const handleRowClick = (task) => {
+    function handleRowClick(task) {
         setSelectedTask(task);
         setShowDetailModal(true);
-    };
+    }
 
-    const handleToggleLane = (laneKey) => {
+    function handleToggleLane(laneKey) {
         setCollapsedLanes((prev) => ({
             ...prev,
             [laneKey]: !prev[laneKey]
         }));
-    };
+    }
 
-    const handlePageChange = (laneKey, page) => {
+    function handlePageChange(laneKey, page) {
         setLanePages((prev) => ({
             ...prev,
             [laneKey]: page
         }));
-    };
+    }
 
     return (
         <>
             <div className="task-board-shell">
-                <TaskLane
-                    laneKey="ongoing"
-                    tasks={ongoingTasks}
-                    onRowClick={handleRowClick}
-                    collapsed={collapsedLanes.ongoing}
-                    onToggle={() => handleToggleLane("ongoing")}
-                    currentPage={lanePages.ongoing}
-                    onPageChange={(page) => handlePageChange("ongoing", page)}
-                />
-
-                <TaskLane
-                    laneKey="overdue"
-                    tasks={overdueTasks}
-                    onRowClick={handleRowClick}
-                    collapsed={collapsedLanes.overdue}
-                    onToggle={() => handleToggleLane("overdue")}
-                    currentPage={lanePages.overdue}
-                    onPageChange={(page) => handlePageChange("overdue", page)}
-                />
-
-                <TaskLane
-                    laneKey="completed"
-                    tasks={completedTasks}
-                    onRowClick={handleRowClick}
-                    collapsed={collapsedLanes.completed}
-                    onToggle={() => handleToggleLane("completed")}
-                    currentPage={lanePages.completed}
-                    onPageChange={(page) => handlePageChange("completed", page)}
-                />
+                {["ongoing", "overdue", "completed"].map((laneKey) => (
+                    <TaskLane
+                        key={laneKey}
+                        laneKey={laneKey}
+                        tasks={laneTaskMap[laneKey]}
+                        onRowClick={handleRowClick}
+                        collapsed={collapsedLanes[laneKey]}
+                        onToggle={() => handleToggleLane(laneKey)}
+                        currentPage={lanePages[laneKey]}
+                        onPageChange={(page) => handlePageChange(laneKey, page)}
+                    />
+                ))}
             </div>
 
             {showDetailModal && selectedTask && (
@@ -622,9 +593,7 @@ function TaskLane({
 
                         <div className="task-lane-grid-body">
                             {tasks.length === 0 ? (
-                                <div className="task-lane-empty">
-                                    No tasks found
-                                </div>
+                                <div className="task-lane-empty">No tasks found</div>
                             ) : (
                                 paginatedTasks.map((task) => (
                                     <div
@@ -668,9 +637,7 @@ function TaskLane({
                                         </div>
 
                                         <div className="task-lane-col task-lane-col-priority">
-                                            <span
-                                                className={`task-priority-tag ${getPriorityClass(task.priority)}`}
-                                            >
+                                            <span className={`task-priority-tag ${getPriorityClass(task.priority)}`}>
                                                 <i className="bi bi-flag-fill"></i>
                                                 {task.priority || "Low"}
                                             </span>
@@ -740,27 +707,127 @@ function TaskLane({
     );
 }
 
-// Modal component
+function TaskFormFields({
+    taskName,
+    setTaskName,
+    description,
+    setDescription,
+    startDate,
+    setStartDate,
+    deadline,
+    setDeadline,
+    priority,
+    setPriority
+}) {
+    return (
+        <>
+            <div className="task-form-grid">
+                <div className="task-form-field">
+                    <label className="form-label task-form-label">Task Name</label>
+                    <input
+                        type="text"
+                        className="form-control task-form-control"
+                        value={taskName}
+                        onChange={(e) => setTaskName(e.target.value)}
+                        placeholder="Enter task name"
+                    />
+                </div>
+
+                <div className="task-form-field">
+                    <label className="form-label task-form-label">Priority</label>
+                    <select
+                        className="form-select task-form-control"
+                        value={priority}
+                        onChange={(e) => setPriority(e.target.value)}
+                    >
+                        {PRIORITY_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                                {option}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="task-form-field">
+                    <label className="form-label task-form-label">Start Date</label>
+                    <input
+                        type="date"
+                        className="form-control task-form-control"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                    />
+                </div>
+
+                <div className="task-form-field">
+                    <label className="form-label task-form-label">Due Date</label>
+                    <input
+                        type="date"
+                        className="form-control task-form-control"
+                        value={deadline}
+                        onChange={(e) => setDeadline(e.target.value)}
+                    />
+                </div>
+
+                <div className="task-form-field task-form-field-full">
+                    <label className="form-label task-form-label">
+                        Description <span className="text-muted">(Optional)</span>
+                    </label>
+                    <textarea
+                        className="form-control task-form-control task-form-textarea"
+                        rows="4"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Enter task description"
+                    />
+                </div>
+            </div>
+        </>
+    );
+}
+
 function TaskDetailModal({ show, task, onClose, refreshTasks }) {
-    const [status, setStatus] = React.useState(task.status);
+    const [taskName, setTaskName] = React.useState("");
+    const [description, setDescription] = React.useState("");
+    const [startDate, setStartDate] = React.useState("");
+    const [deadline, setDeadline] = React.useState("");
+    const [priority, setPriority] = React.useState("Low");
+    const [status, setStatus] = React.useState("Ongoing");
 
     React.useEffect(() => {
-        setStatus(task.status);
+        if (!task) return;
+
+        setTaskName(task.title || "");
+        setDescription(task.description || "");
+        setStartDate(task.start_date || "");
+        setDeadline(task.deadline || "");
+        setPriority(task.priority || "Low");
+        setStatus(task.status || "Ongoing");
     }, [task]);
 
     if (!show || !task) return null;
 
-    const handleStatusChange = (e) => {
-        setStatus(e.target.value);
-    };
+    async function handleSave() {
+        if (!taskName.trim()) {
+            alert("Task name is required.");
+            return;
+        }
 
-    const handleSave = async () => {
+        if (startDate && deadline && deadline < startDate) {
+            alert("Due date cannot be earlier than start date.");
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append("task_id", task.id);
+            formData.append("task_name", taskName.trim());
+            formData.append("description", description.trim());
+            formData.append("start_date", startDate);
+            formData.append("deadline", deadline);
+            formData.append("priority", priority);
             formData.append("status", status);
 
-            const res = await fetch("http://localhost/taskmanagement/staff/php/update_task_status.php", {
+            const res = await fetch("php/update_task.php", {
                 method: "POST",
                 body: formData
             });
@@ -774,16 +841,16 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
             alert("Failed to update task");
             console.error(error);
         }
-    };
+    }
 
-    const handleDelete = async () => {
+    async function handleDelete() {
         if (!confirm("Are you sure you want to delete this task?")) return;
 
         try {
             const formData = new FormData();
             formData.append("task_id", task.id);
 
-            const res = await fetch("http://localhost/taskmanagement/staff/php/delete_task.php", {
+            const res = await fetch("php/delete_task.php", {
                 method: "POST",
                 body: formData
             });
@@ -797,72 +864,88 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
             alert("Failed to delete task");
             console.error(error);
         }
-    };
+    }
 
     return (
         <div className="task-modal-backdrop" tabIndex="-1">
-            <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-dialog modal-dialog-centered task-modal-dialog">
                 <div className="modal-content task-modal-card">
-                    <div className="modal-header task-modal-head">
+                    <div className="task-modal-headerbar">
                         <div>
                             <h5 className="modal-title task-modal-title">Task Details</h5>
-                            <div className="task-modal-subtitle">Update task status or remove task</div>
+                            <div className="task-modal-subtitle">
+                                Edit task information, update status, or remove task
+                            </div>
                         </div>
 
-                        <button type="button" className="btn-close" onClick={onClose}></button>
+                        <button
+                            type="button"
+                            className="task-modal-close-btn"
+                            onClick={onClose}
+                            aria-label="Close modal"
+                        >
+                            <i className="bi bi-x-lg"></i>
+                        </button>
                     </div>
 
-                    <div className="modal-body task-modal-body">
-                        <div className="task-detail-grid">
-                            <div className="task-detail-box">
-                                <div className="task-detail-label">Title</div>
-                                <div className="task-detail-value">{task.title}</div>
+                    <div className="task-modal-body">
+                        <div className="task-modal-section-label">Task Information</div>
+
+                        <div className="task-modal-panel">
+                            <TaskFormFields
+                                taskName={taskName}
+                                setTaskName={setTaskName}
+                                description={description}
+                                setDescription={setDescription}
+                                startDate={startDate}
+                                setStartDate={setStartDate}
+                                deadline={deadline}
+                                setDeadline={setDeadline}
+                                priority={priority}
+                                setPriority={setPriority}
+                            />
+
+                            <div className="task-form-field task-form-field-full task-form-status-block">
+                                <label className="form-label task-form-label">Status</label>
+                                <select
+                                    className="form-select task-form-control"
+                                    value={status}
+                                    onChange={(e) => setStatus(e.target.value)}
+                                >
+                                    {STATUS_OPTIONS.map((option) => (
+                                        <option key={option} value={option}>
+                                            {option}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <div className="task-detail-box">
-                                <div className="task-detail-label">Priority</div>
-                                <div className="task-detail-value">{task.priority || "-"}</div>
-                            </div>
+                            <div className="task-modal-actions">
+                                <button
+                                    type="button"
+                                    className="btn task-btn task-btn-danger"
+                                    onClick={handleDelete}
+                                >
+                                    Delete
+                                </button>
 
-                            <div className="task-detail-box">
-                                <div className="task-detail-label">Start Date</div>
-                                <div className="task-detail-value">{task.start_date || "-"}</div>
-                            </div>
+                                <button
+                                    type="button"
+                                    className="btn task-btn task-btn-neutral"
+                                    onClick={onClose}
+                                >
+                                    Close
+                                </button>
 
-                            <div className="task-detail-box">
-                                <div className="task-detail-label">Deadline</div>
-                                <div className="task-detail-value">{task.deadline || "-"}</div>
+                                <button
+                                    type="button"
+                                    className="btn task-btn task-btn-primary"
+                                    onClick={handleSave}
+                                >
+                                    Save
+                                </button>
                             </div>
                         </div>
-
-                        <div className="task-detail-box task-detail-box-block">
-                            <div className="task-detail-label">Description</div>
-                            <div className="task-detail-value task-detail-value-multiline">
-                                {task.description || "-"}
-                            </div>
-                        </div>
-
-                        <div className="task-detail-box task-detail-box-block">
-                            <div className="task-detail-label">Status</div>
-                            <select className="form-select task-modal-select" value={status} onChange={handleStatusChange}>
-                                <option value="Ongoing">Ongoing</option>
-                                <option value="Completed">Completed</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="modal-footer task-modal-foot">
-                        <button className="btn task-btn task-btn-danger" onClick={handleDelete}>
-                            Delete
-                        </button>
-
-                        <button className="btn task-btn task-btn-primary" onClick={handleSave}>
-                            Save
-                        </button>
-
-                        <button className="btn task-btn task-btn-neutral" onClick={onClose}>
-                            Close
-                        </button>
                     </div>
                 </div>
             </div>
@@ -879,7 +962,7 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
 
     if (!show) return null;
 
-    const handleSubmit = async () => {
+    async function handleSubmit() {
         const formData = new FormData();
         formData.append("task_name", taskName);
         formData.append("description", description.trim());
@@ -888,7 +971,7 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
         formData.append("priority", priority);
 
         try {
-            const response = await fetch("http://localhost/taskmanagement/staff/php/create_task.php", {
+            const response = await fetch("php/create_task.php", {
                 method: "POST",
                 body: formData
             });
@@ -908,87 +991,51 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
         } catch (error) {
             console.error("Error:", error);
         }
-    };
+    }
 
     return (
         <div className="task-modal-backdrop" tabIndex="-1">
-            <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-dialog modal-dialog-centered task-modal-dialog">
                 <div className="modal-content task-modal-card">
-                    <div className="modal-header task-modal-head">
-                        <div>
-                            <h5 className="modal-title task-modal-title">Add Task</h5>
-                            <div className="task-modal-subtitle">Create a new task entry</div>
-                        </div>
-
-                        <button type="button" className="btn-close" onClick={onClose}></button>
+                    <div className="task-modal-headerbar">
+                        <h5 className="modal-title task-modal-title">Add Task</h5>
                     </div>
 
-                    <div className="modal-body task-modal-body">
-                        <div className="mb-3">
-                            <label className="form-label task-form-label">Task Name</label>
-                            <input
-                                type="text"
-                                className="form-control task-form-control"
-                                value={taskName}
-                                onChange={(e) => setTaskName(e.target.value)}
+                    <div className="task-modal-body">
+                        <div className="task-modal-section-label">Task Information</div>
+
+                        <div className="task-modal-panel">
+                            <TaskFormFields
+                                taskName={taskName}
+                                setTaskName={setTaskName}
+                                description={description}
+                                setDescription={setDescription}
+                                startDate={startDate}
+                                setStartDate={setStartDate}
+                                deadline={deadline}
+                                setDeadline={setDeadline}
+                                priority={priority}
+                                setPriority={setPriority}
                             />
+
+                            <div className="task-modal-actions">
+                                <button
+                                    type="button"
+                                    className="btn task-btn task-btn-neutral"
+                                    onClick={onClose}
+                                >
+                                    Close
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="btn task-btn task-btn-primary"
+                                    onClick={handleSubmit}
+                                >
+                                    Add Task
+                                </button>
+                            </div>
                         </div>
-
-                        <div className="mb-3">
-                            <label className="form-label task-form-label">
-                                Description <span className="text-muted">(Optional)</span>
-                            </label>
-                            <textarea
-                                className="form-control task-form-control task-form-textarea"
-                                rows="3"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Enter task description"
-                            />
-                        </div>
-
-                        <div className="mb-3">
-                            <label className="form-label task-form-label">Start Date</label>
-                            <input
-                                type="date"
-                                className="form-control task-form-control"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="mb-3">
-                            <label className="form-label task-form-label">Due Date</label>
-                            <input
-                                type="date"
-                                className="form-control task-form-control"
-                                value={deadline}
-                                onChange={(e) => setDeadline(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="mb-0">
-                            <label className="form-label task-form-label">Priority</label>
-                            <select
-                                className="form-select task-form-control"
-                                value={priority}
-                                onChange={(e) => setPriority(e.target.value)}
-                            >
-                                <option value="Low">Low</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="modal-footer task-modal-foot">
-                        <button type="button" className="btn task-btn task-btn-neutral" onClick={onClose}>
-                            Close
-                        </button>
-
-                        <button type="button" className="btn task-btn task-btn-primary" onClick={handleSubmit}>
-                            Add Task
-                        </button>
                     </div>
                 </div>
             </div>
@@ -1001,6 +1048,7 @@ function ModalController({ refreshTasks }) {
 
     React.useEffect(() => {
         const btn = document.getElementById("openReactModalBtn");
+
         if (btn) {
             btn.onclick = () => setShow(true);
         }
@@ -1017,74 +1065,6 @@ function ModalController({ refreshTasks }) {
             refreshTasks={refreshTasks}
         />
     );
-}
-
-function DueSoon({ tasks }) {
-    const today = new Date(
-        new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
-    );
-
-    const dueSoonTasks = tasks.filter(task => {
-        if (task.status.toLowerCase() === "completed") return false;
-
-        const deadline = new Date(task.deadline + "T00:00:00");
-        const diffTime = deadline - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        return diffDays === 0 || diffDays === 1;
-    });
-
-    const formatLabel = (deadlineStr) => {
-        const todayPH = new Date(
-            new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
-        );
-
-        const deadline = new Date(deadlineStr + "T00:00:00");
-        const diffDays = Math.ceil((deadline - todayPH) / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 0) return "Due Today";
-        if (diffDays === 1) return "Due Tomorrow";
-        return "";
-    };
-
-    return (
-        <div className="card p-3 mb-4">
-            <h5>⚠️ Due Soon</h5>
-            <ul>
-                {dueSoonTasks.length === 0 ? (
-                    <li>No upcoming deadlines</li>
-                ) : (
-                    dueSoonTasks.map(task => (
-                        <li key={task.id}>
-                            {task.title} - {formatLabel(task.deadline)}
-                        </li>
-                    ))
-                )}
-            </ul>
-        </div>
-    );
-}
-
-function DashboardHeader() {
-    const [dept, setDept] = React.useState("");
-    const [loading, setLoading] = React.useState(true);
-
-    React.useEffect(() => {
-        fetch("php/get_department_name.php")
-            .then(res => res.json())
-            .then(data => {
-                if (data.department_name) setDept(data.department_name);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
-    }, []);
-
-    return null;
-}
-
-const dashboardHeaderRoot = document.getElementById("dashboard-header-root");
-if (dashboardHeaderRoot) {
-    ReactDOM.createRoot(dashboardHeaderRoot).render(<DashboardHeader />);
 }
 
 const rootElement = document.getElementById("root");
