@@ -326,16 +326,28 @@ function Calendar() {
 
     useEffect(()=>{
         fetch('php/get_current_user.php').then(r=>r.json()).then(d=>{ if(!d.error)setUser(d); }).catch(()=>{});
-        fetch('php/get_employees.php').then(r=>r.json()).then(d=>setEmployees(Array.isArray(d)?d:[])).catch(()=>{});
-    },[]);
 
-    useEffect(()=>{
-        if(!currentUser) return;
-        const url=isEditor?'php/get_events.php':`php/get_events.php?user_id=${currentUser.id}`;
-        fetch(url).then(r=>r.json()).then(d=>setEvents(Array.isArray(d)?d:[])).catch(()=>{});
-    },[currentUser]);
+        // Fetch all employees (for tagging)
+        fetch('php/get_employees.php')
+            .then(r => r.json())
+            .then(d => setEmployees(Array.isArray(d) ? d : []))
+            .catch(() => {});
+    }, []);
+// Fetch all events once current user is loaded
+useEffect(() => {
+    if (!currentUser) return;
 
-    const toggleFilter = s => setFilters(f=>f.includes(s)?f.filter(x=>x!==s):[...f,s]);
+    fetch('php/get_events.php')
+        .then(r => r.json())
+        .then(d => setEvents(Array.isArray(d) ? d : []))
+        .catch(err => {
+            console.error('Failed to fetch events:', err);
+            setEvents([]);
+        });
+}, [currentUser]);
+
+const toggleFilter = s => setFilters(f=>f.includes(s)?f.filter(x=>x!==s):[...f,s]);
+
 
     const getDay = dateStr =>
         events.filter(ev=>ev.start_date<=dateStr&&ev.end_date>=dateStr&&filters.includes(ev.status));

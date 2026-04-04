@@ -1,6 +1,59 @@
 
 const { useState, useEffect, useRef } = React;
 
+
+
+
+
+function Sidebar() {
+    const [showUsers,   setShowUsers]   = useState(false);
+    const [showReports, setShowReports] = useState(false);
+
+    const NavGroup = ({ label, open, onToggle, children }) => (
+        <>
+            <a href="#" className="nav-link fw-semibold d-flex justify-content-between align-items-center"
+               onClick={e => { e.preventDefault(); onToggle(); }} style={{ cursor: 'pointer' }}>
+                <span>{label}</span>
+                <span style={{ fontSize: '1em' }}>{open ? '▼' : '▶'}</span>
+            </a>
+            {open && <div style={{ marginLeft: 12 }}>{children}</div>}
+        </>
+    );
+
+    return (
+        <nav className="sidebar-orange d-flex flex-column min-vh-100" style={{ minWidth: 0 }}>
+            <div className="sidebar-logo">⚙ Admin Panel</div>
+
+            {/* Overview */}
+            <div className="sidebar-section">Overview</div>
+            <a href="dashboard.html" className="nav-link active">Dashboard</a>
+
+            {/* User Management */}
+            <div className="sidebar-section">User Management</div>
+            <a href="users.html"  className="nav-link">Manage Users</a>
+            <a href="departments.html"  className="nav-link">Departments</a>
+
+              {/* Event Management */}
+                <div className="sidebar-section">Event Management</div>
+                <a href="calendar.html"    className="nav-link">Calendar</a>
+
+            {/* Reports */}
+            <div className="sidebar-section">Reports</div>
+            <NavGroup label="Reports" open={showReports} onToggle={() => setShowReports(p => !p)}>
+                <a href="daily-reports.html"     className="nav-link">Daily</a>
+                <a href="weekly-reports.html"    className="nav-link">Weekly</a>
+                <a href="monthly-reports.html"   className="nav-link">Monthly</a>
+                <a href="quarterly-reports.html" className="nav-link">Quarterly</a>
+                <a href="annual-reports.html"    className="nav-link">Annually</a>
+            </NavGroup>
+
+            {/* Account */}
+            <div className="sidebar-section">Account</div>
+            <a href="profile.html"  className="nav-link">Profile</a>
+            <a href="logout.php"    className="nav-link text-danger">Log Out</a>
+        </nav>
+    );
+}
 // ====================================================================
 // CONSTANTS
 // ====================================================================
@@ -60,7 +113,7 @@ function EventPill({ event }) {
 }
 
 // ====================================================================
-// EVENT FORM MODAL — create or edit an event (MarketingHR only)
+// EVENT FORM MODAL — create or edit an event (all users)
 // ====================================================================
 function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     const isEdit = !!event?.id;
@@ -266,7 +319,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
 }
 
 // ====================================================================
-// EVENT DETAIL MODAL — read-only view for non-MarketingHr users
+// EVENT DETAIL MODAL — view for all users, edit button shown to all
 // ====================================================================
 function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
     const color    = STATUS_COLORS[event.status] ?? STATUS_COLORS['Upcoming'];
@@ -393,7 +446,7 @@ function DayEventsModal({ dateStr, events, employees, canEdit, onSelectEvent, on
 // ====================================================================
 // SIDEBAR EVENT LIST / SUMMARY PANEL
 // ====================================================================
-function EventSidebar({ events, employees, currentMonth, currentYear, isMarketingHr, onSelectEvent, onNewEvent }) {
+function EventSidebar({ events, employees, currentMonth, currentYear, onSelectEvent, onNewEvent }) {
     const [filter, setFilter]  = useState('all');   // all | mine | month
     const [search, setSearch]  = useState('');
     const [sortBy, setSortBy]  = useState('date');  // date | status | priority
@@ -463,12 +516,10 @@ function EventSidebar({ events, employees, currentMonth, currentYear, isMarketin
                 </select>
             </div>
 
-            {/* New Event button — MarketingHr only */}
-            {isMarketingHr && (
-                <button className="btn btn-sm btn-primary w-100 mb-3" onClick={onNewEvent}>
-                    + New Event
-                </button>
-            )}
+            {/* New Event button — available to all users */}
+            <button className="btn btn-sm btn-primary w-100 mb-3" onClick={onNewEvent}>
+                + New Event
+            </button>
 
             {/* Event list */}
             <div style={{ overflowY:'auto', flex:1 }}>
@@ -537,8 +588,7 @@ function Calendar() {
     const [editEvent,   setEditEvent]   = useState(null);  // event object (or {}) for form
     const [showForm,    setShowForm]    = useState(false);
 
-    // Derived
-    const isMarketingHr  = currentUser?.department?.toLowerCase() === 'marketing' || currentUser?.department?.toLowerCase() === 'human resources';  
+    // All authenticated users can create and edit events
 
     // ----------------------------------------------------------------
     // Bootstrap: fetch current user, events, employees
@@ -556,18 +606,17 @@ function Calendar() {
             .then(d => setEmployees(Array.isArray(d) ? d : []))
             .catch(() => {});
     }, []);
-// Fetch all events once current user is loaded
-useEffect(() => {
-    if (!currentUser) return;
-
-    fetch('php/get_events.php')
-        .then(r => r.json())
-        .then(d => setEvents(Array.isArray(d) ? d : []))
-        .catch(err => {
-            console.error('Failed to fetch events:', err);
-            setEvents([]);
-        });
-}, [currentUser]);
+    // Fetch all events once current user is loaded
+    useEffect(() => {
+        if (!currentUser) return;
+        fetch('php/get_events.php')
+            .then(r => r.json())
+            .then(d => setEvents(Array.isArray(d) ? d : []))
+            .catch(err => {
+                console.error('Failed to fetch events:', err);
+                setEvents([]);
+            });
+    }, [currentUser]);
 
     // ----------------------------------------------------------------
     // Helpers
@@ -647,14 +696,14 @@ useEffect(() => {
                 onClick={() => {
                     if (dayEvents.length > 0) {
                         setDayModal({ dateStr, events: dayEvents });
-                    } else if (isMarketingHr) {
-                        // MarketingHr can click an empty day to quickly create an event
+                    } else {
+                        // Any user can click an empty day to quickly create an event
                         setEditEvent({ start_date: dateStr, end_date: dateStr });
                         setShowForm(true);
                     }
                 }}
                 style={{
-                    verticalAlign:'top', padding:'4px 5px', cursor: dayEvents.length > 0 || isMarketingHr ? 'pointer' : 'default',
+                    verticalAlign:'top', padding:'4px 5px', cursor: 'pointer',
                     minWidth: 80, maxWidth: 120,
                     background: isToday ? '#fff8e1' : '#fff',
                     outline: isToday ? '2px solid #ffc107' : 'none',
@@ -716,26 +765,14 @@ useEffect(() => {
                     </div>
                     <div style={{ display:'flex', gap:6, alignItems:'center' }}>
                         <button className="btn btn-sm btn-outline-primary" onClick={goToToday}>Today</button>
-                        {isMarketingHr && (
-                            <button
-                                className="btn btn-sm btn-primary"
-                                onClick={() => { setEditEvent({}); setShowForm(true); }}
-                            >
-                                + New Event
-                            </button>
-                        )}
-                        {currentUser && !isMarketingHr && (
-                            <span className="badge bg-secondary" style={{ fontSize:11 }}>View Only</span>
-                        )}
+                        <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => { setEditEvent({}); setShowForm(true); }}
+                        >
+                            + New Event
+                        </button>
                     </div>
                 </div>
-
-                {/* Role notice for non-MarketingHr */}
-                {currentUser && !isMarketingHr && (
-                    <div className="alert alert-info py-2 mb-3" style={{ fontSize:12 }}>
-                        You are viewing events visible to your account. Only <strong>Marketing & HR</strong> staff can create or edit events.
-                    </div>
-                )}
 
                 {/* Calendar table */}
                 <div style={{ overflowX:'auto' }}>
@@ -784,7 +821,6 @@ useEffect(() => {
                     employees={employees}
                     currentMonth={currentMonth}
                     currentYear={currentYear}
-                    isMarketingHr={isMarketingHr}
                     onSelectEvent={(ev) => setDetailEvent(ev)}
                     onNewEvent={() => { setEditEvent({}); setShowForm(true); }}
                 />
@@ -798,7 +834,7 @@ useEffect(() => {
                     dateStr={dayModal.dateStr}
                     events={dayModal.events}
                     employees={employees}
-                    canEdit={isMarketingHr}
+                    canEdit={true}
                     onSelectEvent={(ev) => { setDetailEvent(ev); setDayModal(null); }}
                     onClose={() => setDayModal(null)}
                 />
@@ -809,14 +845,14 @@ useEffect(() => {
                 <EventDetailModal
                     event={detailEvent}
                     employees={employees}
-                    canEdit={isMarketingHr}
+                    canEdit={true}
                     onEdit={() => { setEditEvent(detailEvent); setDetailEvent(null); setShowForm(true); }}
                     onClose={() => { setDetailEvent(null); setDayModal(null); }}
                 />
             )}
 
-            {/* Event form — MarketingHr only */}
-            {showForm && isMarketingHr && (
+            {/* Event form — all authenticated users */}
+            {showForm && (
                 <EventFormModal
                     event={editEvent}
                     employees={employees}
@@ -832,6 +868,12 @@ useEffect(() => {
 // ====================================================================
 // MOUNT
 // ====================================================================
+
+const sidebarEl = document.getElementById('sidebarRoot');
+if (sidebarEl) {
+    ReactDOM.createRoot(sidebarEl).render(<Sidebar />);
+}
+
 const rootElement = document.getElementById('calendarRoot');
 if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);

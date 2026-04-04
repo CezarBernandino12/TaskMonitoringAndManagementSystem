@@ -95,17 +95,16 @@ function Sidebar() {
 
             {/* Overview */}
             <div className="sidebar-section">Overview</div>
-            <a href="admin-dashboard.html" className="nav-link active">Dashboard</a>
+            <a href="dashboard.html" className="nav-link active">Dashboard</a>
 
             {/* User Management */}
             <div className="sidebar-section">User Management</div>
             <a href="users.html"  className="nav-link">Manage Users</a>
             <a href="departments.html"  className="nav-link">Departments</a>
 
-            {/* Task Management */}
-            <div className="sidebar-section">Task Management</div>
-            <a href="all-tasks.html"    className="nav-link">All Tasks</a>
-            <a href="assign-task.html"  className="nav-link">Assign Task</a>
+              {/* Event Management */}
+                <div className="sidebar-section">Event Management</div>
+                <a href="calendar.html"    className="nav-link">Calendar</a>
 
             {/* Reports */}
             <div className="sidebar-section">Reports</div>
@@ -287,6 +286,8 @@ function UserFormModal({ user, departments, onSave, onClose }) {
         if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email';
         if (!isEdit && !form.password.trim()) e.password = 'Required for new users';
         if (form.password && form.password.length < 6) e.password = 'Minimum 6 characters';
+        if (!form.role) e.role = 'Please select a role';
+        if (!form.department_id) e.department_id = 'Please select a department';
         return e;
     };
 
