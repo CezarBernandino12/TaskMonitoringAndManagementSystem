@@ -97,10 +97,9 @@ function Sidebar() {
                 <a href="users.html"  className="nav-link">Manage Users</a>
                 <a href="departments.html"  className="nav-link">Departments</a>
 
-                {/* Task Management */}
-                <div className="sidebar-section">Task Management</div>
-                <a href="all-tasks.html"    className="nav-link">All Tasks</a>
-                <a href="assign-task.html"  className="nav-link">Assign Task</a>
+                {/* Event Management */}
+                <div className="sidebar-section">Event Management</div>
+                <a href="calendar.html"    className="nav-link">Calendar</a>
 
                 {/* Reports */}
                 <div className="sidebar-section">Reports</div>
@@ -298,35 +297,7 @@ function AdminDashboard() {
                             </div>
                         </div>
 
-                        {/* Staff with no tasks assigned */}
-                        <div className="col-md-6">
-                            <div className="card p-3 h-100">
-                                <h6 className="fw-semibold mb-1">Staff with No Tasks Assigned</h6>
-                                <p className="text-muted mb-3" style={{ fontSize: 12 }}>
-                                    Active staff members who have no tasks at all — may need follow-up.
-                                </p>
-                                {no_tasks.length === 0 ? (
-                                    <div className="text-center text-success py-3">
-                                        <div style={{ fontSize: 24 }}>✓</div>
-                                        All active staff have tasks assigned.
-                                    </div>
-                                ) : (
-                                    <div className="d-flex flex-column gap-2" style={{ maxHeight: 200, overflowY: 'auto' }}>
-                                        {no_tasks.map(u => (
-                                            <div key={u.id} className="alert-row d-flex align-items-center justify-content-between">
-                                                <div>
-                                                    <div style={{ fontWeight: 500, fontSize: 13 }}>{u.name}</div>
-                                                    <div style={{ fontSize: 11, color: '#888' }}>{u.department}</div>
-                                                </div>
-                                                <a href={`assign-task.html?user=${u.id}`} className="btn btn-sm btn-outline-warning" style={{ fontSize: 11 }}>
-                                                    Assign Task
-                                                </a>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                      
                     </div>
 
                     {/* ── Row 3: Department summary table ── */}
