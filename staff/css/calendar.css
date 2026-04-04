@@ -1,108 +1,158 @@
-.calendar-has-tasks {
-    position: relative;
+/* ============================================================
+   CALENDAR — Google Calendar-style redesign
+   ============================================================ */
+
+/* Reset orange/yellow theme from old calendar.css */
+.calendar-table th,
+.calendar-table td,
+.modern-calendar,
+.summary-card {
+    all: unset;
 }
-/* Modern Calendar Custom Styles */
-.modern-calendar {
-    max-width: 420px;
-    margin: 0 auto;
-}
-.calendar-table {
-    border-radius: 8px;
+
+/* App shell: make calendar fill the main column */
+#calendarRoot {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(255, 184, 77, 0.08);
+    font-family: 'Google Sans', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #fff;
+    color: #202124;
 }
-.calendar-table th {
-    background: #ffe7b3;
-    color: #cc7a00;
-    font-weight: 600;
-    font-size: 1rem;
-    border: none;
+
+/* Scrollbar for inner calendar */
+#calendarRoot ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
 }
-.calendar-table td {
-    height: 48px;
-    vertical-align: middle;
-    font-size: 1.1rem;
-    border: none;
-    transition: background 0.2s, color 0.2s;
+#calendarRoot ::-webkit-scrollbar-track { background: transparent; }
+#calendarRoot ::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 3px; }
+#calendarRoot ::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
+
+/* ── Nav arrow hover ── */
+#calendarRoot button[style*="border-radius: 50%"]:hover {
+    background: #f1f3f4 !important;
 }
-.calendar-table td.bg-warning {
-    background: #ffb84d !important;
-    color: #fff !important;
-    border-radius: 50%;
+
+/* ── Tab hover ── */
+#calendarRoot header button:hover {
+    color: #202124;
 }
-.calendar-table td:hover:not(.bg-warning) {
-    background: #fff0b3;
+
+/* ── Day cell hover override (handled inline but ensure cursor) ── */
+#calendarRoot table td {
+    transition: background 0.1s;
+}
+
+/* ── Event bars ── */
+#calendarRoot .ev-bar {
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 6px;
+    margin-top: 2px;
+    line-height: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     cursor: pointer;
-    color: #cc7a00;
-    border-radius: 50%;
-}
-.modern-calendar .btn-primary {
-    background: #ff9900;
-    border: none;
-    padding: 0.25rem 0.75rem;
-    font-size: 1.1rem;
-    border-radius: 50%;
-    box-shadow: 0 1px 4px rgba(255, 184, 77, 0.12);
-}
-.modern-calendar .btn-primary:focus, .modern-calendar .btn-primary:hover {
-    background: #ffb84d;
-    color: #cc7a00;
+    color: #fff;
 }
 
-    body {
-        background-color: #ffff;
-        color: #333; 
-        font-family: Arial, sans-serif;
-    }
+/* ── View-only badge ── */
+#calendarRoot .view-only-badge {
+    font-size: 11px;
+    background: #f1f3f4;
+    color: #9aa0a6;
+    border-radius: 12px;
+    padding: 3px 10px;
+}
 
-    .card {
-        border-radius: 12px;
-        background: #ffffff;
-        border: 1px solid #ffb84d; 
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); 
-        color: #222; 
-    }
+/* ── Form inputs match GCal style ── */
+#calendarRoot .form-control,
+#calendarRoot .form-select {
+    border: 1px solid #dadce0 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    color: #202124 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    transition: border-color .15s, box-shadow .15s;
+}
 
-    .overdue {
-        background-color: #fff0b3 !important; 
-        color: #665200; 
-    }
+#calendarRoot .form-control:focus,
+#calendarRoot .form-select:focus {
+    border-color: #1a73e8 !important;
+    box-shadow: 0 0 0 2px rgba(26,115,232,.15) !important;
+    outline: none !important;
+}
 
-    .btn-primary {
-        background-color: #ff9900;
-        border-color: #ff9900;
-        color: #fff;
-    }
+/* ── Alert overrides ── */
+#calendarRoot .alert-danger {
+    background: #fce8e6;
+    border-color: #f5c6c4;
+    color: #c5221f;
+    border-radius: 8px;
+    font-size: 13px;
+}
 
-    .btn-primary:hover, .btn-primary:focus {
-        background-color: #ffb84d;
-        border-color: #ffb84d;
-        color: #333; 
-    }
+#calendarRoot .alert-info {
+    background: #e8f0fe;
+    border-color: #c5d6fb;
+    color: #1967d2;
+    border-radius: 8px;
+    font-size: 12px;
+}
 
-    .table thead {
-        background: #ffe7b3;
-    }
+/* ── Checkbox style ── */
+#calendarRoot input[type="checkbox"] {
+    accent-color: #1a73e8;
+    width: 14px;
+    height: 14px;
+}
 
-    .table th {
-        color: #cc7a00;
+/* ── Responsive: hide left panel on small screens ── */
+@media (max-width: 680px) {
+    #calendarRoot > div > div:first-child {
+        display: none !important;
     }
+}
 
-    .table-hover tbody tr:hover {
-        background: #fff0b3;
-    }
+/* ── Table cell min height for calendar rows ── */
+#calendarRoot table tbody td {
+    min-height: 90px;
+    height: 90px;
+}
 
-    .form-control:focus {
-        border-color: #ffb84d;
-        box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
-    }
+/* ── Sticky day header ── */
+#calendarRoot table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fff;
+}
 
-    h3, h5, h6 {
-        color: #cc7a00; /* darker headings */
-    }
+/* ── Today circle animation ── */
+#calendarRoot .today-circle {
+    animation: today-pop 0.3s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes today-pop {
+    from { transform: scale(0.5); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
 
-    .summary-card {
-        background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
-        border: 1px solid #ffb84d;
-        color: #cc7a00;
-    }
+/* Remove old overrides that conflict */
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    color: #202124;
+}
+
+/* Keep old overdue, table, btn-primary only outside calendarRoot */

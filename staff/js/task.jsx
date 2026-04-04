@@ -1,3 +1,9 @@
+import React from "https://esm.sh/react@18.3.1";
+import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
+import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
+
+window.sileo = sileo;
+
 const API_BASE = "http://localhost/taskmanagement/staff/php";
 const TASKS_PER_PAGE = 5;
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
@@ -5,6 +11,40 @@ const STATUS_OPTIONS = ["Ongoing", "Completed"];
 
 function normalizeText(value = "") {
     return String(value).trim().toLowerCase();
+}
+
+function showToast(type = "info", title = "Notice", description = "") {
+    const method = window.sileo?.[type] || window.sileo?.info;
+
+    if (typeof method === "function") {
+        method({ title, description });
+        return;
+    }
+
+    console.warn("Sileo is not ready yet.", { type, title, description });
+}
+
+async function parseServerResponse(response, fallbackMessage) {
+    const rawText = (await response.text()).trim();
+    let parsed = null;
+
+    try {
+        parsed = rawText ? JSON.parse(rawText) : null;
+    } catch {
+        parsed = null;
+    }
+
+    const parsedStatus = normalizeText(parsed?.status);
+    const parsedSuccess = parsed?.success === true || parsedStatus === "success" || parsedStatus === "ok";
+    const textSuccess = /^success\b/i.test(rawText) || /successfully/i.test(rawText);
+    const success = response.ok && (parsedSuccess || textSuccess);
+    const message = parsed?.message || rawText || fallbackMessage;
+
+    if (!success) {
+        throw new Error(message || fallbackMessage);
+    }
+
+    return message;
 }
 
 function formatDate(dateStr) {
@@ -170,7 +210,7 @@ function ModalDatePicker({
                 <button
                     type="button"
                     className={`modal-picker-trigger ${open ? "is-open" : ""} ${value ? "has-value" : ""}`}
-                    onClick={() => setOpen((current) => !current)}
+                    onClick={() => setOpen(current => !current)}
                     aria-expanded={open}
                     aria-haspopup="dialog"
                 >
@@ -224,7 +264,7 @@ function ModalDatePicker({
                         </div>
 
                         <div className="modal-calendar-weekdays">
-                            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
                                 <div key={day} className="modal-calendar-weekday">
                                     {day}
                                 </div>
@@ -232,7 +272,7 @@ function ModalDatePicker({
                         </div>
 
                         <div className="modal-calendar-grid">
-                            {days.map((day) => {
+                            {days.map(day => {
                                 const isOutside = day.getMonth() !== viewDate.getMonth();
                                 const isSelected = isSameDay(day, selectedDate);
                                 const isToday = isSameDay(day, today);
@@ -279,7 +319,7 @@ function ModalPriorityPicker({ value, onChange }) {
     const [open, setOpen] = React.useState(false);
     const rootRef = React.useRef(null);
 
-    const options = ["Low", "Medium", "High"];
+    const options = PRIORITY_OPTIONS;
     const currentMeta = getPriorityMeta(value);
 
     const closeMenu = React.useCallback(() => {
@@ -296,7 +336,7 @@ function ModalPriorityPicker({ value, onChange }) {
                 <button
                     type="button"
                     className={`modal-picker-trigger modal-priority-trigger ${open ? "is-open" : ""}`}
-                    onClick={() => setOpen((current) => !current)}
+                    onClick={() => setOpen(current => !current)}
                     aria-expanded={open}
                     aria-haspopup="listbox"
                 >
@@ -312,7 +352,7 @@ function ModalPriorityPicker({ value, onChange }) {
 
                 {open && (
                     <div className="modal-priority-popover" role="listbox" aria-label="Choose priority">
-                        {options.map((option) => {
+                        {options.map(option => {
                             const meta = getPriorityMeta(option);
                             const active = option === value;
 
@@ -471,7 +511,7 @@ function TaskDateFilter({ value, onChange }) {
             <button
                 type="button"
                 className={`task-toolbar-chip ${open ? "is-open" : ""} ${value ? "is-selected" : ""}`}
-                onClick={() => setOpen((current) => !current)}
+                onClick={() => setOpen(current => !current)}
                 aria-expanded={open}
                 aria-haspopup="dialog"
             >
@@ -487,7 +527,7 @@ function TaskDateFilter({ value, onChange }) {
                             <button
                                 type="button"
                                 className="task-toolbar-year-trigger"
-                                onClick={() => setYearMenuOpen((current) => !current)}
+                                onClick={() => setYearMenuOpen(current => !current)}
                                 aria-expanded={yearMenuOpen}
                             >
                                 <span>
@@ -498,7 +538,7 @@ function TaskDateFilter({ value, onChange }) {
 
                             {yearMenuOpen && (
                                 <div className="task-toolbar-year-menu">
-                                    {years.map((year) => (
+                                    {years.map(year => (
                                         <button
                                             key={year}
                                             type="button"
@@ -542,7 +582,7 @@ function TaskDateFilter({ value, onChange }) {
                     </div>
 
                     <div className="task-toolbar-picker-weekdays">
-                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
                             <div key={day} className="task-toolbar-picker-weekday">
                                 {day}
                             </div>
@@ -550,7 +590,7 @@ function TaskDateFilter({ value, onChange }) {
                     </div>
 
                     <div className="task-toolbar-picker-grid">
-                        {days.map((day) => {
+                        {days.map(day => {
                             const isOutside = day.getMonth() !== viewDate.getMonth();
                             const isSelected = isSameDay(day, selectedDate);
                             const isToday = isSameDay(day, today);
@@ -610,7 +650,7 @@ function TaskPriorityFilter({ value, onChange }) {
             <button
                 type="button"
                 className={`task-toolbar-chip ${open ? "is-open" : ""} ${value !== "all" ? "is-selected" : ""}`}
-                onClick={() => setOpen((current) => !current)}
+                onClick={() => setOpen(current => !current)}
                 aria-expanded={open}
                 aria-haspopup="listbox"
             >
@@ -621,7 +661,7 @@ function TaskPriorityFilter({ value, onChange }) {
 
             {open && (
                 <div className="task-toolbar-select-popup" role="listbox" aria-label="Choose priority">
-                    {options.map((option) => (
+                    {options.map(option => (
                         <button
                             key={option.value}
                             type="button"
@@ -649,14 +689,23 @@ function App() {
     const [dueDateFilter, setDueDateFilter] = React.useState("");
     const [priorityFilter, setPriorityFilter] = React.useState("all");
 
-    const fetchTasks = React.useCallback(async () => {
+    const fetchTasks = React.useCallback(async ({ silent = true } = {}) => {
         try {
             const response = await fetch(`${API_BASE}/get_tasks.php`);
+
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+
             const data = await response.json();
             setTasks(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error:", error);
             setTasks([]);
+
+            if (!silent) {
+                showToast("error", "Load failed", error.message || "Unable to load tasks.");
+            }
         }
     }, []);
 
@@ -666,6 +715,8 @@ function App() {
 
     return (
         <div className="task-view">
+            <Toaster />
+
             <div className="task-toolbar">
                 <div className="task-toolbar-left">
                     <TaskDateFilter
@@ -717,7 +768,7 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
         completed: 1
     });
 
-    const filteredTasks = tasks.filter((task) => {
+    const filteredTasks = tasks.filter(task => {
         const matchesDueDate = !dueDateFilter || task.deadline === dueDateFilter;
         const matchesPriority =
             priorityFilter === "all" ||
@@ -727,9 +778,9 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
     });
 
     const laneTaskMap = {
-        ongoing: filteredTasks.filter((task) => getLaneKey(task) === "ongoing"),
-        overdue: filteredTasks.filter((task) => getLaneKey(task) === "overdue"),
-        completed: filteredTasks.filter((task) => getLaneKey(task) === "completed")
+        ongoing: filteredTasks.filter(task => getLaneKey(task) === "ongoing"),
+        overdue: filteredTasks.filter(task => getLaneKey(task) === "overdue"),
+        completed: filteredTasks.filter(task => getLaneKey(task) === "completed")
     };
 
     React.useEffect(() => {
@@ -746,14 +797,14 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
     }
 
     function handleToggleLane(laneKey) {
-        setCollapsedLanes((prev) => ({
+        setCollapsedLanes(prev => ({
             ...prev,
             [laneKey]: !prev[laneKey]
         }));
     }
 
     function handlePageChange(laneKey, page) {
-        setLanePages((prev) => ({
+        setLanePages(prev => ({
             ...prev,
             [laneKey]: page
         }));
@@ -762,7 +813,7 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
     return (
         <>
             <div className="task-board-shell">
-                {["ongoing", "overdue", "completed"].map((laneKey) => (
+                {["ongoing", "overdue", "completed"].map(laneKey => (
                     <TaskLane
                         key={laneKey}
                         laneKey={laneKey}
@@ -771,7 +822,7 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
                         collapsed={collapsedLanes[laneKey]}
                         onToggle={() => handleToggleLane(laneKey)}
                         currentPage={lanePages[laneKey]}
-                        onPageChange={(page) => handlePageChange(laneKey, page)}
+                        onPageChange={page => handlePageChange(laneKey, page)}
                     />
                 ))}
             </div>
@@ -849,14 +900,14 @@ function TaskLane({
                             {tasks.length === 0 ? (
                                 <div className="task-lane-empty">No tasks found</div>
                             ) : (
-                                paginatedTasks.map((task) => (
+                                paginatedTasks.map(task => (
                                     <div
                                         key={task.id}
                                         className={`task-lane-row ${task.is_overdue ? "is-overdue" : ""}`}
                                         onClick={() => onRowClick(task)}
                                         role="button"
                                         tabIndex="0"
-                                        onKeyDown={(event) => {
+                                        onKeyDown={event => {
                                             if (event.key === "Enter" || event.key === " ") {
                                                 event.preventDefault();
                                                 onRowClick(task);
@@ -982,7 +1033,7 @@ function TaskFormFields({
                         type="text"
                         className="form-control task-form-control"
                         value={taskName}
-                        onChange={(e) => setTaskName(e.target.value)}
+                        onChange={e => setTaskName(e.target.value)}
                         placeholder="Enter task name"
                     />
                 </div>
@@ -1014,7 +1065,7 @@ function TaskFormFields({
                         className="form-control task-form-control task-form-textarea"
                         rows="4"
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        onChange={e => setDescription(e.target.value)}
                         placeholder="Enter task description"
                     />
                 </div>
@@ -1022,6 +1073,7 @@ function TaskFormFields({
         </>
     );
 }
+
 function TaskDetailModal({ show, task, onClose, refreshTasks }) {
     const [taskName, setTaskName] = React.useState("");
     const [description, setDescription] = React.useState("");
@@ -1029,6 +1081,8 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
     const [deadline, setDeadline] = React.useState("");
     const [priority, setPriority] = React.useState("Low");
     const [status, setStatus] = React.useState("Ongoing");
+    const [isSaving, setIsSaving] = React.useState(false);
+    const [isDeleting, setIsDeleting] = React.useState(false);
 
     React.useEffect(() => {
         if (!task) return;
@@ -1045,14 +1099,16 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
 
     async function handleSave() {
         if (!taskName.trim()) {
-            alert("Task name is required.");
+            showToast("error", "Validation error", "Task name is required.");
             return;
         }
 
         if (startDate && deadline && deadline < startDate) {
-            alert("Due date cannot be earlier than start date.");
+            showToast("error", "Validation error", "Due date cannot be earlier than start date.");
             return;
         }
+
+        setIsSaving(true);
 
         try {
             const formData = new FormData();
@@ -1069,21 +1125,24 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
                 body: formData
             });
 
-            const result = await res.text();
-            alert(result);
+            const message = await parseServerResponse(res, "Failed to update task.");
 
-            if (res.ok) {
-                onClose();
-                refreshTasks();
-            }
+            await refreshTasks();
+            onClose();
+
+            showToast("success", "Task updated", message || "Task updated successfully.");
         } catch (error) {
-            alert("Failed to update task");
             console.error(error);
+            showToast("error", "Update failed", error.message || "Failed to update task.");
+        } finally {
+            setIsSaving(false);
         }
     }
 
     async function handleDelete() {
         if (!confirm("Are you sure you want to delete this task?")) return;
+
+        setIsDeleting(true);
 
         try {
             const formData = new FormData();
@@ -1094,14 +1153,17 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
                 body: formData
             });
 
-            const result = await res.text();
-            alert(result);
+            const message = await parseServerResponse(res, "Failed to delete task.");
 
+            await refreshTasks();
             onClose();
-            refreshTasks();
+
+            showToast("success", "Task deleted", message || "Task deleted successfully.");
         } catch (error) {
-            alert("Failed to delete task");
             console.error(error);
+            showToast("error", "Delete failed", error.message || "Failed to delete task.");
+        } finally {
+            setIsDeleting(false);
         }
     }
 
@@ -1147,14 +1209,16 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
                                     type="button"
                                     className="btn task-btn task-btn-danger"
                                     onClick={handleDelete}
+                                    disabled={isSaving || isDeleting}
                                 >
-                                    Delete
+                                    {isDeleting ? "Deleting..." : "Delete"}
                                 </button>
 
                                 <button
                                     type="button"
                                     className="btn task-btn task-btn-neutral"
                                     onClick={onClose}
+                                    disabled={isSaving || isDeleting}
                                 >
                                     Close
                                 </button>
@@ -1163,8 +1227,9 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
                                     type="button"
                                     className="btn task-btn task-btn-primary"
                                     onClick={handleSave}
+                                    disabled={isSaving || isDeleting}
                                 >
-                                    Save
+                                    {isSaving ? "Saving..." : "Save"}
                                 </button>
                             </div>
                         </div>
@@ -1211,7 +1276,7 @@ function ModalStatusPicker({ value, onChange }) {
                 <button
                     type="button"
                     className={`modal-picker-trigger modal-status-trigger ${open ? "is-open" : ""}`}
-                    onClick={() => setOpen((current) => !current)}
+                    onClick={() => setOpen(current => !current)}
                     aria-expanded={open}
                     aria-haspopup="listbox"
                 >
@@ -1226,7 +1291,7 @@ function ModalStatusPicker({ value, onChange }) {
 
                 {open && (
                     <div className="modal-status-popover" role="listbox" aria-label="Choose status">
-                        {STATUS_OPTIONS.map((option) => {
+                        {STATUS_OPTIONS.map(option => {
                             const meta = getStatusMeta(option);
                             const active = option === value;
 
@@ -1264,12 +1329,25 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
     const [startDate, setStartDate] = React.useState("");
     const [deadline, setDeadline] = React.useState("");
     const [priority, setPriority] = React.useState("Low");
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     if (!show) return null;
 
     async function handleSubmit() {
+        if (!taskName.trim()) {
+            showToast("error", "Validation error", "Task name is required.");
+            return;
+        }
+
+        if (startDate && deadline && deadline < startDate) {
+            showToast("error", "Validation error", "Due date cannot be earlier than start date.");
+            return;
+        }
+
+        setIsSubmitting(true);
+
         const formData = new FormData();
-        formData.append("task_name", taskName);
+        formData.append("task_name", taskName.trim());
         formData.append("description", description.trim());
         formData.append("start_date", startDate);
         formData.append("deadline", deadline);
@@ -1281,10 +1359,9 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
                 body: formData
             });
 
-            const result = await response.text();
-            alert(result);
+            const message = await parseServerResponse(response, "Failed to create task.");
 
-            refreshTasks();
+            await refreshTasks();
 
             setTaskName("");
             setDescription("");
@@ -1293,8 +1370,13 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
             setPriority("Low");
 
             onClose();
+
+            showToast("success", "Task created", message || "Task created successfully.");
         } catch (error) {
             console.error("Error:", error);
+            showToast("error", "Create failed", error.message || "Failed to create task.");
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -1328,6 +1410,7 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
                                     type="button"
                                     className="btn task-btn task-btn-neutral"
                                     onClick={onClose}
+                                    disabled={isSubmitting}
                                 >
                                     Close
                                 </button>
@@ -1336,8 +1419,9 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
                                     type="button"
                                     className="btn task-btn task-btn-primary"
                                     onClick={handleSubmit}
+                                    disabled={isSubmitting}
                                 >
-                                    Add Task
+                                    {isSubmitting ? "Adding..." : "Add Task"}
                                 </button>
                             </div>
                         </div>
@@ -1373,6 +1457,12 @@ function ModalController({ refreshTasks }) {
 }
 
 const rootElement = document.getElementById("root");
-if (rootElement) {
-    ReactDOM.createRoot(rootElement).render(<App />);
+if (!rootElement) {
+    throw new Error('Root element with id "root" was not found.');
 }
+
+createRoot(rootElement).render(
+    <React.StrictMode>
+        <App />
+    </React.StrictMode>
+);
