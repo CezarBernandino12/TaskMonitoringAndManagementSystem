@@ -191,11 +191,11 @@ body {
 .task-lane-row {
     display: grid;
     grid-template-columns:
-        minmax(220px, 1.7fr)
-        minmax(120px, 0.9fr)
-        minmax(130px, 0.9fr)
-        minmax(130px, 0.9fr)
-        minmax(130px, 0.9fr)
+        minmax(220px, 1.5fr)
+        minmax(300px, 2.2fr)
+        minmax(130px, 0.85fr)
+        minmax(130px, 0.85fr)
+        minmax(130px, 0.85fr)
         28px;
     gap: 16px;
     align-items: center;
@@ -700,11 +700,12 @@ body {
 }
 
 .task-lane-col-description {
-    min-width: 0;
+    min-width: 300px;
 }
 
 .task-description-text {
     display: block;
+    width: 100%;
     font-size: 13px;
     font-weight: 600;
     color: #5a6274;
