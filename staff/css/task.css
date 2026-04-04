@@ -190,7 +190,13 @@ body {
 .task-lane-grid-head,
 .task-lane-row {
     display: grid;
-    grid-template-columns: minmax(220px, 1.7fr) minmax(120px, 0.9fr) minmax(130px, 0.9fr) minmax(130px, 0.9fr) 28px;
+    grid-template-columns:
+        minmax(220px, 1.7fr)
+        minmax(120px, 0.9fr)
+        minmax(130px, 0.9fr)
+        minmax(130px, 0.9fr)
+        minmax(130px, 0.9fr)
+        28px;
     gap: 16px;
     align-items: center;
 }
@@ -890,7 +896,7 @@ body {
 
     .task-lane-grid-head,
     .task-lane-row {
-        min-width: 760px;
+        min-width: 900px;
     }
 }
 

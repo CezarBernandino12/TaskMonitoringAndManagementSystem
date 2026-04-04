@@ -529,6 +529,7 @@ function TaskLane({ laneKey, tasks, onRowClick }) {
                 <div className="task-lane-grid-head">
                     <div>Task Name</div>
                     <div>Task Description</div>
+                    <div>Start Date</div>
                     <div>Due Date</div>
                     <div>Priority</div>
                     <div></div>
@@ -569,7 +570,9 @@ function TaskLane({ laneKey, tasks, onRowClick }) {
                                         </span>
                                     )}
                                 </div>
-
+                                <div className="task-lane-col task-lane-col-date">
+                                    {formatDate(task.start_date)}
+                                </div>
                                 <div className="task-lane-col task-lane-col-date">
                                     {formatDate(task.deadline)}
                                 </div>
