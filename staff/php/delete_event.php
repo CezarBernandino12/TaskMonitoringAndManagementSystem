@@ -36,18 +36,18 @@ if (empty($_SESSION['user_id'])) {
 
 $sessionUserId = (int)$_SESSION['user_id'];
 
-// Verify the user is in Marketing
+// Verify the user is in Marketing or HR department
 $authStmt = $conn->prepare("
     SELECT u.id FROM users u
     INNER JOIN departments d ON u.department_id = d.id
     WHERE u.id = ? AND u.is_active = 1
-    AND LOWER(d.name) = 'marketing'
+    AND LOWER(d.name) IN ('marketing', 'human resources')
     LIMIT 1
 ");
 $authStmt->execute([$sessionUserId]);
 if (!$authStmt->fetch()) {
     http_response_code(403);
-    echo json_encode(['error' => 'Only Marketing department users can delete events.']);
+    echo json_encode(['error' => 'Only Marketing or Human Resources department users can delete events.']);
     exit;
 }
 
