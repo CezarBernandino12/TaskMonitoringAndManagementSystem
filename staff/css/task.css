@@ -453,6 +453,313 @@ body {
     color: var(--task-danger-text);
 }
 
+.task-toolbar-filter-shell {
+    position: relative;
+}
+
+.task-toolbar-chip.is-open {
+    border-color: #d6dcea;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.task-toolbar-chip.is-selected span {
+    color: var(--task-text);
+}
+
+.task-toolbar-chip i:last-child {
+    transition: transform 0.18s ease;
+}
+
+.task-toolbar-chip.is-open i:last-child {
+    transform: rotate(180deg);
+}
+
+.task-toolbar-picker-popup,
+.task-toolbar-select-popup,
+.task-toolbar-year-menu {
+    background: #ffffff;
+    border: 1px solid #e5e8f0;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+}
+
+.task-toolbar-picker-popup,
+.task-toolbar-select-popup {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    z-index: 90;
+    border-radius: 24px;
+}
+
+.task-toolbar-picker-popup {
+    width: 352px;
+    padding: 18px 18px 14px;
+}
+
+.task-toolbar-select-popup {
+    min-width: 220px;
+    padding: 8px;
+    border-radius: 18px;
+}
+
+.task-toolbar-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.task-toolbar-picker-title {
+    position: relative;
+}
+
+.task-toolbar-year-trigger {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #2f3545;
+    cursor: pointer;
+}
+
+.task-toolbar-year-trigger i {
+    font-size: 11px;
+}
+
+.task-toolbar-year-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 95;
+    width: 110px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 6px;
+    border-radius: 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.task-toolbar-year-menu::-webkit-scrollbar {
+    display: none;
+}
+
+.task-toolbar-year-option {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 8px 10px;
+    border-radius: 12px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 700;
+    color: #3a4251;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.task-toolbar-year-option:hover {
+    background: #f5f7fc;
+}
+
+.task-toolbar-year-option.is-selected {
+    background: #eef3ff;
+    color: #466fe0;
+}
+
+.task-toolbar-picker-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.task-toolbar-picker-nav button {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    border-radius: 999px;
+    color: #50586a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.18s ease;
+}
+
+.task-toolbar-picker-nav button:hover {
+    background: #f5f7fc;
+}
+
+.task-toolbar-picker-weekdays,
+.task-toolbar-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.task-toolbar-picker-weekdays {
+    margin-bottom: 4px;
+}
+
+.task-toolbar-picker-weekday {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #8a91a3;
+    padding: 6px 0;
+}
+
+.task-toolbar-picker-day {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto;
+    border: 0;
+    background: transparent;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #353b49;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.task-toolbar-picker-day:hover {
+    background: #f5f7fc;
+}
+
+.task-toolbar-picker-day.is-outside {
+    color: #b0b7c6;
+}
+
+.task-toolbar-picker-day.is-selected {
+    color: #2873ff;
+    box-shadow: inset 0 0 0 3px #2873ff;
+    background: #ffffff;
+}
+
+.task-toolbar-picker-day.is-today:not(.is-selected)::after {
+    content: "";
+    position: absolute;
+    bottom: 6px;
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: #2873ff;
+}
+
+.task-toolbar-picker-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 10px;
+}
+
+.task-toolbar-clear-btn {
+    border: 0;
+    background: transparent;
+    color: var(--task-purple);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.task-toolbar-select-option {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 12px 14px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #3a4251;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.task-toolbar-select-option:hover {
+    background: #f5f7fc;
+}
+
+.task-toolbar-select-option.is-selected {
+    background: #eef3ff;
+    color: #466fe0;
+}
+
+[data-theme="dark"] .task-toolbar-chip.is-open {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+}
+
+[data-theme="dark"] .task-toolbar-picker-popup,
+[data-theme="dark"] .task-toolbar-select-popup,
+[data-theme="dark"] .task-toolbar-year-menu {
+    background: #111827;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .task-toolbar-year-trigger,
+[data-theme="dark"] .task-toolbar-picker-nav button,
+[data-theme="dark"] .task-toolbar-picker-day,
+[data-theme="dark"] .task-toolbar-select-option,
+[data-theme="dark"] .task-toolbar-year-option {
+    color: #e5e7eb;
+}
+
+[data-theme="dark"] .task-toolbar-picker-weekday {
+    color: #9aa3b6;
+}
+
+[data-theme="dark"] .task-toolbar-picker-day.is-outside {
+    color: #6f7890;
+}
+
+[data-theme="dark"] .task-toolbar-picker-day:hover,
+[data-theme="dark"] .task-toolbar-picker-nav button:hover,
+[data-theme="dark"] .task-toolbar-select-option:hover,
+[data-theme="dark"] .task-toolbar-year-option:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .task-toolbar-picker-day.is-selected {
+    color: #a9bdff;
+    box-shadow: inset 0 0 0 3px #7c93ff;
+    background: transparent;
+}
+
+[data-theme="dark"] .task-toolbar-picker-day.is-today:not(.is-selected)::after {
+    background: #8fb0ff;
+}
+
+[data-theme="dark"] .task-toolbar-select-option.is-selected,
+[data-theme="dark"] .task-toolbar-year-option.is-selected {
+    background: rgba(124, 147, 255, 0.18);
+    color: #bfd0ff;
+}
+
+[data-theme="dark"] .task-toolbar-clear-btn {
+    color: #bfd0ff;
+}
+
+@media (max-width: 575.98px) {
+    .task-toolbar-picker-popup {
+        width: min(352px, calc(100vw - 24px));
+    }
+
+    .task-toolbar-select-popup {
+        width: min(240px, calc(100vw - 24px));
+    }
+}
+
 [data-theme="dark"] {
     --task-bg: #0f172a;
     --task-surface: #111827;

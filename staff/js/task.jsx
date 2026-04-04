@@ -14,6 +14,83 @@ function formatDate(dateStr) {
     });
 }
 
+function parseYMD(value) {
+    if (!value) return null;
+
+    const [year, month, day] = String(value).split("-").map(Number);
+    if (!year || !month || !day) return null;
+
+    const parsed = new Date(year, month - 1, day);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatYMD(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function isSameDay(a, b) {
+    return (
+        a &&
+        b &&
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate()
+    );
+}
+
+function formatCalendarMonth(date) {
+    return date.toLocaleString("en-US", { month: "short" });
+}
+
+function getYearOptions(centerYear) {
+    const startYear = 2000;
+    const endYear = new Date().getFullYear() + 10;
+    const years = [];
+
+    for (let year = endYear; year >= startYear; year -= 1) {
+        years.push(year);
+    }
+
+    if (!years.includes(centerYear)) {
+        years.unshift(centerYear);
+    }
+
+    return years;
+}
+
+function getCalendarDays(viewDate) {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstOfMonth = new Date(year, month, 1);
+    const mondayIndex = (firstOfMonth.getDay() + 6) % 7;
+    const start = new Date(year, month, 1 - mondayIndex);
+
+    return Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        return date;
+    });
+}
+
+function formatDueDateChipLabel(value) {
+    const parsed = parseYMD(value);
+    if (!parsed) return "Due Date";
+
+    return `Due Date ${parsed.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric"
+    })}`;
+}
+
+function formatPriorityChipLabel(value) {
+    if (!value || value === "all") return "Priority";
+
+    return `Priority ${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+}
+
 function getLaneKey(task = {}) {
     const normalized = normalizeText(task.status);
 
@@ -64,8 +141,265 @@ function getAssigneeInitials(assignee = "") {
     return `${words[0][0] || ""}${words[1][0] || ""}`.toUpperCase();
 }
 
+function TaskDateFilter({ value, onChange }) {
+    const [open, setOpen] = React.useState(false);
+    const [yearMenuOpen, setYearMenuOpen] = React.useState(false);
+    const selectedDate = parseYMD(value);
+    const [viewDate, setViewDate] = React.useState(selectedDate || new Date());
+    const rootRef = React.useRef(null);
+    const today = new Date();
+
+    React.useEffect(() => {
+        if (selectedDate) {
+            setViewDate(selectedDate);
+        }
+    }, [value]);
+
+    React.useEffect(() => {
+        function handleOutside(event) {
+            if (rootRef.current && !rootRef.current.contains(event.target)) {
+                setOpen(false);
+                setYearMenuOpen(false);
+            }
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === "Escape") {
+                setOpen(false);
+                setYearMenuOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleOutside);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("mousedown", handleOutside);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, []);
+
+    const days = React.useMemo(() => getCalendarDays(viewDate), [viewDate]);
+    const years = React.useMemo(
+        () => getYearOptions(viewDate.getFullYear()),
+        [viewDate]
+    );
+
+    function pickDate(date) {
+        onChange(formatYMD(date));
+        setOpen(false);
+        setYearMenuOpen(false);
+    }
+
+    function clearDate() {
+        onChange("");
+        setOpen(false);
+        setYearMenuOpen(false);
+    }
+
+    function changeYear(year) {
+        setViewDate(new Date(year, viewDate.getMonth(), 1));
+        setYearMenuOpen(false);
+    }
+
+    return (
+        <div className="task-toolbar-filter-shell" ref={rootRef}>
+            <button
+                type="button"
+                className={`task-toolbar-chip ${open ? "is-open" : ""} ${value ? "is-selected" : ""}`}
+                onClick={() => setOpen((current) => !current)}
+                aria-expanded={open}
+                aria-haspopup="dialog"
+            >
+                <i className="bi bi-calendar3"></i>
+                <span>{formatDueDateChipLabel(value)}</span>
+                <i className="bi bi-chevron-down"></i>
+            </button>
+
+            {open && (
+                <div className="task-toolbar-picker-popup" role="dialog" aria-label="Choose due date">
+                    <div className="task-toolbar-picker-header">
+                        <div className="task-toolbar-picker-title">
+                            <button
+                                type="button"
+                                className="task-toolbar-year-trigger"
+                                onClick={() => setYearMenuOpen((current) => !current)}
+                                aria-expanded={yearMenuOpen}
+                            >
+                                <span>
+                                    {formatCalendarMonth(viewDate)} {viewDate.getFullYear()}
+                                </span>
+                                <i className={`bi ${yearMenuOpen ? "bi-chevron-up" : "bi-chevron-down"}`}></i>
+                            </button>
+
+                            {yearMenuOpen && (
+                                <div className="task-toolbar-year-menu">
+                                    {years.map((year) => (
+                                        <button
+                                            key={year}
+                                            type="button"
+                                            className={`task-toolbar-year-option ${
+                                                year === viewDate.getFullYear() ? "is-selected" : ""
+                                            }`}
+                                            onClick={() => changeYear(year)}
+                                        >
+                                            {year}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="task-toolbar-picker-nav">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setViewDate(
+                                        new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1)
+                                    )
+                                }
+                                aria-label="Previous month"
+                            >
+                                <i className="bi bi-chevron-left"></i>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setViewDate(
+                                        new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1)
+                                    )
+                                }
+                                aria-label="Next month"
+                            >
+                                <i className="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="task-toolbar-picker-weekdays">
+                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                            <div key={day} className="task-toolbar-picker-weekday">
+                                {day}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="task-toolbar-picker-grid">
+                        {days.map((day) => {
+                            const isOutside = day.getMonth() !== viewDate.getMonth();
+                            const isSelected = isSameDay(day, selectedDate);
+                            const isToday = isSameDay(day, today);
+
+                            return (
+                                <button
+                                    key={day.toISOString()}
+                                    type="button"
+                                    className={[
+                                        "task-toolbar-picker-day",
+                                        isOutside ? "is-outside" : "",
+                                        isSelected ? "is-selected" : "",
+                                        !isSelected && isToday ? "is-today" : ""
+                                    ].join(" ").trim()}
+                                    onClick={() => pickDate(day)}
+                                >
+                                    {day.getDate()}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="task-toolbar-picker-footer">
+                        <button
+                            type="button"
+                            className="task-toolbar-clear-btn"
+                            onClick={clearDate}
+                        >
+                            All dates
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function TaskPriorityFilter({ value, onChange }) {
+    const [open, setOpen] = React.useState(false);
+    const rootRef = React.useRef(null);
+
+    const options = [
+        { value: "all", label: "All" },
+        { value: "high", label: "High" },
+        { value: "medium", label: "Medium" },
+        { value: "low", label: "Low" }
+    ];
+
+    React.useEffect(() => {
+        function handleOutside(event) {
+            if (rootRef.current && !rootRef.current.contains(event.target)) {
+                setOpen(false);
+            }
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === "Escape") {
+                setOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleOutside);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("mousedown", handleOutside);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, []);
+
+    return (
+        <div className="task-toolbar-filter-shell" ref={rootRef}>
+            <button
+                type="button"
+                className={`task-toolbar-chip ${open ? "is-open" : ""} ${value !== "all" ? "is-selected" : ""}`}
+                onClick={() => setOpen((current) => !current)}
+                aria-expanded={open}
+                aria-haspopup="listbox"
+            >
+                <i className="bi bi-flag"></i>
+                <span>{formatPriorityChipLabel(value)}</span>
+                <i className="bi bi-chevron-down"></i>
+            </button>
+
+            {open && (
+                <div className="task-toolbar-select-popup" role="listbox" aria-label="Choose priority">
+                    {options.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            className={`task-toolbar-select-option ${
+                                value === option.value ? "is-selected" : ""
+                            }`}
+                            aria-selected={value === option.value}
+                            onClick={() => {
+                                onChange(option.value);
+                                setOpen(false);
+                            }}
+                        >
+                            <span>{option.label}</span>
+                            {value === option.value && <i className="bi bi-check2"></i>}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function App() {
     const [tasks, setTasks] = React.useState([]);
+    const [dueDateFilter, setDueDateFilter] = React.useState("");
+    const [priorityFilter, setPriorityFilter] = React.useState("all");
 
     const fetchTasks = async () => {
         try {
@@ -86,18 +420,15 @@ function App() {
         <div className="task-view">
             <div className="task-toolbar">
                 <div className="task-toolbar-left">
-                    <button type="button" className="task-toolbar-chip">
-                        <i className="bi bi-calendar3"></i>
-                        <span>Due Date</span>
-                        <i className="bi bi-chevron-down"></i>
-                    </button>
+                    <TaskDateFilter
+                        value={dueDateFilter}
+                        onChange={setDueDateFilter}
+                    />
 
-
-                    <button type="button" className="task-toolbar-chip">
-                        <i className="bi bi-flag"></i>
-                        <span>Priority</span>
-                        <i className="bi bi-chevron-down"></i>
-                    </button>
+                    <TaskPriorityFilter
+                        value={priorityFilter}
+                        onChange={setPriorityFilter}
+                    />
                 </div>
 
                 <button
@@ -112,18 +443,32 @@ function App() {
 
             <ModalController refreshTasks={fetchTasks} />
 
-            <TaskTable tasks={tasks} refreshTasks={fetchTasks} />
+            <TaskTable
+                tasks={tasks}
+                refreshTasks={fetchTasks}
+                dueDateFilter={dueDateFilter}
+                priorityFilter={priorityFilter}
+            />
         </div>
     );
 }
 
-function TaskTable({ tasks, refreshTasks }) {
+function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
     const [selectedTask, setSelectedTask] = React.useState(null);
     const [showDetailModal, setShowDetailModal] = React.useState(false);
 
-    const ongoingTasks = tasks.filter(task => getLaneKey(task) === "ongoing");
-    const overdueTasks = tasks.filter(task => getLaneKey(task) === "overdue");
-    const completedTasks = tasks.filter(task => getLaneKey(task) === "completed");
+    const filteredTasks = tasks.filter((task) => {
+        const matchesDueDate = !dueDateFilter || task.deadline === dueDateFilter;
+        const matchesPriority =
+            priorityFilter === "all" ||
+            normalizeText(task.priority) === priorityFilter;
+
+        return matchesDueDate && matchesPriority;
+    });
+
+    const ongoingTasks = filteredTasks.filter(task => getLaneKey(task) === "ongoing");
+    const overdueTasks = filteredTasks.filter(task => getLaneKey(task) === "overdue");
+    const completedTasks = filteredTasks.filter(task => getLaneKey(task) === "completed");
 
     const handleRowClick = (task) => {
         setSelectedTask(task);
