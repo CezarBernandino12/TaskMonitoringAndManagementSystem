@@ -1,10 +1,3 @@
-/* ============================================================
-   CALENDAR — matches second photo design
-   All visual styles are handled inline in calendar.jsx.
-   This file only resets old orange/yellow overrides.
-   ============================================================ */
-
-/* Reset old conflicting overrides */
 #calendarRoot .btn-primary,
 #calendarRoot .table thead,
 #calendarRoot .table th,
