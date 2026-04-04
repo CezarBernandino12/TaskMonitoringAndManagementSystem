@@ -4,29 +4,54 @@ date_default_timezone_set('Asia/Manila');
 session_start();
 require_once '../../config/db.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=UTF-8');
 
 if (!isset($_SESSION['user_id'])) {
-	echo json_encode([]);
-	exit();
+    echo json_encode([]);
+    exit();
 }
 
-$user_id = $_SESSION['user_id'];
+$user_id = (int) $_SESSION['user_id'];
 
 try {
-	// Only retrieve tasks where assigned_to matches the logged-in user
-	$stmt = $conn->prepare("SELECT id, title, start_date, deadline, status, priority FROM tasks WHERE assigned_to = :user_id ORDER BY deadline ASC");
-	$stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
-	$stmt->execute();
-	$tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $conn->prepare("
+        SELECT
+            id,
+            title,
+            COALESCE(description, '') AS description,
+            start_date,
+            deadline,
+            status,
+            priority
+        FROM tasks
+        WHERE assigned_to = :user_id
+        ORDER BY deadline ASC, id DESC
+    ");
 
-	$today = date('Y-m-d');
-	foreach ($tasks as &$task) {
-		$task['is_overdue'] = ($task['status'] !== 'Completed' && $task['deadline'] < $today) ? true : false;
-	}
-	unset($task);
+    $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+    $stmt->execute();
 
-	echo json_encode($tasks);
+    $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $today = date('Y-m-d');
+
+    foreach ($tasks as &$task) {
+        $is_overdue = ($task['status'] !== 'Completed' && $task['deadline'] < $today);
+
+        $task['is_overdue'] = $is_overdue;
+
+        /*
+         * Keep frontend display consistent even if the DB event
+         * has not yet flipped the stored status to Overdue.
+         */
+        if ($is_overdue) {
+            $task['status'] = 'Overdue';
+        }
+    }
+    unset($task);
+
+    echo json_encode($tasks);
 } catch (PDOException $e) {
-	echo json_encode([]);
+    http_response_code(500);
+    echo json_encode([]);
 }

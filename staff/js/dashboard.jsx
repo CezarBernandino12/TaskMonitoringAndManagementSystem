@@ -708,6 +708,12 @@ function TaskTable({
                                 </th>
                                 <th>
                                     <span className="task-board-th">
+                                        <i className="bi bi-text-paragraph"></i>
+                                        Description
+                                    </span>
+                                </th>
+                                <th>
+                                    <span className="task-board-th">
                                         <i className="bi bi-calendar-event"></i>
                                         Start
                                     </span>
@@ -736,11 +742,11 @@ function TaskTable({
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="6" className="task-board-empty">Loading tasks...</td>
+                                    <td colSpan="7" className="task-board-empty">Loading tasks...</td>
                                 </tr>
                             ) : error ? (
                                 <tr>
-                                    <td colSpan="6" className="task-board-empty">
+                                    <td colSpan="7" className="task-board-empty">
                                         <div className="task-board-feedback">
                                             <div className="task-board-error">{error}</div>
                                             <button
@@ -755,7 +761,7 @@ function TaskTable({
                                 </tr>
                             ) : filteredTasks.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="task-board-empty">
+                                    <td colSpan="7" className="task-board-empty">
                                         No {statusFilter === "All" ? "" : statusFilter.toLowerCase() + " "}tasks found
                                     </td>
                                 </tr>
@@ -792,7 +798,20 @@ function TaskTable({
                                                 </div>
                                             </div>
                                         </td>
-
+                                        <td>
+                                            {task.description ? (
+                                                <div
+                                                    className="task-board-description"
+                                                    title={task.description}
+                                                >
+                                                    {task.description}
+                                                </div>
+                                            ) : (
+                                                <div className="task-board-description is-empty">
+                                                    No description
+                                                </div>
+                                            )}
+                                        </td>
                                         <td className="task-board-date">{formatDate(task.start_date)}</td>
                                         <td className="task-board-date">{formatDate(task.deadline)}</td>
 

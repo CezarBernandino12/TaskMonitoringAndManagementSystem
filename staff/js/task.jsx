@@ -134,12 +134,6 @@ function getPriorityClass(priority = "") {
     return "task-priority-low";
 }
 
-function getAssigneeInitials(assignee = "") {
-    const words = String(assignee).trim().split(/\s+/).filter(Boolean);
-    if (words.length === 0) return "NA";
-    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-    return `${words[0][0] || ""}${words[1][0] || ""}`.toUpperCase();
-}
 
 function TaskDateFilter({ value, onChange }) {
     const [open, setOpen] = React.useState(false);
@@ -437,7 +431,7 @@ function App() {
                     onClick={() => document.getElementById("openReactModalBtn").click()}
                 >
                     <i className="bi bi-plus-lg"></i>
-                    <span>Add New</span>
+                    <span>Add New Task</span>
                 </button>
             </div>
 
@@ -534,7 +528,7 @@ function TaskLane({ laneKey, tasks, onRowClick }) {
             <div className="task-lane-grid">
                 <div className="task-lane-grid-head">
                     <div>Task Name</div>
-                    <div>Assignee</div>
+                    <div>Task Description</div>
                     <div>Due Date</div>
                     <div>Priority</div>
                     <div></div>
@@ -564,18 +558,14 @@ function TaskLane({ laneKey, tasks, onRowClick }) {
                                     <span className="task-lane-title">{task.title}</span>
                                 </div>
 
-                                <div className="task-lane-col task-lane-col-assignee">
-                                    {task.assignee ? (
-                                        <div className="task-assignee-chip" title={task.assignee}>
-                                            <span className="task-assignee-avatar">
-                                                {getAssigneeInitials(task.assignee)}
-                                            </span>
-                                            <span className="task-assignee-name">{task.assignee}</span>
-                                        </div>
+                                <div className="task-lane-col task-lane-col-description">
+                                    {task.description ? (
+                                        <span className="task-description-text" title={task.description}>
+                                            {task.description}
+                                        </span>
                                     ) : (
-                                        <span className="task-assignee-empty">
-                                            <i className="bi bi-person-circle"></i>
-                                            Assign
+                                        <span className="task-description-empty">
+                                            No description
                                         </span>
                                     )}
                                 </div>
@@ -735,6 +725,7 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
 
 function AddTaskModal({ show, onClose, refreshTasks }) {
     const [taskName, setTaskName] = React.useState("");
+    const [description, setDescription] = React.useState("");
     const [startDate, setStartDate] = React.useState("");
     const [deadline, setDeadline] = React.useState("");
     const [priority, setPriority] = React.useState("Low");
@@ -744,7 +735,7 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
     const handleSubmit = async () => {
         const formData = new FormData();
         formData.append("task_name", taskName);
-        formData.append("description", "");
+        formData.append("description", description.trim());
         formData.append("start_date", startDate);
         formData.append("deadline", deadline);
         formData.append("priority", priority);
@@ -761,6 +752,7 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
             refreshTasks();
 
             setTaskName("");
+            setDescription("");
             setStartDate("");
             setDeadline("");
             setPriority("Low");
@@ -792,6 +784,19 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
                                 className="form-control task-form-control"
                                 value={taskName}
                                 onChange={(e) => setTaskName(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="mb-3">
+                            <label className="form-label task-form-label">
+                                Description <span className="text-muted">(Optional)</span>
+                            </label>
+                            <textarea
+                                className="form-control task-form-control task-form-textarea"
+                                rows="3"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Enter task description"
                             />
                         </div>
 

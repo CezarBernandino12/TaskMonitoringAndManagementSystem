@@ -693,6 +693,36 @@ body {
     color: #466fe0;
 }
 
+.task-lane-col-description {
+    min-width: 0;
+}
+
+.task-description-text {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #5a6274;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.task-description-empty {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #9aa1b2;
+    font-style: italic;
+}
+
+[data-theme="dark"] .task-description-text {
+    color: #d5dceb;
+}
+
+[data-theme="dark"] .task-description-empty {
+    color: #8f98ad;
+}
+
 [data-theme="dark"] .task-toolbar-chip.is-open {
     border-color: rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.06);
