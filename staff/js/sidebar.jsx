@@ -61,7 +61,7 @@ function SidebarLink({
 }
 
 function LogoutModal({ open, onClose, onConfirm }) {
-    const modalRoot = document.getElementById("react-modal-root");
+   const modalRoot = document.getElementById("react-modal-root") || document.body;
 
     React.useEffect(() => {
         if (!open) return;
@@ -79,7 +79,7 @@ function LogoutModal({ open, onClose, onConfirm }) {
         };
     }, [open, onClose]);
 
-    if (!open || !modalRoot) return null;
+    if (!open) return null;
 
     return ReactDOM.createPortal(
         <div className="logout-modal-overlay" onClick={onClose}>
