@@ -519,10 +519,6 @@ function TaskLane({ laneKey, tasks, onRowClick }) {
                         {meta.title}
                     </span>
                 </div>
-
-                <button type="button" className="task-lane-icon-btn" aria-label={`${meta.title} menu`}>
-                    <i className="bi bi-three-dots"></i>
-                </button>
             </div>
 
             <div className="task-lane-grid">
