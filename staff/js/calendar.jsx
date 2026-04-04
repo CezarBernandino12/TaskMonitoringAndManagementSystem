@@ -326,10 +326,7 @@ function Calendar() {
 
     useEffect(()=>{
         fetch('php/get_current_user.php').then(r=>r.json()).then(d=>{ if(!d.error)setUser(d); }).catch(()=>{});
-        fetch('php/get_employees.php').then(r=>r.json()).then(d=>setEmployees(Array.isArray(d)?d:[])).catch(()=>{});
-    },[]);
 
-<<<<<<< HEAD
         // Fetch all employees (for tagging)
         fetch('php/get_employees.php')
             .then(r => r.json())
@@ -348,15 +345,9 @@ useEffect(() => {
             setEvents([]);
         });
 }, [currentUser]);
-=======
-    useEffect(()=>{
-        if(!currentUser) return;
-        const url=isEditor?'php/get_events.php':`php/get_events.php?user_id=${currentUser.id}`;
-        fetch(url).then(r=>r.json()).then(d=>setEvents(Array.isArray(d)?d:[])).catch(()=>{});
-    },[currentUser]);
 
-    const toggleFilter = s => setFilters(f=>f.includes(s)?f.filter(x=>x!==s):[...f,s]);
->>>>>>> b2fc7422a3abc1bca76a3152ee139c82f92885a6
+const toggleFilter = s => setFilters(f=>f.includes(s)?f.filter(x=>x!==s):[...f,s]);
+
 
     const getDay = dateStr =>
         events.filter(ev=>ev.start_date<=dateStr&&ev.end_date>=dateStr&&filters.includes(ev.status));
