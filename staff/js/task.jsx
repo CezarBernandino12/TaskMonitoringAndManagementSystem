@@ -397,7 +397,7 @@ function App() {
 
     const fetchTasks = React.useCallback(async () => {
         try {
-            const response = await fetch("php/get_tasks.php");
+            const response = await fetch(`${API_BASE}/get_tasks.php`);
             const data = await response.json();
             setTasks(Array.isArray(data) ? data : []);
         } catch (error) {
@@ -827,7 +827,7 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
             formData.append("priority", priority);
             formData.append("status", status);
 
-            const res = await fetch("php/update_task.php", {
+            const res = await fetch(`${API_BASE}/update_task.php`, {
                 method: "POST",
                 body: formData
             });
@@ -835,8 +835,10 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
             const result = await res.text();
             alert(result);
 
-            onClose();
-            refreshTasks();
+            if (res.ok) {
+                onClose();
+                refreshTasks();
+            }
         } catch (error) {
             alert("Failed to update task");
             console.error(error);
@@ -850,7 +852,7 @@ function TaskDetailModal({ show, task, onClose, refreshTasks }) {
             const formData = new FormData();
             formData.append("task_id", task.id);
 
-            const res = await fetch("php/delete_task.php", {
+            const res = await fetch(`${API_BASE}/delete_task.php`, {
                 method: "POST",
                 body: formData
             });
@@ -971,7 +973,7 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
         formData.append("priority", priority);
 
         try {
-            const response = await fetch("php/create_task.php", {
+            const response = await fetch(`${API_BASE}/create_task.php`, {
                 method: "POST",
                 body: formData
             });
