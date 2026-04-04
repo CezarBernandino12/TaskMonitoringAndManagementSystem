@@ -434,14 +434,6 @@ function DashboardHeader() {
             })
             .catch(() => setLoading(false));
     }, []);
-
-    return (
-        <div className="d-flex justify-content-between align-items-center mb-4">
-            <h3>
-                {loading ? 'Loading...' : dept ? `${dept} - Staff Dashboard` : 'Staff Dashboard'}
-            </h3>
-        </div>
-    );
 }
 
 ReactDOM.createRoot(document.getElementById('dashboard-header-root')).render(<DashboardHeader />);
