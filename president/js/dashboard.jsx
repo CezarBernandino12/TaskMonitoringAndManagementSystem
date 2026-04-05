@@ -1,48 +1,99 @@
 const { useState, useEffect, useRef } = React;
 
 // ====================================================================
-// ORG HEALTH RING — doughnut showing ongoing / overdue / completed today
+// ORG HEALTH RING — ECharts doughnut
 // ====================================================================
 function HealthRing({ ongoing, overdue, completedToday, overallRate }) {
     const ref = useRef(null);
     const chartRef = useRef(null);
 
     useEffect(() => {
-        if (chartRef.current) chartRef.current.destroy();
+        if (!ref.current) return;
 
-        chartRef.current = new Chart(ref.current, {
-            type: "doughnut",
-            data: {
-                labels: ["Completed today", "Ongoing", "Overdue"],
-                datasets: [{
-                    data: [completedToday, ongoing, overdue],
-                    backgroundColor: ["#28a745", "#ffc107", "#dc3545"],
-                    borderWidth: 2,
-                    borderColor: "#fff",
-                }]
-            },
-            options: {
-                cutout: "72%",
-                responsive: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => ` ${ctx.label}: ${ctx.parsed}`
-                        }
-                    }
-                }
-            }
-        });
+        chartRef.current = echarts.init(ref.current);
+
+        const handleResize = () => {
+            if (chartRef.current) chartRef.current.resize();
+        };
+
+        window.addEventListener("resize", handleResize);
 
         return () => {
-            if (chartRef.current) chartRef.current.destroy();
+            window.removeEventListener("resize", handleResize);
+            if (chartRef.current) {
+                chartRef.current.dispose();
+                chartRef.current = null;
+            }
         };
+    }, []);
+
+    useEffect(() => {
+        if (!chartRef.current) return;
+
+        chartRef.current.setOption(
+            {
+                animationDuration: 500,
+                animationEasing: "cubicOut",
+                tooltip: {
+                    trigger: "item",
+                    backgroundColor: "rgba(40,40,40,0.92)",
+                    borderWidth: 0,
+                    textStyle: { color: "#fff" },
+                    formatter: ({ name, value }) => `${name}: ${value}`
+                },
+                series: [
+                    {
+                        type: "pie",
+                        radius: ["72%", "90%"],
+                        center: ["50%", "50%"],
+                        avoidLabelOverlap: true,
+                        label: { show: false },
+                        labelLine: { show: false },
+                        emphasis: {
+                            scale: true,
+                            scaleSize: 4
+                        },
+                        itemStyle: {
+                            borderColor: "#fff",
+                            borderWidth: 2,
+                            borderRadius: 6
+                        },
+                        data: [
+                            {
+                                value: completedToday,
+                                name: "Completed today",
+                                itemStyle: { color: "#28a745" }
+                            },
+                            {
+                                value: ongoing,
+                                name: "Ongoing",
+                                itemStyle: { color: "#ffc107" }
+                            },
+                            {
+                                value: overdue,
+                                name: "Overdue",
+                                itemStyle: { color: "#dc3545" }
+                            }
+                        ]
+                    }
+                ]
+            },
+            true
+        );
     }, [ongoing, overdue, completedToday]);
 
     return (
         <div className="health-ring-wrap">
-            <canvas ref={ref} width="160" height="160"></canvas>
+            <div
+                ref={ref}
+                style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%"
+                }}
+            ></div>
+
             <div className="health-ring-label">
                 <span style={{ fontSize: 26, fontWeight: 700, color: "#333" }}>
                     {overallRate}%
@@ -56,50 +107,110 @@ function HealthRing({ ongoing, overdue, completedToday, overallRate }) {
 }
 
 // ====================================================================
-// OVERDUE TREND SPARKLINE — 4-week mini line chart
+// OVERDUE TREND — ECharts smooth line chart
 // ====================================================================
 function OverdueTrend({ trend }) {
     const ref = useRef(null);
     const chartRef = useRef(null);
 
     useEffect(() => {
-        if (!trend.length) return;
-        if (chartRef.current) chartRef.current.destroy();
+        if (!ref.current) return;
 
-        chartRef.current = new Chart(ref.current, {
-            type: "line",
-            data: {
-                labels: trend.map((t) => t.label),
-                datasets: [{
-                    data: trend.map((t) => t.count),
-                    borderColor: "#dc3545",
-                    backgroundColor: "rgba(220,53,69,0.08)",
-                    pointBackgroundColor: "#dc3545",
-                    pointRadius: 4,
-                    tension: 0.3,
-                    fill: true,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: {
-                        grid: { display: false },
-                        ticks: { font: { size: 11 } }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1, font: { size: 11 } }
-                    }
-                }
-            }
-        });
+        chartRef.current = echarts.init(ref.current);
+
+        const handleResize = () => {
+            if (chartRef.current) chartRef.current.resize();
+        };
+
+        window.addEventListener("resize", handleResize);
 
         return () => {
-            if (chartRef.current) chartRef.current.destroy();
+            window.removeEventListener("resize", handleResize);
+            if (chartRef.current) {
+                chartRef.current.dispose();
+                chartRef.current = null;
+            }
         };
+    }, []);
+
+    useEffect(() => {
+        if (!chartRef.current) return;
+
+        if (!trend.length) {
+            chartRef.current.clear();
+            return;
+        }
+
+        chartRef.current.setOption(
+            {
+                animationDuration: 500,
+                animationEasing: "cubicOut",
+                tooltip: {
+                    trigger: "axis",
+                    backgroundColor: "rgba(40,40,40,0.92)",
+                    borderWidth: 0,
+                    textStyle: { color: "#fff" }
+                },
+                grid: {
+                    top: 12,
+                    right: 12,
+                    bottom: 28,
+                    left: 36
+                },
+                xAxis: {
+                    type: "category",
+                    boundaryGap: false,
+                    data: trend.map((t) => t.label),
+                    axisLine: {
+                        lineStyle: { color: "#e5e5e5" }
+                    },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: "#666",
+                        fontSize: 11
+                    },
+                    splitLine: { show: false }
+                },
+                yAxis: {
+                    type: "value",
+                    minInterval: 1,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: "#666",
+                        fontSize: 11
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: "#f0f0f0"
+                        }
+                    }
+                },
+                series: [
+                    {
+                        name: "Overdue tasks",
+                        type: "line",
+                        smooth: true,
+                        symbol: "circle",
+                        symbolSize: 8,
+                        data: trend.map((t) => t.count),
+                        lineStyle: {
+                            width: 3,
+                            color: "#dc3545"
+                        },
+                        itemStyle: {
+                            color: "#dc3545",
+                            borderColor: "#fff",
+                            borderWidth: 2
+                        },
+                        areaStyle: {
+                            color: "rgba(220,53,69,0.10)"
+                        }
+                    }
+                ]
+            },
+            true
+        );
     }, [trend]);
 
     let trendIcon = null;
@@ -122,9 +233,19 @@ function OverdueTrend({ trend }) {
                 <h6 className="mb-0">Overdue trend (last 4 weeks)</h6>
                 {trendIcon}
             </div>
-            <div style={{ height: 100 }}>
-                <canvas ref={ref}></canvas>
-            </div>
+
+            {!trend.length ? (
+                <div className="text-muted" style={{ fontSize: 13 }}>
+                    No trend data available.
+                </div>
+            ) : (
+                <div style={{ height: 110 }}>
+                    <div
+                        ref={ref}
+                        style={{ width: "100%", height: "100%" }}
+                    ></div>
+                </div>
+            )}
         </div>
     );
 }
@@ -153,7 +274,10 @@ function Dashboard() {
 
     if (loading) {
         return (
-            <div className="p-4 d-flex align-items-center justify-content-center" style={{ minHeight: "60vh" }}>
+            <div
+                className="p-4 d-flex align-items-center justify-content-center"
+                style={{ minHeight: "60vh" }}
+            >
                 <div className="text-center text-muted">
                     <div className="spinner-border mb-3" role="status"></div>
                     <div>Loading dashboard…</div>
@@ -198,6 +322,7 @@ function Dashboard() {
                 <div className="col-md-4">
                     <div className="card p-3 h-100">
                         <h6 className="mb-3 fw-semibold">Organization Health</h6>
+
                         <HealthRing
                             ongoing={org_health.ongoing}
                             overdue={org_health.overdue}
@@ -205,22 +330,57 @@ function Dashboard() {
                             overallRate={org_health.overall_rate}
                         />
 
-                        <div className="d-flex justify-content-center gap-3 mt-3" style={{ fontSize: 13 }}>
+                        <div
+                            className="d-flex justify-content-center gap-3 mt-3"
+                            style={{ fontSize: 13 }}
+                        >
                             <span>
-                                <span style={{ background: "#28a745", borderRadius: 3, display: "inline-block", width: 10, height: 10, marginRight: 4 }}></span>
+                                <span
+                                    style={{
+                                        background: "#28a745",
+                                        borderRadius: 3,
+                                        display: "inline-block",
+                                        width: 10,
+                                        height: 10,
+                                        marginRight: 4
+                                    }}
+                                ></span>
                                 Done today: <strong>{org_health.completed_today}</strong>
                             </span>
+
                             <span>
-                                <span style={{ background: "#ffc107", borderRadius: 3, display: "inline-block", width: 10, height: 10, marginRight: 4 }}></span>
+                                <span
+                                    style={{
+                                        background: "#ffc107",
+                                        borderRadius: 3,
+                                        display: "inline-block",
+                                        width: 10,
+                                        height: 10,
+                                        marginRight: 4
+                                    }}
+                                ></span>
                                 Ongoing: <strong>{org_health.ongoing}</strong>
                             </span>
+
                             <span>
-                                <span style={{ background: "#dc3545", borderRadius: 3, display: "inline-block", width: 10, height: 10, marginRight: 4 }}></span>
+                                <span
+                                    style={{
+                                        background: "#dc3545",
+                                        borderRadius: 3,
+                                        display: "inline-block",
+                                        width: 10,
+                                        height: 10,
+                                        marginRight: 4
+                                    }}
+                                ></span>
                                 Overdue: <strong>{org_health.overdue}</strong>
                             </span>
                         </div>
 
-                        <div className="text-center mt-2" style={{ fontSize: 12, color: "#888" }}>
+                        <div
+                            className="text-center mt-2"
+                            style={{ fontSize: 12, color: "#888" }}
+                        >
                             Based on all {org_health.total_active} active tasks
                         </div>
                     </div>
