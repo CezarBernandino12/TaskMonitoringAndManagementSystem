@@ -909,7 +909,7 @@ body {
     width: min(1060px, calc(100vw - 28px));
     min-height: 88px;
     padding: 14px 18px;
-    border-radius: 22px;
+    border-radius: 15px;
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
@@ -988,7 +988,7 @@ body {
     min-height: 58px;
     padding: 8px 12px;
     border: 1px solid transparent;
-    border-radius: 14px;
+    border-radius: 12px;
     background: transparent;
     color: var(--bulk-bar-tool-text);
     display: inline-flex;
