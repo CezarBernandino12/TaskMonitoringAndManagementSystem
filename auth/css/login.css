@@ -117,8 +117,8 @@ body {
 }
 
 .eyebrow {
-	font-size: 11px;
-	font-weight: 600;
+	font-size: 9px;
+	font-weight: 700;
 	letter-spacing: 0.2em;
 	text-transform: uppercase;
 	color: var(--gold);
@@ -126,19 +126,72 @@ body {
 }
 
 .form-header h1 {
-	font-family: 'Playfair Display', serif;
-	font-size: 36px;
+	font-size: 24px;
 	font-weight: 500;
 	color: var(--text-main);
 	line-height: 1.15;
-	margin-bottom: 8px;
 }
 
 .form-header p {
-	font-size: 14px;
+	font-size: 11px;
 	color: var(--text-muted);
 	font-weight: 400;
 	line-height: 1.6;
+}
+
+
+.system-identity {
+	margin-bottom: 28px;
+	animation: fadeUp 0.5s 0.18s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.system-identity::after {
+	content: '';
+	display: block;
+	width: 52px;
+	height: 2px;
+	margin-bottom: 12px;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--gold), rgba(201,168,76,0.15));
+}
+
+.system-name {
+	font-family: 'Playfair Display', serif;
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1.05;
+	letter-spacing: 0.02em;
+	color: var(--navy);
+	margin-bottom: 6px;
+}
+
+.system-subtitle {
+	font-family: 'DM Sans', sans-serif;
+	font-size: 13.5px;
+	font-weight: 400;
+	line-height: 1.6;
+	color: var(--text-muted);
+	max-width: 290px;
+	margin-top: 12px;
+}
+.system-subtext {
+	margin-top: 10px;
+	font-family: 'DM Sans', sans-serif;
+	font-size: 8px;
+	font-weight: 800;
+	line-height: 1.6;
+	color: var(--text-muted);
+	max-width: 290px;
+	flex-wrap: nowrap;
+}
+@media (max-width: 520px) {
+	.system-name {
+		font-size: 24px;
+	}
+
+	.system-subtitle {
+		font-size: 13px;
+	}
 }
 
 
