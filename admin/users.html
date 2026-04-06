@@ -41,6 +41,7 @@
     .role-admin      { background: #fff3cd; color: #856404; }
     .role-supervisor { background: #cfe2ff; color: #084298; }
     .role-staff      { background: #d1e7dd; color: #0a3622; }
+    .role-executive_director { background: #ffe5d0; color: #7a2e0c; }
     .role-president  { background: #f8d7da; color: #842029; }
 
     /* Active badge */
@@ -127,13 +128,14 @@ function Sidebar() {
 // ====================================================================
 // CONSTANTS
 // ====================================================================
-const ROLES      = ['admin', 'supervisor', 'staff', 'executive'];
+const ROLES      = ['admin', 'supervisor', 'staff', 'executive_director', 'president'];
 const GENDERS    = ['Male', 'Female', 'Rather not say'];
 const ROLE_META  = {
     admin:      { color: '#7c3aed', bg: '#f3f0ff', label: 'Admin' },
     supervisor: { color: '#0369a1', bg: '#e0f2fe', label: 'Supervisor' },
     staff:      { color: '#065f46', bg: '#d1fae5', label: 'Staff' },
-    executive:  { color: '#9a3412', bg: '#fff7ed', label: 'Executive' },
+    executive_director:  { color: '#9a3412', bg: '#fff7ed', label: 'Executive Director' },
+    president: { color: '#1d4ed8', bg: '#dbeafe', label: 'President' }
 };
 
 // ====================================================================
@@ -287,7 +289,6 @@ function UserFormModal({ user, departments, onSave, onClose }) {
         if (!isEdit && !form.password.trim()) e.password = 'Required for new users';
         if (form.password && form.password.length < 6) e.password = 'Minimum 6 characters';
         if (!form.role) e.role = 'Please select a role';
-        if (!form.department_id) e.department_id = 'Please select a department';
         return e;
     };
 

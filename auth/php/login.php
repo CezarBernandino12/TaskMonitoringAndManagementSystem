@@ -30,7 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					header('Location: ../../admin/dashboard.html');
 					break;
 				case 'executive_director':
-					header('Location: ../../executive_director/dashboard.html');
+					header('Location: ../../pres_exec/dashboard.html');
+					break;
+				case 'president':
+					header('Location: ../../pres_exec/dashboard.html');
 					break;
 				case 'supervisor':
 					header('Location: ../../supervisor/dashboard.html');

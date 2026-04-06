@@ -70,7 +70,7 @@ $employeeId     = trim($input['employee_id']     ?? '') ?: null;
 // ----------------------------------------------------------------
 // Validation
 // ----------------------------------------------------------------
-$allowedRoles   = ['admin','supervisor','staff','executive'];
+$allowedRoles   = ['admin','supervisor','staff','executive_director','president'];
 $allowedGenders = ['Male','Female','Rather not say', null, ''];
 
 if ($name === '') { http_response_code(400); echo json_encode(['error' => 'name is required.']); exit; }

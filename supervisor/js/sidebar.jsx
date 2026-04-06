@@ -509,13 +509,6 @@ function SupervisorSidebar() {
                         onNavigate={handleNavigate}
                     />
 
-                    <SidebarLink
-                        href="task-monitoring.html"
-                        icon="bi-list-check"
-                        label="Task Monitoring"
-                        isActive={isActivePage("task-monitoring.html")}
-                        onNavigate={handleNavigate}
-                    />
 
                     <SidebarLink
                         href="calendar.html"

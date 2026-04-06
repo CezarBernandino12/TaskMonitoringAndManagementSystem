@@ -3199,3 +3199,10 @@ CREATE TABLE IF NOT EXISTS event_employees (
 
 
 
+
+
+
+
+APRIL 6 MONDAY
+
+ALTER TABLE `users` CHANGE `role` `role` ENUM('admin','supervisor','staff','executive_director','president') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'staff';

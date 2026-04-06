@@ -32,27 +32,14 @@
       color: #222;
     }
 
-    .sidebar-orange {
-      background: #fff;
-      color: #ff9900;
-      border-right: 1px solid #ffe0b2;
-      box-shadow: 2px 0 8px rgba(255, 153, 0, 0.04);
-    }
+     /* Sidebar */
+    .sidebar-orange { background: #fff; border-right: 1px solid #ffe0b2; box-shadow: 2px 0 8px rgba(255,153,0,0.04); }
+    .sidebar-orange .nav-link { color: #cc7a00 !important; border-radius: 8px; margin-bottom: 2px; transition: 0.2s; font-weight: 500; padding: 10px 18px; font-size: 14px; }
+    .sidebar-orange .nav-link:hover { background: linear-gradient(90deg,#ff9900 60%,#ff8800 100%); color: #fff !important; }
+    .sidebar-orange .nav-link.active { background: linear-gradient(90deg,#ff9900 60%,#ff8800 100%); color: #fff !important; }
+    .sidebar-section { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: #bbb; text-transform: uppercase; padding: 8px 18px 4px; margin-top: 4px; }
+    .sidebar-logo { font-size: 18px; font-weight: 700; color: #cc7a00; padding: 16px 18px 12px; border-bottom: 1px solid #ffe0b2; margin-bottom: 8px; letter-spacing: -.3px; }
 
-    .sidebar-orange .nav-link {
-      color: #cc7a00 !important;
-      border-radius: 8px;
-      margin-bottom: 2px;
-      transition: 0.2s;
-      font-weight: 500;
-      padding: 10px 18px;
-    }
-
-    .sidebar-orange .nav-link.active,
-    .sidebar-orange .nav-link:hover {
-      background: linear-gradient(90deg, #ff9900 60%, #ff8800 100%);
-      color: #fff !important;
-    }
 
     .summary-card {
       background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
@@ -63,44 +50,68 @@
 </head>
 <body>
 
+<div class="container-fluid">
+  <div class="row">
+    <div id="sidebarRoot" class="col-md-2 p-0"></div>
+    <div id="dailyReportRoot" class="col-md-10"></div>
+  </div>
+</div>
 
-<div id="dailyReportRoot"></div>
 <script type="text/babel">
 const { useEffect, useState, useRef } = React;
 
 // ====================================================================
 // SIDEBAR
 // ====================================================================
+
+
+
 function Sidebar() {
+    const [showUsers,   setShowUsers]   = useState(false);
     const [showReports, setShowReports] = useState(false);
 
+    const NavGroup = ({ label, open, onToggle, children }) => (
+        <>
+            <a href="#" className="nav-link fw-semibold d-flex justify-content-between align-items-center"
+               onClick={e => { e.preventDefault(); onToggle(); }} style={{ cursor: 'pointer' }}>
+                <span>{label}</span>
+                <span style={{ fontSize: '1em' }}>{open ? '▼' : '▶'}</span>
+            </a>
+            {open && <div style={{ marginLeft: 12 }}>{children}</div>}
+        </>
+    );
+
     return (
-        <nav className="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
-            <div className="sidebar-orange d-flex flex-column p-3 gap-2 min-vh-100">
-                <a href="dashboard.html" className="nav-link fw-semibold">Dashboard</a>
+        <nav className="sidebar-orange d-flex flex-column min-vh-100" style={{ minWidth: 0 }}>
+            <div className="sidebar-logo">⚙ Admin Panel</div>
 
-                <a
-                    href="#"
-                    className="nav-link fw-semibold d-flex justify-content-between align-items-center"
-                    onClick={e => { e.preventDefault(); setShowReports(prev => !prev); }}
-                    style={{ cursor: 'pointer' }}
-                >
-                    <span>Reports</span>
-                    <span style={{ fontSize: '1.1em' }}>{showReports ? '▼' : '▶'}</span>
-                </a>
+            {/* Overview */}
+            <div className="sidebar-section">Overview</div>
+            <a href="dashboard.html" className="nav-link active">Dashboard</a>
 
-                {showReports && (
-                    <div style={{ marginLeft: 12 }}>
-                        <a href="daily-reports.html"     className="nav-link fw-semibold">Daily</a>
-                        <a href="weekly-reports.html"    className="nav-link fw-semibold">Weekly</a>
-                        <a href="monthly-reports.html"   className="nav-link fw-semibold">Monthly</a>
-                        <a href="quarterly-reports.html" className="nav-link fw-semibold">Quarterly</a>
-                        <a href="annual-reports.html"    className="nav-link fw-semibold">Annually</a>
-                    </div>
-                )}
+            {/* User Management */}
+            <div className="sidebar-section">User Management</div>
+            <a href="users.html"  className="nav-link">Manage Users</a>
+            <a href="departments.html"  className="nav-link">Departments</a>
 
-                <a href="profile.html" className="nav-link fw-semibold">Profile</a>
-            </div>
+              {/* Event Management */}
+                <div className="sidebar-section">Event Management</div>
+                <a href="calendar.html"    className="nav-link">Calendar</a>
+
+            {/* Reports */}
+            <div className="sidebar-section">Reports</div>
+            <NavGroup label="Reports" open={showReports} onToggle={() => setShowReports(p => !p)}>
+                <a href="daily-reports.html"     className="nav-link">Daily</a>
+                <a href="weekly-reports.html"    className="nav-link">Weekly</a>
+                <a href="monthly-reports.html"   className="nav-link">Monthly</a>
+                <a href="quarterly-reports.html" className="nav-link">Quarterly</a>
+                <a href="annual-reports.html"    className="nav-link">Annually</a>
+            </NavGroup>
+
+            {/* Account */}
+            <div className="sidebar-section">Account</div>
+            <a href="profile.html"  className="nav-link">Profile</a>
+            <a href="logout.php"    className="nav-link text-danger">Log Out</a>
         </nav>
     );
 }
@@ -487,9 +498,8 @@ function DailyReportPage() {
         <div className="container-fluid p-4">
             <div className="row">
 
-                <Sidebar />
 
-                <main className="col-md-10 ms-sm-auto px-4">
+                <main>
                     <h2 className="mb-4">Daily Task Report</h2>
 
                     <div className="alert alert-info" role="alert" hidden>
@@ -715,6 +725,10 @@ function DailyReportPage() {
             )}
         </div>
     );
+}
+const sidebarEl = document.getElementById('sidebarRoot');
+if (sidebarEl) {
+    ReactDOM.createRoot(sidebarEl).render(<Sidebar />);
 }
 
 const root = ReactDOM.createRoot(document.getElementById('dailyReportRoot'));

@@ -1,138 +1,11 @@
-<head>
-  <meta charset="UTF-8" />
-  <title>Quarterly Report</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- React + Babel -->
-  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <style>
-    body {
-      background-color: #fffaf3;
-      color: #333;
-      font-family: Arial, sans-serif;
-    }
-
-    .card {
-      border-radius: 12px;
-      background: #ffffff;
-      border: 1px solid #ffb84d;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      color: #222;
-    }
-
-    /* Sidebar */
-    .sidebar-orange { background: #fff; border-right: 1px solid #ffe0b2; box-shadow: 2px 0 8px rgba(255,153,0,0.04); }
-    .sidebar-orange .nav-link { color: #cc7a00 !important; border-radius: 8px; margin-bottom: 2px; transition: 0.2s; font-weight: 500; padding: 10px 18px; font-size: 14px; }
-    .sidebar-orange .nav-link:hover { background: linear-gradient(90deg,#ff9900 60%,#ff8800 100%); color: #fff !important; }
-    .sidebar-orange .nav-link.active { background: linear-gradient(90deg,#ff9900 60%,#ff8800 100%); color: #fff !important; }
-    .sidebar-section { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: #bbb; text-transform: uppercase; padding: 8px 18px 4px; margin-top: 4px; }
-    .sidebar-logo { font-size: 18px; font-weight: 700; color: #cc7a00; padding: 16px 18px 12px; border-bottom: 1px solid #ffe0b2; margin-bottom: 8px; letter-spacing: -.3px; }
-
-
-    .summary-card {
-      background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
-      border: 1px solid #ffb84d;
-      color: #cc7a00;
-    }
-  </style>
-</head>
-<body>
-
-    <div class="container-fluid">
-  <div class="row">
-    <div id="sidebarRoot" class="col-md-2 p-0"></div>
-    <div id="quarterlyReportRoot" class="col-md-10"></div>
-  </div>
-</div>
-
-
-<script type="text/babel">
 const { useEffect, useState, useRef } = React;
 
-// ====================================================================
-// SIDEBAR
-// ====================================================================
-
-
-
-function Sidebar() {
-    const [showUsers,   setShowUsers]   = useState(false);
-    const [showReports, setShowReports] = useState(false);
-
-    const NavGroup = ({ label, open, onToggle, children }) => (
-        <>
-            <a href="#" className="nav-link fw-semibold d-flex justify-content-between align-items-center"
-               onClick={e => { e.preventDefault(); onToggle(); }} style={{ cursor: 'pointer' }}>
-                <span>{label}</span>
-                <span style={{ fontSize: '1em' }}>{open ? '▼' : '▶'}</span>
-            </a>
-            {open && <div style={{ marginLeft: 12 }}>{children}</div>}
-        </>
-    );
-
-    return (
-        <nav className="sidebar-orange d-flex flex-column min-vh-100" style={{ minWidth: 0 }}>
-            <div className="sidebar-logo">⚙ Admin Panel</div>
-
-            {/* Overview */}
-            <div className="sidebar-section">Overview</div>
-            <a href="dashboard.html" className="nav-link active">Dashboard</a>
-
-            {/* User Management */}
-            <div className="sidebar-section">User Management</div>
-            <a href="users.html"  className="nav-link">Manage Users</a>
-            <a href="departments.html"  className="nav-link">Departments</a>
-
-              {/* Event Management */}
-                <div className="sidebar-section">Event Management</div>
-                <a href="calendar.html"    className="nav-link">Calendar</a>
-
-            {/* Reports */}
-            <div className="sidebar-section">Reports</div>
-            <NavGroup label="Reports" open={showReports} onToggle={() => setShowReports(p => !p)}>
-                <a href="daily-reports.html"     className="nav-link">Daily</a>
-                <a href="weekly-reports.html"    className="nav-link">Weekly</a>
-                <a href="monthly-reports.html"   className="nav-link">Monthly</a>
-                <a href="quarterly-reports.html" className="nav-link">Quarterly</a>
-                <a href="annual-reports.html"    className="nav-link">Annually</a>
-            </NavGroup>
-
-            {/* Account */}
-            <div className="sidebar-section">Account</div>
-            <a href="profile.html"  className="nav-link">Profile</a>
-            <a href="logout.php"    className="nav-link text-danger">Log Out</a>
-        </nav>
-    );
-}
-// ====================================================================
-// HELPERS
-// ====================================================================
-const QUARTER_LABELS = { 1: 'Q1', 2: 'Q2', 3: 'Q3', 4: 'Q4' };
-const QUARTER_RANGES = { 1: 'Jan – Mar', 2: 'Apr – Jun', 3: 'Jul – Sep', 4: 'Oct – Dec' };
-
-function formatQuarterDisplay(year, quarter) {
-    return `${QUARTER_LABELS[quarter]} ${year}  (${QUARTER_RANGES[quarter]})`;
-}
-
-function getCurrentQuarter() {
-    return Math.ceil((new Date().getMonth() + 1) / 3);
-}
 
 // ====================================================================
-// EMPLOYEE TASK MODAL — quarterly version
-// Passes quarter_start and quarter_end so only tasks relevant to
-// the selected quarter are shown.
+// EMPLOYEE TASK MODAL — annual version
 // ====================================================================
-function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
+function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
     const [tasks, setTasks]         = useState([]);
     const [loading, setLoading]     = useState(true);
     const [error, setError]         = useState(null);
@@ -144,7 +17,7 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
         setTasks([]);
         setActiveTab('all');
 
-        fetch(`php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${quarterStart}&week_end=${quarterEnd}`)
+        fetch(`php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${yearStart}&week_end=${yearEnd}`)
             .then(res => {
                 if (!res.ok) throw new Error(`Server returned ${res.status}`);
                 return res.json();
@@ -158,7 +31,7 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
                 setError(`Could not load tasks: ${err.message}`);
                 setLoading(false);
             });
-    }, [emp.id, quarterStart, quarterEnd]);
+    }, [emp.id, yearStart, yearEnd]);
 
     const handleBackdropClick = (e) => { if (e.target === e.currentTarget) onClose(); };
 
@@ -169,8 +42,6 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
     const annotated = tasks.map(t => ({ ...t, derivedStatus: getTaskStatus(t) }));
     const filtered  = activeTab === 'all' ? annotated : annotated.filter(t => t.derivedStatus === activeTab);
     const countFor  = (s) => annotated.filter(t => t.derivedStatus === s).length;
-
-    const quarterLabel = `${quarterStart} – ${quarterEnd}`;
 
     return (
         <div onClick={handleBackdropClick} style={{
@@ -186,7 +57,7 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
                 <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #dee2e6', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
                     <div>
                         <h5 style={{ margin: 0, fontWeight: 600 }}>{emp.name}</h5>
-                        <small className="text-muted">{emp.department} &nbsp;·&nbsp; {quarterLabel}</small>
+                        <small className="text-muted">{emp.department} &nbsp;·&nbsp; {yearStart} – {yearEnd}</small>
                     </div>
                     <button className="btn-close" aria-label="Close" onClick={onClose} style={{ marginTop: 2 }} />
                 </div>
@@ -225,7 +96,7 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
                         <div className="alert alert-danger">{error}</div>
                     ) : filtered.length === 0 ? (
                         <div className="text-center text-muted py-4">
-                            No {activeTab === 'all' ? '' : activeTab.toLowerCase() + ' '}tasks found for this quarter.
+                            No {activeTab === 'all' ? '' : activeTab.toLowerCase() + ' '}tasks found for this year.
                         </div>
                     ) : (
                         <table className="table table-bordered table-hover align-middle mb-0">
@@ -286,98 +157,106 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
 }
 
 // ====================================================================
-// MAIN PAGE
+// MAIN PAGE — SUPERVISOR VERSION
+// Key differences from admin version:
+//   • No department filter dropdown — scope is always the supervisor's dept
+//   • PHP endpoint changed to get_annual_report_supervisor.php
+//   • Department name badge shown in header, sourced from API response
+//   • Auth error renders a full-page Access Denied card
+//   • selectedDept chart-focus feature removed (only one dept in data)
 // ====================================================================
-function QuarterlyReportPage() {
+function AnnualReportPage() {
     const now = new Date();
 
-    const [summary, setSummary]                   = useState({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
-    const [departments, setDepartments]           = useState([]);
-    const [allDepartments, setAllDepartments]     = useState([]);
-    const [monthlyTrend, setMonthlyTrend]         = useState([]);
-    const [employees, setEmployees]               = useState([]);
-    const [departmentFilter, setDepartmentFilter] = useState('all');
-    const [year, setYear]                         = useState(now.getFullYear());
-    const [quarter, setQuarter]                   = useState(getCurrentQuarter());
-    const [selectedDept, setSelectedDept]         = useState(null);
-    const [modalEmp, setModalEmp]                 = useState(null);
+    const [summary, setSummary]             = useState({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
+    const [departments, setDepartments]     = useState([]);
+    const [quarterlyTrend, setQuarterlyTrend] = useState([]);
+    const [monthlyTrend, setMonthlyTrend]   = useState([]);
+    const [employees, setEmployees]         = useState([]);
+    const [deptName, setDeptName]           = useState('');   // supervisor's department name
+    const [year, setYear]                   = useState(now.getFullYear());
+    const [modalEmp, setModalEmp]           = useState(null);
+    const [authError, setAuthError]         = useState(null);
 
     // Chart canvas refs
     const groupedBarRef  = useRef(null);
-    const monthlyBarRef  = useRef(null);  // monthly trend — stacked bar (replaces daily line)
-    const donutRef       = useRef(null);  // completion donut (replaces horizontal bar, supplements it)
+    const lineRef        = useRef(null);
+    const quarterBarRef  = useRef(null);
+    const donutRef       = useRef(null);
     const hBarRef        = useRef(null);
 
     // Chart instance refs
-    const groupedBarChart  = useRef(null);
-    const monthlyBarChart  = useRef(null);
-    const donutChart       = useRef(null);
-    const hBarChart        = useRef(null);
+    const groupedBarChart = useRef(null);
+    const lineChart       = useRef(null);
+    const quarterBarChart = useRef(null);
+    const donutChart      = useRef(null);
+    const hBarChart       = useRef(null);
 
-    // Derive quarter boundaries for the modal
-    const qMonthStart   = (quarter - 1) * 3 + 1;
-    const qMonthEnd     = qMonthStart + 2;
-    const quarterStart  = `${year}-${String(qMonthStart).padStart(2,'0')}-01`;
-    const lastDay       = new Date(year, qMonthEnd, 0).getDate();
-    const quarterEnd    = `${year}-${String(qMonthEnd).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+    const yearStart = `${year}-01-01`;
+    const yearEnd   = `${year}-12-31`;
 
-    // Fetch department list for filter dropdown
+    // Fetch annual report — no department param, PHP reads it from session
     useEffect(() => {
-        fetch('php/get_departments.php')
-            .then(res => res.json())
-            .then(data => setAllDepartments(data))
-            .catch(() => setAllDepartments([]));
-    }, []);
-
-    // Fetch quarterly report whenever year, quarter, or department changes
-    useEffect(() => {
-        setSelectedDept(null);
         setModalEmp(null);
-        fetch(`php/get_quarterly_report.php?year=${year}&quarter=${quarter}&department=${departmentFilter}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) { console.error('PHP error:', data.error); return; }
-                setSummary(data.summary);
-                setDepartments(data.departments   ?? []);
-                setMonthlyTrend(data.monthly_trend ?? []);
-                setEmployees(data.employees        ?? []);
+
+        fetch(`php/get_annual_report_supervisor.php?year=${year}`)
+            .then(res => {
+                if (res.status === 401 || res.status === 403) {
+                    return res.json().then(d => { throw new Error(d.error ?? 'Access denied'); });
+                }
+                return res.json();
             })
-            .catch(err => console.error(err));
-    }, [year, quarter, departmentFilter]);
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                setSummary(data.summary);
+                setDepartments(data.departments       ?? []);
+                setQuarterlyTrend(data.quarterly_trend ?? []);
+                setMonthlyTrend(data.monthly_trend    ?? []);
+                setEmployees(data.employees           ?? []);
+                setDeptName(data.supervisor_department_name ?? '');
+            })
+            .catch(err => {
+                console.error(err);
+                setAuthError(err.message);
+            });
+    }, [year]);
 
     // ----------------------------------------------------------------
-    // Chart data derived from state
+    // Chart data
     // ----------------------------------------------------------------
 
-    // 1. Grouped bar — department comparison (filtered to selectedDept if active)
-    const chartDepts    = selectedDept
-        ? departments.filter(d => d.department_id === selectedDept.department_id)
-        : departments;
-    const deptLabels    = chartDepts.map(d => d.department);
-    const deptCompleted = chartDepts.map(d => d.completed);
-    const deptOngoing   = chartDepts.map(d => d.ongoing);
-    const deptOverdue   = chartDepts.map(d => d.overdue);
+    // 1. Grouped bar — single dept for supervisor
+    const deptLabels    = departments.map(d => d.department);
+    const deptCompleted = departments.map(d => d.completed);
+    const deptOngoing   = departments.map(d => d.ongoing);
+    const deptOverdue   = departments.map(d => d.overdue);
 
-    // 2. Monthly trend — 3 months in the quarter
-    const monthNames     = monthlyTrend.map(m => m.month_name);
-    const trendCompleted = monthlyTrend.map(m => m.completed);
-    const trendOngoing   = monthlyTrend.map(m => m.ongoing);
-    const trendOverdue   = monthlyTrend.map(m => m.overdue);
+    // 2. Monthly line
+    const monthNames    = monthlyTrend.map(m => m.month_name);
+    const lineCompleted = monthlyTrend.map(m => m.completed);
+    const lineOngoing   = monthlyTrend.map(m => m.ongoing);
+    const lineOverdue   = monthlyTrend.map(m => m.overdue);
 
-    // 3. Donut — overall completion breakdown
+    // 3. Quarterly stacked bar
+    const quarterLabels = quarterlyTrend.map(q => q.quarter_label);
+    const qCompleted    = quarterlyTrend.map(q => q.completed);
+    const qOngoing      = quarterlyTrend.map(q => q.ongoing);
+    const qOverdue      = quarterlyTrend.map(q => q.overdue);
+
+    // 4. Donut
     const donutData = [summary.completed, summary.ongoing, summary.overdue];
 
-    // 4. Horizontal bar — employee performance
-    const empSorted   = [...employees].sort((a, b) => b.completion_rate - a.completion_rate);
-    const empNames    = empSorted.map(e => e.name);
+    // 5. Horizontal bar
+    const empSorted    = [...employees].sort((a, b) => b.completion_rate - a.completion_rate);
+    const empNames     = empSorted.map(e => e.name);
     const empCompleted = empSorted.map(e => e.completed);
-    const empOverdue  = empSorted.map(e => e.overdue);
+    const empOverdue   = empSorted.map(e => e.overdue);
 
     // ----------------------------------------------------------------
-    // Build / rebuild all four charts
+    // Build / rebuild all five charts
     // ----------------------------------------------------------------
     useEffect(() => {
-        // 1. GROUPED BAR — department comparison
+        // 1. GROUPED BAR
         if (groupedBarChart.current) groupedBarChart.current.destroy();
         groupedBarChart.current = new Chart(groupedBarRef.current, {
             type: 'bar',
@@ -394,16 +273,11 @@ function QuarterlyReportPage() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'top' },
-                    title: {
-                        display: !!selectedDept,
-                        text: selectedDept ? `Focused: ${selectedDept.department}` : ''
-                    },
                     tooltip: {
                         callbacks: {
                             afterLabel: (ctx) => {
-                                const dept = chartDepts[ctx.dataIndex];
-                                if (!dept) return '';
-                                return `Completion rate: ${dept.completion_rate}%`;
+                                const dept = departments[ctx.dataIndex];
+                                return dept ? `Completion rate: ${dept.completion_rate}%` : '';
                             }
                         }
                     }
@@ -415,17 +289,16 @@ function QuarterlyReportPage() {
             }
         });
 
-        // 2. STACKED BAR — monthly trend within quarter
-        // Better than a line chart for only 3 data points; shows volume + composition per month.
-        if (monthlyBarChart.current) monthlyBarChart.current.destroy();
-        monthlyBarChart.current = new Chart(monthlyBarRef.current, {
-            type: 'bar',
+        // 2. LINE CHART — monthly trend
+        if (lineChart.current) lineChart.current.destroy();
+        lineChart.current = new Chart(lineRef.current, {
+            type: 'line',
             data: {
                 labels: monthNames,
                 datasets: [
-                    { label: 'Completed', data: trendCompleted, backgroundColor: '#28a745', borderRadius: 4 },
-                    { label: 'Ongoing',   data: trendOngoing,   backgroundColor: '#ffc107', borderRadius: 4 },
-                    { label: 'Overdue',   data: trendOverdue,   backgroundColor: '#dc3545', borderRadius: 4 },
+                    { label: 'Completed', data: lineCompleted, borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.08)',  pointBackgroundColor: '#28a745', pointRadius: 4, tension: 0.4, fill: true },
+                    { label: 'Ongoing',   data: lineOngoing,   borderColor: '#ffc107', backgroundColor: 'rgba(255,193,7,0.06)',  pointBackgroundColor: '#ffc107', pointRadius: 4, tension: 0.4, fill: true },
+                    { label: 'Overdue',   data: lineOverdue,   borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.06)',  pointBackgroundColor: '#dc3545', pointRadius: 4, tension: 0.4, fill: true },
                 ]
             },
             options: {
@@ -436,11 +309,44 @@ function QuarterlyReportPage() {
                     tooltip: {
                         callbacks: {
                             footer: (items) => {
-                                const idx  = items[0].dataIndex;
-                                const comp = trendCompleted[idx];
-                                const total = comp + trendOngoing[idx] + trendOverdue[idx];
+                                const idx   = items[0].dataIndex;
+                                const comp  = lineCompleted[idx];
+                                const total = comp + lineOngoing[idx] + lineOverdue[idx];
                                 const rate  = total > 0 ? Math.round((comp / total) * 100) : 0;
                                 return `Completion rate: ${rate}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: `${year} — Monthly Activity` }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+
+        // 3. QUARTERLY STACKED BAR
+        if (quarterBarChart.current) quarterBarChart.current.destroy();
+        quarterBarChart.current = new Chart(quarterBarRef.current, {
+            type: 'bar',
+            data: {
+                labels: quarterLabels,
+                datasets: [
+                    { label: 'Completed', data: qCompleted, backgroundColor: '#28a745', borderRadius: 4 },
+                    { label: 'Ongoing',   data: qOngoing,   backgroundColor: '#ffc107', borderRadius: 4 },
+                    { label: 'Overdue',   data: qOverdue,   backgroundColor: '#dc3545', borderRadius: 4 },
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            footer: (items) => {
+                                const q = quarterlyTrend[items[0].dataIndex];
+                                return q ? `Completion rate: ${q.completion_rate}%` : '';
                             }
                         }
                     }
@@ -452,7 +358,7 @@ function QuarterlyReportPage() {
             }
         });
 
-        // 3. DONUT — overall task status breakdown for the quarter
+        // 4. DONUT
         if (donutChart.current) donutChart.current.destroy();
         donutChart.current = new Chart(donutRef.current, {
             type: 'doughnut',
@@ -486,7 +392,7 @@ function QuarterlyReportPage() {
             }
         });
 
-        // 4. HORIZONTAL BAR — employee completion count + overdue
+        // 5. HORIZONTAL BAR — employee performance
         if (hBarChart.current) hBarChart.current.destroy();
         if (empSorted.length > 0) {
             hBarChart.current = new Chart(hBarRef.current, {
@@ -523,97 +429,84 @@ function QuarterlyReportPage() {
 
         return () => {
             if (groupedBarChart.current)  groupedBarChart.current.destroy();
-            if (monthlyBarChart.current)  monthlyBarChart.current.destroy();
+            if (lineChart.current)        lineChart.current.destroy();
+            if (quarterBarChart.current)  quarterBarChart.current.destroy();
             if (donutChart.current)       donutChart.current.destroy();
             if (hBarChart.current)        hBarChart.current.destroy();
         };
-    }, [selectedDept, summary, departments, employees, monthlyTrend, year, quarter]);
+    }, [summary, departments, employees, quarterlyTrend, monthlyTrend, year]);
 
     // ----------------------------------------------------------------
-    // Quarter navigation helpers
+    // Year navigation
     // ----------------------------------------------------------------
-    const isCurrentQuarter = (year === now.getFullYear() && quarter === getCurrentQuarter());
+    const isCurrentYear   = year === now.getFullYear();
+    const goToPrevYear    = () => setYear(y => y - 1);
+    const goToNextYear    = () => setYear(y => y + 1);
+    const goToCurrentYear = () => setYear(now.getFullYear());
 
-    const goToPrevQuarter = () => {
-        if (quarter === 1) { setYear(y => y - 1); setQuarter(4); }
-        else               { setQuarter(q => q - 1); }
-    };
-
-    const goToNextQuarter = () => {
-        if (quarter === 4) { setYear(y => y + 1); setQuarter(1); }
-        else               { setQuarter(q => q + 1); }
-    };
-
-    const goToCurrentQuarter = () => {
-        setYear(now.getFullYear());
-        setQuarter(getCurrentQuarter());
-    };
-
-    // Completion rate for the summary cards
     const summaryTotal = summary.completed + summary.ongoing + summary.overdue;
     const summaryRate  = summaryTotal > 0 ? Math.round((summary.completed / summaryTotal) * 100) : 0;
 
     // ----------------------------------------------------------------
     // RENDER
     // ----------------------------------------------------------------
+    if (authError) {
+        return (
+            <div className="container-fluid p-4">
+                <div className="row">
+
+                    <main className="col-md-10 ms-sm-auto px-4 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+                        <div className="text-center">
+                            <div className="alert alert-danger d-inline-block px-5 py-4">
+                                <h5 className="mb-1">Access Denied</h5>
+                                <p className="mb-0">{authError}</p>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="container-fluid p-4">
             <div className="row">
+
 
                 <main>
 
                     {/* Page header */}
                     <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h2 className="mb-0">Quarterly Task Report</h2>
+                        <div>
+                            <h2 className="mb-0">Annual Task Report</h2>
+                            {/* Department badge — shows which dept this supervisor manages */}
+                            {deptName && (
+                                <span className="badge bg-primary mt-1" style={{ fontSize: '0.85rem' }}>
+                                    {deptName}
+                                </span>
+                            )}
+                        </div>
                         <div className="d-flex align-items-center gap-2">
-                            <button className="btn btn-sm btn-outline-secondary" onClick={goToPrevQuarter}>‹ Prev</button>
-                            <span className="fw-semibold" style={{ minWidth: 220, textAlign: 'center' }}>
-                                {formatQuarterDisplay(year, quarter)}
+                            <button className="btn btn-sm btn-outline-secondary" onClick={goToPrevYear}>‹ Prev</button>
+                            <span className="fw-semibold" style={{ minWidth: 80, textAlign: 'center', fontSize: '1.1rem' }}>
+                                {year}
                             </span>
                             <button
                                 className="btn btn-sm btn-outline-secondary"
-                                onClick={goToNextQuarter}
-                                disabled={isCurrentQuarter}
+                                onClick={goToNextYear}
+                                disabled={isCurrentYear}
                             >
                                 Next ›
                             </button>
-                            {!isCurrentQuarter && (
-                                <button className="btn btn-sm btn-outline-primary" onClick={goToCurrentQuarter}>
-                                    This Quarter
+                            {!isCurrentYear && (
+                                <button className="btn btn-sm btn-outline-primary" onClick={goToCurrentYear}>
+                                    This Year
                                 </button>
                             )}
                         </div>
                     </div>
 
-                    {/* Info alert */}
-                    <div className="alert alert-info" role="alert" hidden>
-                        <strong>Overview:</strong> This report summarises department and staff task activity
-                        for <strong>{formatQuarterDisplay(year, quarter)}</strong>.
-                        <ul className="mb-0 mt-1">
-                            <li><strong>Completed</strong>: Tasks marked as completed within this quarter.</li>
-                            <li><strong>Ongoing</strong>: Tasks still in progress with a deadline today or later.</li>
-                            <li><strong>Overdue</strong>: Incomplete tasks whose deadline has already passed.</li>
-                        </ul>
-                        Use the <strong>Department</strong> filter to focus on a specific department.
-                        Click a department row to highlight it in the chart. Click the <strong>eye icon</strong> to
-                        view an employee's full task list for this quarter.
-                    </div>
-
-                    {/* Department filter */}
-                    <div className="mb-4">
-                        <select
-                            className="form-select w-auto"
-                            value={departmentFilter}
-                            onChange={e => { setDepartmentFilter(e.target.value); setSelectedDept(null); }}
-                        >
-                            <option value="all">All Departments</option>
-                            {allDepartments.map(dep => (
-                                <option key={dep.id} value={dep.id}>{dep.name}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Summary cards — 5 cards: adds Completion Rate */}
+                    {/* Summary cards */}
                     <div className="row mb-4">
                         <div className="col-md-3">
                             <div className="card shadow-sm border-0 p-3 text-center">
@@ -649,26 +542,13 @@ function QuarterlyReportPage() {
                         </div>
                     </div>
 
-                    {/* Row 1: Grouped bar chart — department comparison (primary visual) */}
+                    {/* Row 1: Department grouped bar (full width) */}
                     <div className="row mb-4">
                         <div className="col-12">
                             <div className="card shadow-sm border-0 p-3">
-                                <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <div>
-                                        <h5 className="mb-0">Department Task Comparison</h5>
-                                        <small className="text-muted">Completed, Ongoing, and Overdue per department this quarter</small>
-                                    </div>
-                                    {selectedDept && (
-                                        <div className="d-flex align-items-center gap-2">
-                                            <span className="badge bg-primary">{selectedDept.department}</span>
-                                            <button
-                                                className="btn btn-sm btn-outline-secondary"
-                                                onClick={() => setSelectedDept(null)}
-                                            >
-                                                ✕ Show all
-                                            </button>
-                                        </div>
-                                    )}
+                                <div className="mb-3">
+                                    <h5 className="mb-0">Department Task Overview</h5>
+                                    <small className="text-muted">Completed, Ongoing, and Overdue for {year}</small>
                                 </div>
                                 <div style={{ height: 300 }}>
                                     <canvas ref={groupedBarRef}></canvas>
@@ -677,24 +557,53 @@ function QuarterlyReportPage() {
                         </div>
                     </div>
 
-                    {/* Row 2: Monthly trend (stacked bar) + Donut side-by-side */}
+                    {/* Row 2: Monthly line chart */}
+                    <div className="row mb-4">
+                        <div className="col-12">
+                            <div className="card shadow-sm border-0 p-3">
+                                <h5 className="mb-1">Monthly Activity Trend</h5>
+                                <small className="text-muted d-block mb-3">
+                                    Task completion, ongoing, and overdue counts across all 12 months of {year}
+                                </small>
+                                <div style={{ height: 280 }}>
+                                    <canvas ref={lineRef}></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Row 3: Quarterly stacked bar + Donut */}
                     <div className="row mb-4">
                         <div className="col-md-8">
                             <div className="card shadow-sm border-0 p-3 h-100">
-                                <h5 className="mb-1">Monthly Breakdown</h5>
+                                <h5 className="mb-1">Quarterly Breakdown</h5>
                                 <small className="text-muted d-block mb-3">
-                                    Task volume and composition across the 3 months of {QUARTER_LABELS[quarter]} {year}
+                                    Volume and status composition per quarter — Q1 through Q4 {year}
                                 </small>
-                                <div style={{ height: 260 }}>
-                                    <canvas ref={monthlyBarRef}></canvas>
+                                {/* Quarterly completion rate badges */}
+                                <div className="d-flex gap-3 mb-3 flex-wrap">
+                                    {quarterlyTrend.map(q => (
+                                        <div key={q.quarter} style={{ fontSize: 13 }}>
+                                            <span className="fw-semibold">{q.quarter_label}</span>
+                                            <span className="ms-1 badge" style={{
+                                                background: q.completion_rate >= 70 ? '#28a745' : q.completion_rate >= 40 ? '#ffc107' : '#dc3545',
+                                                color: q.completion_rate >= 40 && q.completion_rate < 70 ? '#333' : '#fff',
+                                            }}>
+                                                {q.completion_rate}%
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ height: 220 }}>
+                                    <canvas ref={quarterBarRef}></canvas>
                                 </div>
                             </div>
                         </div>
                         <div className="col-md-4">
                             <div className="card shadow-sm border-0 p-3 h-100">
-                                <h5 className="mb-1">Quarter Status Mix</h5>
+                                <h5 className="mb-1">Annual Status Mix</h5>
                                 <small className="text-muted d-block mb-3">
-                                    Overall share of completed, ongoing, and overdue tasks
+                                    Overall share of completed, ongoing, and overdue for {year}
                                 </small>
                                 <div style={{ height: 260 }}>
                                     <canvas ref={donutRef}></canvas>
@@ -703,13 +612,13 @@ function QuarterlyReportPage() {
                         </div>
                     </div>
 
-                    {/* Row 3: Horizontal bar — employee performance */}
+                    {/* Row 4: Employee horizontal bar */}
                     <div className="row mb-4">
                         <div className="col-12">
                             <div className="card shadow-sm border-0 p-3">
                                 <h5 className="mb-1">Employee Performance</h5>
                                 <small className="text-muted d-block mb-3">
-                                    Sorted by most tasks completed this quarter. Hover a bar for completion rate.
+                                    Sorted by most tasks completed in {year}. Hover for completion rate.
                                 </small>
                                 <div style={{ height: Math.max(200, empSorted.length * 36) }}>
                                     <canvas ref={hBarRef}></canvas>
@@ -718,19 +627,60 @@ function QuarterlyReportPage() {
                         </div>
                     </div>
 
+                    {/* Quarterly summary table */}
+                    <div className="card shadow-sm border-0 p-3 mb-4">
+                        <h5 className="mb-3">Quarterly Summary</h5>
+                        <div className="table-responsive">
+                            <table className="table table-bordered table-hover align-middle">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Quarter</th>
+                                        <th>Period</th>
+                                        <th>Total</th>
+                                        <th>Completed</th>
+                                        <th>Ongoing</th>
+                                        <th>Overdue</th>
+                                        <th>Completion Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {quarterlyTrend.map(q => (
+                                        <tr key={q.quarter}>
+                                            <td className="fw-semibold">{q.quarter_label}</td>
+                                            <td className="text-muted">{q.quarter_range}</td>
+                                            <td>{q.total}</td>
+                                            <td>{q.completed}</td>
+                                            <td>{q.ongoing}</td>
+                                            <td className="text-danger fw-bold">{q.overdue}</td>
+                                            <td>
+                                                {q.total === 0 ? (
+                                                    <span className="text-muted" style={{ fontSize: '0.9em' }}>No tasks yet</span>
+                                                ) : q.completion_rate === 0 ? (
+                                                    <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>0% — None completed</span>
+                                                ) : (
+                                                    <div className="progress" style={{ height: 20 }}>
+                                                        <div
+                                                            className="progress-bar bg-success"
+                                                            style={{ width: `${q.completion_rate}%` }}
+                                                            aria-valuenow={q.completion_rate}
+                                                            aria-valuemin="0"
+                                                            aria-valuemax="100"
+                                                        >
+                                                            {q.completion_rate}%
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     {/* Department details table */}
                     <div className="card shadow-sm border-0 p-3 mb-4">
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                            <h5 className="mb-0">Department Details</h5>
-                            {selectedDept && (
-                                <small className="text-muted">
-                                    Focused on <strong>{selectedDept.department}</strong> —{' '}
-                                    <span style={{ cursor: 'pointer', color: '#0d6efd' }} onClick={() => setSelectedDept(null)}>
-                                        show all
-                                    </span>
-                                </small>
-                            )}
-                        </div>
+                        <h5 className="mb-3">Department Details</h5>
                         <div className="table-responsive">
                             <table className="table table-bordered table-hover align-middle">
                                 <thead className="table-light">
@@ -744,52 +694,34 @@ function QuarterlyReportPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {departments.map(dept => {
-                                        const isSelected = selectedDept?.department_id === dept.department_id;
-                                        return (
-                                            <tr
-                                                key={dept.department_id}
-                                                onClick={() => setSelectedDept(prev =>
-                                                    prev?.department_id === dept.department_id ? null : dept
-                                                )}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    backgroundColor: isSelected ? '#cfe2ff' : '',
-                                                    fontWeight: isSelected ? '600' : 'normal',
-                                                    opacity: selectedDept && !isSelected ? 0.5 : 1,
-                                                    transition: 'opacity 0.2s, background-color 0.2s'
-                                                }}
-                                            >
-                                                <td>
-                                                    {isSelected && <span className="me-1" style={{ color: '#0d6efd' }}>▶</span>}
-                                                    {dept.department}
-                                                </td>
-                                                <td>{dept.total}</td>
-                                                <td>{dept.completed}</td>
-                                                <td>{dept.ongoing}</td>
-                                                <td className="text-danger fw-bold">{dept.overdue}</td>
-                                                <td>
-                                                    {dept.total === 0 ? (
-                                                        <span className="text-muted" style={{ fontSize: '0.9em' }}>No tasks yet</span>
-                                                    ) : dept.completion_rate === 0 ? (
-                                                        <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>0% — None completed</span>
-                                                    ) : (
-                                                        <div className="progress" style={{ height: 20 }}>
-                                                            <div
-                                                                className="progress-bar bg-success"
-                                                                style={{ width: `${dept.completion_rate}%` }}
-                                                                aria-valuenow={dept.completion_rate}
-                                                                aria-valuemin="0"
-                                                                aria-valuemax="100"
-                                                            >
-                                                                {dept.completion_rate}%
-                                                            </div>
+                                    {departments.map(dept => (
+                                        <tr key={dept.department_id}>
+                                            <td>{dept.department}</td>
+                                            <td>{dept.total}</td>
+                                            <td>{dept.completed}</td>
+                                            <td>{dept.ongoing}</td>
+                                            <td className="text-danger fw-bold">{dept.overdue}</td>
+                                            <td>
+                                                {dept.total === 0 ? (
+                                                    <span className="text-muted" style={{ fontSize: '0.9em' }}>No tasks yet</span>
+                                                ) : dept.completion_rate === 0 ? (
+                                                    <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>0% — None completed</span>
+                                                ) : (
+                                                    <div className="progress" style={{ height: 20 }}>
+                                                        <div
+                                                            className="progress-bar bg-success"
+                                                            style={{ width: `${dept.completion_rate}%` }}
+                                                            aria-valuenow={dept.completion_rate}
+                                                            aria-valuemin="0"
+                                                            aria-valuemax="100"
+                                                        >
+                                                            {dept.completion_rate}%
                                                         </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -844,7 +776,7 @@ function QuarterlyReportPage() {
                                                 <td style={{ textAlign: 'center' }} onClick={e => { e.stopPropagation(); setModalEmp(emp); }}>
                                                     <button
                                                         className="btn btn-link p-0"
-                                                        title={`View ${emp.name}'s tasks this quarter`}
+                                                        title={`View ${emp.name}'s tasks for ${year}`}
                                                         style={{ color: '#0d6efd' }}
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
@@ -864,12 +796,12 @@ function QuarterlyReportPage() {
                 </main>
             </div>
 
-            {/* Modal — rendered at page root, outside the table */}
+            {/* Modal */}
             {modalEmp && (
                 <EmployeeTaskModal
                     emp={modalEmp}
-                    quarterStart={quarterStart}
-                    quarterEnd={quarterEnd}
+                    yearStart={yearStart}
+                    yearEnd={yearEnd}
                     onClose={() => setModalEmp(null)}
                 />
             )}
@@ -877,14 +809,5 @@ function QuarterlyReportPage() {
     );
 }
 
-const sidebarEl = document.getElementById('sidebarRoot');
-if (sidebarEl) {
-    ReactDOM.createRoot(sidebarEl).render(<Sidebar />);
-}
-
-const root = ReactDOM.createRoot(document.getElementById('quarterlyReportRoot'));
-root.render(<QuarterlyReportPage />);
-</script>
-
-</body>
-</html>
+const root = ReactDOM.createRoot(document.getElementById('annualReportRoot'));
+root.render(<AnnualReportPage />);
