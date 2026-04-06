@@ -68,7 +68,7 @@ body:has(.dashboard-sidebar.collapsed) .app-topbar {
     position: fixed;
     top: var(--shell-edge);
     left: var(--shell-edge);
-    z-index: 1195;
+    z-index: 1210;
     padding: 0;
     flex-shrink: 0;
     isolation: isolate;
@@ -76,7 +76,11 @@ body:has(.dashboard-sidebar.collapsed) .app-topbar {
 
 .app-sidebar-col .dashboard-sidebar {
     position: relative;
-    z-index: 1195 !important;
+    z-index: 1210 !important;
+}
+
+.sidebar-toggle {
+    z-index: 1220;
 }
 
 .app-main-col {

@@ -1,3 +1,9 @@
+/* Remove border from Reports button */
+.sidebar-section-label-toggle.reports-toggle {
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
 /* STICKY SIDEBAR COLUMN */
 .staff-sidebar-col {
     position: sticky;
