@@ -3206,3 +3206,53 @@ CREATE TABLE IF NOT EXISTS event_employees (
 APRIL 6 MONDAY
 
 ALTER TABLE `users` CHANGE `role` `role` ENUM('admin','supervisor','staff','executive_director','president') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'staff';
+
+
+
+
+APRIL 7 TUESDAY
+
+CREATE TABLE messages (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    message TEXT NOT NULL,
+
+    task_id INT UNSIGNED NULL,
+
+    sender_id INT UNSIGNED NOT NULL,
+    recipient_id INT UNSIGNED NOT NULL,
+
+    time_sent DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    read_at DATETIME NULL,
+
+    INDEX idx_sender (sender_id),
+    INDEX idx_recipient (recipient_id),
+    INDEX idx_task (task_id),
+
+    CONSTRAINT fk_messages_task
+        FOREIGN KEY (task_id) REFERENCES tasks(id)
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_messages_sender
+        FOREIGN KEY (sender_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_messages_recipient
+        FOREIGN KEY (recipient_id) REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+
+
+CREATE TABLE message_attachments (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    message_id INT UNSIGNED NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (message_id) REFERENCES messages(id)
+        ON DELETE CASCADE
+);
