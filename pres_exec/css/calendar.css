@@ -1,0 +1,43 @@
+#calendarRoot .btn-primary,
+#calendarRoot .table thead,
+#calendarRoot .table th,
+#calendarRoot .card,
+#calendarRoot .summary-card,
+#calendarRoot .overdue,
+#calendarRoot .form-control:focus,
+#calendarRoot h3,
+#calendarRoot h5,
+#calendarRoot h6 {
+    all: unset;
+}
+
+/* Scrollbar */
+#calendarRoot ::-webkit-scrollbar { width:5px; height:5px; }
+#calendarRoot ::-webkit-scrollbar-track { background:transparent; }
+#calendarRoot ::-webkit-scrollbar-thumb { background:#E0E0E0; border-radius:3px; }
+#calendarRoot ::-webkit-scrollbar-thumb:hover { background:#BDBDBD; }
+
+/* Input focus ring */
+#calendarRoot input:focus,
+#calendarRoot select:focus,
+#calendarRoot textarea:focus {
+    outline: none !important;
+    border-color: #FF6B4E !important;
+    box-shadow: 0 0 0 2px rgba(255,107,78,.18) !important;
+}
+
+/* Checkbox accent */
+#calendarRoot input[type="checkbox"] {
+    accent-color: #FF6B4E;
+}
+
+/* Nav button hover */
+#calendarRoot button[style*="background:#F5F5F5"]:hover {
+    background: #EBEBEB !important;
+}
+
+/* Ensure calendarRoot fills available space */
+#calendarRoot {
+    min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}

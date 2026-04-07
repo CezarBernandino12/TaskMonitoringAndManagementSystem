@@ -208,6 +208,14 @@ function PresidentSidebar() {
                         isActive={isActivePage("dashboard.html")}
                         onNavigate={handleNavigate}
                     />
+                    <SidebarLink
+                        href="calendar.html"
+                        icon="bi-calendar"
+                        label="Calendar"
+                        isActive={isActivePage("calendar.html")}
+                        onNavigate={handleNavigate}
+                    />
+
 
                     <div className="sidebar-divider mt-3"></div>
 

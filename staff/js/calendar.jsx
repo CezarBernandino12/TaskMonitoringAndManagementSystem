@@ -610,39 +610,110 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                             </div>
                         )}
 
-                        {tagged.length > 0 && (
-                            <div style={{ marginTop: 8 }}>
-                                <div
-                                    style={{
-                                        fontSize: 11,
-                                        fontWeight: 600,
-                                        color: '#bbb',
-                                        marginBottom: 6,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '.05em'
-                                    }}
-                                >
-                                    Tagged
-                                </div>
+                        {tagged.length > 0 && (() => {
+                            // When all employees are tagged, or the list is very large,
+                            // show a compact summary instead of individual chips.
+                            const isAll     = tagged.length === employees.length && employees.length > 0;
+                            const SHOW_MAX  = 6; // max individual chips before collapsing
+                            const isLarge   = !isAll && tagged.length > SHOW_MAX;
 
-                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                    {tagged.map(emp => (
+                            return (
+                                <div style={{ marginTop: 8 }}>
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            color: '#bbb',
+                                            marginBottom: 6,
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '.05em'
+                                        }}
+                                    >
+                                        Tagged
+                                    </div>
+
+                                    {isAll ? (
+                                        // All employees — single pill
                                         <span
-                                            key={emp.id}
                                             style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: 6,
                                                 fontSize: 12,
-                                                background: '#F5F5F5',
+                                                background: cfg.bg,
+                                                border: `1px solid ${cfg.badge}44`,
                                                 borderRadius: 20,
-                                                padding: '2px 10px',
-                                                color: '#444'
+                                                padding: '3px 12px',
+                                                color: cfg.text,
+                                                fontWeight: 600
                                             }}
                                         >
-                                            {emp.name} <span style={{ color: '#aaa' }}>· {emp.department}</span>
+                                            👥 All Employees
+                                            <span
+                                                style={{
+                                                    fontSize: 11,
+                                                    background: cfg.badge,
+                                                    color: '#fff',
+                                                    borderRadius: 20,
+                                                    padding: '0px 7px',
+                                                    fontWeight: 700
+                                                }}
+                                            >
+                                                {tagged.length}
+                                            </span>
                                         </span>
-                                    ))}
+                                    ) : isLarge ? (
+                                        // Large partial group — show first few + overflow count
+                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                            {tagged.slice(0, SHOW_MAX).map(emp => (
+                                                <span
+                                                    key={emp.id}
+                                                    style={{
+                                                        fontSize: 12,
+                                                        background: '#F5F5F5',
+                                                        borderRadius: 20,
+                                                        padding: '2px 10px',
+                                                        color: '#444'
+                                                    }}
+                                                >
+                                                    {emp.name} <span style={{ color: '#aaa' }}>· {emp.department}</span>
+                                                </span>
+                                            ))}
+                                            <span
+                                                style={{
+                                                    fontSize: 12,
+                                                    background: '#EDEDF0',
+                                                    borderRadius: 20,
+                                                    padding: '2px 10px',
+                                                    color: '#666',
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                +{tagged.length - SHOW_MAX} more
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        // Small list — show all chips normally
+                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                            {tagged.map(emp => (
+                                                <span
+                                                    key={emp.id}
+                                                    style={{
+                                                        fontSize: 12,
+                                                        background: '#F5F5F5',
+                                                        borderRadius: 20,
+                                                        padding: '2px 10px',
+                                                        color: '#444'
+                                                    }}
+                                                >
+                                                    {emp.name} <span style={{ color: '#aaa' }}>· {emp.department}</span>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
 
                     <div style={{ ...S.mFoot, justifyContent: 'flex-end', gap: 8 }}>
