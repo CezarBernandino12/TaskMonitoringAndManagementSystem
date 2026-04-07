@@ -422,11 +422,21 @@ function TaskSummary({ tasks, period, onPeriodChange }) {
             {/* Period selector bar */}
             <div className="stats-period-bar">
                 {PERIOD_OPTIONS.map(opt => (
-                    <button
+                       <button
                         key={opt.key}
                         type="button"
-                        className={`stats-period-btn ${period === opt.key ? "is-active" : ""}`}
                         onClick={() => onPeriodChange(opt.key)}
+                        style={{
+                            padding: "5px 16px",
+                            borderRadius: "20px",
+                            border: period === opt.key ? "2px solid #ff9900" : "2px solid #ffe0b2",
+                            background: period === opt.key ? "#ff9900" : "#fff",
+                            color: period === opt.key ? "#fff" : "#cc7a00",
+                            fontWeight: 500,
+                            fontSize: "0.85rem",
+                            cursor: "pointer",
+                            transition: "all 0.15s"
+                        }}
                         aria-pressed={period === opt.key}
                     >
                         {opt.label}

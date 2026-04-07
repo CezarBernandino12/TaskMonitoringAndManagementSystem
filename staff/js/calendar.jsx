@@ -137,6 +137,32 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
         `${e.name} ${e.department}`.toLowerCase().includes(empQ.toLowerCase())
     );
 
+    // Are all currently-visible (filtered) employees already tagged?
+    const allFilteredSelected =
+        filtered.length > 0 &&
+        filtered.every(e => form.tagged_employees.includes(e.id));
+
+    // Select all visible employees (merges with any already-tagged ones outside the filter)
+    const selectAllFiltered = () => {
+        const filteredIds = filtered.map(e => e.id);
+        const merged = Array.from(new Set([...form.tagged_employees, ...filteredIds]));
+        set('tagged_employees', merged);
+    };
+
+    // Deselect all visible employees (keeps any tagged ones outside the current filter)
+    const deselectAllFiltered = () => {
+        const filteredIds = new Set(filtered.map(e => e.id));
+        set('tagged_employees', form.tagged_employees.filter(id => !filteredIds.has(id)));
+    };
+
+    const toggleSelectAll = () => {
+        if (allFilteredSelected) {
+            deselectAllFiltered();
+        } else {
+            selectAllFiltered();
+        }
+    };
+
     const save = () => {
         if (!form.title.trim()) {
             setError('Title is required.');
@@ -297,6 +323,83 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                 value={empQ}
                                 onChange={e => setEmpQ(e.target.value)}
                             />
+
+                            {/* Select All / Deselect All row */}
+                            {filtered.length > 0 && (
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        marginBottom: 5,
+                                        padding: '0 2px'
+                                    }}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={toggleSelectAll}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            background: allFilteredSelected ? cfg.bg : '#F5F5F5',
+                                            border: `1.5px solid ${allFilteredSelected ? cfg.badge + '88' : '#DCDCDC'}`,
+                                            borderRadius: 6,
+                                            padding: '4px 10px',
+                                            fontSize: 11.5,
+                                            fontWeight: 600,
+                                            color: allFilteredSelected ? cfg.text : '#555',
+                                            cursor: 'pointer',
+                                            transition: 'all .15s'
+                                        }}
+                                    >
+                                        {/* Mini checkbox indicator */}
+                                        <span
+                                            style={{
+                                                width: 13,
+                                                height: 13,
+                                                borderRadius: 3,
+                                                border: `1.5px solid ${allFilteredSelected ? cfg.badge : '#AAAAAA'}`,
+                                                background: allFilteredSelected ? cfg.badge : '#fff',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                                transition: 'all .15s'
+                                            }}
+                                        >
+                                            {allFilteredSelected && (
+                                                <span style={{ color: '#fff', fontSize: 9, fontWeight: 900, lineHeight: 1 }}>✓</span>
+                                            )}
+                                        </span>
+                                        {allFilteredSelected
+                                            ? empQ
+                                                ? `Deselect all ${filtered.length} shown`
+                                                : 'Deselect all'
+                                            : empQ
+                                                ? `Select all ${filtered.length} shown`
+                                                : 'Select all'
+                                        }
+                                    </button>
+
+                                    {/* Live count badge */}
+                                    {form.tagged_employees.length > 0 && (
+                                        <span
+                                            style={{
+                                                fontSize: 11,
+                                                color: cfg.text,
+                                                background: cfg.bg,
+                                                border: `1px solid ${cfg.badge}44`,
+                                                borderRadius: 20,
+                                                padding: '2px 8px',
+                                                fontWeight: 600
+                                            }}
+                                        >
+                                            {form.tagged_employees.length} tagged
+                                        </span>
+                                    )}
+                                </div>
+                            )}
 
                             <div
                                 style={{
