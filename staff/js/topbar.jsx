@@ -272,7 +272,7 @@ function DarkModeToggle({ dark, onToggle }) {
     return (
         <button
             type="button"
-            className={`topbar-icon-btn theme-toggle ${dark ? "is-dark" : ""}`}
+            className={`theme-toggle ${dark ? "is-dark" : ""}`}
             onClick={onToggle}
             aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
             title={dark ? "Light mode" : "Dark mode"}
@@ -282,6 +282,19 @@ function DarkModeToggle({ dark, onToggle }) {
                     <i className={`bi ${dark ? "bi-moon-stars-fill" : "bi-sun-fill"}`}></i>
                 </span>
             </span>
+        </button>
+    );
+}
+
+function ChatButton() {
+    return (
+        <button
+            type="button"
+            className="topbar-icon-btn"
+            aria-label="Messages"
+            title="Messages"
+        >
+            <i className="bi bi-chat-dots"></i>
         </button>
     );
 }
@@ -830,8 +843,13 @@ return (
         <div className="topbar-right">
             <DarkModeToggle dark={dark} onToggle={() => setDark((value) => !value)} />
             <div className="topbar-sep"></div>
+
+            <ChatButton />
+            <div className="topbar-sep"></div>
+
             <NotificationBell />
             <div className="topbar-sep"></div>
+
             <UserChip user={user} userLoaded={userLoaded} />
         </div>
     </header>
