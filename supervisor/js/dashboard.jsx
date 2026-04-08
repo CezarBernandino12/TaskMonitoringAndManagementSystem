@@ -1,7 +1,3 @@
-/* ─── Period options ──────────────────────────────────────────────────────────
-   Default: "week" — broad enough to show meaningful counts, narrow enough to
-   feel actionable on a daily-use dashboard. Matches the staff dashboard logic.
-   ─────────────────────────────────────────────────────────────────────────── */
 const SUPERVISOR_PERIOD_OPTIONS = [
     { key: "today", label: "Today"      },
     { key: "week",  label: "This Week"  },
@@ -11,7 +7,6 @@ const SUPERVISOR_PERIOD_OPTIONS = [
 const SUPERVISOR_DEFAULT_PERIOD = "week";
 const MANILA_TZ = "Asia/Manila";
 
-/* ─── Date helpers ────────────────────────────────────────────────────────── */
 
 function supervisorGetTodayYMD() {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -25,11 +20,6 @@ function supervisorGetTodayYMD() {
     ].join("-");
 }
 
-/**
- * Returns { start: "YYYY-MM-DD", end: "YYYY-MM-DD" } for the period,
- * anchored to today in Manila time.
- * "all" returns { start: null, end: null }.
- */
 function supervisorGetPeriodRange(periodKey) {
     const todayYMD = supervisorGetTodayYMD();
     const [ty, tm, td] = todayYMD.split("-").map(Number);
@@ -396,31 +386,24 @@ function SupervisorDashboard() {
             )}
 
             {/* ── Period filter bar ──────────────────────────────────────── */}
-            <div className="d-flex align-items-center gap-2 mb-4 flex-wrap">
-                <span className="fw-semibold text-muted me-1" style={{ fontSize: "0.85rem" }}>
-                    Showing:
-                </span>
-                {SUPERVISOR_PERIOD_OPTIONS.map(opt => (
-                    <button
-                        key={opt.key}
-                        type="button"
-                        onClick={() => setPeriod(opt.key)}
-                        style={{
-                            padding: "5px 16px",
-                            borderRadius: "20px",
-                            border: period === opt.key ? "2px solid #ff9900" : "2px solid #ffe0b2",
-                            background: period === opt.key ? "#ff9900" : "#fff",
-                            color: period === opt.key ? "#fff" : "#cc7a00",
-                            fontWeight: 500,
-                            fontSize: "0.85rem",
-                            cursor: "pointer",
-                            transition: "all 0.15s"
-                        }}
-                        aria-pressed={period === opt.key}
-                    >
-                        {opt.label}
-                    </button>
-                ))}
+            <div className="db-period-wrap">
+                <div className="db-period-bar" aria-label="Supervisor dashboard period">
+                    {SUPERVISOR_PERIOD_OPTIONS.map(opt => {
+                        const isActive = period === opt.key;
+
+                        return (
+                            <button
+                                key={opt.key}
+                                type="button"
+                                className={`db-period-tab ${isActive ? "is-active" : ""}`}
+                                onClick={() => setPeriod(opt.key)}
+                                aria-pressed={isActive}
+                            >
+                                {opt.label}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* ── Summary Cards ─────────────────────────────────────────── */}
