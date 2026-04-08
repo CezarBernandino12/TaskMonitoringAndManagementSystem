@@ -110,9 +110,9 @@ try {
         exit;
     }
 
-    if ($contact !== '' && !preg_match('/^\+639\d{9}$/', $contact)) {
+    if ($contact !== '' && !preg_match('/^[0-9+\-\s()]+$/', $contact)) {
         http_response_code(422);
-        echo json_encode(['error' => 'Please enter a valid Philippine mobile number.']);
+        echo json_encode(['error' => 'Contact number contains invalid characters.']);
         exit;
     }
 
