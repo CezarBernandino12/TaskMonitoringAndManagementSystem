@@ -418,56 +418,49 @@ function TaskSummary({ tasks, period, onPeriodChange }) {
     ];
 
     return (
-        <section className="stats-strip mb-4">
-            {/* Period selector bar */}
-            <div className="stats-period-bar">
-                {PERIOD_OPTIONS.map(opt => (
-                       <button
-                        key={opt.key}
-                        type="button"
-                        onClick={() => onPeriodChange(opt.key)}
-                        style={{
-                            padding: "5px 16px",
-                            borderRadius: "20px",
-                            border: period === opt.key ? "2px solid #ff9900" : "2px solid #ffe0b2",
-                            background: period === opt.key ? "#ff9900" : "#fff",
-                            color: period === opt.key ? "#fff" : "#cc7a00",
-                            fontWeight: 500,
-                            fontSize: "0.85rem",
-                            cursor: "pointer",
-                            transition: "all 0.15s"
-                        }}
-                        aria-pressed={period === opt.key}
-                    >
-                        {opt.label}
-                    </button>
-                ))}
+        <div className="stats-summary-block mb-4">
+            <div className="stats-period-wrap">
+                <div className="stats-period-bar" aria-label="Task summary period">
+                    {PERIOD_OPTIONS.map(opt => {
+                        const isActive = period === opt.key;
+
+                        return (
+                            <button
+                                key={opt.key}
+                                type="button"
+                                className={`stats-period-tab ${isActive ? "is-active" : ""}`}
+                                onClick={() => onPeriodChange(opt.key)}
+                                aria-pressed={isActive}
+                            >
+                                {opt.label}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
-            <div className="stats-strip-inner">
-                {stats.map(item => (
-                    <div className="stats-metric" key={item.key}>
-                        <div className="stats-icon">
-                            <i className={`bi ${item.icon}`}></i>
-                        </div>
-                        <div className="stats-label">{item.title}</div>
-                        <div className="stats-bottom">
-                            <div className="stats-value">{item.value}</div>
-                            <div className="stats-trend">
-                                <span className={`stats-pill ${item.pillClass}`}>{item.pillText}</span>
-                                <span className="stats-meta">{item.metaText}</span>
+            <section className="stats-strip">
+                <div className="stats-strip-inner">
+                    {stats.map(item => (
+                        <div className="stats-metric" key={item.key}>
+                            <div className="stats-icon">
+                                <i className={`bi ${item.icon}`}></i>
+                            </div>
+                            <div className="stats-label">{item.title}</div>
+                            <div className="stats-bottom">
+                                <div className="stats-value">{item.value}</div>
+                                <div className="stats-trend">
+                                    <span className={`stats-pill ${item.pillClass}`}>{item.pillText}</span>
+                                    <span className="stats-meta">{item.metaText}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
-            </div>
-        </section>
+                    ))}
+                </div>
+            </section>
+        </div>
     );
 }
-
-// ─── DueSoon ──────────────────────────────────────────────────────────────────
-// Shows tasks with deadlines within the next 2 days relative to today.
-// The period filter does not affect DueSoon — it always shows imminent deadlines.
 
 function DueSoon({ tasks }) {
     const today = parseYMDToUTC(getTodayYMDInManila());
