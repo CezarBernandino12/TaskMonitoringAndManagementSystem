@@ -127,32 +127,58 @@ function getToasterOptions() {
 function useSileoTheme() {
     const [theme, setTheme] = React.useState(getCurrentTheme);
 
-    React.useEffect(() => {
-        function syncTheme(event) {
-            const nextTheme = event?.detail?.theme;
-            if (nextTheme === "dark" || nextTheme === "light") {
-                setTheme(nextTheme);
-                return;
+React.useEffect(() => {
+    let active = true;
+
+    async function loadUser() {
+        try {
+            const response = await fetch(TOPBAR_USER_API, {
+                credentials: "same-origin",
+                headers: {
+                    Accept: "application/json"
+                }
+            });
+
+            const data = await parseJsonResponse(response);
+
+            if (!response.ok || data.error) {
+                throw new Error(data.error || "Failed to load user information.");
             }
 
-            setTheme(getCurrentTheme());
+            if (!active) return;
+
+            setUser(normalizeUserPayload(data));
+        } catch (error) {
+            console.error("Unable to load top bar user:", error);
+
+            if (!active) return;
+
+            setUser(FALLBACK_USER);
+        } finally {
+            if (active) setUserLoaded(true);
+        }
+    }
+
+    function handleProfileUpdated(event) {
+        const detail = event?.detail;
+
+        if (!detail) {
+            loadUser();
+            return;
         }
 
-        const observer = new MutationObserver(() => {
-            setTheme(getCurrentTheme());
-        });
+        setUser(normalizeUserPayload(detail));
+        setUserLoaded(true);
+    }
 
-        window.addEventListener("dashboard-theme-changed", syncTheme);
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ["data-theme", "data-bs-theme"]
-        });
+    loadUser();
+    window.addEventListener("profile-updated", handleProfileUpdated);
 
-        return () => {
-            window.removeEventListener("dashboard-theme-changed", syncTheme);
-            observer.disconnect();
-        };
-    }, []);
+    return () => {
+        active = false;
+        window.removeEventListener("profile-updated", handleProfileUpdated);
+    };
+}, []);
 
     return theme;
 }
@@ -272,7 +298,7 @@ function DarkModeToggle({ dark, onToggle }) {
     return (
         <button
             type="button"
-            className={`topbar-icon-btn theme-toggle ${dark ? "is-dark" : ""}`}
+            className={`theme-toggle ${dark ? "is-dark" : ""}`}
             onClick={onToggle}
             aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
             title={dark ? "Light mode" : "Dark mode"}
@@ -282,6 +308,19 @@ function DarkModeToggle({ dark, onToggle }) {
                     <i className={`bi ${dark ? "bi-moon-stars-fill" : "bi-sun-fill"}`}></i>
                 </span>
             </span>
+        </button>
+    );
+}
+
+function ChatButton() {
+    return (
+        <button
+            type="button"
+            className="topbar-icon-btn"
+            aria-label="Messages"
+            title="Messages"
+        >
+            <i className="bi bi-chat-dots"></i>
         </button>
     );
 }
@@ -467,7 +506,7 @@ function UserChip({ user, userLoaded }) {
 }
 
 function TopBar() {
-    const [dark, setDark] = React.useState(() => getStoredTheme() === "dark");
+    const [dark, setDark] = React.useState(() => getCurrentTheme() === "dark");
     const [now, setNow] = React.useState(() => new Date());
     const [user, setUser] = React.useState(FALLBACK_USER);
     const [userLoaded, setUserLoaded] = React.useState(false);
@@ -691,8 +730,13 @@ return (
         <div className="topbar-right">
             <DarkModeToggle dark={dark} onToggle={() => setDark((value) => !value)} />
             <div className="topbar-sep"></div>
+
+            <ChatButton />
+            <div className="topbar-sep"></div>
+
             <NotificationBell />
             <div className="topbar-sep"></div>
+
             <UserChip user={user} userLoaded={userLoaded} />
         </div>
     </header>

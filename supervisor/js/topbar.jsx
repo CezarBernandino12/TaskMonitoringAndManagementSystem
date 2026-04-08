@@ -5,6 +5,8 @@ import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom
 const TOPBAR_USER_API = "php/sidebar.php";
 const THEME_KEY = "dashboard-theme";
 const GREETING_REFRESH_MS = 60 * 1000;
+const TASKS_API = "php/get_tasks.php";
+const MANILA_TIMEZONE = "Asia/Manila";
 
 const FALLBACK_USER = {
     name: "User",
@@ -17,45 +19,6 @@ const FALLBACK_USER = {
     initials: "U",
     profile_image_url: ""
 };
-
-const STATIC_NOTIFICATIONS = [
-    {
-        id: 1,
-        icon: "bi-check2-circle",
-        iconColor: "notif-green",
-        title: "Task completed",
-        desc: "Q2 Report has been marked as done.",
-        time: "2 min ago",
-        unread: true
-    },
-    {
-        id: 2,
-        icon: "bi-calendar-event",
-        iconColor: "notif-blue",
-        title: "Meeting reminder",
-        desc: "Team standup starts in 15 minutes.",
-        time: "14 min ago",
-        unread: true
-    },
-    {
-        id: 3,
-        icon: "bi-person-plus",
-        iconColor: "notif-purple",
-        title: "New team member",
-        desc: "Maria Santos joined your department.",
-        time: "1 hr ago",
-        unread: true
-    },
-    {
-        id: 4,
-        icon: "bi-file-earmark-text",
-        iconColor: "notif-amber",
-        title: "Document shared",
-        desc: "Budget proposal was shared with you.",
-        time: "Yesterday",
-        unread: false
-    }
-];
 
 function getStoredTheme() {
     const storedTheme = localStorage.getItem(THEME_KEY);
@@ -242,16 +205,6 @@ function getDisplayName(user) {
     return name || "User";
 }
 
-function getRoleLabel(user) {
-    if (user?.role_label?.trim()) return user.role_label.trim();
-
-    if (user?.role?.trim()) {
-        return user.role.charAt(0).toUpperCase() + user.role.slice(1);
-    }
-
-    return "User";
-}
-
 function buildGreeting(user, date = new Date()) {
     const meta = getGreetingMeta(date);
     const title = getHonorific(user?.gender);
@@ -272,7 +225,7 @@ function DarkModeToggle({ dark, onToggle }) {
     return (
         <button
             type="button"
-            className={`topbar-icon-btn theme-toggle ${dark ? "is-dark" : ""}`}
+            className={`theme-toggle ${dark ? "is-dark" : ""}`}
             onClick={onToggle}
             aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
             title={dark ? "Light mode" : "Dark mode"}
@@ -286,16 +239,171 @@ function DarkModeToggle({ dark, onToggle }) {
     );
 }
 
+function ChatButton() {
+    return (
+        <button
+            type="button"
+            className="topbar-icon-btn"
+            aria-label="Messages"
+            title="Messages"
+        >
+            <i className="bi bi-chat-dots"></i>
+        </button>
+    );
+}
+
+function getTodayYMDInManila() {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: MANILA_TIMEZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).formatToParts(new Date());
+
+    const year = parts.find((p) => p.type === "year")?.value;
+    const month = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+
+    return `${year}-${month}-${day}`;
+}
+
+function parseYMDToUTC(dateStr) {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatTaskDate(dateStr) {
+    const date = parseYMDToUTC(dateStr);
+    if (!date) return "";
+
+    return new Intl.DateTimeFormat("en-US", {
+        timeZone: "UTC",
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    }).format(date);
+}
+
+function normalizeStatus(status = "") {
+    return String(status).trim().toLowerCase();
+}
+
+function getTaskDueMeta(task) {
+    if (!task?.deadline) return null;
+    if (normalizeStatus(task.status) === "completed") return null;
+
+    const todayUTC = parseYMDToUTC(getTodayYMDInManila());
+    const deadlineUTC = parseYMDToUTC(task.deadline);
+
+    if (!todayUTC || !deadlineUTC) return null;
+
+    const diffDays = Math.ceil((deadlineUTC - todayUTC) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+        return {
+            label: "Overdue",
+            icon: "bi-exclamation-circle",
+            iconColor: "notif-red",
+            time: "Past deadline"
+        };
+    }
+
+    if (diffDays === 0) {
+        return {
+            label: "Due Today",
+            icon: "bi-calendar2-check",
+            iconColor: "notif-amber",
+            time: "Today"
+        };
+    }
+
+    if (diffDays === 1) {
+        return {
+            label: "Due Tomorrow",
+            icon: "bi-calendar2-event",
+            iconColor: "notif-blue",
+            time: "Tomorrow"
+        };
+    }
+
+    return null;
+}
+
+function buildTaskNotifications(tasks = []) {
+    return tasks
+        .map((task) => {
+            const meta = getTaskDueMeta(task);
+            if (!meta) return null;
+
+            return {
+                id: `task-${task.id ?? task.title ?? task.deadline ?? "unknown"}`,
+                icon: meta.icon,
+                iconColor: meta.iconColor,
+                title: meta.label,
+                desc: `${task.title || "Untitled Task"}${task.deadline ? ` • ${formatTaskDate(task.deadline)}` : ""}`,
+                time: meta.time,
+                unread: true
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+            const priority = {
+                "Overdue": 0,
+                "Due Today": 1,
+                "Due Tomorrow": 2
+            };
+
+            return (priority[a.title] ?? 99) - (priority[b.title] ?? 99);
+        });
+}
+
 function NotificationBell() {
     const [open, setOpen] = React.useState(false);
+    const [notifications, setNotifications] = React.useState([]);
     const panelRef = React.useRef(null);
     const btnRef = React.useRef(null);
     const panelId = React.useId();
 
-    const unreadCount = React.useMemo(
-        () => STATIC_NOTIFICATIONS.filter((item) => item.unread).length,
-        []
-    );
+    React.useEffect(() => {
+        let active = true;
+
+        async function loadNotifications() {
+            try {
+                const response = await fetch(TASKS_API, {
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json"
+                    }
+                });
+
+                const data = await parseJsonResponse(response);
+
+                if (!response.ok) {
+                    throw new Error("Failed to load task notifications.");
+                }
+
+                if (!active) return;
+
+                const items = buildTaskNotifications(Array.isArray(data) ? data : []);
+                setNotifications(items);
+            } catch (error) {
+                console.error("Unable to load task notifications:", error);
+                if (!active) return;
+                setNotifications([]);
+            }
+        }
+
+        loadNotifications();
+        const intervalId = window.setInterval(loadNotifications, 60000);
+
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+        };
+    }, []);
+
+    const unreadCount = notifications.length;
 
     React.useEffect(() => {
         if (!open) return undefined;
@@ -362,34 +470,28 @@ function NotificationBell() {
                     </div>
 
                     <div className="notif-list">
-                        {STATIC_NOTIFICATIONS.map((item) => (
-                            <div
-                                key={item.id}
-                                className={`notif-item ${item.unread ? "unread" : ""}`}
-                            >
-                                <div className={`notif-item-icon ${item.iconColor}`}>
-                                    <i className={`bi ${item.icon}`}></i>
+                        {notifications.length === 0 ? (
+                            <div className="notif-empty">No due-soon tasks</div>
+                        ) : (
+                            notifications.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className={`notif-item ${item.unread ? "unread" : ""}`}
+                                >
+                                    <div className={`notif-item-icon ${item.iconColor}`}>
+                                        <i className={`bi ${item.icon}`}></i>
+                                    </div>
+
+                                    <div className="notif-item-body">
+                                        <div className="notif-item-title">{item.title}</div>
+                                        <div className="notif-item-desc">{item.desc}</div>
+                                        <div className="notif-item-time">{item.time}</div>
+                                    </div>
+
+                                    {item.unread && <span className="notif-unread-dot"></span>}
                                 </div>
-
-                                <div className="notif-item-body">
-                                    <div className="notif-item-title">{item.title}</div>
-                                    <div className="notif-item-desc">{item.desc}</div>
-                                    <div className="notif-item-time">{item.time}</div>
-                                </div>
-
-                                {item.unread && <span className="notif-unread-dot"></span>}
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="notif-panel-footer">
-                        <button
-                            type="button"
-                            className="notif-view-all btn btn-link p-0 text-decoration-none"
-                            onClick={() => setOpen(false)}
-                        >
-                            View all notifications
-                        </button>
+                            ))
+                        )}
                     </div>
                 </div>
             )}
@@ -467,7 +569,7 @@ function UserChip({ user, userLoaded }) {
 }
 
 function TopBar() {
-    const [dark, setDark] = React.useState(() => getStoredTheme() === "dark");
+    const [dark, setDark] = React.useState(() => getCurrentTheme() === "dark");
     const [now, setNow] = React.useState(() => new Date());
     const [user, setUser] = React.useState(FALLBACK_USER);
     const [userLoaded, setUserLoaded] = React.useState(false);
@@ -535,60 +637,6 @@ function TopBar() {
 
                 setUser(FALLBACK_USER);
             } finally {
-                if (active) {
-                    setUserLoaded(true);
-                }
-            }
-        }
-
-        function applyProfileUpdate(detail) {
-            if (!detail) {
-                loadUser();
-                return;
-            }
-
-            setUser(normalizeUserPayload(detail));
-            setUserLoaded(true);
-        }
-
-        loadUser();
-        window.addEventListener("profile-updated", (event) => applyProfileUpdate(event.detail));
-
-        return () => {
-            active = false;
-            window.removeEventListener("profile-updated", (event) => applyProfileUpdate(event.detail));
-        };
-    }, []);
-
-    // Fix the event listener cleanup by using stable handlers.
-    React.useEffect(() => {
-        let active = true;
-
-        async function loadUser() {
-            try {
-                const response = await fetch(TOPBAR_USER_API, {
-                    credentials: "same-origin",
-                    headers: {
-                        Accept: "application/json"
-                    }
-                });
-
-                const data = await parseJsonResponse(response);
-
-                if (!response.ok || data.error) {
-                    throw new Error(data.error || "Failed to load user information.");
-                }
-
-                if (!active) return;
-
-                setUser(normalizeUserPayload(data));
-            } catch (error) {
-                console.error("Unable to load top bar user:", error);
-
-                if (!active) return;
-
-                setUser(FALLBACK_USER);
-            } finally {
                 if (active) setUserLoaded(true);
             }
         }
@@ -614,89 +662,94 @@ function TopBar() {
         };
     }, []);
 
-const greetingMeta = getGreetingMeta(now);
-const greetingText = buildGreeting(user, now);
-const todayText = getFriendlyDate(now);
+    const greetingMeta = getGreetingMeta(now);
+    const greetingText = buildGreeting(user, now);
+    const todayText = getFriendlyDate(now);
 
-return (
-    <header className="topbar">
-        <div className="topbar-left">
-            <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
-                <div
-                    className="d-inline-flex align-items-center justify-content-center shadow-sm"
-                    style={{
-                        width: "56px",
-                        height: "56px",
-                        borderRadius: "18px",
-                        background:
-                            "linear-gradient(135deg, rgba(255,193,7,0.18), rgba(13,110,253,0.12))",
-                        border: "1px solid var(--bs-border-color)",
-                        flexShrink: 0
-                    }}
-                >
-                    <i
-                        className={`bi ${greetingMeta.icon}`}
-                        style={{ fontSize: "24px" }}
-                        aria-hidden="true"
-                    ></i>
-                </div>
-
-                <div style={{ minWidth: 0 }}>
+    return (
+        <header className="topbar">
+            <div className="topbar-left">
+                <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
                     <div
-                        className="d-flex align-items-center flex-wrap gap-2 mb-1"
-                        style={{ minWidth: 0 }}
-                    >
-                        <span
-                            className="badge rounded-pill text-body-emphasis"
-                            style={{
-                                background: "var(--bs-tertiary-bg)",
-                                border: "1px solid var(--bs-border-color)",
-                                padding: "6px 10px",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                letterSpacing: "0.04em"
-                            }}
-                        >
-                            <i className={`bi ${greetingMeta.icon} me-1`} aria-hidden="true"></i>
-                            {greetingMeta.chip}
-                        </span>
-
-                        <span
-                            className="text-body-secondary"
-                            style={{ fontSize: "12px", fontWeight: 600 }}
-                        >
-                            {todayText}
-                        </span>
-                    </div>
-
-                    <h1
-                        className="mb-1 fw-bold text-body"
+                        className="d-inline-flex align-items-center justify-content-center shadow-sm"
                         style={{
-                            fontSize: "28px",
-                            lineHeight: 1.1,
-                            letterSpacing: "-0.02em",
-                            margin: 0,
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            maxWidth: "100%"
+                            width: "56px",
+                            height: "56px",
+                            borderRadius: "18px",
+                            background:
+                                "linear-gradient(135deg, rgba(255,193,7,0.18), rgba(13,110,253,0.12))",
+                            border: "1px solid var(--bs-border-color)",
+                            flexShrink: 0
                         }}
                     >
-                        {greetingText}
-                    </h1>
+                        <i
+                            className={`bi ${greetingMeta.icon}`}
+                            style={{ fontSize: "24px" }}
+                            aria-hidden="true"
+                        ></i>
+                    </div>
+
+                    <div style={{ minWidth: 0 }}>
+                        <div
+                            className="d-flex align-items-center flex-wrap gap-2 mb-1"
+                            style={{ minWidth: 0 }}
+                        >
+                            <span
+                                className="badge rounded-pill text-body-emphasis"
+                                style={{
+                                    background: "var(--bs-tertiary-bg)",
+                                    border: "1px solid var(--bs-border-color)",
+                                    padding: "6px 10px",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                    letterSpacing: "0.04em"
+                                }}
+                            >
+                                <i className={`bi ${greetingMeta.icon} me-1`} aria-hidden="true"></i>
+                                {greetingMeta.chip}
+                            </span>
+
+                            <span
+                                className="text-body-secondary"
+                                style={{ fontSize: "12px", fontWeight: 600 }}
+                            >
+                                {todayText}
+                            </span>
+                        </div>
+
+                        <h1
+                            className="mb-1 fw-bold text-body"
+                            style={{
+                                fontSize: "28px",
+                                lineHeight: 1.1,
+                                letterSpacing: "-0.02em",
+                                margin: 0,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                maxWidth: "100%"
+                            }}
+                        >
+                            {greetingText}
+                        </h1>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div className="topbar-right">
-            <DarkModeToggle dark={dark} onToggle={() => setDark((value) => !value)} />
-            <div className="topbar-sep"></div>
-            <NotificationBell />
-            <div className="topbar-sep"></div>
-            <UserChip user={user} userLoaded={userLoaded} />
-        </div>
-    </header>
-);
+            <div className="topbar-right">
+                <DarkModeToggle dark={dark} onToggle={() => setDark((value) => !value)} />
+                <div className="topbar-sep"></div>
+
+                <ChatButton />
+                <div className="topbar-sep"></div>
+
+                <NotificationBell />
+                <div className="topbar-sep"></div>
+
+                <UserChip user={user} userLoaded={userLoaded} />
+            </div>
+        </header>
+    );
 }
 
 const sileoRoot = document.getElementById("sileo-root");
