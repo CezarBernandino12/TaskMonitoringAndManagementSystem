@@ -818,44 +818,43 @@
 }
 /* shared chart card */
 .db-chart-card {
-    width: 100%;
+    width: auto;
     height: auto;
     margin: 0;
 }
 
 /* ── Donut chart card ───────────────────────────────────────── */
-
 .db-donut-card {
     background: var(--db-card);
     border: 1px solid var(--db-border);
-    border-radius: 22px;
+    border-radius: 16px;
     box-shadow: var(--db-shadow);
-    padding: 18px 18px 16px;
-    min-height: auto;
-    max-height: none;
-    margin: 0;
+    padding: 12px 12px 10px;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
 }
 
 .db-donut-card-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 6px;
+    gap: 8px;
+    margin-bottom: 0;
 }
 
 .db-donut-title {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: 0.98rem;
     font-weight: 800;
     color: var(--db-title);
     font-family: "Nunito", sans-serif;
 }
 
 .db-donut-period {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--db-text);
     font-family: "Nunito", sans-serif;
@@ -863,29 +862,34 @@
 
 .db-donut-chart {
     width: 100%;
-    height: 360px;
+    height: 235px;
+    margin: 0;
     flex: 0 0 auto;
 }
 
+/* turn existing legend rows into compact blocks */
 .db-donut-legend {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 10px 4px 0;
-    margin-top: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(84px, max-content));
+    justify-content: center;
+    gap: 8px 18px;
+    padding: 0;
+    margin-top: -6px;
 }
 
 .db-donut-legend-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 2px;
+    min-width: 84px;
 }
 
 .db-donut-legend-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     min-width: 0;
 }
 
@@ -897,30 +901,50 @@
 }
 
 .db-donut-legend-label {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 700;
+    line-height: 1.05;
     color: var(--db-title);
     font-family: "Nunito", sans-serif;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .db-donut-legend-value {
-    font-size: 15px;
-    font-weight: 800;
-    color: var(--db-title);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--db-text);
     font-family: "Nunito", sans-serif;
-    white-space: nowrap;
+    padding-left: 14px;
+    white-space: normal;
 }
 
 .db-donut-empty {
-    min-height: 300px;
+    min-height: 185px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--db-text);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     font-family: "Nunito", sans-serif;
     text-align: center;
+}
+
+@media (max-width: 600px) {
+    .db-donut-card {
+        max-width: 100%;
+        padding: 12px 12px 10px;
+    }
+
+    .db-donut-chart {
+        height: 175px;
+    }
+
+    .db-donut-legend {
+        gap: 8px 14px;
+    }
 }
 
 

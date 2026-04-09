@@ -257,33 +257,44 @@ const fetchDashboardData = async () => {
             },
             series: [{
                 type: "pie",
-                radius: ["36%", "58%"],
-                center: ["50%", "38%"],
-                startAngle: 90,
-                selectedMode: "single",
-                selectedOffset: 4,
+                radius: ["42%", "68%"],
+                center: ["50%", "44%"],
+                startAngle: 140,
+                clockwise: true,
                 avoidLabelOverlap: false,
-                minAngle: 6,
+                minAngle: 8,
+                hoverAnimation: true,
+                selectedMode: false,
                 itemStyle: {
-                    borderWidth: 0
+                    borderColor: "#f7f7f7",
+                    borderWidth: 3,
+                    shadowBlur: 10,
+                    shadowOffsetY: 5,
+                    shadowColor: "rgba(0,0,0,0.12)"
                 },
                 label: {
                     show: true,
-                    position: "inside",
+                    position: "outside",
                     formatter: "{d}%",
-                    color: "#ffffff",
+                    color: "#444",
                     fontFamily: "Nunito, sans-serif",
-                    fontSize: 12,
-                    fontWeight: 800
+                    fontSize: 9,
+                    fontWeight: 800,
+                    backgroundColor: "#ffffff",
+                    borderRadius: 999,
+                    padding: [3, 5],
+                    shadowBlur: 4,
+                    shadowColor: "rgba(0,0,0,0.10)"
                 },
                 labelLine: {
                     show: false
                 },
-                data: taskStatusData.map((item, index) => ({
+                data: taskStatusData.map(item => ({
                     value: item.value,
                     name: item.name,
-                    selected: index === Math.min(1, taskStatusData.length - 1),
-                    itemStyle: { color: item.color }
+                    itemStyle: {
+                        color: item.color
+                    }
                 }))
             }]
         });
