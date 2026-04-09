@@ -34,67 +34,8 @@ body {
 }
 
 /* Toolbar */
-.task-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-}
-
-.task-toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.task-toolbar-filter-shell {
-    position: relative;
-}
-
-.task-toolbar-chip {
-    height: 38px;
-    padding: 0 14px;
-    border: 1px solid var(--task-border);
-    border-radius: 12px;
-    background: var(--task-surface);
-    color: #5f677a;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-}
-
-.task-toolbar-chip:hover {
-    background: #fcfcff;
-    border-color: #dbdeea;
-}
-
-.task-toolbar-chip.is-open {
-    border-color: #d6dcea;
-    background: #ffffff;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-}
-
-.task-toolbar-chip.is-selected span {
-    color: var(--task-text);
-}
-
-.task-toolbar-chip i:last-child {
-    transition: transform 0.18s ease;
-}
-
-.task-toolbar-chip.is-open i:last-child {
-    transform: rotate(180deg);
-}
-
 .task-create-btn {
-    height: 38px;
+    height: 35px;
     padding: 0 16px;
     border: none;
     border-radius: 12px;
@@ -103,8 +44,8 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
-    font-weight: 800;
+    font-size: 12px;
+    font-weight: 600;
     box-shadow: 0 10px 24px var(--task-primary-shadow);
     transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
@@ -114,224 +55,79 @@ body {
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
 }
 
-/* Filter popups */
-.task-toolbar-picker-popup,
-.task-toolbar-select-popup,
-.task-toolbar-year-menu {
-    background: #ffffff;
-    border: 1px solid #e5e8f0;
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
-}
-
-.task-toolbar-picker-popup,
-.task-toolbar-select-popup {
-    position: absolute;
-    top: calc(100% + 12px);
-    left: 0;
-    z-index: 90;
-    border-radius: 24px;
-}
-
-.task-toolbar-picker-popup {
-    width: 352px;
-    padding: 18px 18px 14px;
-}
-
-.task-toolbar-select-popup {
-    min-width: 220px;
-    padding: 8px;
-    border-radius: 18px;
-}
-
-.task-toolbar-picker-header {
+.task-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
 }
 
-.task-toolbar-picker-title {
-    position: relative;
+.task-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
 }
 
-.task-toolbar-year-trigger {
-    border: 0;
-    background: transparent;
-    padding: 0;
+.task-period-wrap {
+    display: flex;
+    align-items: center;
+}
+
+.task-period-bar {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 16px;
-    font-weight: 800;
-    color: #2f3545;
+    padding: 3px;
+    background: #ececec;
+    border: 1px solid #e3e3e3;
+    border-radius: 9px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.task-period-tab {
+    min-width: 0;
+    height: 26px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #7b7b7b;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
+    transition:
+        background 0.18s ease,
+        color 0.18s ease,
+        box-shadow 0.18s ease;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
-.task-toolbar-year-trigger i {
-    font-size: 11px;
+.task-period-tab:hover {
+    color: #3b3b3b;
+    background: rgba(255, 255, 255, 0.45);
 }
 
-.task-toolbar-year-menu {
-    position: absolute;
-    top: calc(100% + 10px);
-    left: 0;
-    z-index: 95;
-    width: 110px;
-    max-height: 220px;
-    overflow-y: auto;
-    padding: 6px;
-    border-radius: 16px;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.task-toolbar-year-menu::-webkit-scrollbar {
-    display: none;
-}
-
-.task-toolbar-year-option {
-    width: 100%;
-    border: 0;
-    background: transparent;
-    padding: 8px 10px;
-    border-radius: 12px;
-    text-align: left;
-    font-size: 13px;
-    font-weight: 700;
-    color: #3a4251;
-    transition: background 0.18s ease, color 0.18s ease;
-}
-
-.task-toolbar-year-option:hover {
-    background: #f5f7fc;
-}
-
-.task-toolbar-year-option.is-selected {
-    background: #eef3ff;
-    color: #466fe0;
-}
-
-.task-toolbar-picker-nav {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.task-toolbar-picker-nav button {
-    width: 32px;
-    height: 32px;
-    border: 0;
-    background: transparent;
-    border-radius: 999px;
-    color: #50586a;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.18s ease;
-}
-
-.task-toolbar-picker-nav button:hover {
-    background: #f5f7fc;
-}
-
-.task-toolbar-picker-weekdays,
-.task-toolbar-picker-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-}
-
-.task-toolbar-picker-weekdays {
-    margin-bottom: 4px;
-}
-
-.task-toolbar-picker-weekday {
-    text-align: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: #8a91a3;
-    padding: 6px 0;
-}
-
-.task-toolbar-picker-day {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    margin: 0 auto;
-    border: 0;
-    background: transparent;
-    border-radius: 999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    font-weight: 700;
-    color: #353b49;
-    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.task-toolbar-picker-day:hover {
-    background: #f5f7fc;
-}
-
-.task-toolbar-picker-day.is-outside {
-    color: #b0b7c6;
-}
-
-.task-toolbar-picker-day.is-selected {
-    color: #2873ff;
-    box-shadow: inset 0 0 0 3px #2873ff;
+.task-period-tab.is-active {
     background: #ffffff;
+    color: #1f1f1f;
+    font-weight: 600;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.08),
+        0 0 0 1px rgba(15, 23, 42, 0.03);
 }
 
-.task-toolbar-picker-day.is-today:not(.is-selected)::after {
-    content: "";
-    position: absolute;
-    bottom: 6px;
-    width: 4px;
-    height: 4px;
-    border-radius: 999px;
-    background: #2873ff;
+.task-period-tab:focus-visible {
+    outline: 2px solid rgba(17, 17, 17, 0.12);
+    outline-offset: 2px;
 }
 
-.task-toolbar-picker-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 10px;
-}
-
-.task-toolbar-clear-btn {
-    border: 0;
-    background: transparent;
-    color: var(--task-purple);
-    font-size: 13px;
-    font-weight: 800;
-}
-
-.task-toolbar-select-option {
-    width: 100%;
-    border: 0;
-    background: transparent;
-    padding: 12px 14px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #3a4251;
-    transition: background 0.18s ease, color 0.18s ease;
-}
-
-.task-toolbar-select-option:hover {
-    background: #f5f7fc;
-}
-
-.task-toolbar-select-option.is-selected {
-    background: #eef3ff;
-    color: #466fe0;
-}
 
 /* Task board */
 .task-board-shell {
@@ -1457,7 +1253,48 @@ body {
     color: #e5e7eb;
 }
 
+[data-theme="dark"] .task-period-bar {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+}
+
+[data-theme="dark"] .task-period-tab {
+    color: #b8bec9;
+}
+
+[data-theme="dark"] .task-period-tab:hover {
+    color: #f3f4f6;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .task-period-tab.is-active {
+    background: #ffffff;
+    color: #111827;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
 /* Responsive */
+
+@media (max-width: 575.98px) {
+    .task-period-bar {
+        max-width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .task-period-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .task-period-tab {
+        flex: 0 0 auto;
+        height: 29px;
+        padding: 0 14px;
+        font-size: 12.5px;
+    }
+}
+
 @media (max-width: 991.98px) {
     .task-lane-grid {
         overflow-x: auto;

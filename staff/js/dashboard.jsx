@@ -1,24 +1,23 @@
 import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
+import * as echarts from "https://esm.sh/echarts@6";
 
 window.sileo = sileo;
 
 const MANILA_TIMEZONE = "Asia/Manila";
 const ITEMS_PER_PAGE = 10;
 
-// ─── Period options ────────────────────────────────────────────────────────────
-// Default is "week" — broad enough to show meaningful counts, narrow enough
-// to feel actionable on a daily-use dashboard.
-const PERIOD_OPTIONS = [
-    { key: "today",   label: "Today" },
-    { key: "week",    label: "This Week" },
-    { key: "month",   label: "This Month" },
-    { key: "all",     label: "All Time" },
-];
-const DEFAULT_PERIOD = "week";
+const TASK_PROGRESS_STEP = 1;
+const TASK_PROGRESS_LONG_PRESS_DELAY = 320;
+const TASK_PROGRESS_REPEAT_INTERVAL = 120;
 
-// ─── Utilities ─────────────────────────────────────────────────────────────────
+function clampProgress(value = 0) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(0, Math.min(100, Math.round(num)));
+}
+
 
 function showSileoToast(type = "info", payload = {}) {
     const toastMethod = window.sileo?.[type] || window.sileo?.info;
@@ -88,6 +87,7 @@ function buildTaskId(task = {}, index = 0) {
 function normalizeTask(task = {}, index = 0) {
     const normalizedStatus   = normalizeStatus(task.status, task.deadline);
     const normalizedPriority = normalizePriority(task.priority);
+
     return {
         ...task,
         id:               buildTaskId(task, index),
@@ -98,6 +98,7 @@ function normalizeTask(task = {}, index = 0) {
         project_name:     task.project_name || "",
         start_date:       task.start_date || "",
         deadline:         task.deadline || "",
+        progress:         clampProgress(task.progress ?? task.progress_percentage ?? 0),
         status:           normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1),
         priority:         normalizedPriority.charAt(0).toUpperCase() + normalizedPriority.slice(1),
         normalizedStatus,
@@ -106,6 +107,7 @@ function normalizeTask(task = {}, index = 0) {
         isOverdue:        normalizedStatus === "overdue"
     };
 }
+
 
 function normalizeTasks(taskList = []) {
     const seenIds = new Map();
@@ -131,72 +133,6 @@ async function parseMutationResponse(response, fallbackMessage) {
     return message;
 }
 
-// ─── Period helpers ────────────────────────────────────────────────────────────
-
-/**
- * Returns { start: "YYYY-MM-DD", end: "YYYY-MM-DD" } for the chosen period,
- * anchored to today in Manila time.
- */
-function getPeriodRange(periodKey) {
-    const todayYMD = getTodayYMDInManila();
-    const today    = parseYMDToUTC(todayYMD);
-
-    if (periodKey === "today") {
-        return { start: todayYMD, end: todayYMD };
-    }
-
-    if (periodKey === "week") {
-        // Monday → Sunday of the current ISO week
-        const dow       = today.getUTCDay();                          // 0 = Sun
-        const diffToMon = dow === 0 ? -6 : 1 - dow;
-        const monday    = new Date(today);
-        monday.setUTCDate(today.getUTCDate() + diffToMon);
-        const sunday    = new Date(monday);
-        sunday.setUTCDate(monday.getUTCDate() + 6);
-        return {
-            start: monday.toISOString().slice(0, 10),
-            end:   sunday.toISOString().slice(0, 10)
-        };
-    }
-
-    if (periodKey === "month") {
-        const [y, m] = todayYMD.split("-").map(Number);
-        const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
-        return {
-            start: `${String(y).padStart(4,"0")}-${String(m).padStart(2,"0")}-01`,
-            end:   `${String(y).padStart(4,"0")}-${String(m).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`
-        };
-    }
-
-    // "all" — no date boundary
-    return { start: null, end: null };
-}
-
-/**
- * Checks whether a task is "in scope" for the chosen period.
- *
- * Scoping rules:
- *   - Completed tasks   → included if completed_at (or deadline) falls in range
- *   - Ongoing / other   → included if deadline falls in range
- *   - Overdue tasks     → always included (they need attention regardless of period)
- *   - "all"             → every task is in scope
- *
- * Tasks with no deadline are excluded from Today / Week / Month views
- * because they have no natural time anchor.
- */
-function isTaskInPeriod(task, periodKey) {
-    if (periodKey === "all") return true;
-
-    const { start, end } = getPeriodRange(periodKey);
-
-    // Overdue tasks are always surfaced — they are past-due and need action
-    if (task.normalizedStatus === "overdue") return true;
-
-    if (!task.deadline) return false;
-
-    return task.deadline >= start && task.deadline <= end;
-}
-
 // ─── Pill / tone maps ──────────────────────────────────────────────────────────
 
 const priorityToneMap = { high: "priority-high", medium: "priority-medium", low: "priority-low" };
@@ -216,26 +152,89 @@ function getPriorityLabel(priority = "") {
 // ─── App ───────────────────────────────────────────────────────────────────────
 
 function App() {
-    const [tasks,      setTasks]      = React.useState([]);
-    const [loading,    setLoading]    = React.useState(true);
-    const [error,      setError]      = React.useState("");
+    const [tasks, setTasks] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState("");
     const [isMutating, setIsMutating] = React.useState(false);
+    const [focusedTaskId, setFocusedTaskId] = React.useState("");
+    const progressQueueRef = React.useRef(Promise.resolve());
 
-    // Selected period — lifted here so both TaskSummary and DueSoon can share it
-    const [period, setPeriod] = React.useState(DEFAULT_PERIOD);
+    const updateTaskProgressOnServer = async (taskId, direction) => {
+        const body = new URLSearchParams();
+        body.append("task_id", taskId);
+        body.append("direction", direction);
+        body.append("step", String(TASK_PROGRESS_STEP));
+
+        const response = await fetch("php/update_task_progress.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+            body: body.toString()
+        });
+
+        return parseMutationResponse(response, `Failed to update progress for task ${taskId}.`);
+    };
+
+        const handleTaskProgressChange = (taskId, direction, { silent = false } = {}) => {
+            if (!taskId) return Promise.resolve();
+
+            setError("");
+
+            const runMutation = async () => {
+                try {
+                    await updateTaskProgressOnServer(taskId, direction);
+                    await finalizeMutation();
+
+                    if (!silent) {
+                        showSileoToast(direction === "increase" ? "success" : "info", {
+                            title: "Task progress updated",
+                            description:
+                                direction === "increase"
+                                    ? `Task progress increased by ${TASK_PROGRESS_STEP}%.`
+                                    : `Task progress decreased by ${TASK_PROGRESS_STEP}%.`
+                        });
+                    }
+                } catch (err) {
+                    const msg = err.message || "Unable to update task progress.";
+                    setError(msg);
+                    showSileoToast("error", { title: "Update failed", description: msg });
+                    throw err;
+                }
+            };
+
+            const queuedMutation = progressQueueRef.current.then(runMutation, runMutation);
+            progressQueueRef.current = queuedMutation.catch(() => null);
+
+            return queuedMutation;
+        };
 
     const fetchTasks = React.useCallback(async ({ showLoader = true, throwOnError = false, signal } = {}) => {
         if (showLoader) setLoading(true);
         setError("");
+
         try {
             const response = await fetch("php/get_tasks.php", {
                 headers: { Accept: "application/json" },
                 signal
             });
+
             if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
+
             const data = await response.json();
             if (!Array.isArray(data)) throw new Error("The server did not return a valid task list.");
-            setTasks(normalizeTasks(data));
+
+            const normalized = normalizeTasks(data);
+            setTasks(normalized);
+
+            const visibleTasks = normalized.filter(task =>
+                task.normalizedStatus === "ongoing" ||
+                task.normalizedStatus === "overdue"
+            );
+
+            setFocusedTaskId(prev => {
+                if (prev && visibleTasks.some(task => task.id === prev)) return prev;
+                return visibleTasks[0]?.id || "";
+            });
+
             return data;
         } catch (err) {
             if (err?.name === "AbortError") return null;
@@ -254,8 +253,6 @@ function App() {
         fetchTasks({ signal: controller.signal });
         return () => controller.abort();
     }, [fetchTasks]);
-
-    // ── Server mutation helpers (unchanged) ───────────────────────────────────
 
     const updateTaskStatusOnServer = async (taskId, status) => {
         const body = new URLSearchParams();
@@ -299,23 +296,33 @@ function App() {
     const handleBulkUpdateStatus = async (taskIds, nextStatus) => {
         if (taskIds.length === 0) return;
         const scrollY = window.scrollY;
-        setError(""); setIsMutating(true);
+        setError("");
+        setIsMutating(true);
+
         try {
             const results = await Promise.allSettled(taskIds.map(id => updateTaskStatusOnServer(id, nextStatus)));
             await finalizeMutation();
-            const failedCount  = results.filter(r => r.status === "rejected").length;
+
+            const failedCount = results.filter(r => r.status === "rejected").length;
             const successCount = results.length - failedCount;
             const n = normalizeText(nextStatus);
+
             window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "auto" }));
+
             if (failedCount === 0) {
                 const desc = n === "completed"
                     ? `${successCount} ${successCount === 1 ? "task was" : "tasks were"} marked as Completed.`
                     : n === "ongoing"
                         ? `${successCount} ${successCount === 1 ? "task was" : "tasks were"} moved to Ongoing.`
                         : `${successCount} ${successCount === 1 ? "task was" : "tasks were"} updated to ${nextStatus}.`;
-                showSileoToast(n === "completed" ? "success" : "info", { title: "Status updated", description: desc });
+
+                showSileoToast(n === "completed" ? "success" : "info", {
+                    title: "Status updated",
+                    description: desc
+                });
                 return;
             }
+
             const msg = `${successCount} succeeded, ${failedCount} failed. ${results.find(r => r.status === "rejected")?.reason?.message || "Some tasks could not be updated."}`;
             setError(msg);
             showSileoToast("error", { title: "Partial update", description: msg });
@@ -323,122 +330,135 @@ function App() {
             const msg = err.message || "Unable to refresh tasks after saving the status update.";
             setError(msg);
             showSileoToast("error", { title: "Update failed", description: msg });
-        } finally { setIsMutating(false); }
+        } finally {
+            setIsMutating(false);
+        }
     };
 
     const handleBulkUpdatePriority = async (taskIds, nextPriority) => {
         if (taskIds.length === 0) return;
         const scrollY = window.scrollY;
-        setError(""); setIsMutating(true);
+        setError("");
+        setIsMutating(true);
+
         try {
             const results = await Promise.allSettled(taskIds.map(id => updateTaskPriorityOnServer(id, nextPriority)));
             await finalizeMutation();
-            const failedCount  = results.filter(r => r.status === "rejected").length;
+
+            const failedCount = results.filter(r => r.status === "rejected").length;
             const successCount = results.length - failedCount;
+
             window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "auto" }));
+
             if (failedCount === 0) {
-                showSileoToast("info", { title: "Priority updated", description: `${successCount} ${successCount === 1 ? "task was" : "tasks were"} updated to ${nextPriority}.` });
+                showSileoToast("info", {
+                    title: "Priority updated",
+                    description: `${successCount} ${successCount === 1 ? "task was" : "tasks were"} updated to ${nextPriority}.`
+                });
                 return;
             }
+
             const msg = `${successCount} succeeded, ${failedCount} failed. ${results.find(r => r.status === "rejected")?.reason?.message || "Some tasks could not be updated."}`;
-            setError(msg); showSileoToast("error", { title: "Partial update", description: msg });
+            setError(msg);
+            showSileoToast("error", { title: "Partial update", description: msg });
         } catch (err) {
             const msg = err.message || "Unable to refresh tasks after saving the priority update.";
-            setError(msg); showSileoToast("error", { title: "Update failed", description: msg });
-        } finally { setIsMutating(false); }
+            setError(msg);
+            showSileoToast("error", { title: "Update failed", description: msg });
+        } finally {
+            setIsMutating(false);
+        }
     };
 
     const handleBulkDelete = async (taskIds) => {
         if (taskIds.length === 0) return;
         const scrollY = window.scrollY;
-        setError(""); setIsMutating(true);
+        setError("");
+        setIsMutating(true);
+
         try {
             const results = await Promise.allSettled(taskIds.map(id => deleteTaskOnServer(id)));
             await finalizeMutation();
-            const failedCount  = results.filter(r => r.status === "rejected").length;
+
+            const failedCount = results.filter(r => r.status === "rejected").length;
             const successCount = results.length - failedCount;
+
             window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "auto" }));
+
             if (failedCount === 0) {
-                showSileoToast("success", { title: "Tasks deleted", description: `${successCount} ${successCount === 1 ? "task has" : "tasks have"} been removed.` });
+                showSileoToast("success", {
+                    title: "Tasks deleted",
+                    description: `${successCount} ${successCount === 1 ? "task has" : "tasks have"} been removed.`
+                });
                 return;
             }
+
             const msg = `${successCount} deleted, ${failedCount} failed. ${results.find(r => r.status === "rejected")?.reason?.message || "Some tasks could not be deleted."}`;
-            setError(msg); showSileoToast("error", { title: "Partial delete", description: msg });
+            setError(msg);
+            showSileoToast("error", { title: "Partial delete", description: msg });
         } catch (err) {
             const msg = err.message || "Unable to refresh tasks after deleting selected tasks.";
-            setError(msg); showSileoToast("error", { title: "Delete failed", description: msg });
-        } finally { setIsMutating(false); }
+            setError(msg);
+            showSileoToast("error", { title: "Delete failed", description: msg });
+        } finally {
+            setIsMutating(false);
+        }
     };
+
+        const tableTasks = React.useMemo(() => {
+            return tasks.filter(task =>
+                task.normalizedStatus === "ongoing" ||
+                task.normalizedStatus === "overdue"
+            );
+        }, [tasks]);
 
     return (
         <>
             <Toaster />
-            <TaskSummary tasks={tasks} period={period} onPeriodChange={setPeriod} />
-            <DueSoon tasks={tasks} period={period} />
-            <TaskTable
-                tasks={tasks}
-                loading={loading}
-                error={error}
-                isMutating={isMutating}
-                onRetry={() => fetchTasks()}
-                onBulkUpdateStatus={handleBulkUpdateStatus}
-                onBulkUpdatePriority={handleBulkUpdatePriority}
-                onBulkDelete={handleBulkDelete}
-            />
+            <TaskSummary tasks={tasks} />
+
+            <div className="task-dashboard-grid">
+                <TaskTable
+                    tasks={tableTasks}
+                    loading={loading}
+                    error={error}
+                    isMutating={isMutating}
+                    focusedTaskId={focusedTaskId}
+                    onTaskFocus={setFocusedTaskId}
+                    onRetry={() => fetchTasks()}
+                    onBulkUpdateStatus={handleBulkUpdateStatus}
+                    onBulkUpdatePriority={handleBulkUpdatePriority}
+                    onBulkDelete={handleBulkDelete}
+                />
+
+                <TaskProgressCard
+                    task={tableTasks.find(task => task.id === focusedTaskId) || null}
+                    isMutating={isMutating}
+                    onIncrease={(options) => handleTaskProgressChange(focusedTaskId, "increase", options)}
+                    onDecrease={(options) => handleTaskProgressChange(focusedTaskId, "decrease", options)}
+                />
+            </div>
         </>
     );
 }
 
 // ─── TaskSummary ──────────────────────────────────────────────────────────────
 
-function TaskSummary({ tasks, period, onPeriodChange }) {
-    // Filter tasks to only those in scope for the selected period
-    const scopedTasks = tasks.filter(t => isTaskInPeriod(t, period));
-
-    const total     = scopedTasks.length;
-    const ongoing   = scopedTasks.filter(t => t.normalizedStatus === "ongoing").length;
-    const completed = scopedTasks.filter(t => t.normalizedStatus === "completed").length;
-    const overdue   = scopedTasks.filter(t => t.normalizedStatus === "overdue").length;
-
-    const periodLabel = PERIOD_OPTIONS.find(o => o.key === period)?.label ?? "This Week";
-
-    // Descriptive meta text changes with the period so the cards feel contextual
-    const metaFor = (key) => {
-        if (period === "today")  return { total: "due today",   ongoing: "active today",   completed: "done today",  overdue: "past due" }[key];
-        if (period === "week")   return { total: "this week",   ongoing: "active this week", completed: "done this week", overdue: "past due" }[key];
-        if (period === "month")  return { total: "this month",  ongoing: "active this month", completed: "done this month", overdue: "past due" }[key];
-        return                          { total: "total tasks", ongoing: "active tasks",    completed: "finished tasks", overdue: "needs attention" }[key];
-    };
+function TaskSummary({ tasks }) {
+    const total = tasks.length;
+    const ongoing = tasks.filter(t => t.normalizedStatus === "ongoing").length;
+    const completed = tasks.filter(t => t.normalizedStatus === "completed").length;
+    const overdue = tasks.filter(t => t.normalizedStatus === "overdue").length;
 
     const stats = [
-        { key: "total",     title: "Total Tasks", value: total,     icon: "bi-card-checklist",       pillClass: "stats-pill-neutral", pillText: periodLabel,  metaText: metaFor("total") },
-        { key: "ongoing",   title: "Ongoing",     value: ongoing,   icon: "bi-arrow-repeat",         pillClass: "stats-pill-info",    pillText: "Open",       metaText: metaFor("ongoing") },
-        { key: "completed", title: "Completed",   value: completed, icon: "bi-check2-circle",        pillClass: "stats-pill-success", pillText: "Done",       metaText: metaFor("completed") },
-        { key: "overdue",   title: "Overdue",     value: overdue,   icon: "bi-exclamation-triangle", pillClass: "stats-pill-danger",  pillText: "Alert",      metaText: metaFor("overdue") },
+        { key: "total", title: "Total Tasks", value: total, icon: "bi-card-checklist", pillClass: "stats-pill-neutral", pillText: "All Time", metaText: "total tasks" },
+        { key: "ongoing", title: "Ongoing", value: ongoing, icon: "bi-arrow-repeat", pillClass: "stats-pill-info", pillText: "Open", metaText: "active tasks" },
+        { key: "completed", title: "Completed", value: completed, icon: "bi-check2-circle", pillClass: "stats-pill-success", pillText: "Done", metaText: "finished tasks" },
+        { key: "overdue", title: "Overdue", value: overdue, icon: "bi-exclamation-triangle", pillClass: "stats-pill-danger", pillText: "Alert", metaText: "needs attention" },
     ];
 
     return (
         <div className="stats-summary-block mb-4">
-            <div className="stats-period-wrap">
-                <div className="stats-period-bar" aria-label="Task summary period">
-                    {PERIOD_OPTIONS.map(opt => {
-                        const isActive = period === opt.key;
-
-                        return (
-                            <button
-                                key={opt.key}
-                                type="button"
-                                className={`stats-period-tab ${isActive ? "is-active" : ""}`}
-                                onClick={() => onPeriodChange(opt.key)}
-                                aria-pressed={isActive}
-                            >
-                                {opt.label}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
             <section className="stats-strip">
                 <div className="stats-strip-inner">
                     {stats.map(item => (
@@ -462,45 +482,248 @@ function TaskSummary({ tasks, period, onPeriodChange }) {
     );
 }
 
-function DueSoon({ tasks }) {
-    const today = parseYMDToUTC(getTodayYMDInManila());
+function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
+    const rawProgress = Number(task?.progress ?? task?.progress_percentage ?? 0);
+    const progressValue = Math.max(0, Math.min(100, Number.isFinite(rawProgress) ? rawProgress : 0));
 
-    const dueSoonTasks = tasks.filter(task => {
-        if (task.isCompleted || !task.deadline) return false;
-        const deadline = parseYMDToUTC(task.deadline);
-        if (!deadline || !today) return false;
-        const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
-        return diffDays === 0 || diffDays === 1;
+    const progressLabel =
+        Number.isFinite(rawProgress) && !Number.isInteger(rawProgress)
+            ? `${Math.max(0, Math.min(100, rawProgress)).toFixed(2)}%`
+            : `${Math.round(progressValue)}%`;
+
+    const totalTicks = 72;
+    const activeTicks = Math.round((progressValue / 100) * totalTicks);
+
+    const center = 120;
+    const outerRadius = 92;
+    const shortInnerRadius = 78;
+    const longInnerRadius = 72;
+
+    const pressStateRef = React.useRef({
+        timeoutId: null,
+        intervalId: null,
+        didLongPress: false
     });
 
-    const getDueLabel = deadlineStr => {
-        const deadline = parseYMDToUTC(deadlineStr);
-        if (!deadline || !today) return "";
-        const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
-        if (diffDays === 0) return "Due Today";
-        if (diffDays === 1) return "Due Tomorrow";
-        return "";
-    };
+    function polarToCartesian(cx, cy, radius, angleDeg) {
+        const angleRad = (angleDeg - 90) * (Math.PI / 180);
+        return {
+            x: cx + radius * Math.cos(angleRad),
+            y: cy + radius * Math.sin(angleRad)
+        };
+    }
 
-    if (dueSoonTasks.length === 0) return null;
+    const clearPressTimers = React.useCallback(() => {
+        if (pressStateRef.current.timeoutId) {
+            window.clearTimeout(pressStateRef.current.timeoutId);
+            pressStateRef.current.timeoutId = null;
+        }
+
+        if (pressStateRef.current.intervalId) {
+            window.clearInterval(pressStateRef.current.intervalId);
+            pressStateRef.current.intervalId = null;
+        }
+    }, []);
+
+    React.useEffect(() => {
+        return () => clearPressTimers();
+    }, [clearPressTimers]);
+
+    const startPress = React.useCallback((action, disabled) => (event) => {
+        if (disabled) return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+
+        clearPressTimers();
+        pressStateRef.current.didLongPress = false;
+
+        pressStateRef.current.timeoutId = window.setTimeout(() => {
+            pressStateRef.current.didLongPress = true;
+
+            action({ silent: true });
+
+            pressStateRef.current.intervalId = window.setInterval(() => {
+                action({ silent: true });
+            }, TASK_PROGRESS_REPEAT_INTERVAL);
+        }, TASK_PROGRESS_LONG_PRESS_DELAY);
+    }, [clearPressTimers]);
+
+    const endPress = React.useCallback(() => {
+        clearPressTimers();
+    }, [clearPressTimers]);
+
+    const handlePressClick = React.useCallback((action) => (event) => {
+        if (pressStateRef.current.didLongPress) {
+            event.preventDefault();
+            event.stopPropagation();
+            pressStateRef.current.didLongPress = false;
+            return;
+        }
+
+        action({ silent: false });
+    }, []);
+
+    const ticks = Array.from({ length: totalTicks }, (_, index) => {
+        const angle = (360 / totalTicks) * index;
+        const isMajor = index % 3 === 0;
+        const innerRadius = isMajor ? longInnerRadius : shortInnerRadius;
+        const start = polarToCartesian(center, center, innerRadius, angle);
+        const end = polarToCartesian(center, center, outerRadius, angle);
+        const isActive = index < activeTicks;
+
+        let stroke = "rgba(124, 156, 199, 0.14)";
+        if (isActive) {
+            const glowStrength = 0.45 + (0.55 * ((index + 1) / Math.max(activeTicks, 1)));
+            stroke = `rgba(68, 140, 255, ${glowStrength})`;
+        }
+
+        return {
+            x1: start.x,
+            y1: start.y,
+            x2: end.x,
+            y2: end.y,
+            stroke,
+            strokeWidth: isMajor ? 2.6 : 1.8
+        };
+    });
+
+    if (!task) {
+        return (
+            <aside className="task-progress-panel task-progress-panel--empty">
+                <div className="task-progress-panel-head">
+                    <div className="task-progress-panel-title">Task Progress</div>
+                    <div className="task-progress-panel-period">
+                        <span>Select task</span>
+                        <i className="bi bi-chevron-down"></i>
+                    </div>
+                </div>
+
+                <div className="task-progress-empty-copy">
+                    Select a task from the table to track its progress.
+                </div>
+            </aside>
+        );
+    }
+
+    const metaItems = [
+        {
+            key: "status",
+            label: "Status",
+            value: task.status || "-",
+            dotClass: `is-status-${task.normalizedStatus || "other"}`
+        },
+        {
+            key: "priority",
+            label: "Priority",
+            value: getPriorityLabel(task.normalizedPriority),
+            dotClass: `is-priority-${task.normalizedPriority || "medium"}`
+        },
+        {
+            key: "due-date",
+            label: "Due Date",
+            value: formatDate(task.deadline),
+            dotClass: task.isOverdue ? "is-due-overdue" : "is-due-date"
+        }
+    ];
+
+    const decreaseDisabled = isMutating || progressValue <= 0;
+    const increaseDisabled = isMutating || progressValue >= 100;
 
     return (
-        <section className="due-soon-strip mb-4">
-            <div className="due-soon-header">
-                <i className="bi bi-alarm"></i>
-                <span>Coming up — {dueSoonTasks.length} {dueSoonTasks.length === 1 ? "task" : "tasks"} due soon</span>
+        <aside className="task-progress-panel task-progress-panel--performance">
+            <div className="task-progress-panel-head">
+                <div className="task-progress-panel-title">Task Progress</div>
             </div>
-            <div className="due-soon-list">
-                {dueSoonTasks.map(task => (
-                    <div key={task.id} className="due-soon-item">
-                        <span className="due-soon-title">{task.title}</span>
-                        <span className={`due-soon-badge ${getDueLabel(task.deadline) === "Due Today" ? "is-today" : "is-tomorrow"}`}>
-                            {getDueLabel(task.deadline)}
-                        </span>
+
+            <div className="task-progress-visual">
+                <div className="task-progress-chart-shell is-performance">
+                    <svg
+                        className="task-progress-svg"
+                        viewBox="0 0 240 240"
+                        role="img"
+                        aria-label={`${progressLabel} progress for ${task.title}`}
+                    >
+                        <defs>
+                            <filter id="taskProgressGlow" x="-40%" y="-40%" width="180%" height="180%">
+                                <feGaussianBlur stdDeviation="1.8" result="blur" />
+                                <feMerge>
+                                    <feMergeNode in="blur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+
+                        {ticks.map((tick, index) => (
+                            <line
+                                key={index}
+                                x1={tick.x1}
+                                y1={tick.y1}
+                                x2={tick.x2}
+                                y2={tick.y2}
+                                stroke={tick.stroke}
+                                strokeWidth={tick.strokeWidth}
+                                strokeLinecap="round"
+                                filter={index < activeTicks ? "url(#taskProgressGlow)" : undefined}
+                            />
+                        ))}
+                    </svg>
+
+                    <div className="task-progress-center performance-center">
+                        <div className="task-progress-value performance-value">{progressLabel}</div>
+                        <div className="task-progress-inline-title">{task.title}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="task-progress-meta-list" aria-label="Task details">
+                {metaItems.map(item => (
+                    <div className="task-progress-meta-item" key={item.key}>
+                        <span className={`task-progress-meta-dot ${item.dotClass}`}></span>
+                        <span className="task-progress-meta-name">{item.label}</span>
+                        <span className="task-progress-meta-value">{item.value}</span>
                     </div>
                 ))}
             </div>
-        </section>
+
+            <div className="task-progress-actions">
+                <div
+                    className="task-progress-split-control"
+                    role="group"
+                    aria-label={`Update progress for ${task.title}`}
+                >
+                    <button
+                        type="button"
+                        className="task-progress-split-btn is-minus"
+                        onPointerDown={startPress(onDecrease, decreaseDisabled)}
+                        onPointerUp={endPress}
+                        onPointerLeave={endPress}
+                        onPointerCancel={endPress}
+                        onClick={handlePressClick(onDecrease)}
+                        disabled={decreaseDisabled}
+                        aria-label={`Decrease progress for ${task.title}`}
+                        title="Decrease progress"
+                    >
+                        <span className="task-progress-split-icon is-minus" aria-hidden="true"></span>
+                    </button>
+
+                    <span className="task-progress-split-divider" aria-hidden="true"></span>
+
+                    <button
+                        type="button"
+                        className="task-progress-split-btn is-plus"
+                        onPointerDown={startPress(onIncrease, increaseDisabled)}
+                        onPointerUp={endPress}
+                        onPointerLeave={endPress}
+                        onPointerCancel={endPress}
+                        onClick={handlePressClick(onIncrease)}
+                        disabled={increaseDisabled}
+                        aria-label={`Increase progress for ${task.title}`}
+                        title="Increase progress"
+                    >
+                        <span className="task-progress-split-icon is-plus" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </aside>
     );
 }
 
@@ -508,36 +731,19 @@ function DueSoon({ tasks }) {
 
 function TaskTable({
     tasks, loading, error, isMutating,
+    focusedTaskId, onTaskFocus,
     onRetry, onBulkUpdateStatus, onBulkUpdatePriority, onBulkDelete
 }) {
     const [selectedTaskIds, setSelectedTaskIds] = React.useState([]);
-    const [isFilterOpen,    setIsFilterOpen]    = React.useState(false);
-    const [statusFilter,    setStatusFilter]    = React.useState("All");
-    const [currentPage,     setCurrentPage]     = React.useState(1);
+    const [currentPage, setCurrentPage] = React.useState(1);
 
-    const filterRef    = React.useRef(null);
-    const checkAllRef  = React.useRef(null);
+    const checkAllRef = React.useRef(null);
 
-    const filterOptions = ["All", "Ongoing", "Completed", "Overdue", "Other"];
+    const filteredTasks = tasks;
 
-    React.useEffect(() => {
-        const handleOutsideClick = e => {
-            if (filterRef.current && !filterRef.current.contains(e.target)) setIsFilterOpen(false);
-        };
-        document.addEventListener("mousedown", handleOutsideClick);
-        return () => document.removeEventListener("mousedown", handleOutsideClick);
-    }, []);
-
-    const filteredTasks = tasks.filter(task => {
-        if (statusFilter === "All") return true;
-        return task.normalizedStatus === normalizeText(statusFilter);
-    });
-
-    const totalPages      = Math.max(1, Math.ceil(filteredTasks.length / ITEMS_PER_PAGE));
-    const pageStartIndex  = (currentPage - 1) * ITEMS_PER_PAGE;
+    const totalPages = Math.max(1, Math.ceil(filteredTasks.length / ITEMS_PER_PAGE));
+    const pageStartIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const currentPageTasks = filteredTasks.slice(pageStartIndex, pageStartIndex + ITEMS_PER_PAGE);
-
-    React.useEffect(() => { setCurrentPage(1); }, [statusFilter]);
 
     React.useEffect(() => {
         if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -546,24 +752,40 @@ function TaskTable({
     React.useEffect(() => {
         const allowedIds = new Set(filteredTasks.map(t => t.id));
         setSelectedTaskIds(prev => prev.filter(id => allowedIds.has(id)));
-    }, [statusFilter, tasks]);
+    }, [tasks]);
 
     React.useEffect(() => {
         if (!checkAllRef.current) return;
-        const visibleIds            = currentPageTasks.map(t => t.id);
-        const selectedVisibleCount  = visibleIds.filter(id => selectedTaskIds.includes(id)).length;
-        const allVisibleSelected    = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
-        const someVisibleSelected   = selectedVisibleCount > 0 && !allVisibleSelected;
+
+        const visibleIds = currentPageTasks.map(t => t.id);
+        const selectedVisibleCount = visibleIds.filter(id => selectedTaskIds.includes(id)).length;
+        const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+        const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+
         checkAllRef.current.indeterminate = someVisibleSelected;
     }, [currentPageTasks, selectedTaskIds]);
 
-    const visibleTaskIds       = currentPageTasks.map(t => t.id);
+        React.useEffect(() => {
+            const hasSelection = selectedTaskIds.length > 0;
+            document.body.classList.toggle("has-bulk-action-bar", hasSelection);
+
+            return () => {
+                document.body.classList.remove("has-bulk-action-bar");
+            };
+        }, [selectedTaskIds.length]);
+
+
+    const visibleTaskIds = currentPageTasks.map(t => t.id);
     const selectedVisibleCount = visibleTaskIds.filter(id => selectedTaskIds.includes(id)).length;
-    const allVisibleSelected   = visibleTaskIds.length > 0 && selectedVisibleCount === visibleTaskIds.length;
-    const selectedTasks        = tasks.filter(t => selectedTaskIds.includes(t.id));
+    const allVisibleSelected = visibleTaskIds.length > 0 && selectedVisibleCount === visibleTaskIds.length;
+    const selectedTasks = tasks.filter(t => selectedTaskIds.includes(t.id));
 
     const toggleTaskSelection = taskId => {
-        setSelectedTaskIds(prev => prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]);
+        setSelectedTaskIds(prev =>
+            prev.includes(taskId)
+                ? prev.filter(id => id !== taskId)
+                : [...prev, taskId]
+        );
     };
 
     const toggleSelectAllVisible = () => {
@@ -577,12 +799,15 @@ function TaskTable({
 
     const getPaginationItems = () => {
         if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+
         const items = [1];
         const start = Math.max(2, currentPage - 1);
-        const end   = Math.min(totalPages - 1, currentPage + 1);
+        const end = Math.min(totalPages - 1, currentPage + 1);
+
         if (start > 2) items.push("left-ellipsis");
         for (let p = start; p <= end; p++) items.push(p);
         if (end < totalPages - 1) items.push("right-ellipsis");
+
         items.push(totalPages);
         return items;
     };
@@ -593,42 +818,8 @@ function TaskTable({
         <>
             <section className="task-board">
                 <div className="task-board-head">
-                    <div><h5 className="task-board-title">Your Tasks</h5></div>
-
-                    <div className="task-board-actions">
-                        <div className="task-filter" ref={filterRef}>
-                            <button
-                                type="button"
-                                className={`task-filter-btn ${isFilterOpen ? "is-open" : ""}`}
-                                onClick={() => setIsFilterOpen(prev => !prev)}
-                                aria-haspopup="menu"
-                                aria-expanded={isFilterOpen}
-                                disabled={loading || isMutating}
-                            >
-                                <span className="task-filter-btn-inner">
-                                    <i className="bi bi-filter"></i>
-                                    <span>Filter</span>
-                                </span>
-                                <i className={`bi ${isFilterOpen ? "bi-chevron-up" : "bi-chevron-down"} task-filter-caret`}></i>
-                            </button>
-
-                            {isFilterOpen && (
-                                <div className="task-filter-menu" role="menu">
-                                    {filterOptions.map(option => (
-                                        <button
-                                            key={option}
-                                            type="button"
-                                            className={`task-filter-item ${statusFilter === option ? "is-active" : ""}`}
-                                            onClick={() => { setStatusFilter(option); setIsFilterOpen(false); }}
-                                            disabled={isMutating}
-                                        >
-                                            <span>{option}</span>
-                                            {statusFilter === option && <i className="bi bi-check2"></i>}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                    <div>
+                        <h5 className="task-board-title">Your Tasks</h5>
                     </div>
                 </div>
 
@@ -641,7 +832,7 @@ function TaskTable({
                                 className="task-checkbox-input"
                                 checked={allVisibleSelected}
                                 onChange={toggleSelectAllVisible}
-                                aria-label={`Select all ${statusFilter === "All" ? "" : `${statusFilter.toLowerCase()} `}tasks on this page`}
+                                aria-label="Select all tasks on this page"
                                 disabled={loading || isMutating || currentPageTasks.length === 0}
                             />
                             <span className="task-checkbox-ui"></span>
@@ -650,7 +841,6 @@ function TaskTable({
                     </div>
 
                     <div className="task-board-strip-meta">
-                        <span className="task-board-filter-state">Showing: {statusFilter}</span>
                         <span className="task-board-count">{filteredTasks.length}</span>
                         {selectedTaskIds.length > 0 && (
                             <span className="task-board-selected-count">{selectedTaskIds.length} selected</span>
@@ -685,15 +875,18 @@ function TaskTable({
                             ) : filteredTasks.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="task-board-empty">
-                                        No {statusFilter === "All" ? "" : `${statusFilter.toLowerCase()} `}tasks found
+                                        No tasks found
                                     </td>
                                 </tr>
                             ) : (
                                 currentPageTasks.map(task => (
                                     <tr
                                         key={task.id}
-                                        className={`task-board-row ${selectedTaskIds.includes(task.id) ? "is-selected" : ""}`}
-                                        onClick={() => { if (!isMutating) toggleTaskSelection(task.id); }}
+                                        className={`task-board-row ${selectedTaskIds.includes(task.id) ? "is-selected" : ""} ${focusedTaskId === task.id ? "is-focused" : ""}`}
+                                        onClick={() => {
+                                            if (isMutating) return;
+                                            onTaskFocus(task.id);
+                                        }}
                                     >
                                         <td className="task-board-checkbox-col" onClick={e => e.stopPropagation()}>
                                             <label className="task-checkbox-wrap" onClick={e => e.stopPropagation()}>

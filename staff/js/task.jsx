@@ -1079,8 +1079,7 @@ function TaskCommentModal({ task, currentUserId, recipientId, onClose }) {
 function App() {
     const [tasks, setTasks] = React.useState([]);
     const [currentUserId, setCurrentUserId] = React.useState(null);
-    const [dueDateFilter, setDueDateFilter] = React.useState("");
-    const [priorityFilter, setPriorityFilter] = React.useState("all");
+    const [period, setPeriod] = React.useState(DEFAULT_PERIOD);
 
     // Fetch the logged-in user's ID once on mount.
     // get_current_user.php returns { id, name, ... } from the active session.
@@ -1121,15 +1120,25 @@ function App() {
 
             <div className="task-toolbar">
                 <div className="task-toolbar-left">
-                    <TaskDateFilter
-                        value={dueDateFilter}
-                        onChange={setDueDateFilter}
-                    />
+                    <div className="task-period-wrap">
+                        <div className="task-period-bar" aria-label="Task period filter">
+                            {PERIOD_OPTIONS.map(option => {
+                                const isActive = period === option.key;
 
-                    <TaskPriorityFilter
-                        value={priorityFilter}
-                        onChange={setPriorityFilter}
-                    />
+                                return (
+                                    <button
+                                        key={option.key}
+                                        type="button"
+                                        className={`task-period-tab ${isActive ? "is-active" : ""}`}
+                                        onClick={() => setPeriod(option.key)}
+                                        aria-pressed={isActive}
+                                    >
+                                        {option.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
 
                 <button
@@ -1149,13 +1158,12 @@ function App() {
                 refreshTasks={fetchTasks}
                 dueDateFilter={dueDateFilter}
                 priorityFilter={priorityFilter}
-                currentUserId={currentUserId}
             />
         </div>
     );
 }
 
-function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter, currentUserId }) {
+function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
     const [selectedTask, setSelectedTask] = React.useState(null);
     const [showDetailModal, setShowDetailModal] = React.useState(false);
     const [commentTask, setCommentTask] = React.useState(null); // task whose comment panel is open
@@ -1172,14 +1180,7 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter, current
         completed: 1
     });
 
-    const filteredTasks = tasks.filter(task => {
-        const matchesDueDate = !dueDateFilter || task.deadline === dueDateFilter;
-        const matchesPriority =
-            priorityFilter === "all" ||
-            normalizeText(task.priority) === priorityFilter;
-
-        return matchesDueDate && matchesPriority;
-    });
+    const filteredTasks = tasks.filter(task => isTaskInPeriod(task, period));
 
     const laneTaskMap = {
         ongoing: filteredTasks.filter(task => getLaneKey(task) === "ongoing"),
@@ -1193,7 +1194,7 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter, current
             overdue: 1,
             completed: 1
         });
-    }, [dueDateFilter, priorityFilter, tasks]);
+    }, [period, tasks]);
 
     function handleRowClick(task) {
         setSelectedTask(task);
@@ -1711,6 +1712,66 @@ function getStatusMeta(status = "") {
         label: "Ongoing",
         chipClass: "status-chip-ongoing"
     };
+}
+
+const PERIOD_OPTIONS = [
+    { key: "today", label: "Today" },
+    { key: "week", label: "This Week" },
+    { key: "month", label: "This Month" },
+    { key: "all", label: "All Time" }
+];
+
+const DEFAULT_PERIOD = "week";
+
+function getTodayYMD() {
+    return formatYMD(new Date());
+}
+
+function getPeriodRange(periodKey) {
+    const today = parseYMD(getTodayYMD());
+
+    if (!today) return { start: null, end: null };
+
+    if (periodKey === "today") {
+        const todayYMD = getTodayYMD();
+        return { start: todayYMD, end: todayYMD };
+    }
+
+    if (periodKey === "week") {
+        const dow = today.getDay(); // 0 = Sunday
+        const diffToMon = dow === 0 ? -6 : 1 - dow;
+
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + diffToMon);
+
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        return {
+            start: formatYMD(monday),
+            end: formatYMD(sunday)
+        };
+    }
+
+    if (periodKey === "month") {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1);
+        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+        return {
+            start: formatYMD(start),
+            end: formatYMD(end)
+        };
+    }
+
+    return { start: null, end: null };
+}
+
+function isTaskInPeriod(task, periodKey) {
+    if (periodKey === "all") return true;
+    if (!task?.deadline) return false;
+
+    const { start, end } = getPeriodRange(periodKey);
+    return task.deadline >= start && task.deadline <= end;
 }
 
 function ModalStatusPicker({ value, onChange }) {
