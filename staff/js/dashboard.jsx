@@ -225,9 +225,14 @@ function App() {
             const normalized = normalizeTasks(data);
             setTasks(normalized);
 
+            const visibleTasks = normalized.filter(task =>
+                task.normalizedStatus === "ongoing" ||
+                task.normalizedStatus === "overdue"
+            );
+
             setFocusedTaskId(prev => {
-                if (prev && normalized.some(task => task.id === prev)) return prev;
-                return normalized[0]?.id || "";
+                if (prev && visibleTasks.some(task => task.id === prev)) return prev;
+                return visibleTasks[0]?.id || "";
             });
 
             return data;
@@ -400,6 +405,13 @@ function App() {
         }
     };
 
+        const tableTasks = React.useMemo(() => {
+            return tasks.filter(task =>
+                task.normalizedStatus === "ongoing" ||
+                task.normalizedStatus === "overdue"
+            );
+        }, [tasks]);
+
     return (
         <>
             <Toaster />
@@ -407,7 +419,7 @@ function App() {
 
             <div className="task-dashboard-grid">
                 <TaskTable
-                    tasks={tasks}
+                    tasks={tableTasks}
                     loading={loading}
                     error={error}
                     isMutating={isMutating}
@@ -420,7 +432,7 @@ function App() {
                 />
 
                 <TaskProgressCard
-                    task={tasks.find(task => task.id === focusedTaskId) || null}
+                    task={tableTasks.find(task => task.id === focusedTaskId) || null}
                     isMutating={isMutating}
                     onIncrease={(options) => handleTaskProgressChange(focusedTaskId, "increase", options)}
                     onDecrease={(options) => handleTaskProgressChange(focusedTaskId, "decrease", options)}
