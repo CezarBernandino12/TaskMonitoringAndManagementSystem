@@ -461,66 +461,54 @@ function TaskSummary({ tasks }) {
 }
 
 function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
-    const chartRef = React.useRef(null);
-    const chartInstanceRef = React.useRef(null);
+    const rawProgress = Number(task?.progress ?? task?.progress_percentage ?? 0);
+    const progressValue = Math.max(0, Math.min(100, Number.isFinite(rawProgress) ? rawProgress : 0));
 
-    const progressValue = clampProgress(task?.progress ?? 0);
+    const progressLabel =
+        Number.isFinite(rawProgress) && !Number.isInteger(rawProgress)
+            ? `${Math.max(0, Math.min(100, rawProgress)).toFixed(2)}%`
+            : `${Math.round(progressValue)}%`;
 
-    React.useEffect(() => {
-        if (!chartRef.current) return;
+    const totalTicks = 72;
+    const activeTicks = Math.round((progressValue / 100) * totalTicks);
 
-        const chart = echarts.init(chartRef.current);
-        chartInstanceRef.current = chart;
+    const center = 120;
+    const outerRadius = 92;
+    const shortInnerRadius = 78;
+    const longInnerRadius = 72;
 
-        const handleResize = () => chart.resize();
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-            chart.dispose();
-            chartInstanceRef.current = null;
+    function polarToCartesian(cx, cy, radius, angleDeg) {
+        const angleRad = (angleDeg - 90) * (Math.PI / 180);
+        return {
+            x: cx + radius * Math.cos(angleRad),
+            y: cy + radius * Math.sin(angleRad)
         };
-    }, []);
+    }
 
-    React.useEffect(() => {
-        const chart = chartInstanceRef.current;
-        if (!chart) return;
+    const ticks = Array.from({ length: totalTicks }, (_, index) => {
+        const angle = (360 / totalTicks) * index;
+        const isMajor = index % 3 === 0;
+        const innerRadius = isMajor ? longInnerRadius : shortInnerRadius;
+        const start = polarToCartesian(center, center, innerRadius, angle);
+        const end = polarToCartesian(center, center, outerRadius, angle);
 
-        chart.setOption({
-            animationDuration: 700,
-            series: [
-                {
-                    type: "gauge",
-                    startAngle: 120,
-                    endAngle: -240,
-                    min: 0,
-                    max: 100,
-                    radius: "92%",
-                    center: ["50%", "50%"],
-                    pointer: { show: false },
-                    anchor: { show: false },
-                    title: { show: false },
-                    detail: { show: false },
-                    splitLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: { show: false },
-                    progress: {
-                        show: true,
-                        roundCap: true,
-                        width: 18,
-                        itemStyle: { color: "#ff8a00" }
-                    },
-                    axisLine: {
-                        lineStyle: {
-                            width: 18,
-                            color: [[1, "#ececef"]]
-                        }
-                    },
-                    data: [{ value: progressValue }]
-                }
-            ]
-        });
-    }, [progressValue]);
+        const isActive = index < activeTicks;
+
+        let stroke = "rgba(124, 156, 199, 0.14)";
+        if (isActive) {
+            const glowStrength = 0.45 + (0.55 * ((index + 1) / Math.max(activeTicks, 1)));
+            stroke = `rgba(68, 140, 255, ${glowStrength})`;
+        }
+
+        return {
+            x1: start.x,
+            y1: start.y,
+            x2: end.x,
+            y2: end.y,
+            stroke,
+            strokeWidth: isMajor ? 2.6 : 1.8
+        };
+    });
 
     if (!task) {
         return (
@@ -533,63 +521,77 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
         );
     }
 
-    return (
-        <aside className="task-progress-panel">
-            <div className="task-progress-panel-head">
-                <div className="task-progress-panel-title">Task Progress</div>
-                <div className="task-progress-panel-subtitle">
-                    {task.project_name || "Selected task"}
+        return (
+            <aside className="task-progress-panel task-progress-panel--performance">
+                <div className="task-progress-panel-head">
+                    <div className="task-progress-panel-title">Task Progress</div>
                 </div>
-            </div>
 
-            <div className="task-progress-chart-shell">
-                <div
-                    ref={chartRef}
-                    className="task-progress-chart"
-                    aria-label={`${progressValue}% progress for ${task.title}`}
-                ></div>
+                <div className="task-progress-visual">
+                    <div className="task-progress-chart-shell is-performance">
+                        <svg
+                            className="task-progress-svg"
+                            viewBox="0 0 240 240"
+                            role="img"
+                            aria-label={`${progressLabel} progress for ${task.title}`}
+                        >
+                            <defs>
+                                <filter id="taskProgressGlow" x="-40%" y="-40%" width="180%" height="180%">
+                                    <feGaussianBlur stdDeviation="1.8" result="blur" />
+                                    <feMerge>
+                                        <feMergeNode in="blur" />
+                                        <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                </filter>
+                            </defs>
 
-                <div className="task-progress-center">
-                    <div className="task-progress-value">{progressValue}%</div>
-                    <div className="task-progress-task-name">{task.title}</div>
-                    <div className="task-progress-task-meta">
-                        {task.deadline ? `Due ${formatDate(task.deadline)}` : "No deadline"}
+                            {ticks.map((tick, index) => (
+                                <line
+                                    key={index}
+                                    x1={tick.x1}
+                                    y1={tick.y1}
+                                    x2={tick.x2}
+                                    y2={tick.y2}
+                                    stroke={tick.stroke}
+                                    strokeWidth={tick.strokeWidth}
+                                    strokeLinecap="round"
+                                    filter={index < activeTicks ? "url(#taskProgressGlow)" : undefined}
+                                />
+                            ))}
+                        </svg>
+
+                        <div className="task-progress-center performance-center">
+                            <div className="task-progress-value performance-value">{progressLabel}</div>
+                            <div className="task-progress-inline-title">{task.title}</div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="task-progress-status-row">
-                <span className={`task-pill task-status-pill ${getStatusTone(task.normalizedStatus)}`}>
-                    {task.status}
-                </span>
+                <div className="task-progress-actions is-inline">
+                    <button
+                        type="button"
+                        className="task-progress-btn task-progress-btn-icon is-minus"
+                        onClick={onDecrease}
+                        disabled={isMutating || progressValue <= 0}
+                        aria-label={`Decrease progress for ${task.title}`}
+                        title="Decrease progress"
+                    >
+                        <i className="bi bi-dash-lg"></i>
+                    </button>
 
-                <span className={`task-priority-pill ${getPriorityTone(task.normalizedPriority)}`}>
-                    <i className="bi bi-flag-fill"></i>
-                    {getPriorityLabel(task.normalizedPriority)}
-                </span>
-            </div>
-
-            <div className="task-progress-actions">
-                <button
-                    type="button"
-                    className="task-progress-btn is-primary"
-                    onClick={onIncrease}
-                    disabled={isMutating || progressValue >= 100}
-                >
-                    Task In
-                </button>
-
-                <button
-                    type="button"
-                    className="task-progress-btn is-secondary"
-                    onClick={onDecrease}
-                    disabled={isMutating || progressValue <= 0}
-                >
-                    Step Back
-                </button>
-            </div>
-        </aside>
-    );
+                    <button
+                        type="button"
+                        className="task-progress-btn task-progress-btn-icon is-plus"
+                        onClick={onIncrease}
+                        disabled={isMutating || progressValue >= 100}
+                        aria-label={`Increase progress for ${task.title}`}
+                        title="Increase progress"
+                    >
+                        <i className="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+            </aside>
+        );
 }
 
 // ─── TaskTable (unchanged logic, just carried forward) ────────────────────────

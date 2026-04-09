@@ -3256,3 +3256,9 @@ CREATE TABLE message_attachments (
     FOREIGN KEY (message_id) REFERENCES messages(id)
         ON DELETE CASCADE
 );
+
+
+GABO APRIL 9
+
+ALTER TABLE tasks
+ADD COLUMN progress_percentage TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER priority;
