@@ -83,9 +83,9 @@
     --bulk-bar-delete-hover-bg: #fff3f1;
 }
 
-/* ==========================================================================
-   02. BASE
-   ========================================================================== */
+html {
+    scroll-padding-bottom: 180px;
+}
 
 body {
     background: var(--bg-page);
@@ -94,9 +94,9 @@ body {
     transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* ==========================================================================
-   03. DASHBOARD LAYOUT
-   ========================================================================== */
+body.has-bulk-action-bar {
+    padding-bottom: calc(170px + env(safe-area-inset-bottom, 0px));
+}
 
 .task-dashboard-grid {
     display: grid;
@@ -1268,6 +1268,9 @@ body {
     align-items: center;
     justify-content: center;
     color: #2f73ea;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
     transition:
         background 0.18s ease,
         transform 0.18s ease,
@@ -1760,6 +1763,17 @@ body {
 
     .bulk-action-close {
         margin-left: auto;
+    }
+}
+
+
+@media (max-width: 767.98px) {
+    html {
+        scroll-padding-bottom: 240px;
+    }
+
+    body.has-bulk-action-bar {
+        padding-bottom: calc(240px + env(safe-area-inset-bottom, 0px));
     }
 }
 

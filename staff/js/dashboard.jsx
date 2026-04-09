@@ -8,7 +8,9 @@ window.sileo = sileo;
 const MANILA_TIMEZONE = "Asia/Manila";
 const ITEMS_PER_PAGE = 10;
 
-const TASK_PROGRESS_STEP = 10;
+const TASK_PROGRESS_STEP = 1;
+const TASK_PROGRESS_LONG_PRESS_DELAY = 320;
+const TASK_PROGRESS_REPEAT_INTERVAL = 120;
 
 function clampProgress(value = 0) {
     const num = Number(value);
@@ -155,6 +157,7 @@ function App() {
     const [error, setError] = React.useState("");
     const [isMutating, setIsMutating] = React.useState(false);
     const [focusedTaskId, setFocusedTaskId] = React.useState("");
+    const progressQueueRef = React.useRef(Promise.resolve());
 
     const updateTaskProgressOnServer = async (taskId, direction) => {
         const body = new URLSearchParams();
@@ -171,31 +174,38 @@ function App() {
         return parseMutationResponse(response, `Failed to update progress for task ${taskId}.`);
     };
 
-    const handleTaskProgressChange = async (taskId, direction) => {
-        if (!taskId) return;
+        const handleTaskProgressChange = (taskId, direction, { silent = false } = {}) => {
+            if (!taskId) return Promise.resolve();
 
-        setError("");
-        setIsMutating(true);
+            setError("");
 
-        try {
-            await updateTaskProgressOnServer(taskId, direction);
-            await finalizeMutation();
+            const runMutation = async () => {
+                try {
+                    await updateTaskProgressOnServer(taskId, direction);
+                    await finalizeMutation();
 
-            showSileoToast(direction === "increase" ? "success" : "info", {
-                title: "Task progress updated",
-                description:
-                    direction === "increase"
-                        ? `Task progress increased by ${TASK_PROGRESS_STEP}%.`
-                        : `Task progress decreased by ${TASK_PROGRESS_STEP}%.`
-            });
-        } catch (err) {
-            const msg = err.message || "Unable to update task progress.";
-            setError(msg);
-            showSileoToast("error", { title: "Update failed", description: msg });
-        } finally {
-            setIsMutating(false);
-        }
-    };
+                    if (!silent) {
+                        showSileoToast(direction === "increase" ? "success" : "info", {
+                            title: "Task progress updated",
+                            description:
+                                direction === "increase"
+                                    ? `Task progress increased by ${TASK_PROGRESS_STEP}%.`
+                                    : `Task progress decreased by ${TASK_PROGRESS_STEP}%.`
+                        });
+                    }
+                } catch (err) {
+                    const msg = err.message || "Unable to update task progress.";
+                    setError(msg);
+                    showSileoToast("error", { title: "Update failed", description: msg });
+                    throw err;
+                }
+            };
+
+            const queuedMutation = progressQueueRef.current.then(runMutation, runMutation);
+            progressQueueRef.current = queuedMutation.catch(() => null);
+
+            return queuedMutation;
+        };
 
     const fetchTasks = React.useCallback(async ({ showLoader = true, throwOnError = false, signal } = {}) => {
         if (showLoader) setLoading(true);
@@ -412,8 +422,8 @@ function App() {
                 <TaskProgressCard
                     task={tasks.find(task => task.id === focusedTaskId) || null}
                     isMutating={isMutating}
-                    onIncrease={() => handleTaskProgressChange(focusedTaskId, "increase")}
-                    onDecrease={() => handleTaskProgressChange(focusedTaskId, "decrease")}
+                    onIncrease={(options) => handleTaskProgressChange(focusedTaskId, "increase", options)}
+                    onDecrease={(options) => handleTaskProgressChange(focusedTaskId, "decrease", options)}
                 />
             </div>
         </>
@@ -477,6 +487,12 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
     const shortInnerRadius = 78;
     const longInnerRadius = 72;
 
+    const pressStateRef = React.useRef({
+        timeoutId: null,
+        intervalId: null,
+        didLongPress: false
+    });
+
     function polarToCartesian(cx, cy, radius, angleDeg) {
         const angleRad = (angleDeg - 90) * (Math.PI / 180);
         return {
@@ -484,6 +500,55 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
             y: cy + radius * Math.sin(angleRad)
         };
     }
+
+    const clearPressTimers = React.useCallback(() => {
+        if (pressStateRef.current.timeoutId) {
+            window.clearTimeout(pressStateRef.current.timeoutId);
+            pressStateRef.current.timeoutId = null;
+        }
+
+        if (pressStateRef.current.intervalId) {
+            window.clearInterval(pressStateRef.current.intervalId);
+            pressStateRef.current.intervalId = null;
+        }
+    }, []);
+
+    React.useEffect(() => {
+        return () => clearPressTimers();
+    }, [clearPressTimers]);
+
+    const startPress = React.useCallback((action, disabled) => (event) => {
+        if (disabled) return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+
+        clearPressTimers();
+        pressStateRef.current.didLongPress = false;
+
+        pressStateRef.current.timeoutId = window.setTimeout(() => {
+            pressStateRef.current.didLongPress = true;
+
+            action({ silent: true });
+
+            pressStateRef.current.intervalId = window.setInterval(() => {
+                action({ silent: true });
+            }, TASK_PROGRESS_REPEAT_INTERVAL);
+        }, TASK_PROGRESS_LONG_PRESS_DELAY);
+    }, [clearPressTimers]);
+
+    const endPress = React.useCallback(() => {
+        clearPressTimers();
+    }, [clearPressTimers]);
+
+    const handlePressClick = React.useCallback((action) => (event) => {
+        if (pressStateRef.current.didLongPress) {
+            event.preventDefault();
+            event.stopPropagation();
+            pressStateRef.current.didLongPress = false;
+            return;
+        }
+
+        action({ silent: false });
+    }, []);
 
     const ticks = Array.from({ length: totalTicks }, (_, index) => {
         const angle = (360 / totalTicks) * index;
@@ -547,6 +612,9 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
             dotClass: task.isOverdue ? "is-due-overdue" : "is-due-date"
         }
     ];
+
+    const decreaseDisabled = isMutating || progressValue <= 0;
+    const increaseDisabled = isMutating || progressValue >= 100;
 
     return (
         <aside className="task-progress-panel task-progress-panel--performance">
@@ -613,8 +681,12 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
                     <button
                         type="button"
                         className="task-progress-split-btn is-minus"
-                        onClick={onDecrease}
-                        disabled={isMutating || progressValue <= 0}
+                        onPointerDown={startPress(onDecrease, decreaseDisabled)}
+                        onPointerUp={endPress}
+                        onPointerLeave={endPress}
+                        onPointerCancel={endPress}
+                        onClick={handlePressClick(onDecrease)}
+                        disabled={decreaseDisabled}
                         aria-label={`Decrease progress for ${task.title}`}
                         title="Decrease progress"
                     >
@@ -626,8 +698,12 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
                     <button
                         type="button"
                         className="task-progress-split-btn is-plus"
-                        onClick={onIncrease}
-                        disabled={isMutating || progressValue >= 100}
+                        onPointerDown={startPress(onIncrease, increaseDisabled)}
+                        onPointerUp={endPress}
+                        onPointerLeave={endPress}
+                        onPointerCancel={endPress}
+                        onClick={handlePressClick(onIncrease)}
+                        disabled={increaseDisabled}
                         aria-label={`Increase progress for ${task.title}`}
                         title="Increase progress"
                     >
@@ -676,6 +752,16 @@ function TaskTable({
 
         checkAllRef.current.indeterminate = someVisibleSelected;
     }, [currentPageTasks, selectedTaskIds]);
+
+        React.useEffect(() => {
+            const hasSelection = selectedTaskIds.length > 0;
+            document.body.classList.toggle("has-bulk-action-bar", hasSelection);
+
+            return () => {
+                document.body.classList.remove("has-bulk-action-bar");
+            };
+        }, [selectedTaskIds.length]);
+
 
     const visibleTaskIds = currentPageTasks.map(t => t.id);
     const selectedVisibleCount = visibleTaskIds.filter(id => selectedTaskIds.includes(id)).length;
@@ -788,7 +874,6 @@ function TaskTable({
                                         onClick={() => {
                                             if (isMutating) return;
                                             onTaskFocus(task.id);
-                                            toggleTaskSelection(task.id);
                                         }}
                                     >
                                         <td className="task-board-checkbox-col" onClick={e => e.stopPropagation()}>
