@@ -1,15 +1,13 @@
 import React from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
+import * as echarts from "https://esm.sh/echarts@6";
 
 window.sileo = sileo;
 
 const MANILA_TIMEZONE = "Asia/Manila";
 const ITEMS_PER_PAGE = 10;
 
-// ─── Period options ────────────────────────────────────────────────────────────
-// Default is "week" — broad enough to show meaningful counts, narrow enough
-// to feel actionable on a daily-use dashboard.
 const PERIOD_OPTIONS = [
     { key: "today",   label: "Today" },
     { key: "week",    label: "This Week" },
@@ -18,7 +16,6 @@ const PERIOD_OPTIONS = [
 ];
 const DEFAULT_PERIOD = "week";
 
-// ─── Utilities ─────────────────────────────────────────────────────────────────
 
 function showSileoToast(type = "info", payload = {}) {
     const toastMethod = window.sileo?.[type] || window.sileo?.info;
@@ -105,6 +102,44 @@ function normalizeTask(task = {}, index = 0) {
         isCompleted:      normalizedStatus === "completed",
         isOverdue:        normalizedStatus === "overdue"
     };
+}
+
+function getScopedTasks(tasks = [], periodKey = DEFAULT_PERIOD) {
+    return tasks.filter(task => isTaskInPeriod(task, periodKey));
+}
+
+function getProgressTitle(periodKey) {
+    if (periodKey === "today") return "Today's Progress";
+    if (periodKey === "week") return "Weekly Progress";
+    if (periodKey === "month") return "Monthly Progress";
+    return "Overall Progress";
+}
+
+function formatPeriodCaption(periodKey) {
+    if (periodKey === "all") return "Across all tasks";
+
+    const { start, end } = getPeriodRange(periodKey);
+    if (!start || !end) return "Across all tasks";
+
+    if (start === end) return formatDate(start);
+
+    const startDate = parseYMDToUTC(start);
+    const endDate = parseYMDToUTC(end);
+    if (!startDate || !endDate) return `${formatDate(start)} - ${formatDate(end)}`;
+
+    const sameYear = startDate.getUTCFullYear() === endDate.getUTCFullYear();
+    const sameMonth = sameYear && startDate.getUTCMonth() === endDate.getUTCMonth();
+
+    if (sameMonth) {
+        const month = new Intl.DateTimeFormat("en-US", {
+            timeZone: "UTC",
+            month: "short"
+        }).format(startDate);
+
+        return `${month} ${startDate.getUTCDate()}-${endDate.getUTCDate()}, ${startDate.getUTCFullYear()}`;
+    }
+
+    return `${formatDate(start)} - ${formatDate(end)}`;
 }
 
 function normalizeTasks(taskList = []) {
@@ -375,16 +410,21 @@ function App() {
             <Toaster />
             <TaskSummary tasks={tasks} period={period} onPeriodChange={setPeriod} />
             <DueSoon tasks={tasks} period={period} />
-            <TaskTable
-                tasks={tasks}
-                loading={loading}
-                error={error}
-                isMutating={isMutating}
-                onRetry={() => fetchTasks()}
-                onBulkUpdateStatus={handleBulkUpdateStatus}
-                onBulkUpdatePriority={handleBulkUpdatePriority}
-                onBulkDelete={handleBulkDelete}
-            />
+
+            <div className="task-dashboard-grid">
+                <TaskTable
+                    tasks={tasks}
+                    loading={loading}
+                    error={error}
+                    isMutating={isMutating}
+                    onRetry={() => fetchTasks()}
+                    onBulkUpdateStatus={handleBulkUpdateStatus}
+                    onBulkUpdatePriority={handleBulkUpdatePriority}
+                    onBulkDelete={handleBulkDelete}
+                />
+
+                <ProgressMeterCard tasks={tasks} period={period} />
+            </div>
         </>
     );
 }
@@ -392,8 +432,8 @@ function App() {
 // ─── TaskSummary ──────────────────────────────────────────────────────────────
 
 function TaskSummary({ tasks, period, onPeriodChange }) {
-    // Filter tasks to only those in scope for the selected period
-    const scopedTasks = tasks.filter(t => isTaskInPeriod(t, period));
+   
+    const scopedTasks = getScopedTasks(tasks, period);
 
     const total     = scopedTasks.length;
     const ongoing   = scopedTasks.filter(t => t.normalizedStatus === "ongoing").length;
@@ -459,6 +499,99 @@ function TaskSummary({ tasks, period, onPeriodChange }) {
                 </div>
             </section>
         </div>
+    );
+}
+
+function ProgressMeterCard({ tasks, period }) {
+    const chartRef = React.useRef(null);
+    const chartInstanceRef = React.useRef(null);
+
+    const scopedTasks = React.useMemo(() => getScopedTasks(tasks, period), [tasks, period]);
+    const completedCount = scopedTasks.filter(task => task.normalizedStatus === "completed").length;
+    const totalCount = scopedTasks.length;
+    const progressValue = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    React.useEffect(() => {
+        if (!chartRef.current) return;
+
+        const chart = echarts.init(chartRef.current);
+        chartInstanceRef.current = chart;
+
+        const handleResize = () => chart.resize();
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+            chart.dispose();
+            chartInstanceRef.current = null;
+        };
+    }, []);
+
+    React.useEffect(() => {
+        const chart = chartInstanceRef.current;
+        if (!chart) return;
+
+        chart.setOption({
+            animationDuration: 700,
+            series: [
+                {
+                    type: "gauge",
+                    startAngle: 225,
+                    endAngle: -45,
+                    min: 0,
+                    max: 100,
+                    radius: "92%",
+                    center: ["50%", "50%"],
+                    pointer: { show: false },
+                    anchor: { show: false },
+                    title: { show: false },
+                    detail: { show: false },
+                    splitLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: { show: false },
+                    progress: {
+                        show: true,
+                        roundCap: true,
+                        width: 16,
+                        itemStyle: {
+                            color: "#f4b400"
+                        }
+                    },
+                    axisLine: {
+                        lineStyle: {
+                            width: 16,
+                            color: [[1, "#eef2f6"]]
+                        }
+                    },
+                    data: [{ value: progressValue }]
+                }
+            ]
+        });
+    }, [progressValue]);
+
+    return (
+        <aside className="progress-panel">
+            <div className="progress-panel-copy">
+                <div className="progress-panel-title">{getProgressTitle(period)}</div>
+                <div className="progress-panel-range">{formatPeriodCaption(period)}</div>
+                <div className="progress-panel-meta">
+                    {completedCount} of {totalCount} tasks finished
+                </div>
+            </div>
+
+            <div className="progress-panel-chart-shell">
+                <div
+                    ref={chartRef}
+                    className="progress-panel-chart"
+                    aria-label={`${progressValue}% task completion`}
+                ></div>
+
+                <div className="progress-panel-center">
+                    <div className="progress-panel-value">{progressValue}%</div>
+                    <div className="progress-panel-label">Task Finished</div>
+                </div>
+            </div>
+        </aside>
     );
 }
 
