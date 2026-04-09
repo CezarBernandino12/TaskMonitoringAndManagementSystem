@@ -22,7 +22,8 @@ try {
             start_date,
             deadline,
             status,
-            priority
+            priority,
+            COALESCE(progress_percentage, 0) AS progress_percentage
         FROM tasks
         WHERE assigned_to = :user_id
         ORDER BY deadline ASC, id DESC
@@ -40,13 +41,11 @@ try {
 
         $task['is_overdue'] = $is_overdue;
 
-        /*
-         * Keep frontend display consistent even if the DB event
-         * has not yet flipped the stored status to Overdue.
-         */
         if ($is_overdue) {
             $task['status'] = 'Overdue';
         }
+
+        $task['progress_percentage'] = (int) $task['progress_percentage'];
     }
     unset($task);
 

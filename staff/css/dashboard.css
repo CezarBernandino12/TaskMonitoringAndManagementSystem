@@ -178,39 +178,6 @@ body {
     max-width: 100%;
 }
 
-.stats-period-tab {
-    height: 34px;
-    padding: 0 16px;
-    border: none;
-    outline: none;
-    border-radius: 999px;
-    background: transparent;
-    color: #2f3137;
-    font-size: 13.5px;
-    font-weight: 500;
-    line-height: 1;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-.stats-period-tab:hover {
-    background: rgba(31, 41, 55, 0.05);
-}
-
-.stats-period-tab.is-active {
-    background: #232428;
-    color: #ffffff;
-    box-shadow: 0 3px 10px rgba(17, 24, 39, 0.16);
-}
-
-.stats-period-tab:focus-visible {
-    outline: 3px solid rgba(53, 89, 216, 0.18);
-    outline-offset: 2px;
-}
-
 .stats-strip {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -332,116 +299,6 @@ body {
     white-space: nowrap;
 }
 
-/* ==========================================================================
-   05. DUE SOON
-   ========================================================================== */
-
-.due-soon-strip {
-    background: linear-gradient(180deg, #fffdf6 0%, #fffaf0 100%);
-    border: 1px solid #f5e6b8;
-    border-radius: 18px;
-    box-shadow: var(--shadow-sm);
-    padding: 14px 16px;
-}
-
-.due-soon-header {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #8a6a12;
-}
-
-.due-soon-list {
-    margin-top: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.due-soon-item {
-    min-height: 44px;
-    padding: 10px 12px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid #f2e6c8;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.due-soon-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-strong);
-}
-
-.due-soon-badge {
-    min-height: 28px;
-    padding: 0 10px;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11.5px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.due-soon-badge.is-today {
-    background: #fff1ef;
-    color: #d94841;
-}
-
-.due-soon-badge.is-tomorrow {
-    background: #eef4ff;
-    color: #3559d8;
-}
-
-/* ==========================================================================
-   06. TASK DETAIL
-   ========================================================================== */
-
-.task-detail-card,
-.task-detail-text {
-    background: var(--bg-soft);
-    border: 1px solid #edf1f5;
-    border-radius: 16px;
-}
-
-.task-detail-card {
-    padding: 14px;
-}
-
-.task-detail-section + .task-detail-section {
-    margin-top: 16px;
-}
-
-.task-detail-label {
-    margin-bottom: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
-.task-detail-value {
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1.35;
-    color: var(--text-primary);
-}
-
-.task-detail-text {
-    padding: 14px;
-    font-size: 14px;
-    line-height: 1.6;
-    color: #475569;
-    white-space: pre-wrap;
-}
 
 /* ==========================================================================
    07. TASK BOARD SHELL
@@ -474,117 +331,6 @@ body {
     color: var(--text-strong);
 }
 
-.task-board-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-/* ==========================================================================
-   08. FILTER
-   ========================================================================== */
-
-.task-filter {
-    position: relative;
-    flex: 0 0 auto;
-}
-
-.task-filter-btn {
-    min-width: 122px;
-    height: var(--control-height);
-    padding: 0 14px;
-    border: 1px solid #dbe3ec;
-    border-radius: 14px;
-    background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
-    color: var(--text-body);
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
-    display: inline-flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    transition: all 0.18s ease;
-}
-
-.task-filter-btn:hover {
-    border-color: #cfd8e3;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-}
-
-.task-filter-btn.is-open {
-    border-color: #c9d4e1;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
-}
-
-.task-filter-btn-inner {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.task-filter-btn-inner i,
-.task-filter-caret {
-    font-size: 13px;
-    color: #667085;
-}
-
-.task-filter-menu {
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
-    z-index: 80;
-    width: 220px;
-    padding: 10px;
-    border: 1px solid #e4eaf1;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 20px 44px rgba(15, 23, 42, 0.14);
-    backdrop-filter: blur(14px);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.task-filter-item {
-    width: 100%;
-    min-height: 38px;
-    padding: 0 12px;
-    border: none;
-    outline: none;
-    border-radius: 12px;
-    background: transparent;
-    color: #475467;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.16s ease, color 0.16s ease;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-.task-filter-item:hover {
-    background: #f6f8fb;
-    color: #1f2937;
-}
-
-.task-filter-item.is-active {
-    background: #eef4ff;
-    color: #3559d8;
-    box-shadow: inset 0 0 0 1px #d8e4ff;
-}
-
-.task-filter-item i {
-    flex: 0 0 auto;
-    font-size: 14px;
-}
 
 /* ==========================================================================
    09. BOARD STRIP / META / CHECKBOXES
@@ -606,33 +352,22 @@ body {
     flex-wrap: wrap;
 }
 
-.task-board-filter-state,
 .task-board-count,
 .task-board-selected-count {
     min-height: 34px;
+    min-width: 34px;
+    padding: 0 10px;
     border-radius: 11px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 13px;
     font-weight: 600;
-}
-
-.task-board-filter-state,
-.task-board-count {
     border: 1px solid var(--panel-border);
     background: #f8fafc;
     color: var(--text-soft);
 }
 
-.task-board-filter-state {
-    padding: 0 12px;
-}
-
-.task-board-count {
-    min-width: 34px;
-    padding: 0 10px;
-}
 
 .task-board-selected-count {
     padding: 0 12px;
@@ -1289,72 +1024,73 @@ body {
     line-height: 1;
 }
 
-/* ==========================================================================
-   15. PROGRESS PANEL
-   ========================================================================== */
+.task-board-row.is-focused td {
+    background: #fff5ea;
+}
 
-.progress-panel {
-    min-height: 290px;
-    padding: 18px 18px 16px;
-    background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
-    border: 1px solid var(--panel-border);
+.task-board-row.is-focused:hover td {
+    background: #ffeed8;
+}
+
+.task-progress-panel {
+    min-height: 430px;
+    padding: 18px 18px 20px;
+    background: #f6f6f7;
+    border: 1px solid #ececef;
     border-radius: 20px;
     box-shadow: var(--panel-shadow);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 18px;
-}
-
-.progress-panel-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.progress-panel-title {
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    color: var(--text-strong);
-}
-
-.progress-panel-range {
-    font-size: 13px;
-    line-height: 1.45;
-    color: var(--text-soft);
-}
-
-.progress-panel-meta {
-    width: fit-content;
-    min-height: 32px;
-    padding: 0 12px;
-    border: 1px solid var(--panel-border);
-    border-radius: 999px;
-    background: #f8fafc;
-    color: var(--text-body);
-    display: inline-flex;
     align-items: center;
-    font-size: 12px;
-    font-weight: 700;
+    justify-content: space-between;
+    gap: 16px;
 }
 
-.progress-panel-chart-shell {
+.task-progress-panel--empty {
+    justify-content: center;
+    text-align: center;
+}
+
+.task-progress-panel-head {
+    width: 100%;
+    text-align: center;
+}
+
+.task-progress-panel-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #202124;
+}
+
+.task-progress-panel-subtitle {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.task-progress-empty-copy {
+    max-width: 220px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #667085;
+}
+
+.task-progress-chart-shell {
     position: relative;
-    width: 210px;
-    height: 210px;
+    width: 230px;
+    height: 230px;
     margin: 0 auto;
 }
 
-.progress-panel-chart {
+.task-progress-chart {
     width: 100%;
     height: 100%;
 }
 
-.progress-panel-center {
+.task-progress-center {
     position: absolute;
     inset: 0;
+    padding: 0 24px;
     pointer-events: none;
     text-align: center;
     display: flex;
@@ -1363,20 +1099,125 @@ body {
     justify-content: center;
 }
 
-.progress-panel-value {
-    font-size: 34px;
+.task-progress-value {
+    font-size: 42px;
     font-weight: 800;
     line-height: 1;
-    color: var(--text-strong);
+    color: #202124;
 }
 
-.progress-panel-label {
+.task-progress-task-name {
     margin-top: 8px;
-    font-size: 13px;
-    line-height: 1.2;
-    color: var(--text-soft);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #202124;
+    max-width: 160px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
+.task-progress-task-meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #7b8190;
+}
+
+.task-progress-status-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.task-progress-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.task-progress-btn {
+    width: 100%;
+    min-height: 48px;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.task-progress-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.task-progress-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.task-progress-btn.is-primary {
+    background: #ff8a00;
+    color: #ffffff;
+    box-shadow: 0 10px 22px rgba(255, 138, 0, 0.25);
+}
+
+.task-progress-btn.is-secondary {
+    background: #0f1720;
+    color: #ffffff;
+    box-shadow: 0 10px 22px rgba(15, 23, 32, 0.18);
+}
+
+[data-theme="dark"] .task-board-row.is-focused td {
+    background: rgba(255, 138, 0, 0.14);
+}
+
+[data-theme="dark"] .task-board-row.is-focused:hover td {
+    background: rgba(255, 138, 0, 0.18);
+}
+
+[data-theme="dark"] .task-progress-panel {
+    background: #151922;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .task-progress-panel-title,
+[data-theme="dark"] .task-progress-value,
+[data-theme="dark"] .task-progress-task-name {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .task-progress-panel-subtitle,
+[data-theme="dark"] .task-progress-task-meta,
+[data-theme="dark"] .task-progress-empty-copy {
+    color: #aeb8c7;
+}
+
+@media (max-width: 1199.98px) {
+    .task-progress-panel {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .task-progress-chart-shell {
+        width: 200px;
+        height: 200px;
+    }
+
+    .task-progress-value {
+        font-size: 36px;
+    }
+
+    .task-progress-btn {
+        min-height: 44px;
+        font-size: 15px;
+    }
+}
 /* ==========================================================================
    16. DARK MODE TOKENS
    ========================================================================== */
@@ -1426,28 +1267,9 @@ body {
    17. DARK MODE OVERRIDES
    ========================================================================== */
 
-[data-theme="dark"] .stats-period-bar {
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: none;
-}
-
-[data-theme="dark"] .stats-period-tab {
-    color: #e5e7eb;
-}
-
-[data-theme="dark"] .stats-period-tab:hover {
-    background: rgba(255, 255, 255, 0.06);
-}
-
-[data-theme="dark"] .stats-period-tab.is-active {
-    background: #f9fafb;
-    color: #111827;
-    box-shadow: none;
-}
 
 [data-theme="dark"] .stats-strip,
-[data-theme="dark"] .task-board,
-[data-theme="dark"] .progress-panel {
+[data-theme="dark"] .task-board {
     background: var(--bg-card);
     border-color: var(--border);
     box-shadow: var(--shadow-md);
@@ -1465,12 +1287,8 @@ body {
 
 [data-theme="dark"] .stats-label,
 [data-theme="dark"] .stats-meta,
-[data-theme="dark"] .task-detail-label,
-[data-theme="dark"] .task-board-filter-state,
 [data-theme="dark"] .task-board-count,
-[data-theme="dark"] .task-board-table thead th,
-[data-theme="dark"] .progress-panel-range,
-[data-theme="dark"] .progress-panel-label {
+[data-theme="dark"] .task-board-table thead th {
     color: var(--text-secondary);
 }
 
@@ -1478,9 +1296,6 @@ body {
 [data-theme="dark"] .task-board-title,
 [data-theme="dark"] .task-board-task-title,
 [data-theme="dark"] .task-board-date,
-[data-theme="dark"] .task-detail-value,
-[data-theme="dark"] .progress-panel-title,
-[data-theme="dark"] .progress-panel-value,
 [data-theme="dark"] .due-soon-title {
     color: var(--text-primary);
 }
@@ -1519,15 +1334,6 @@ body {
     border-color: rgba(255, 255, 255, 0.08);
 }
 
-[data-theme="dark"] .task-detail-card,
-[data-theme="dark"] .task-detail-text {
-    background: var(--bg-soft);
-    border-color: var(--border);
-}
-
-[data-theme="dark"] .task-detail-text {
-    color: var(--text-secondary);
-}
 
 [data-theme="dark"] .task-board-head {
     border-color: var(--border);
@@ -1636,7 +1442,7 @@ body {
     color: #4fd18f;
 }
 
-[data-theme="dark"] .task-filter-btn,
+
 [data-theme="dark"] .task-action-btn {
     background: rgba(255, 255, 255, 0.04);
     border-color: rgba(255, 255, 255, 0.08);
@@ -1644,40 +1450,14 @@ body {
     box-shadow: none;
 }
 
-[data-theme="dark"] .task-filter-btn:hover,
+
 [data-theme="dark"] .task-action-btn:hover {
     background: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.12);
 }
 
-[data-theme="dark"] .task-filter-btn-inner i,
-[data-theme="dark"] .task-filter-caret {
-    color: var(--text-primary);
-}
 
-[data-theme="dark"] .task-filter-menu {
-    background: var(--bg-card);
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-}
-
-[data-theme="dark"] .task-filter-item {
-    color: var(--text-primary);
-}
-
-[data-theme="dark"] .task-filter-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-[data-theme="dark"] .task-filter-item.is-active {
-    background: rgba(53, 89, 216, 0.18);
-    box-shadow: inset 0 0 0 1px rgba(157, 180, 255, 0.18);
-    color: #9db4ff;
-}
-
-[data-theme="dark"] .task-board-filter-state,
-[data-theme="dark"] .task-board-count,
-[data-theme="dark"] .progress-panel-meta {
+[data-theme="dark"] .task-board-count {
     background: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.08);
     color: var(--text-primary);
@@ -1713,10 +1493,6 @@ body {
     .task-dashboard-grid {
         grid-template-columns: 1fr;
     }
-
-    .progress-panel {
-        min-height: auto;
-    }
 }
 
 @media (max-width: 991.98px) {
@@ -1743,10 +1519,6 @@ body {
     .task-board-head {
         flex-direction: column;
         align-items: stretch;
-    }
-
-    .task-board-actions {
-        justify-content: flex-start;
     }
 
     .task-board-table-wrap {
@@ -1802,13 +1574,6 @@ body {
         display: none;
     }
 
-    .stats-period-tab {
-        height: 31px;
-        padding: 0 13px;
-        font-size: 12.5px;
-        flex: 0 0 auto;
-    }
-
     .stats-strip-inner {
         grid-template-columns: 1fr;
     }
@@ -1841,27 +1606,6 @@ body {
 
     .task-board-pagination-controls {
         justify-content: center;
-    }
-
-    .task-filter-menu {
-        width: min(220px, calc(100vw - 32px));
-    }
-
-    .progress-panel {
-        padding: 16px;
-    }
-
-    .progress-panel-title {
-        font-size: 20px;
-    }
-
-    .progress-panel-chart-shell {
-        width: 180px;
-        height: 180px;
-    }
-
-    .progress-panel-value {
-        font-size: 30px;
     }
 
     .due-soon-item {
