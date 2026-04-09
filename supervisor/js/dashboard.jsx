@@ -331,169 +331,193 @@ React.useEffect(() => {
         return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     };
 
-    chart.setOption({
-        animationDuration: 450,
-        grid: {
-            top: 110,
-            left: 100,
-            right: 24,
-            bottom: 56
+ const durationSeries = rows.map((row, idx) => (
+    idx === featuredIndex ? 0 : row.duration
+));
+
+const featuredSeries = rows.map((row, idx) => (
+    idx === featuredIndex ? row.duration : 0
+));
+
+const tooltipFormatter = params => {
+    const item = Array.isArray(params)
+        ? params.find(
+            p =>
+                (p.seriesName === "Task span" || p.seriesName === "Featured task") &&
+                Number(p.value) > 0
+        )
+        : params;
+
+    if (!item || Number(item.value) <= 0) return "";
+
+    const row = rows[item.dataIndex];
+    const accent = item.seriesName === "Featured task" ? "#f4a340" : "#6d84ff";
+    const badge = item.seriesName === "Featured task" ? "Featured task" : row.status;
+
+    return `
+        <div style="font-family: Nunito, sans-serif; min-width: 176px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+                <span style="width:8px;height:8px;border-radius:50%;background:${accent};display:inline-block;"></span>
+                <span style="font-size:12px;font-weight:800;color:#7c8798;">${badge}</span>
+            </div>
+
+            <div style="font-size:15px;font-weight:900;color:#234f3f;margin-bottom:6px;">
+                ${row.title}
+            </div>
+
+            <div style="font-size:12px;font-weight:700;color:#7b8797;">
+                ${row.startLabel} - ${row.endLabel}
+            </div>
+
+            <div style="margin-top:10px;font-size:12px;font-weight:700;color:#9aa4b2;">
+                Duration
+            </div>
+
+            <div style="font-size:30px;line-height:1;font-weight:900;color:#234f3f;">
+                ${row.duration}
+                <span style="font-size:13px;font-weight:800;color:#47b97f;margin-left:4px;">
+                    days
+                </span>
+            </div>
+        </div>
+    `;
+};
+
+chart.setOption({
+    animationDuration: 500,
+    animationEasing: "cubicOut",
+    legend: {
+        top: 0,
+        left: "center",
+        itemWidth: 8,
+        itemHeight: 8,
+        icon: "circle",
+        selectedMode: false,
+        textStyle: {
+            color: "#5f6b7a",
+            fontFamily: "Nunito, sans-serif",
+            fontSize: 12,
+            fontWeight: 700
         },
-        tooltip: {
-            trigger: "axis",
-            axisPointer: { type: "shadow" },
-            formatter: params => {
-                const item = params.find(p => p.seriesName === "Duration");
-                if (!item) return "";
-                const row = rows[item.dataIndex];
-                return `
-                    <div style="font-family: Nunito, sans-serif; min-width: 170px;">
-                        <div style="font-weight: 800; margin-bottom: 4px;">${row.title}</div>
-                        <div>${row.startLabel} – ${row.endLabel}</div>
-                        <div>Status: ${row.status}</div>
-                        <div>Duration: ${row.duration} day${row.duration !== 1 ? "s" : ""}</div>
-                    </div>
-                `;
+        data: ["Task span", "Featured task"]
+    },
+    grid: {
+        top: 44,
+        left: 120,
+        right: 18,
+        bottom: 28
+    },
+    tooltip: {
+        trigger: "item",
+        backgroundColor: "#ffffff",
+        borderColor: "#edf1f7",
+        borderWidth: 1,
+        padding: [10, 12],
+        textStyle: {
+            color: "#1f3551",
+            fontFamily: "Nunito, sans-serif"
+        },
+        extraCssText: "box-shadow:0 14px 30px rgba(31,53,81,0.14); border-radius:16px;",
+        formatter: tooltipFormatter
+    },
+    xAxis: {
+        type: "value",
+        min: 0,
+        max: totalDays,
+        interval: Math.max(1, Math.ceil(totalDays / 6)),
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: {
+            show: true,
+            lineStyle: {
+                color: "#edf1f7",
+                width: 1
             }
         },
-        xAxis: {
-            type: "value",
-            min: 0,
-            max: totalDays,
-            interval: Math.max(1, Math.ceil(totalDays / 6)),
-            axisLine: { show: false },
-            axisTick: { show: false },
-            splitLine: {
-                show: true,
-                lineStyle: {
-                    color: "#d9dce5",
-                    width: 1
-                }
-            },
-            axisLabel: {
-                color: "#737784",
-                fontFamily: "Nunito, sans-serif",
-                fontSize: 12,
-                fontWeight: 700,
-                formatter: value => axisDate(value)
+        axisLabel: {
+            margin: 14,
+            color: "#97a2b2",
+            fontFamily: "Nunito, sans-serif",
+            fontSize: 12,
+            fontWeight: 700,
+            formatter: value => axisDate(value)
+        }
+    },
+    yAxis: {
+        type: "category",
+        inverse: true,
+        data: rows.map(r => r.title),
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        axisLabel: {
+            color: "#5d6878",
+            fontFamily: "Nunito, sans-serif",
+            fontSize: 12,
+            fontWeight: 700,
+            margin: 18,
+            width: 92,
+            overflow: "truncate"
+        }
+    },
+    series: [
+        {
+            name: "Timeline track",
+            type: "bar",
+            data: rows.map(() => totalDays),
+            barWidth: 16,
+            barGap: "-100%",
+            silent: true,
+            z: 1,
+            itemStyle: {
+                color: "#f3f5f9",
+                borderRadius: 999
             }
         },
-        yAxis: {
-            type: "category",
-            inverse: true,
-            data: rows.map(r => r.title),
-            axisLine: { show: false },
-            axisTick: { show: false },
-            axisLabel: {
-                color: "#737784",
-                fontFamily: "Nunito, sans-serif",
-                fontSize: 12,
-                fontWeight: 700,
-                margin: 14
+        {
+            name: "Offset",
+            type: "bar",
+            stack: "timeline",
+            data: rows.map(r => r.startOffset),
+            silent: true,
+            tooltip: { show: false },
+            z: 2,
+            itemStyle: {
+                color: "transparent"
             }
         },
-        series: [
-            {
-                name: "Track",
-                type: "bar",
-                data: rows.map(() => totalDays),
-                barWidth: 34,
-                barGap: "-100%",
-                silent: true,
-                z: 1,
-                itemStyle: {
-                    color: "#dbdde6",
-                    borderRadius: 8
-                }
-            },
-            {
-                name: "Offset",
-                type: "bar",
-                stack: "timeline",
-                data: rows.map(r => r.startOffset),
-                silent: true,
-                z: 2,
-                itemStyle: {
-                    color: "transparent"
-                }
-            },
-            {
-                name: "Duration",
-                type: "bar",
-                stack: "timeline",
-                data: rows.map(r => r.duration),
-                z: 3,
-                barWidth: 28,
-                itemStyle: {
-                    borderRadius: 8,
-                    color: params => params.dataIndex === featuredIndex ? "#000000" : "#111111"
-                },
-                markLine: {
-                    symbol: ["none", "none"],
-                    silent: true,
-                    animation: false,
-                    lineStyle: {
-                        color: "#8c909c",
-                        type: "dashed",
-                        width: 1.5
-                    },
-                    data: [
-                        { xAxis: featured.startOffset + featured.duration - 0.5 }
-                    ]
-                }
+        {
+            name: "Task span",
+            type: "bar",
+            stack: "timeline",
+            data: durationSeries,
+            z: 3,
+            barWidth: 16,
+            itemStyle: {
+                color: "#6d84ff",
+                borderRadius: 999,
+                shadowBlur: 8,
+                shadowOffsetY: 4,
+                shadowColor: "rgba(109,132,255,0.18)"
             }
-        ],
-        graphic: [
-            {
-                type: "group",
-                left: "center",
-                top: 24,
-                children: [
-                    {
-                        type: "rect",
-                        shape: { x: 0, y: 0, width: 186, height: 52, r: 10 },
-                        style: {
-                            fill: "#ffffff",
-                            stroke: "#eceef3",
-                            shadowBlur: 12,
-                            shadowColor: "rgba(17,24,39,0.08)",
-                            shadowOffsetY: 4
-                        }
-                    },
-                    {
-                        type: "text",
-                        style: {
-                            x: 14,
-                            y: 13,
-                            text: featured.title,
-                            fill: "#2a2e38",
-                            font: '700 12px "Nunito", sans-serif'
-                        }
-                    },
-                    {
-                        type: "text",
-                        style: {
-                            x: 14,
-                            y: 32,
-                            text: `${featured.startLabel} – ${featured.endLabel}`,
-                            fill: "#7a7f8b",
-                            font: '700 11px "Nunito", sans-serif'
-                        }
-                    },
-                    {
-                        type: "text",
-                        style: {
-                            x: 138,
-                            y: 21,
-                            text: `${featured.duration}d`,
-                            fill: "#69c356",
-                            font: '800 12px "Nunito", sans-serif'
-                        }
-                    }
-                ]
+        },
+        {
+            name: "Featured task",
+            type: "bar",
+            stack: "timeline",
+            data: featuredSeries,
+            z: 4,
+            barWidth: 16,
+            itemStyle: {
+                color: "#f4a340",
+                borderRadius: 999,
+                shadowBlur: 8,
+                shadowOffsetY: 4,
+                shadowColor: "rgba(244,163,64,0.22)"
             }
-        ]
-    });
+        }
+    ]
+});
 
     const onResize = () => chart.resize();
     window.addEventListener("resize", onResize);
@@ -629,11 +653,13 @@ React.useEffect(() => {
                             </span>
                         </div>
 
-                        <h3 className="db-stat-value">
-                            {loading ? "…" : card.value}
-                        </h3>
+                        <div className="db-stat-main">
+                            <h3 className="db-stat-value">
+                                {loading ? "…" : card.value}
+                            </h3>
 
-                        <p className="db-stat-label">{card.label}</p>
+                            <p className="db-stat-label">{card.label}</p>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -680,10 +706,8 @@ React.useEffect(() => {
                 <div className="col-lg-7 col-xl-8 d-flex">
                     <div className="db-gantt-report-card db-chart-card w-100">
                         <div className="db-gantt-report-head">
-                            <div>
-                                <h5 className="db-gantt-report-title">Gantt Chart</h5>
-                                <p className="db-gantt-report-sub">{periodLabel}</p>
-                            </div>
+                            <h5 className="db-gantt-report-title">Task Timeline</h5>
+                            <span className="db-gantt-report-range">{periodLabel}</span>
                         </div>
 
                         {!loading && !ganttReportData?.rows?.length ? (
