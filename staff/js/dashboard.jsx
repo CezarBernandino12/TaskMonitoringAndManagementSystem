@@ -491,7 +491,6 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
         const innerRadius = isMajor ? longInnerRadius : shortInnerRadius;
         const start = polarToCartesian(center, center, innerRadius, angle);
         const end = polarToCartesian(center, center, outerRadius, angle);
-
         const isActive = index < activeTicks;
 
         let stroke = "rgba(124, 156, 199, 0.14)";
@@ -513,7 +512,14 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
     if (!task) {
         return (
             <aside className="task-progress-panel task-progress-panel--empty">
-                <div className="task-progress-panel-title">Task Progress</div>
+                <div className="task-progress-panel-head">
+                    <div className="task-progress-panel-title">Task Progress</div>
+                    <div className="task-progress-panel-period">
+                        <span>Select task</span>
+                        <i className="bi bi-chevron-down"></i>
+                    </div>
+                </div>
+
                 <div className="task-progress-empty-copy">
                     Select a task from the table to track its progress.
                 </div>
@@ -521,77 +527,116 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
         );
     }
 
-        return (
-            <aside className="task-progress-panel task-progress-panel--performance">
-                <div className="task-progress-panel-head">
-                    <div className="task-progress-panel-title">Task Progress</div>
-                </div>
+    const metaItems = [
+        {
+            key: "status",
+            label: "Status",
+            value: task.status || "-",
+            dotClass: `is-status-${task.normalizedStatus || "other"}`
+        },
+        {
+            key: "priority",
+            label: "Priority",
+            value: getPriorityLabel(task.normalizedPriority),
+            dotClass: `is-priority-${task.normalizedPriority || "medium"}`
+        },
+        {
+            key: "due-date",
+            label: "Due Date",
+            value: formatDate(task.deadline),
+            dotClass: task.isOverdue ? "is-due-overdue" : "is-due-date"
+        }
+    ];
 
-                <div className="task-progress-visual">
-                    <div className="task-progress-chart-shell is-performance">
-                        <svg
-                            className="task-progress-svg"
-                            viewBox="0 0 240 240"
-                            role="img"
-                            aria-label={`${progressLabel} progress for ${task.title}`}
-                        >
-                            <defs>
-                                <filter id="taskProgressGlow" x="-40%" y="-40%" width="180%" height="180%">
-                                    <feGaussianBlur stdDeviation="1.8" result="blur" />
-                                    <feMerge>
-                                        <feMergeNode in="blur" />
-                                        <feMergeNode in="SourceGraphic" />
-                                    </feMerge>
-                                </filter>
-                            </defs>
+    return (
+        <aside className="task-progress-panel task-progress-panel--performance">
+            <div className="task-progress-panel-head">
+                <div className="task-progress-panel-title">Task Progress</div>
+            </div>
 
-                            {ticks.map((tick, index) => (
-                                <line
-                                    key={index}
-                                    x1={tick.x1}
-                                    y1={tick.y1}
-                                    x2={tick.x2}
-                                    y2={tick.y2}
-                                    stroke={tick.stroke}
-                                    strokeWidth={tick.strokeWidth}
-                                    strokeLinecap="round"
-                                    filter={index < activeTicks ? "url(#taskProgressGlow)" : undefined}
-                                />
-                            ))}
-                        </svg>
+            <div className="task-progress-visual">
+                <div className="task-progress-chart-shell is-performance">
+                    <svg
+                        className="task-progress-svg"
+                        viewBox="0 0 240 240"
+                        role="img"
+                        aria-label={`${progressLabel} progress for ${task.title}`}
+                    >
+                        <defs>
+                            <filter id="taskProgressGlow" x="-40%" y="-40%" width="180%" height="180%">
+                                <feGaussianBlur stdDeviation="1.8" result="blur" />
+                                <feMerge>
+                                    <feMergeNode in="blur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
 
-                        <div className="task-progress-center performance-center">
-                            <div className="task-progress-value performance-value">{progressLabel}</div>
-                            <div className="task-progress-inline-title">{task.title}</div>
-                        </div>
+                        {ticks.map((tick, index) => (
+                            <line
+                                key={index}
+                                x1={tick.x1}
+                                y1={tick.y1}
+                                x2={tick.x2}
+                                y2={tick.y2}
+                                stroke={tick.stroke}
+                                strokeWidth={tick.strokeWidth}
+                                strokeLinecap="round"
+                                filter={index < activeTicks ? "url(#taskProgressGlow)" : undefined}
+                            />
+                        ))}
+                    </svg>
+
+                    <div className="task-progress-center performance-center">
+                        <div className="task-progress-value performance-value">{progressLabel}</div>
+                        <div className="task-progress-inline-title">{task.title}</div>
                     </div>
                 </div>
+            </div>
 
-                <div className="task-progress-actions is-inline">
+            <div className="task-progress-meta-list" aria-label="Task details">
+                {metaItems.map(item => (
+                    <div className="task-progress-meta-item" key={item.key}>
+                        <span className={`task-progress-meta-dot ${item.dotClass}`}></span>
+                        <span className="task-progress-meta-name">{item.label}</span>
+                        <span className="task-progress-meta-value">{item.value}</span>
+                    </div>
+                ))}
+            </div>
+
+            <div className="task-progress-actions">
+                <div
+                    className="task-progress-split-control"
+                    role="group"
+                    aria-label={`Update progress for ${task.title}`}
+                >
                     <button
                         type="button"
-                        className="task-progress-btn task-progress-btn-icon is-minus"
+                        className="task-progress-split-btn is-minus"
                         onClick={onDecrease}
                         disabled={isMutating || progressValue <= 0}
                         aria-label={`Decrease progress for ${task.title}`}
                         title="Decrease progress"
                     >
-                        <i className="bi bi-dash-lg"></i>
+                        <span className="task-progress-split-icon is-minus" aria-hidden="true"></span>
                     </button>
+
+                    <span className="task-progress-split-divider" aria-hidden="true"></span>
 
                     <button
                         type="button"
-                        className="task-progress-btn task-progress-btn-icon is-plus"
+                        className="task-progress-split-btn is-plus"
                         onClick={onIncrease}
                         disabled={isMutating || progressValue >= 100}
                         aria-label={`Increase progress for ${task.title}`}
                         title="Increase progress"
                     >
-                        <i className="bi bi-plus-lg"></i>
+                        <span className="task-progress-split-icon is-plus" aria-hidden="true"></span>
                     </button>
                 </div>
-            </aside>
-        );
+            </div>
+        </aside>
+    );
 }
 
 // ─── TaskTable (unchanged logic, just carried forward) ────────────────────────
