@@ -1144,7 +1144,6 @@ body.has-bulk-action-bar {
     max-width: 96px;
     display: -webkit-box;
     overflow: hidden;
-    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     font-family: "Nunito", Arial, sans-serif !important;
     font-size: 11px;

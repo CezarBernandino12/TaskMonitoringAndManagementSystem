@@ -115,9 +115,97 @@ function SupervisorDashboard() {
         return [];
     }
 
-    /* ── Fetch ────────────────────────────────────────────────────────────── */
+const TASK_STATUS_COLOR_MAP = {
+    Overdue:   "#ef5a5a",
+    Ongoing:   "#7a8dff",
+    Completed: "#4f73ff",
+    Other:     "#f5a0a0",
+    Extra:     "#b8c9ff"
+};
 
-    const fetchDashboardData = async () => {
+/* ── Period-scoped task list ──────────────────────────────────────────── */
+const scopedTasks = React.useMemo(
+    () => (Array.isArray(tasks) ? tasks.filter(t => supervisorIsTaskInPeriod(t, period)) : []),
+    [tasks, period]
+);
+
+const taskStatusData = React.useMemo(() => {
+    const order = ["Overdue", "Ongoing", "Completed", "Other", "Extra"];
+    const counts = {};
+
+    scopedTasks.forEach(task => {
+        const name = normalizeStatus(task?.status);
+        counts[name] = (counts[name] || 0) + 1;
+    });
+
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+
+    return order
+        .filter(name => counts[name] > 0)
+        .map(name => ({
+            name,
+            value: counts[name],
+            percent: total ? Math.round((counts[name] / total) * 100) : 0,
+            color: TASK_STATUS_COLOR_MAP[name] || "#9fb4ff"
+        }));
+}, [scopedTasks]);
+
+const ganttReportData = React.useMemo(() => {
+    const validTasks = scopedTasks.filter(
+        t => t?.title && t?.start_date && t?.deadline
+    );
+
+    if (!validTasks.length) return null;
+
+    const sortedTasks = [...validTasks].sort(
+        (a, b) => new Date(a.start_date) - new Date(b.start_date)
+    );
+
+    const formatShort = dateStr => {
+        const d = new Date(`${String(dateStr).slice(0, 10)}T00:00:00`);
+        return d.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric"
+        });
+    };
+
+    const startTimes = sortedTasks.map(
+        t => new Date(`${t.start_date}T00:00:00`).getTime()
+    );
+    const endTimes = sortedTasks.map(
+        t => new Date(`${t.deadline}T00:00:00`).getTime()
+    );
+
+    const minDate = Math.min(...startTimes);
+    const maxDate = Math.max(...endTimes);
+    const totalDays = Math.max(1, Math.ceil((maxDate - minDate) / 864e5) + 1);
+
+    const rows = sortedTasks.map(task => {
+        const startTime = new Date(`${task.start_date}T00:00:00`).getTime();
+        const deadlineTime = new Date(`${task.deadline}T00:00:00`).getTime();
+        const startOffset = Math.max(0, Math.round((startTime - minDate) / 864e5));
+        const duration = Math.max(1, Math.round((deadlineTime - startTime) / 864e5) + 1);
+        const status = normalizeStatus(task?.status);
+
+        return {
+            title: task.title,
+            status,
+            startOffset,
+            duration,
+            startLabel: formatShort(task.start_date),
+            endLabel: formatShort(task.deadline)
+        };
+    });
+
+    const featured = rows.reduce((best, row) => {
+        if (!best) return row;
+        return row.duration > best.duration ? row : best;
+    }, null);
+
+    return { rows, featured, minDate, totalDays };
+}, [scopedTasks]);
+
+const fetchDashboardData = async () => {
         try {
             setLoading(true);
             setError("");
@@ -148,185 +236,262 @@ function SupervisorDashboard() {
 
     React.useEffect(() => { fetchDashboardData(); }, []);
 
-    /* ── Period-scoped task list ──────────────────────────────────────────── */
-
-    const scopedTasks = React.useMemo(
-        () => (Array.isArray(tasks) ? tasks.filter(t => supervisorIsTaskInPeriod(t, period)) : []),
-        [tasks, period]
-    );
-
-    /* ── Pie chart — rebuilds whenever scopedTasks or period changes ─────── */
-
     React.useEffect(() => {
-        if (!window.Chart) return;
+        if (!window.echarts) return;
 
-        const canvas = document.getElementById("taskStatusPieChart");
-        if (!canvas) return;
+        const el = document.getElementById("taskStatusDonutChart");
+        if (!el) return;
 
-        if (window.taskStatusPieChartInstance) {
-            window.taskStatusPieChartInstance.destroy();
-            window.taskStatusPieChartInstance = null;
+        const chart = window.echarts.getInstanceByDom(el) || window.echarts.init(el);
+
+        if (taskStatusData.length === 0) {
+            chart.clear();
+            return () => chart.dispose();
         }
 
-        if (scopedTasks.length === 0) return;
-
-        const statusCounts = {};
-        scopedTasks.forEach(t => {
-            const s = normalizeStatus(t?.status);
-            statusCounts[s] = (statusCounts[s] || 0) + 1;
-        });
-
-        const labels           = Object.keys(statusCounts);
-        const values           = Object.values(statusCounts);
-        const backgroundColors = labels.map(l => statusColorMap[l] || "#e0e0e0");
-
-        window.taskStatusPieChartInstance = new window.Chart(canvas, {
-            type: "pie",
-            data: {
-                labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: backgroundColors,
-                    borderColor: "#fffaf3",
-                    borderWidth: 3,
-                    hoverOffset: 6
-                }]
+        chart.setOption({
+            animation: true,
+            tooltip: {
+                trigger: "item",
+                formatter: params => `${params.name}: ${params.value} (${params.percent}%)`
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: "bottom",
-                        labels: { color: "#a67c52", font: { size: 13 } }
-                    }
+            series: [{
+                type: "pie",
+                radius: ["36%", "58%"],
+                center: ["50%", "38%"],
+                startAngle: 90,
+                selectedMode: "single",
+                selectedOffset: 4,
+                avoidLabelOverlap: false,
+                minAngle: 6,
+                itemStyle: {
+                    borderWidth: 0
                 },
-                layout: { padding: 10 }
-            }
-        });
-
-        return () => {
-            if (window.taskStatusPieChartInstance) {
-                window.taskStatusPieChartInstance.destroy();
-                window.taskStatusPieChartInstance = null;
-            }
-        };
-    }, [scopedTasks]);
-
-    /* ── Gantt chart — rebuilds whenever scopedTasks or period changes ───── */
-
-    React.useEffect(() => {
-        if (!window.Chart) return;
-
-        const canvas = document.getElementById("ganttChartCanvas");
-        if (!canvas) return;
-
-        if (window.ganttChartInstance) {
-            window.ganttChartInstance.destroy();
-            window.ganttChartInstance = null;
-        }
-
-        const validTasks = scopedTasks.filter(t => t?.title && t?.start_date && t?.deadline);
-        if (validTasks.length === 0) return;
-
-        const sortedTasks = [...validTasks].sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-        const labels      = sortedTasks.map(t => t.title);
-        const startDates  = sortedTasks.map(t => new Date(t.start_date));
-        const endDates    = sortedTasks.map(t => new Date(t.deadline));
-
-        const minDate   = Math.min(...startDates.map(d => d.getTime()));
-        const maxDate   = Math.max(...endDates.map(d => d.getTime()));
-        const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-
-        const ganttData = sortedTasks.map(t => ({
-            x:      (new Date(t.start_date).getTime() - minDate) / 864e5,
-            x2:     (new Date(t.deadline).getTime()   - minDate) / 864e5,
-            y:      t.title,
-            status: normalizeStatus(t.status)
-        }));
-
-        window.ganttChartInstance = new window.Chart(canvas, {
-            type: "bar",
-            data: {
-                labels,
-                datasets: [{
-                    label: "Task Duration",
-                    data: ganttData,
-                    backgroundColor: ganttData.map(d => statusColorMap[d.status] || "#e0e0e0"),
-                    borderRadius: 6,
-                    borderSkipped: false,
-                    barPercentage: 0.8,
-                    categoryPercentage: 0.9
-                }]
-            },
-            options: {
-                indexAxis: "y",
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label(context) {
-                                const d     = context.raw;
-                                const start = new Date(minDate + d.x  * 864e5);
-                                const end   = new Date(minDate + d.x2 * 864e5);
-                                return `${d.y}: ${start.toLocaleDateString()} – ${end.toLocaleDateString()} (${d.status})`;
-                            }
-                        }
-                    }
+                label: {
+                    show: true,
+                    position: "inside",
+                    formatter: "{d}%",
+                    color: "#ffffff",
+                    fontFamily: "Nunito, sans-serif",
+                    fontSize: 12,
+                    fontWeight: 800
                 },
-                scales: {
-                    x: {
-                        min: 0,
-                        max: totalDays,
-                        title: { display: true, text: "Timeline (days)" },
-                        ticks: {
-                            callback: value => new Date(minDate + value * 864e5).toLocaleDateString(),
-                            autoSkip: true,
-                            maxTicksLimit: 10
-                        },
-                        grid: { color: "#ffe7b3" }
-                    },
-                    y: { grid: { color: "#ffe7b3" } }
-                }
-            },
-            plugins: [{
-                id: "ganttBar",
-                beforeDatasetsDraw(chart) {
-                    const { ctx, data, scales } = chart;
-                    if (!data.datasets.length) return;
-                    ctx.save();
-                    data.datasets[0].data.forEach((d, i) => {
-                        const y      = scales.y.getPixelForValue(d.y);
-                        const xStart = scales.x.getPixelForValue(d.x);
-                        const xEnd   = scales.x.getPixelForValue(d.x2);
-                        const width  = Math.max(xEnd - xStart, 4);
-                        ctx.beginPath();
-                        ctx.fillStyle   = data.datasets[0].backgroundColor[i];
-                        ctx.strokeStyle = "#fff";
-                        ctx.lineWidth   = 2;
-                        if (typeof ctx.roundRect === "function") {
-                            ctx.roundRect(xStart, y - 12, width, 24, 6);
-                        } else {
-                            ctx.rect(xStart, y - 12, width, 24);
-                        }
-                        ctx.fill();
-                        ctx.stroke();
-                    });
-                    ctx.restore();
-                }
+                labelLine: {
+                    show: false
+                },
+                data: taskStatusData.map((item, index) => ({
+                    value: item.value,
+                    name: item.name,
+                    selected: index === Math.min(1, taskStatusData.length - 1),
+                    itemStyle: { color: item.color }
+                }))
             }]
         });
 
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
+
         return () => {
-            if (window.ganttChartInstance) {
-                window.ganttChartInstance.destroy();
-                window.ganttChartInstance = null;
-            }
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
         };
-    }, [scopedTasks]);
+    }, [taskStatusData]);
+
+    /* ── Gantt chart — rebuilds whenever scopedTasks or period changes ───── */
+
+React.useEffect(() => {
+    if (!window.echarts) return;
+
+    const el = document.getElementById("ganttReportChart");
+    if (!el) return;
+
+    const chart = window.echarts.getInstanceByDom(el) || window.echarts.init(el);
+
+    if (!ganttReportData?.rows?.length) {
+        chart.clear();
+        return () => chart.dispose();
+    }
+
+    const { rows, featured, minDate, totalDays } = ganttReportData;
+    const featuredIndex = rows.findIndex(r => r.title === featured.title);
+
+    const axisDate = value => {
+        const d = new Date(minDate + value * 864e5);
+        return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    };
+
+    chart.setOption({
+        animationDuration: 450,
+        grid: {
+            top: 110,
+            left: 100,
+            right: 24,
+            bottom: 56
+        },
+        tooltip: {
+            trigger: "axis",
+            axisPointer: { type: "shadow" },
+            formatter: params => {
+                const item = params.find(p => p.seriesName === "Duration");
+                if (!item) return "";
+                const row = rows[item.dataIndex];
+                return `
+                    <div style="font-family: Nunito, sans-serif; min-width: 170px;">
+                        <div style="font-weight: 800; margin-bottom: 4px;">${row.title}</div>
+                        <div>${row.startLabel} – ${row.endLabel}</div>
+                        <div>Status: ${row.status}</div>
+                        <div>Duration: ${row.duration} day${row.duration !== 1 ? "s" : ""}</div>
+                    </div>
+                `;
+            }
+        },
+        xAxis: {
+            type: "value",
+            min: 0,
+            max: totalDays,
+            interval: Math.max(1, Math.ceil(totalDays / 6)),
+            axisLine: { show: false },
+            axisTick: { show: false },
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    color: "#d9dce5",
+                    width: 1
+                }
+            },
+            axisLabel: {
+                color: "#737784",
+                fontFamily: "Nunito, sans-serif",
+                fontSize: 12,
+                fontWeight: 700,
+                formatter: value => axisDate(value)
+            }
+        },
+        yAxis: {
+            type: "category",
+            inverse: true,
+            data: rows.map(r => r.title),
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: {
+                color: "#737784",
+                fontFamily: "Nunito, sans-serif",
+                fontSize: 12,
+                fontWeight: 700,
+                margin: 14
+            }
+        },
+        series: [
+            {
+                name: "Track",
+                type: "bar",
+                data: rows.map(() => totalDays),
+                barWidth: 34,
+                barGap: "-100%",
+                silent: true,
+                z: 1,
+                itemStyle: {
+                    color: "#dbdde6",
+                    borderRadius: 8
+                }
+            },
+            {
+                name: "Offset",
+                type: "bar",
+                stack: "timeline",
+                data: rows.map(r => r.startOffset),
+                silent: true,
+                z: 2,
+                itemStyle: {
+                    color: "transparent"
+                }
+            },
+            {
+                name: "Duration",
+                type: "bar",
+                stack: "timeline",
+                data: rows.map(r => r.duration),
+                z: 3,
+                barWidth: 28,
+                itemStyle: {
+                    borderRadius: 8,
+                    color: params => params.dataIndex === featuredIndex ? "#000000" : "#111111"
+                },
+                markLine: {
+                    symbol: ["none", "none"],
+                    silent: true,
+                    animation: false,
+                    lineStyle: {
+                        color: "#8c909c",
+                        type: "dashed",
+                        width: 1.5
+                    },
+                    data: [
+                        { xAxis: featured.startOffset + featured.duration - 0.5 }
+                    ]
+                }
+            }
+        ],
+        graphic: [
+            {
+                type: "group",
+                left: "center",
+                top: 24,
+                children: [
+                    {
+                        type: "rect",
+                        shape: { x: 0, y: 0, width: 186, height: 52, r: 10 },
+                        style: {
+                            fill: "#ffffff",
+                            stroke: "#eceef3",
+                            shadowBlur: 12,
+                            shadowColor: "rgba(17,24,39,0.08)",
+                            shadowOffsetY: 4
+                        }
+                    },
+                    {
+                        type: "text",
+                        style: {
+                            x: 14,
+                            y: 13,
+                            text: featured.title,
+                            fill: "#2a2e38",
+                            font: '700 12px "Nunito", sans-serif'
+                        }
+                    },
+                    {
+                        type: "text",
+                        style: {
+                            x: 14,
+                            y: 32,
+                            text: `${featured.startLabel} – ${featured.endLabel}`,
+                            fill: "#7a7f8b",
+                            font: '700 11px "Nunito", sans-serif'
+                        }
+                    },
+                    {
+                        type: "text",
+                        style: {
+                            x: 138,
+                            y: 21,
+                            text: `${featured.duration}d`,
+                            fill: "#69c356",
+                            font: '800 12px "Nunito", sans-serif'
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    const onResize = () => chart.resize();
+    window.addEventListener("resize", onResize);
+
+    return () => {
+        window.removeEventListener("resize", onResize);
+        chart.dispose();
+    };
+}, [ganttReportData]);
 
     /* ── Summary counts — derived from scopedTasks ───────────────────────── */
 
@@ -407,61 +572,115 @@ function SupervisorDashboard() {
             </div>
 
             {/* ── Summary Cards ─────────────────────────────────────────── */}
-            <div className="row mb-4">
+            <div className="db-metrics-row db-metrics-row--four mb-4">
                 {[
-                    { label: "Total Tasks", value: totalTasks,     sub: periodLabel      },
-                    { label: "Ongoing",     value: ongoingTasks,   sub: "active"         },
-                    { label: "Completed",   value: completedTasks, sub: "done"           },
-                    { label: "Overdue",     value: overdueTasks,   sub: "past due"       },
+                    {
+                        label: "Total Tasks",
+                        value: totalTasks,
+                        sub: periodLabel,
+                        icon: "bi-list-task",
+                        tone: "teal",
+                        trend: "up"
+                    },
+                    {
+                        label: "Ongoing",
+                        value: ongoingTasks,
+                        sub: "active",
+                        icon: "bi-arrow-repeat",
+                        tone: "blue",
+                        trend: "up"
+                    },
+                    {
+                        label: "Completed",
+                        value: completedTasks,
+                        sub: "done",
+                        icon: "bi-check2-circle",
+                        tone: "green",
+                        trend: "up"
+                    },
+                    {
+                        label: "Overdue",
+                        value: overdueTasks,
+                        sub: "past due",
+                        icon: "bi-exclamation-circle",
+                        tone: "red",
+                        trend: "down"
+                    },
                 ].map(card => (
-                    <div className="col-md-3" key={card.label}>
-                        <div className="card summary-card text-center p-3">
-                            <h6>{card.label}</h6>
-                            <h3>{loading ? "…" : card.value}</h3>
-                            <small style={{ color: "#a67c52", fontSize: "0.78rem" }}>
+                    <div className="db-stat-card" key={card.label}>
+                        <div className="db-stat-card-top">
+                            <div className={`db-stat-icon-wrap ${card.tone}`}>
+                                <i className={`bi ${card.icon}`}></i>
+                            </div>
+
+                            <span className={`db-stat-top-text ${card.trend}`}>
                                 {card.sub}
-                            </small>
+                            </span>
                         </div>
+
+                        <h3 className="db-stat-value">
+                            {loading ? "…" : card.value}
+                        </h3>
+
+                        <p className="db-stat-label">{card.label}</p>
                     </div>
                 ))}
             </div>
 
             {/* ── Charts ────────────────────────────────────────────────── */}
-            <div className="row mb-4 justify-content-center align-items-start">
-                <div className="col-md-5">
-                    <div className="card p-3 mb-4" style={{ maxWidth: "420px", margin: "0 auto" }}>
-                        <div className="d-flex justify-content-between align-items-baseline mb-2">
-                            <h5 className="mb-0">Task Status Distribution</h5>
-                            <small style={{ color: "#a67c52" }}>{periodLabel}</small>
+            <div className="row g-4 mb-4 align-items-start">
+                <div className="col-lg-5 col-xl-4 d-flex">
+                    <div className="db-donut-card db-chart-card w-100">
+                        <div className="db-donut-card-head">
+                            <h5 className="db-donut-title">Task Status Distribution</h5>
+                            <small className="db-donut-period">{periodLabel}</small>
                         </div>
-                        {!loading && scopedTasks.length === 0 ? (
-                            <div style={{ height: "260px", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                 className="text-muted">
-                                No tasks for this period
-                            </div>
+
+                        {loading ? (
+                            <div className="db-donut-empty">Loading chart…</div>
+                        ) : taskStatusData.length === 0 ? (
+                            <div className="db-donut-empty">No tasks for this period</div>
                         ) : (
-                            <div style={{ width: "100%", height: "260px", display: "flex", justifyContent: "center" }}>
-                                <canvas id="taskStatusPieChart"></canvas>
-                            </div>
+                            <>
+                                <div id="taskStatusDonutChart" className="db-donut-chart"></div>
+
+                                <div className="db-donut-legend">
+                                    {taskStatusData.map(item => (
+                                        <div className="db-donut-legend-row" key={item.name}>
+                                            <div className="db-donut-legend-left">
+                                                <span
+                                                    className="db-donut-dot"
+                                                    style={{ backgroundColor: item.color }}
+                                                ></span>
+                                                <span className="db-donut-legend-label">{item.name}</span>
+                                            </div>
+
+                                            <span className="db-donut-legend-value">
+                                                {item.value} ({item.percent}%)
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
 
-                <div className="col-md-7">
-                    <div className="card p-3 mb-4" style={{ minHeight: "260px", overflowX: "auto" }}>
-                        <div className="d-flex justify-content-between align-items-baseline mb-2">
-                            <h5 className="mb-0">Gantt Chart</h5>
-                            <small style={{ color: "#a67c52" }}>{periodLabel}</small>
+                <div className="col-lg-7 col-xl-8 d-flex">
+                    <div className="db-gantt-report-card db-chart-card w-100">
+                        <div className="db-gantt-report-head">
+                            <div>
+                                <h5 className="db-gantt-report-title">Gantt Chart</h5>
+                                <p className="db-gantt-report-sub">{periodLabel}</p>
+                            </div>
                         </div>
-                        {!loading && scopedTasks.filter(t => t?.start_date && t?.deadline).length === 0 ? (
-                            <div style={{ height: "380px", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                 className="text-muted">
+
+                        {!loading && !ganttReportData?.rows?.length ? (
+                            <div className="db-gantt-report-empty">
                                 No tasks with date ranges for this period
                             </div>
                         ) : (
-                            <div style={{ height: "380px" }}>
-                                <canvas id="ganttChartCanvas"></canvas>
-                            </div>
+                            <div id="ganttReportChart" className="db-gantt-report-chart"></div>
                         )}
                     </div>
                 </div>
