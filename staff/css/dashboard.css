@@ -1691,6 +1691,47 @@ body.has-bulk-action-bar {
     color: #a9bdff;
 }
 
+/* Active task row in dark mode */
+[data-theme="dark"] .task-board-row.is-focused td {
+    background: linear-gradient(
+        180deg,
+        rgba(76, 125, 255, 0.16) 0%,
+        rgba(76, 125, 255, 0.10) 100%
+    );
+}
+
+[data-theme="dark"] .task-board-row.is-focused:hover td {
+    background: linear-gradient(
+        180deg,
+        rgba(76, 125, 255, 0.22) 0%,
+        rgba(76, 125, 255, 0.14) 100%
+    );
+}
+
+[data-theme="dark"] .task-board-row.is-focused td:first-child {
+    box-shadow: inset 3px 0 0 #7c93ff;
+}
+
+[data-theme="dark"] .task-board-row.is-focused .task-board-task-title,
+[data-theme="dark"] .task-board-row.is-focused .task-board-date {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .task-board-row.is-focused .task-board-description {
+    color: #c9d6f2;
+}
+
+[data-theme="dark"] .task-board-row.is-focused .task-checkbox-ui {
+    border-color: rgba(124, 147, 255, 0.42);
+    background: rgba(124, 147, 255, 0.08);
+}
+
+[data-theme="dark"] .task-board-row.is-focused .task-status-pill.status-ongoing {
+    background: rgba(76, 125, 255, 0.24);
+    border-color: rgba(124, 147, 255, 0.30);
+    color: #aecdff;
+}
+
 /* ==========================================================================
    18. RESPONSIVE
    ========================================================================== */
