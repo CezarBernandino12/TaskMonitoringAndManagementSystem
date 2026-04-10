@@ -70,7 +70,7 @@ function getProfileImageUrl(?string $profileImage): ?string
         return null;
     }
 
-    return '/uploads/profiles/' . ltrim($profileImage, '/\\');
+    return '../uploads/profiles/' . ltrim($profileImage, '/\\');
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
