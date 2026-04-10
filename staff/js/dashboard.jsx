@@ -798,18 +798,29 @@ function TaskTable({
     const clearSelection = () => setSelectedTaskIds([]);
 
     const getPaginationItems = () => {
-        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+        const maxVisible = 3;
 
-        const items = [1];
-        const start = Math.max(2, currentPage - 1);
-        const end = Math.min(totalPages - 1, currentPage + 1);
+        if (totalPages <= maxVisible) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
 
-        if (start > 2) items.push("left-ellipsis");
-        for (let p = start; p <= end; p++) items.push(p);
-        if (end < totalPages - 1) items.push("right-ellipsis");
+        let startPage = currentPage - Math.floor(maxVisible / 2);
+        let endPage = currentPage + Math.floor(maxVisible / 2);
 
-        items.push(totalPages);
-        return items;
+        if (startPage < 1) {
+            startPage = 1;
+            endPage = maxVisible;
+        }
+
+        if (endPage > totalPages) {
+            endPage = totalPages;
+            startPage = totalPages - maxVisible + 1;
+        }
+
+        return Array.from(
+            { length: endPage - startPage + 1 },
+            (_, i) => startPage + i
+        );
     };
 
     const paginationItems = getPaginationItems();
@@ -945,20 +956,16 @@ function TaskTable({
                             </button>
 
                             {paginationItems.map(item => (
-                                typeof item === "number" ? (
-                                    <button
-                                        key={item}
-                                        type="button"
-                                        className={`task-page-btn ${currentPage === item ? "is-active" : ""}`}
-                                        onClick={() => setCurrentPage(item)}
-                                        aria-current={currentPage === item ? "page" : undefined}
-                                        disabled={isMutating}
-                                    >
-                                        {item}
-                                    </button>
-                                ) : (
-                                    <span key={item} className="task-page-ellipsis">…</span>
-                                )
+                                <button
+                                    key={item}
+                                    type="button"
+                                    className={`task-page-btn ${currentPage === item ? "is-active" : ""}`}
+                                    onClick={() => setCurrentPage(item)}
+                                    aria-current={currentPage === item ? "page" : undefined}
+                                    disabled={isMutating}
+                                >
+                                    {item}
+                                </button>
                             ))}
 
                             <button

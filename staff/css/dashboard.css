@@ -793,17 +793,6 @@ body.has-bulk-action-bar {
     padding: 0 10px;
 }
 
-.task-page-ellipsis {
-    min-width: 24px;
-    height: 36px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    font-size: 14px;
-    font-weight: 700;
-}
-
 /* ==========================================================================
    14. BULK ACTION BAR
    ========================================================================== */
@@ -1686,10 +1675,6 @@ body.has-bulk-action-bar {
     background: rgba(53, 89, 216, 0.22);
     border-color: rgba(157, 180, 255, 0.18);
     color: #a9bdff;
-}
-
-[data-theme="dark"] .task-page-ellipsis {
-    color: var(--text-secondary);
 }
 
 /* ==========================================================================
