@@ -1,0 +1,135 @@
+:root {
+    --shell-edge: 18px;
+    --shell-gap: 12px;
+    --sidebar-expanded-w: 250px;
+    --sidebar-collapsed-w: 108px;
+    --topbar-content-gap: 40px;
+    --topbar-bottom: calc(var(--shell-edge) + var(--topbar-height, 78px));
+    --topbar-stack: calc(var(--topbar-bottom) + var(--topbar-content-gap));
+    --page-bottom-space: 48px;
+}
+
+html,
+body {
+    min-height: 100%;
+    margin: 0;
+    background: var(--bg-page);
+}
+
+body {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.app-shell,
+.app-body {
+    min-height: 100vh;
+    background: var(--bg-page);
+}
+
+.app-shell::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--topbar-bottom) + 20px);
+    background: linear-gradient(
+        to bottom,
+        var(--bg-page) 0%,
+        var(--bg-page) 72%,
+        transparent 100%
+    );
+    z-index: 1190;
+    pointer-events: none;
+}
+
+.app-topbar {
+    position: fixed;
+    top: var(--shell-edge);
+    left: calc(var(--shell-edge) + var(--sidebar-expanded-w) + var(--shell-gap));
+    right: var(--shell-edge);
+    width: auto;
+    z-index: 1200 !important;
+    isolation: isolate;
+}
+
+body:has(.dashboard-sidebar.collapsed) .app-topbar {
+    left: calc(var(--shell-edge) + var(--sidebar-collapsed-w) + var(--shell-gap));
+}
+
+.app-topbar .topbar {
+    position: relative;
+    z-index: 1201;
+    overflow: visible !important;
+}
+
+.app-sidebar-col {
+    position: fixed;
+    top: var(--shell-edge);
+    left: var(--shell-edge);
+    z-index: 1210;
+    padding: 0;
+    flex-shrink: 0;
+    isolation: isolate;
+}
+
+.app-sidebar-col .dashboard-sidebar {
+    position: relative;
+    z-index: 1210 !important;
+}
+
+.sidebar-toggle {
+    z-index: 1220;
+}
+
+.app-main-col {
+    min-width: 0;
+    min-height: calc(100vh - var(--topbar-stack));
+    padding:
+        var(--topbar-stack)
+        var(--shell-edge)
+        calc(var(--page-bottom-space) + env(safe-area-inset-bottom, 0px))
+        calc(var(--shell-edge) + var(--sidebar-expanded-w) + var(--shell-gap));
+    background: transparent;
+}
+
+body:has(.dashboard-sidebar.collapsed) .app-main-col {
+    padding-left: calc(var(--shell-edge) + var(--sidebar-collapsed-w) + var(--shell-gap));
+}
+
+.topbar-notif-wrap {
+    position: relative;
+    z-index: 1302;
+}
+
+.notif-panel {
+    z-index: 1305 !important;
+}
+
+@media (max-width: 767.98px) {
+    .app-shell::before {
+        height: calc(var(--topbar-height, 78px) + 16px);
+    }
+
+    .app-topbar {
+        position: sticky;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        z-index: 1200;
+    }
+
+    .app-sidebar-col {
+        position: static;
+        top: auto;
+        left: auto;
+        z-index: auto;
+    }
+
+    .app-main-col {
+        min-height: auto;
+        padding: calc(var(--topbar-height, 78px) + 12px) 16px 28px;
+    }
+}

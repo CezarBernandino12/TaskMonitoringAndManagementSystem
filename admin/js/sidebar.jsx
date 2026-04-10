@@ -3,12 +3,12 @@ const MOBILE_BREAKPOINT = 768;
 const SIDEBAR_USER_API = "php/sidebar.php";
 
 const FALLBACK_USER = {
-    name: "President",
+    name: "Administrator",
     nickname: "",
-    role: "president",
-    role_label: "President",
+    role: "admin",
+    role_label: "Administrator",
     department_name: "",
-    initials: "P",
+    initials: "A",
     profile_image_url: ""
 };
 
@@ -19,19 +19,13 @@ function getCurrentPage() {
 
 function getInitials(name) {
     if (!name) return "U";
-
     const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return "U";
-
-    return parts
-        .slice(0, 2)
-        .map((part) => part.charAt(0).toUpperCase())
-        .join("");
+    return parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("");
 }
 
 async function parseJsonResponse(response) {
     const rawText = await response.text();
-
     try {
         return JSON.parse(rawText);
     } catch (error) {
@@ -41,7 +35,7 @@ async function parseJsonResponse(response) {
 }
 
 function normalizeUserPayload(data = {}) {
-    const name = (data.name || "President").trim();
+    const name = (data.name || "Administrator").trim();
     const nickname = (data.nickname || "").trim();
 
     return {
@@ -60,34 +54,20 @@ function getSidebarRoleText(user) {
     const dept = (user?.department_name || "").trim();
     const rawRole = (user?.role || "").trim().toLowerCase();
 
-    if (rawRole === "president") {
-        return "Executive Access";
+    if (rawRole === "admin") {
+        return "System Access";
     }
 
     if (dept && role) {
         return `${dept} - ${role}`.toUpperCase();
     }
 
-    if (role) {
-        return role.toUpperCase();
-    }
-
-    if (dept) {
-        return dept.toUpperCase();
-    }
-
-    return "EXECUTIVE ACCESS";
+    if (role) return role.toUpperCase();
+    if (dept) return dept.toUpperCase();
+    return "SYSTEM ACCESS";
 }
 
-function SidebarLink({
-    href,
-    icon,
-    label,
-    isActive,
-    extraClass = "",
-    onClick,
-    onNavigate
-}) {
+function SidebarLink({ href, icon, label, isActive, extraClass = "", onClick, onNavigate }) {
     const handleClick = (e) => {
         if (onClick) onClick(e);
         if (!e.defaultPrevented && onNavigate) onNavigate();
@@ -107,20 +87,14 @@ function SidebarLink({
     );
 }
 
-function PresidentSidebar() {
-    const [collapsed, setCollapsed] = React.useState(() => {
-        return localStorage.getItem(STORAGE_KEY) === "true";
-    });
-
-    const [isMobile, setIsMobile] = React.useState(
-        () => window.innerWidth < MOBILE_BREAKPOINT
-    );
+function AdminSidebar() {
+    const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem(STORAGE_KEY) === "true");
+    const [isMobile, setIsMobile] = React.useState(() => window.innerWidth < MOBILE_BREAKPOINT);
     const [mobileOpen, setMobileOpen] = React.useState(false);
     const [user, setUser] = React.useState(FALLBACK_USER);
     const [imgFailed, setImgFailed] = React.useState(false);
 
     const currentPage = getCurrentPage();
-
     const reportsPages = [
         "daily-reports.html",
         "weekly-reports.html",
@@ -131,25 +105,18 @@ function PresidentSidebar() {
 
     const isActivePage = (fileName) => currentPage === fileName.toLowerCase();
     const isAnyReportActive = reportsPages.some(isActivePage);
-
     const [reportsOpen, setReportsOpen] = React.useState(isAnyReportActive);
 
     React.useEffect(() => {
         const handleResize = () => {
             const mobile = window.innerWidth < MOBILE_BREAKPOINT;
             setIsMobile(mobile);
-
-            if (!mobile) {
-                setMobileOpen(false);
-            }
+            if (!mobile) setMobileOpen(false);
         };
 
         handleResize();
         window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
+        return () => window.removeEventListener("resize", handleResize);
     }, []);
 
     React.useEffect(() => {
@@ -161,17 +128,12 @@ function PresidentSidebar() {
     }, []);
 
     React.useEffect(() => {
-        if (isAnyReportActive) {
-            setReportsOpen(true);
-        }
+        if (isAnyReportActive) setReportsOpen(true);
     }, [isAnyReportActive]);
 
     React.useEffect(() => {
         document.body.classList.toggle("sidebar-mobile-open", isMobile && mobileOpen);
-
-        return () => {
-            document.body.classList.remove("sidebar-mobile-open");
-        };
+        return () => document.body.classList.remove("sidebar-mobile-open");
     }, [isMobile, mobileOpen]);
 
     React.useEffect(() => {
@@ -187,13 +149,8 @@ function PresidentSidebar() {
                     credentials: "same-origin",
                     headers: { Accept: "application/json" }
                 });
-
                 const data = await parseJsonResponse(response);
-
-                if (!response.ok || data.error) {
-                    throw new Error(data.error || "Failed to load sidebar user.");
-                }
-
+                if (!response.ok || data.error) throw new Error(data.error || "Failed to load sidebar user.");
                 if (!active) return;
                 setUser(normalizeUserPayload(data));
             } catch (error) {
@@ -205,18 +162,15 @@ function PresidentSidebar() {
 
         function handleProfileUpdated(event) {
             const detail = event?.detail;
-
             if (!detail) {
                 loadUser();
                 return;
             }
-
             setUser(normalizeUserPayload(detail));
         }
 
         loadUser();
         window.addEventListener("profile-updated", handleProfileUpdated);
-
         return () => {
             active = false;
             window.removeEventListener("profile-updated", handleProfileUpdated);
@@ -228,26 +182,14 @@ function PresidentSidebar() {
             setMobileOpen((prev) => !prev);
             return;
         }
-
         setCollapsed((prev) => !prev);
     };
 
-    const openMobileSidebar = () => {
-        setMobileOpen(true);
-    };
-
-    const closeMobileSidebar = () => {
-        setMobileOpen(false);
-    };
-
-    const toggleReports = () => {
-        setReportsOpen((prev) => !prev);
-    };
-
+    const openMobileSidebar = () => setMobileOpen(true);
+    const closeMobileSidebar = () => setMobileOpen(false);
+    const toggleReports = () => setReportsOpen((prev) => !prev);
     const handleNavigate = () => {
-        if (isMobile) {
-            closeMobileSidebar();
-        }
+        if (isMobile) closeMobileSidebar();
     };
 
     const sidebarClassName = [
@@ -255,11 +197,9 @@ function PresidentSidebar() {
         !isMobile && collapsed ? "collapsed" : "",
         isMobile ? "mobile" : "",
         isMobile && mobileOpen ? "mobile-open" : ""
-    ]
-        .filter(Boolean)
-        .join(" ");
+    ].filter(Boolean).join(" ");
 
-    const displayName = user.nickname || user.name || "President";
+    const displayName = user.nickname || user.name || "Administrator";
     const roleText = getSidebarRoleText(user);
     const initials = user.initials || getInitials(displayName);
     const hasImage = Boolean(user.profile_image_url) && !imgFailed;
@@ -301,9 +241,7 @@ function PresidentSidebar() {
 
                 {isMobile && (
                     <div className="sidebar-mobile-topbar">
-                        <div className="sidebar-mobile-title">
-                            President Panel
-                        </div>
+                        <div className="sidebar-mobile-title">Admin Panel</div>
                         <button
                             type="button"
                             className="sidebar-mobile-close"
@@ -332,9 +270,7 @@ function PresidentSidebar() {
                                     }}
                                 />
                             ) : (
-                                <div className="sidebar-avatar sidebar-avatar-fallback">
-                                    {initials}
-                                </div>
+                                <div className="sidebar-avatar sidebar-avatar-fallback">{initials}</div>
                             )}
                         </div>
 
@@ -347,21 +283,14 @@ function PresidentSidebar() {
                     <div className="sidebar-divider"></div>
                     <div className="sidebar-section-label">MAIN</div>
 
-                    <SidebarLink
-                        href="dashboard.html"
-                        icon="bi-house-door"
-                        label="Dashboard"
-                        isActive={isActivePage("dashboard.html")}
-                        onNavigate={handleNavigate}
-                    />
+                    <SidebarLink href="dashboard.html" icon="bi-house-door" label="Dashboard" isActive={isActivePage("dashboard.html")} onNavigate={handleNavigate} />
+                    <SidebarLink href="calendar.html" icon="bi-calendar" label="Calendar" isActive={isActivePage("calendar.html")} onNavigate={handleNavigate} />
 
-                    <SidebarLink
-                        href="calendar.html"
-                        icon="bi-calendar"
-                        label="Calendar"
-                        isActive={isActivePage("calendar.html")}
-                        onNavigate={handleNavigate}
-                    />
+                    <div className="sidebar-divider mt-3"></div>
+                    <div className="sidebar-section-label">MANAGEMENT</div>
+
+                    <SidebarLink href="users.html" icon="bi-people" label="Manage Users" isActive={isActivePage("users.html")} onNavigate={handleNavigate} />
+                    <SidebarLink href="departments.html" icon="bi-diagram-3" label="Departments" isActive={isActivePage("departments.html")} onNavigate={handleNavigate} />
 
                     <div className="sidebar-divider mt-3"></div>
 
@@ -390,63 +319,19 @@ function PresidentSidebar() {
                             id="reportsSubmenu"
                             className={`sidebar-submenu ${reportsOpen ? "open" : ""} ${!isMobile && collapsed ? "collapsed-popout" : ""}`}
                         >
-                            <SidebarLink
-                                href="daily-reports.html"
-                                icon="bi-calendar-day"
-                                label="Daily"
-                                isActive={isActivePage("daily-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
-
-                            <SidebarLink
-                                href="weekly-reports.html"
-                                icon="bi-calendar-week"
-                                label="Weekly"
-                                isActive={isActivePage("weekly-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
-
-                            <SidebarLink
-                                href="monthly-reports.html"
-                                icon="bi-calendar-month"
-                                label="Monthly"
-                                isActive={isActivePage("monthly-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
-
-                            <SidebarLink
-                                href="quarterly-reports.html"
-                                icon="bi-calendar2-range"
-                                label="Quarterly"
-                                isActive={isActivePage("quarterly-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
-
-                            <SidebarLink
-                                href="annual-reports.html"
-                                icon="bi-calendar2-check"
-                                label="Annually"
-                                isActive={isActivePage("annual-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
+                            <SidebarLink href="daily-reports.html" icon="bi-calendar-day" label="Daily" isActive={isActivePage("daily-reports.html")} extraClass="sidebar-sublink" onNavigate={handleNavigate} />
+                            <SidebarLink href="weekly-reports.html" icon="bi-calendar-week" label="Weekly" isActive={isActivePage("weekly-reports.html")} extraClass="sidebar-sublink" onNavigate={handleNavigate} />
+                            <SidebarLink href="monthly-reports.html" icon="bi-calendar-month" label="Monthly" isActive={isActivePage("monthly-reports.html")} extraClass="sidebar-sublink" onNavigate={handleNavigate} />
+                            <SidebarLink href="quarterly-reports.html" icon="bi-calendar2-range" label="Quarterly" isActive={isActivePage("quarterly-reports.html")} extraClass="sidebar-sublink" onNavigate={handleNavigate} />
+                            <SidebarLink href="annual-reports.html" icon="bi-calendar2-check" label="Annually" isActive={isActivePage("annual-reports.html")} extraClass="sidebar-sublink" onNavigate={handleNavigate} />
                         </div>
                     </div>
 
                     <div className="sidebar-divider mt-3"></div>
                     <div className="sidebar-section-label">SETTINGS</div>
 
-                    <SidebarLink
-                        href="profile.html"
-                        icon="bi-gear"
-                        label="Profile"
-                        isActive={isActivePage("profile.html")}
-                        onNavigate={handleNavigate}
-                    />
+                    <SidebarLink href="profile.html" icon="bi-gear" label="Profile" isActive={isActivePage("profile.html")} onNavigate={handleNavigate} />
+                    <SidebarLink href="logout.php" icon="bi-box-arrow-right" label="Logout Account" isActive={false} extraClass="sidebar-logout-link" onNavigate={handleNavigate} />
                 </div>
             </nav>
         </>
@@ -456,5 +341,5 @@ function PresidentSidebar() {
 const sidebarRoot = document.getElementById("sidebar-root");
 
 if (sidebarRoot) {
-    ReactDOM.createRoot(sidebarRoot).render(<PresidentSidebar />);
+    ReactDOM.createRoot(sidebarRoot).render(<AdminSidebar />);
 }
