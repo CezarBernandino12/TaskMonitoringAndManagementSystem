@@ -41,9 +41,21 @@ function getRoleLabel(string $role): string
         'admin' => 'Administrator',
         'supervisor' => 'Supervisor',
         'staff' => 'Staff',
-        'executive' => 'Executive',
+        'executive_director' => 'Executive Director',
+        'president' => 'President',
         default => ucfirst($role ?: 'User')
     };
+}
+
+function getProfileImageUrl(?string $profileImage): ?string
+{
+    $profileImage = trim((string) $profileImage);
+
+    if ($profileImage === '') {
+        return null;
+    }
+
+    return '../uploads/profiles/' . ltrim($profileImage, '/\\');
 }
 
 try {
@@ -83,10 +95,6 @@ try {
     $departmentName = $row['department_name'] ?? null;
     $profileImage = $row['profile_image'] ?? null;
 
-    $profileImageUrl = !empty($profileImage)
-        ? 'uploads/profiles/' . $profileImage
-        : null;
-
     echo json_encode([
         'id' => (int) $row['id'],
         'name' => $name,
@@ -99,7 +107,7 @@ try {
         'department_name' => $departmentName,
         'initials' => getInitials($name),
         'profile_image' => $profileImage,
-        'profile_image_url' => $profileImageUrl
+        'profile_image_url' => getProfileImageUrl($profileImage)
     ]);
 } catch (PDOException $e) {
     http_response_code(500);

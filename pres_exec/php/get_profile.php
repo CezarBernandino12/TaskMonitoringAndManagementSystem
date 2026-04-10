@@ -27,6 +27,17 @@ function getInitials(string $name): string
     return $initials ?: 'U';
 }
 
+function getProfileImageUrl(?string $profileImage): ?string
+{
+    $profileImage = trim((string) $profileImage);
+
+    if ($profileImage === '') {
+        return null;
+    }
+
+    return '../uploads/profiles/' . ltrim($profileImage, '/\\');
+}
+
 try {
     $stmt = $conn->prepare("
         SELECT
@@ -57,10 +68,7 @@ try {
         exit;
     }
 
-    $row['profile_image_url'] = !empty($row['profile_image'])
-        ? 'uploads/profiles/' . $row['profile_image']
-        : null;
-
+    $row['profile_image_url'] = getProfileImageUrl($row['profile_image'] ?? null);
     $row['initials'] = getInitials($row['name'] ?? '');
 
     echo json_encode($row);

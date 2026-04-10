@@ -286,18 +286,50 @@ function getInitialsColor(name = "") {
     return COLORS[Math.abs(hash) % COLORS.length];
 }
 
-function UserAvatar({ name = "", size = 36 }) {
+function UserAvatar({ name = "", imageUrl = "", size = 36 }) {
+    const [imgFailed, setImgFailed] = React.useState(false);
+
+    React.useEffect(() => {
+        setImgFailed(false);
+    }, [imageUrl]);
+
     const initials = getInitials(name);
-    const bg       = getInitialsColor(name);
+    const bg = getInitialsColor(name);
+    const hasImage = Boolean(imageUrl) && !imgFailed;
+
     return (
-        <div style={{
-            width: size, height: size, borderRadius: "50%",
-            background: bg, color: "#fff", display: "flex",
-            alignItems: "center", justifyContent: "center",
-            fontSize: size * 0.38, fontWeight: 700, flexShrink: 0,
-            letterSpacing: "0.02em",
-        }}>
-            {initials}
+        <div
+            style={{
+                width: size,
+                height: size,
+                borderRadius: "50%",
+                background: bg,
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: size * 0.38,
+                fontWeight: 700,
+                flexShrink: 0,
+                letterSpacing: "0.02em",
+                overflow: "hidden",
+            }}
+        >
+            {hasImage ? (
+                <img
+                    src={imageUrl}
+                    alt={name || "User"}
+                    onError={() => setImgFailed(true)}
+                    style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                    }}
+                />
+            ) : (
+                initials
+            )}
         </div>
     );
 }
@@ -329,129 +361,191 @@ function formatBubbleTime(isoStr) {
 // MESSAGING MODAL COMPONENT
 // ====================================================================
 function MessagingModal({ open, onClose, currentUserId }) {
-    const [view, setView]               = React.useState("list");   // "list" | "thread"
-    const [search, setSearch]           = React.useState("");
-    const [tab, setTab]                 = React.useState("recent"); // "recent" | "all"
+    const [view, setView] = React.useState("list"); // "list" | "thread"
+    const [search, setSearch] = React.useState("");
+    const [tab, setTab] = React.useState("recent"); // "recent" | "all"
     const [conversations, setConversations] = React.useState([]);
-    const [allUsers, setAllUsers]       = React.useState([]);
+    const [allUsers, setAllUsers] = React.useState([]);
     const [totalUnread, setTotalUnread] = React.useState(0);
     const [loadingList, setLoadingList] = React.useState(false);
 
-    // Thread state
-    const [activeUser, setActiveUser]   = React.useState(null); // { user_id, user_name, ... }
-    const [messages, setMessages]       = React.useState([]);
+    const [activeUser, setActiveUser] = React.useState(null);
+    const [messages, setMessages] = React.useState([]);
     const [loadingMsgs, setLoadingMsgs] = React.useState(false);
-    const [msgText, setMsgText]         = React.useState("");
-    const [sending, setSending]         = React.useState(false);
+    const [msgText, setMsgText] = React.useState("");
+    const [sending, setSending] = React.useState(false);
 
     const messagesEndRef = React.useRef(null);
-    const inputRef       = React.useRef(null);
-    const modalRef       = React.useRef(null);
+    const inputRef = React.useRef(null);
+    const modalRef = React.useRef(null);
 
-    // Close on Escape
     React.useEffect(() => {
         if (!open) return;
-        function onKey(e) { if (e.key === "Escape") onClose(); }
+        function onKey(e) {
+            if (e.key === "Escape") onClose();
+        }
         document.addEventListener("keydown", onKey);
         return () => document.removeEventListener("keydown", onKey);
     }, [open, onClose]);
 
-    // Load conversations when modal opens
     React.useEffect(() => {
         if (!open) return;
+
         setLoadingList(true);
+
         fetch(MSG_CONVERSATIONS_API, { credentials: "same-origin" })
             .then(r => r.json())
             .then(data => {
-                console.log('[MSG] conversations response:', data);
-                setConversations(data.conversations || []);
-                setAllUsers(data.all_users || []);
-                setTotalUnread(data.total_unread || 0);
+                setConversations(Array.isArray(data.conversations) ? data.conversations : []);
+                setAllUsers(Array.isArray(data.all_users) ? data.all_users : []);
+                setTotalUnread(Number(data.total_unread || 0));
             })
             .catch(err => {
-                console.error('[MSG] conversations fetch error:', err);
+                console.error("[MSG] conversations fetch error:", err);
+                setConversations([]);
+                setAllUsers([]);
+                setTotalUnread(0);
             })
             .finally(() => setLoadingList(false));
     }, [open]);
 
-    // Scroll to bottom of messages
     React.useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // Focus input when thread opens
     React.useEffect(() => {
-        if (view === "thread") {
-            setTimeout(() => inputRef.current?.focus(), 100);
-        }
+        if (view !== "thread") return;
+        const id = setTimeout(() => inputRef.current?.focus(), 100);
+        return () => clearTimeout(id);
     }, [view]);
 
+    function normalizeThreadUser(user = {}) {
+        return {
+            user_id: user.user_id ?? user.id ?? null,
+            user_name: user.user_name ?? user.name ?? "User",
+            user_role: user.user_role ?? user.role ?? "",
+            user_role_label: user.user_role_label ?? user.role_label ?? user.role ?? "",
+            user_initials: user.user_initials ?? user.initials ?? getInitials(user.user_name ?? user.name ?? "User"),
+            profile_image: user.profile_image ?? null,
+            profile_image_url: user.profile_image_url ?? "",
+        };
+    }
+
+    function sortConversationsByRecent(list = []) {
+        return [...list].sort((a, b) => {
+            const aTime = a?.last_time ? new Date(a.last_time).getTime() : 0;
+            const bTime = b?.last_time ? new Date(b.last_time).getTime() : 0;
+            return bTime - aTime;
+        });
+    }
+
     function openThread(user) {
-        console.log('[MSG] openThread called with:', user);
-        setActiveUser(user);
+        const normalizedUser = normalizeThreadUser(user);
+        setActiveUser(normalizedUser);
         setMessages([]);
         setMsgText("");
         setView("thread");
-        loadThreadMessages(user.user_id || user.id);
+        loadThreadMessages(normalizedUser.user_id);
     }
 
     function loadThreadMessages(otherUserId) {
-        console.log('[MSG] loadThreadMessages — otherUserId:', otherUserId);
+        if (!otherUserId) return;
+
         setLoadingMsgs(true);
-        const url = `php/get_user_messages.php?other_user_id=${otherUserId}`;
-        console.log('[MSG] fetching:', url);
+
+        const url = `php/get_user_messages.php?other_user_id=${encodeURIComponent(otherUserId)}`;
+
         fetch(url, { credentials: "same-origin" })
             .then(r => r.json())
             .then(data => {
-                console.log('[MSG] raw response:', data);
-                console.log('[MSG] messages count:', data.messages?.length);
-                console.log('[MSG] currentUserId in state:', currentUserId);
-                setMessages(data.messages || []);
+                setMessages(Array.isArray(data.messages) ? data.messages : []);
+
+                if (data.other_user) {
+                    setActiveUser(prev => ({
+                        ...normalizeThreadUser(prev || {}),
+                        ...normalizeThreadUser({
+                            user_id: data.other_user.id,
+                            user_name: data.other_user.name,
+                            user_role: data.other_user.role,
+                            user_role_label: data.other_user.role_label,
+                            user_initials: data.other_user.initials,
+                            profile_image: data.other_user.profile_image,
+                            profile_image_url: data.other_user.profile_image_url,
+                        }),
+                    }));
+                }
+
+                setConversations(prev =>
+                    prev.map(c =>
+                        c.user_id === otherUserId
+                            ? { ...c, unread_count: 0 }
+                            : c
+                    )
+                );
+
+                setTotalUnread(prev => {
+                    const openedConversation = conversations.find(c => c.user_id === otherUserId);
+                    const unreadToClear = Number(openedConversation?.unread_count || 0);
+                    return Math.max(0, prev - unreadToClear);
+                });
             })
             .catch(err => {
-                console.error('[MSG] fetch error:', err);
+                console.error("[MSG] fetch error:", err);
                 setMessages([]);
             })
             .finally(() => setLoadingMsgs(false));
     }
 
     async function sendMessage() {
-        if (!msgText.trim() || !activeUser) return;
+        const trimmed = msgText.trim();
+        if (!trimmed || !activeUser) return;
+
         setSending(true);
+
         try {
             const recipientId = activeUser.user_id || activeUser.id;
+
             const res = await fetch(MSG_SEND_API, {
-                method:      "POST",
+                method: "POST",
                 credentials: "same-origin",
-                headers:     { "Content-Type": "application/json" },
-                body:        JSON.stringify({
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
                     recipient_id: recipientId,
-                    message:      msgText.trim(),
+                    message: trimmed,
                 }),
             });
+
             const data = await res.json();
 
-            if (data.success && data.message) {
-                setMessages(prev => [...prev, data.message]);
-                setMsgText("");
-                setConversations(prev => {
-                    const exists = prev.find(c => c.user_id === recipientId);
-                    if (exists) {
-                        return prev.map(c =>
-                            c.user_id === recipientId
-                                ? { ...c, last_message: msgText.trim(), last_time: new Date().toISOString() }
-                                : c
-                        );
-                    }
-                    return [{
-                        user_id:      recipientId,
-                        user_name:    activeUser.user_name || activeUser.name,
-                        last_message: msgText.trim(),
-                        last_time:    new Date().toISOString(),
-                        unread_count: 0,
-                    }, ...prev];
-                });
+            if (!res.ok || !data.success || !data.message) {
+                throw new Error(data?.error || "Failed to send message.");
             }
+
+            setMessages(prev => [...prev, data.message]);
+            setMsgText("");
+
+            setConversations(prev => {
+                const exists = prev.some(c => c.user_id === recipientId);
+
+                const nextItem = {
+                    user_id: recipientId,
+                    user_name: activeUser.user_name || activeUser.name,
+                    user_role: activeUser.user_role || "",
+                    user_role_label: activeUser.user_role_label || "",
+                    user_initials: activeUser.user_initials || getInitials(activeUser.user_name || activeUser.name || "User"),
+                    profile_image: activeUser.profile_image || null,
+                    profile_image_url: activeUser.profile_image_url || "",
+                    last_message: trimmed,
+                    last_time: data.message.time_sent || new Date().toISOString(),
+                    unread_count: 0,
+                };
+
+                const updated = exists
+                    ? prev.map(c => (c.user_id === recipientId ? { ...c, ...nextItem } : c))
+                    : [nextItem, ...prev];
+
+                return sortConversationsByRecent(updated);
+            });
         } catch (err) {
             console.error("Send failed:", err);
         } finally {
@@ -466,11 +560,12 @@ function MessagingModal({ open, onClose, currentUserId }) {
         }
     }
 
-    // Filter logic
     const lowerSearch = search.toLowerCase();
+
     const filteredConvos = conversations.filter(c =>
         c.user_name?.toLowerCase().includes(lowerSearch)
     );
+
     const filteredUsers = allUsers.filter(u =>
         u.name?.toLowerCase().includes(lowerSearch)
     );
@@ -479,7 +574,6 @@ function MessagingModal({ open, onClose, currentUserId }) {
 
     return ReactDOM.createPortal(
         <>
-            {/* ---- inline styles ---- */}
             <style>{`
                 .msg-backdrop {
                     position: fixed; inset: 0; z-index: 99998;
@@ -490,7 +584,7 @@ function MessagingModal({ open, onClose, currentUserId }) {
                 @keyframes msgFadeIn { from { opacity:0 } to { opacity:1 } }
                 @keyframes msgSlideUp {
                     from { opacity:0; transform:translateY(24px) scale(.97) }
-                    to   { opacity:1; transform:translateY(0)    scale(1)   }
+                    to   { opacity:1; transform:translateY(0) scale(1) }
                 }
                 .msg-modal {
                     position: fixed;
@@ -611,7 +705,6 @@ function MessagingModal({ open, onClose, currentUserId }) {
                     padding: 40px 24px; text-align: center;
                     color: var(--bs-secondary-color); font-size: 14px;
                 }
-                /* Thread */
                 .msg-thread-header {
                     display: flex; align-items: center; gap: 12px;
                     padding: 14px 16px;
@@ -709,26 +802,13 @@ function MessagingModal({ open, onClose, currentUserId }) {
                     animation: spin .6s linear infinite;
                 }
                 @keyframes spin { to { transform: rotate(360deg); } }
-                .msg-no-task-note {
-                    margin: 0 16px 8px;
-                    padding: 10px 14px;
-                    background: var(--bs-tertiary-bg);
-                    border: 1px solid var(--bs-border-color);
-                    border-radius: 10px;
-                    font-size: 12px; color: var(--bs-secondary-color);
-                    display: flex; align-items: center; gap: 8px;
-                }
             `}</style>
 
-            {/* Backdrop */}
             <div className="msg-backdrop" onClick={onClose} />
 
-            {/* Modal */}
             <div className="msg-modal" ref={modalRef} role="dialog" aria-modal="true" aria-label="Messages">
-
                 {view === "list" && (
                     <>
-                        {/* Header */}
                         <div className="msg-header">
                             <i className="bi bi-chat-dots-fill" style={{ fontSize: 20, color: "#0d6efd" }} />
                             <h2 className="msg-header-title">
@@ -744,7 +824,6 @@ function MessagingModal({ open, onClose, currentUserId }) {
                             </button>
                         </div>
 
-                        {/* Search */}
                         <div className="msg-search-wrap" style={{ position: "relative" }}>
                             <i className="bi bi-search msg-search-icon" />
                             <input
@@ -757,7 +836,6 @@ function MessagingModal({ open, onClose, currentUserId }) {
                             />
                         </div>
 
-                        {/* Tabs */}
                         <div className="msg-tabs">
                             <button
                                 className={`msg-tab ${tab === "recent" ? "active" : ""}`}
@@ -773,7 +851,6 @@ function MessagingModal({ open, onClose, currentUserId }) {
                             </button>
                         </div>
 
-                        {/* List body */}
                         <div className="msg-list">
                             {loadingList ? (
                                 <div className="msg-loading">
@@ -793,7 +870,11 @@ function MessagingModal({ open, onClose, currentUserId }) {
                                             className="msg-row"
                                             onClick={() => openThread(c)}
                                         >
-                                            <UserAvatar name={c.user_name} size={40} />
+                                            <UserAvatar
+                                                name={c.user_name}
+                                                imageUrl={c.profile_image_url}
+                                                size={40}
+                                            />
                                             <div className="msg-row-info">
                                                 <div className="msg-row-name">{c.user_name}</div>
                                                 <div className="msg-row-preview">{c.last_message || "No messages yet"}</div>
@@ -808,12 +889,10 @@ function MessagingModal({ open, onClose, currentUserId }) {
                                     ))
                                 )
                             ) : (
-                                /* All People tab */
                                 filteredUsers.length === 0 ? (
                                     <div className="msg-empty">No people found.</div>
                                 ) : (
                                     <>
-                                        {/* People with history first */}
                                         {filteredUsers.some(u => u.has_history) && (
                                             <>
                                                 <div className="msg-section-label">Previous Conversations</div>
@@ -821,9 +900,21 @@ function MessagingModal({ open, onClose, currentUserId }) {
                                                     <div
                                                         key={u.id}
                                                         className="msg-row"
-                                                        onClick={() => openThread({ user_id: u.id, user_name: u.name, user_role_label: u.role_label || u.role })}
+                                                        onClick={() => openThread({
+                                                            user_id: u.id,
+                                                            user_name: u.name,
+                                                            user_role: u.role,
+                                                            user_role_label: u.role_label || u.role,
+                                                            user_initials: u.initials,
+                                                            profile_image: u.profile_image,
+                                                            profile_image_url: u.profile_image_url,
+                                                        })}
                                                     >
-                                                        <UserAvatar name={u.name} size={40} />
+                                                        <UserAvatar
+                                                            name={u.name}
+                                                            imageUrl={u.profile_image_url}
+                                                            size={40}
+                                                        />
                                                         <div className="msg-row-info">
                                                             <div className="msg-row-name">{u.name}</div>
                                                             <div className="msg-role-chip">{u.role_label || u.role}</div>
@@ -833,6 +924,7 @@ function MessagingModal({ open, onClose, currentUserId }) {
                                                 ))}
                                             </>
                                         )}
+
                                         {filteredUsers.some(u => !u.has_history) && (
                                             <>
                                                 <div className="msg-section-label">All Users</div>
@@ -840,9 +932,21 @@ function MessagingModal({ open, onClose, currentUserId }) {
                                                     <div
                                                         key={u.id}
                                                         className="msg-row"
-                                                        onClick={() => openThread({ user_id: u.id, user_name: u.name, user_role_label: u.role_label || u.role })}
+                                                        onClick={() => openThread({
+                                                            user_id: u.id,
+                                                            user_name: u.name,
+                                                            user_role: u.role,
+                                                            user_role_label: u.role_label || u.role,
+                                                            user_initials: u.initials,
+                                                            profile_image: u.profile_image,
+                                                            profile_image_url: u.profile_image_url,
+                                                        })}
                                                     >
-                                                        <UserAvatar name={u.name} size={40} />
+                                                        <UserAvatar
+                                                            name={u.name}
+                                                            imageUrl={u.profile_image_url}
+                                                            size={40}
+                                                        />
                                                         <div className="msg-row-info">
                                                             <div className="msg-row-name">{u.name}</div>
                                                             <div className="msg-role-chip">{u.role_label || u.role}</div>
@@ -861,24 +965,36 @@ function MessagingModal({ open, onClose, currentUserId }) {
 
                 {view === "thread" && activeUser && (
                     <>
-                        {/* Thread header */}
                         <div className="msg-thread-header">
-                            <button className="msg-back-btn" onClick={() => { setView("list"); setMessages([]); }} aria-label="Back">
+                            <button
+                                className="msg-back-btn"
+                                onClick={() => {
+                                    setView("list");
+                                    setMessages([]);
+                                }}
+                                aria-label="Back"
+                            >
                                 <i className="bi bi-chevron-left" style={{ fontSize: 13 }} />
                             </button>
-                            <UserAvatar name={activeUser.user_name} size={36} />
+
+                            <UserAvatar
+                                name={activeUser.user_name}
+                                imageUrl={activeUser.profile_image_url}
+                                size={36}
+                            />
+
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div className="msg-thread-name">{activeUser.user_name}</div>
                                 {activeUser.user_role_label && (
                                     <div className="msg-role-chip">{activeUser.user_role_label}</div>
                                 )}
                             </div>
+
                             <button className="msg-close-btn" onClick={onClose} aria-label="Close">
                                 <i className="bi bi-x-lg" style={{ fontSize: 13 }} />
                             </button>
                         </div>
 
-                        {/* Bubbles */}
                         <div className="msg-bubbles">
                             {loadingMsgs ? (
                                 <div className="msg-loading">
@@ -886,7 +1002,16 @@ function MessagingModal({ open, onClose, currentUserId }) {
                                     Loading messages…
                                 </div>
                             ) : messages.length === 0 ? (
-                                <div className="msg-empty" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                <div
+                                    className="msg-empty"
+                                    style={{
+                                        flex: 1,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        justifyContent: "center"
+                                    }}
+                                >
                                     <i className="bi bi-chat-heart" style={{ fontSize: 36, display: "block", marginBottom: 10, color: "#0d6efd" }} />
                                     <div>No messages yet.</div>
                                     <div style={{ fontSize: 12, marginTop: 4 }}>Send the first one!</div>
@@ -894,14 +1019,23 @@ function MessagingModal({ open, onClose, currentUserId }) {
                             ) : (
                                 messages.map(m => {
                                     const isMine = m.sender_id === currentUserId;
+
                                     return (
                                         <div
                                             key={m.id}
                                             className={`msg-bubble-wrap ${isMine ? "mine" : "theirs"}`}
                                         >
-                                            {!isMine && <UserAvatar name={m.sender_name} size={28} />}
+                                            {!isMine && (
+                                                <UserAvatar
+                                                    name={m.sender_name}
+                                                    imageUrl={m.sender_profile_image_url}
+                                                    size={28}
+                                                />
+                                            )}
+
                                             <div>
                                                 <div className="msg-bubble">{m.message}</div>
+
                                                 {m.attachments?.length > 0 && (
                                                     <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
                                                         {m.attachments.map(a => (
@@ -911,12 +1045,16 @@ function MessagingModal({ open, onClose, currentUserId }) {
                                                                 target="_blank"
                                                                 rel="noreferrer"
                                                                 style={{
-                                                                    fontSize: 12, padding: "3px 8px",
+                                                                    fontSize: 12,
+                                                                    padding: "3px 8px",
                                                                     background: "var(--bs-tertiary-bg)",
                                                                     border: "1px solid var(--bs-border-color)",
-                                                                    borderRadius: 6, color: "#0d6efd",
-                                                                    textDecoration: "none", display: "inline-flex",
-                                                                    alignItems: "center", gap: 4,
+                                                                    borderRadius: 6,
+                                                                    color: "#0d6efd",
+                                                                    textDecoration: "none",
+                                                                    display: "inline-flex",
+                                                                    alignItems: "center",
+                                                                    gap: 4,
                                                                 }}
                                                             >
                                                                 <i className="bi bi-paperclip" />
@@ -925,7 +1063,11 @@ function MessagingModal({ open, onClose, currentUserId }) {
                                                         ))}
                                                     </div>
                                                 )}
-                                                <div className={`msg-bubble-time`} style={{ textAlign: isMine ? "right" : "left" }}>
+
+                                                <div
+                                                    className="msg-bubble-time"
+                                                    style={{ textAlign: isMine ? "right" : "left" }}
+                                                >
                                                     {formatBubbleTime(m.time_sent)}
                                                 </div>
                                             </div>
@@ -933,10 +1075,10 @@ function MessagingModal({ open, onClose, currentUserId }) {
                                     );
                                 })
                             )}
+
                             <div ref={messagesEndRef} />
                         </div>
 
-                        {/* Input row */}
                         <div className="msg-input-row">
                             <textarea
                                 ref={inputRef}
@@ -1026,6 +1168,7 @@ function ChatButton() {
         </>
     );
 }
+
 
 function NotificationBell() {
     const [open, setOpen] = React.useState(false);
@@ -1248,58 +1391,6 @@ function TopBar() {
         return () => window.clearInterval(timerId);
     }, []);
 
-    React.useEffect(() => {
-        let active = true;
-
-        async function loadUser() {
-            try {
-                const response = await fetch(TOPBAR_USER_API, {
-                    credentials: "same-origin",
-                    headers: {
-                        Accept: "application/json"
-                    }
-                });
-
-                const data = await parseJsonResponse(response);
-
-                if (!response.ok || data.error) {
-                    throw new Error(data.error || "Failed to load user information.");
-                }
-
-                if (!active) return;
-
-                setUser(normalizeUserPayload(data));
-            } catch (error) {
-                console.error("Unable to load top bar user:", error);
-
-                if (!active) return;
-
-                setUser(FALLBACK_USER);
-            } finally {
-                if (active) {
-                    setUserLoaded(true);
-                }
-            }
-        }
-
-        function applyProfileUpdate(detail) {
-            if (!detail) {
-                loadUser();
-                return;
-            }
-
-            setUser(normalizeUserPayload(detail));
-            setUserLoaded(true);
-        }
-
-        loadUser();
-        window.addEventListener("profile-updated", (event) => applyProfileUpdate(event.detail));
-
-        return () => {
-            active = false;
-            window.removeEventListener("profile-updated", (event) => applyProfileUpdate(event.detail));
-        };
-    }, []);
 
     // Fix the event listener cleanup by using stable handlers.
     React.useEffect(() => {
