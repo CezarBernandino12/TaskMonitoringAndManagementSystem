@@ -157,7 +157,7 @@ function App() {
     const [error, setError] = React.useState("");
     const [isMutating, setIsMutating] = React.useState(false);
     const [focusedTaskId, setFocusedTaskId] = React.useState("");
-    const progressQueueRef = React.useRef(Promise.resolve());
+    const progressBusyRef = React.useRef(false);
 
     const updateTaskProgressOnServer = async (taskId, direction) => {
         const body = new URLSearchParams();
@@ -174,38 +174,56 @@ function App() {
         return parseMutationResponse(response, `Failed to update progress for task ${taskId}.`);
     };
 
-        const handleTaskProgressChange = (taskId, direction, { silent = false } = {}) => {
-            if (!taskId) return Promise.resolve();
-
-            setError("");
-
-            const runMutation = async () => {
-                try {
-                    await updateTaskProgressOnServer(taskId, direction);
-                    await finalizeMutation();
-
-                    if (!silent) {
-                        showSileoToast(direction === "increase" ? "success" : "info", {
-                            title: "Task progress updated",
-                            description:
-                                direction === "increase"
-                                    ? `Task progress increased by ${TASK_PROGRESS_STEP}%.`
-                                    : `Task progress decreased by ${TASK_PROGRESS_STEP}%.`
-                        });
-                    }
-                } catch (err) {
-                    const msg = err.message || "Unable to update task progress.";
-                    setError(msg);
-                    showSileoToast("error", { title: "Update failed", description: msg });
-                    throw err;
+const setTaskProgressLocally = React.useCallback((taskId, nextValue) => {
+    setTasks(prev =>
+        prev.map(task =>
+            task.id === taskId
+                ? {
+                    ...task,
+                    progress: clampProgress(nextValue),
+                    progress_percentage: clampProgress(nextValue)
                 }
-            };
+                : task
+        )
+    );
+}, []);
 
-            const queuedMutation = progressQueueRef.current.then(runMutation, runMutation);
-            progressQueueRef.current = queuedMutation.catch(() => null);
+const handleTaskProgressChange = async (taskId, direction) => {
+    if (!taskId || progressBusyRef.current) return;
 
-            return queuedMutation;
-        };
+    const currentTask = tasks.find(task => task.id === taskId);
+    const currentValue = clampProgress(
+        currentTask?.progress ?? currentTask?.progress_percentage ?? 0
+    );
+
+    const nextValue = clampProgress(
+        direction === "increase"
+            ? currentValue + TASK_PROGRESS_STEP
+            : currentValue - TASK_PROGRESS_STEP
+    );
+
+    if (nextValue === currentValue) return;
+
+    setError("");
+    progressBusyRef.current = true;
+    setIsMutating(true);
+
+    setTaskProgressLocally(taskId, nextValue);
+
+    try {
+        await updateTaskProgressOnServer(taskId, direction);
+    } catch (err) {
+        setTaskProgressLocally(taskId, currentValue);
+
+        const msg = err.message || "Unable to update task progress.";
+        setError(msg);
+        showSileoToast("error", { title: "Update failed", description: msg });
+        throw err;
+    } finally {
+        progressBusyRef.current = false;
+        setIsMutating(false);
+    }
+};
 
     const fetchTasks = React.useCallback(async ({ showLoader = true, throwOnError = false, signal } = {}) => {
         if (showLoader) setLoading(true);
@@ -405,6 +423,43 @@ function App() {
         }
     };
 
+const handleTaskProgressSet = async (taskId, nextValue) => {
+    if (!taskId || progressBusyRef.current) return;
+
+    const currentTask = tasks.find(task => task.id === taskId);
+    const currentValue = clampProgress(
+        currentTask?.progress ?? currentTask?.progress_percentage ?? 0
+    );
+    const targetValue = clampProgress(nextValue);
+
+    if (targetValue === currentValue) return;
+
+    setError("");
+    progressBusyRef.current = true;
+    setIsMutating(true);
+
+    setTaskProgressLocally(taskId, targetValue);
+
+    try {
+        const direction = targetValue > currentValue ? "increase" : "decrease";
+        const totalSteps = Math.abs(targetValue - currentValue);
+
+        for (let step = 0; step < totalSteps; step += 1) {
+            await updateTaskProgressOnServer(taskId, direction);
+        }
+    } catch (err) {
+        setTaskProgressLocally(taskId, currentValue);
+
+        const msg = err.message || "Unable to update task progress.";
+        setError(msg);
+        showSileoToast("error", { title: "Update failed", description: msg });
+        throw err;
+    } finally {
+        progressBusyRef.current = false;
+        setIsMutating(false);
+    }
+};
+
         const tableTasks = React.useMemo(() => {
             return tasks.filter(task =>
                 task.normalizedStatus === "ongoing" ||
@@ -434,8 +489,9 @@ function App() {
                 <TaskProgressCard
                     task={tableTasks.find(task => task.id === focusedTaskId) || null}
                     isMutating={isMutating}
-                    onIncrease={(options) => handleTaskProgressChange(focusedTaskId, "increase", options)}
-                    onDecrease={(options) => handleTaskProgressChange(focusedTaskId, "decrease", options)}
+                    onIncrease={() => handleTaskProgressChange(focusedTaskId, "increase")}
+                    onDecrease={() => handleTaskProgressChange(focusedTaskId, "decrease")}
+                    onSetProgress={(nextValue) => handleTaskProgressSet(focusedTaskId, nextValue)}
                 />
             </div>
         </>
@@ -482,7 +538,7 @@ function TaskSummary({ tasks }) {
     );
 }
 
-function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
+function TaskProgressCard({ task, isMutating, onIncrease, onDecrease, onSetProgress }) {
     const rawProgress = Number(task?.progress ?? task?.progress_percentage ?? 0);
     const progressValue = Math.max(0, Math.min(100, Number.isFinite(rawProgress) ? rawProgress : 0));
 
@@ -492,8 +548,6 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
             : `${Math.round(progressValue)}%`;
 
     const totalTicks = 72;
-    const activeTicks = Math.round((progressValue / 100) * totalTicks);
-
     const center = 120;
     const outerRadius = 92;
     const shortInnerRadius = 78;
@@ -504,6 +558,21 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
         intervalId: null,
         didLongPress: false
     });
+
+    const gaugePointerRef = React.useRef({
+        pointerId: null,
+        startX: 0,
+        startY: 0,
+        moved: false
+    });
+
+    const chartShellRef = React.useRef(null);
+    const [dragProgress, setDragProgress] = React.useState(null);
+    const [isGaugeDragging, setIsGaugeDragging] = React.useState(false);
+
+    const displayProgress = dragProgress ?? progressValue;
+    const displayProgressLabel = dragProgress != null ? `${dragProgress}%` : progressLabel;
+    const displayActiveTicks = Math.round((displayProgress / 100) * totalTicks);
 
     function polarToCartesian(cx, cy, radius, angleDeg) {
         const angleRad = (angleDeg - 90) * (Math.PI / 180);
@@ -562,17 +631,121 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
         action({ silent: false });
     }, []);
 
+    const getProgressFromPointer = React.useCallback((clientX, clientY) => {
+        const rect = chartShellRef.current?.getBoundingClientRect();
+        if (!rect) return progressValue;
+
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+
+        let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+        if (angle < 0) angle += 360;
+
+        return clampProgress(Math.round((angle / 360) * 100));
+    }, [progressValue]);
+
+    const commitGaugeProgress = React.useCallback(async (nextValue) => {
+        setIsGaugeDragging(false);
+        setDragProgress(null);
+
+        if (typeof onSetProgress === "function") {
+            await onSetProgress(nextValue, { silent: false });
+        }
+    }, [onSetProgress]);
+
+const handleGaugePointerDown = React.useCallback((event) => {
+    if (isMutating || typeof onSetProgress !== "function") return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+
+    gaugePointerRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false
+    };
+
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+}, [isMutating, onSetProgress]);
+
+const handleGaugePointerMove = React.useCallback((event) => {
+    const state = gaugePointerRef.current;
+    if (state.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - state.startX;
+    const dy = event.clientY - state.startY;
+
+    if (!state.moved && Math.hypot(dx, dy) < 6) {
+        return;
+    }
+
+    if (!state.moved) {
+        state.moved = true;
+        setIsGaugeDragging(true);
+    }
+
+    const nextValue = getProgressFromPointer(event.clientX, event.clientY);
+    setDragProgress(nextValue);
+}, [getProgressFromPointer]);
+
+const handleGaugePointerUp = React.useCallback(async (event) => {
+    const state = gaugePointerRef.current;
+    if (state.pointerId !== event.pointerId) return;
+
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+
+    gaugePointerRef.current = {
+        pointerId: null,
+        startX: 0,
+        startY: 0,
+        moved: false
+    };
+
+    if (!state.moved) {
+        setIsGaugeDragging(false);
+        setDragProgress(null);
+        return;
+    }
+
+    const nextValue = getProgressFromPointer(event.clientX, event.clientY);
+    await commitGaugeProgress(nextValue);
+}, [getProgressFromPointer, commitGaugeProgress]);
+
+const handleGaugePointerCancel = React.useCallback((event) => {
+    const state = gaugePointerRef.current;
+    if (state.pointerId !== event.pointerId) return;
+
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+
+    gaugePointerRef.current = {
+        pointerId: null,
+        startX: 0,
+        startY: 0,
+        moved: false
+    };
+
+    setIsGaugeDragging(false);
+    setDragProgress(null);
+}, []);
+
+    React.useEffect(() => {
+        setDragProgress(null);
+        setIsGaugeDragging(false);
+    }, [task?.id]);
+
     const ticks = Array.from({ length: totalTicks }, (_, index) => {
         const angle = (360 / totalTicks) * index;
         const isMajor = index % 3 === 0;
         const innerRadius = isMajor ? longInnerRadius : shortInnerRadius;
         const start = polarToCartesian(center, center, innerRadius, angle);
         const end = polarToCartesian(center, center, outerRadius, angle);
-        const isActive = index < activeTicks;
+        const isActive = index < displayActiveTicks;
 
         let stroke = "rgba(124, 156, 199, 0.14)";
         if (isActive) {
-            const glowStrength = 0.45 + (0.55 * ((index + 1) / Math.max(activeTicks, 1)));
+            const glowStrength = 0.45 + (0.55 * ((index + 1) / Math.max(displayActiveTicks, 1)));
             stroke = `rgba(68, 140, 255, ${glowStrength})`;
         }
 
@@ -635,12 +808,25 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
             </div>
 
             <div className="task-progress-visual">
-                <div className="task-progress-chart-shell is-performance">
+                <div
+                    ref={chartShellRef}
+                    className={`task-progress-chart-shell is-performance ${isGaugeDragging ? "is-dragging" : ""}`}
+                    onPointerDown={handleGaugePointerDown}
+                    onPointerMove={handleGaugePointerMove}
+                    onPointerUp={handleGaugePointerUp}
+                    onPointerCancel={handleGaugePointerCancel}
+                    role="slider"
+                    tabIndex={0}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={displayProgress}
+                    aria-label={`Progress for ${task.title}`}
+                >
                     <svg
                         className="task-progress-svg"
                         viewBox="0 0 240 240"
                         role="img"
-                        aria-label={`${progressLabel} progress for ${task.title}`}
+                        aria-label={`${displayProgressLabel} progress for ${task.title}`}
                     >
                         <defs>
                             <filter id="taskProgressGlow" x="-40%" y="-40%" width="180%" height="180%">
@@ -662,13 +848,13 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease }) {
                                 stroke={tick.stroke}
                                 strokeWidth={tick.strokeWidth}
                                 strokeLinecap="round"
-                                filter={index < activeTicks ? "url(#taskProgressGlow)" : undefined}
+                                filter={index < displayActiveTicks ? "url(#taskProgressGlow)" : undefined}
                             />
                         ))}
                     </svg>
 
                     <div className="task-progress-center performance-center">
-                        <div className="task-progress-value performance-value">{progressLabel}</div>
+                        <div className="task-progress-value performance-value">{displayProgressLabel}</div>
                         <div className="task-progress-inline-title">{task.title}</div>
                     </div>
                 </div>
