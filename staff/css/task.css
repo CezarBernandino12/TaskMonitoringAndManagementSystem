@@ -1679,13 +1679,11 @@ body {
 
 .comment-compose-textarea::placeholder {
     color: #98a2b3;
-    font-weight: 700;
 }
 
 .comment-compose-hint {
     margin-top: 2px;
     font-size: 9.5px;
-    font-weight: 700;
     color: #98a2b3;
     line-height: 1.2;
 }
