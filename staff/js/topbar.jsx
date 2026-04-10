@@ -288,20 +288,27 @@ function DarkModeToggle({ dark, onToggle }) {
 }
 
 
+
+
 // ====================================================================
-// MESSAGING MODAL — constants & helpers
+// MESSAGING UI — constants & helpers
 // ====================================================================
 const MSG_CONVERSATIONS_API = "php/get_conversations.php";
-const MSG_MESSAGES_API      = "php/get_task_messages.php";
-const MSG_SEND_API          = "php/send_task_message.php";
+const MSG_SEND_API = "php/send_task_message.php";
+const MSG_PINNED_KEY = "dashboard-message-pins";
+const ROLE_FILTERS = ["All", "Supervisor", "Staff", "President", "Admin"];
 
 function getInitialsColor(name = "") {
     const COLORS = [
-        "#4f46e5","#0ea5e9","#10b981","#f59e0b",
-        "#ef4444","#8b5cf6","#ec4899","#06b6d4",
+        "#4f46e5", "#0ea5e9", "#10b981", "#f59e0b",
+        "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"
     ];
+
     let hash = 0;
-    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < name.length; i += 1) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
     return COLORS[Math.abs(hash) % COLORS.length];
 }
 
@@ -327,11 +334,11 @@ function UserAvatar({ name = "", imageUrl = "", size = 36 }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: size * 0.38,
+                fontSize: size * 0.36,
                 fontWeight: 700,
                 flexShrink: 0,
                 letterSpacing: "0.02em",
-                overflow: "hidden",
+                overflow: "hidden"
             }}
         >
             {hasImage ? (
@@ -343,7 +350,7 @@ function UserAvatar({ name = "", imageUrl = "", size = 36 }) {
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
-                        display: "block",
+                        display: "block"
                     }}
                 />
             ) : (
@@ -353,164 +360,527 @@ function UserAvatar({ name = "", imageUrl = "", size = 36 }) {
     );
 }
 
-function formatMsgTime(isoStr) {
-    if (!isoStr) return "";
-    const d   = new Date(isoStr);
-    const now = new Date();
-    const diffMs  = now - d;
-    const diffMin = Math.floor(diffMs / 60000);
-    const diffHr  = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHr  / 24);
+function sameUserId(a, b) {
+    return String(a ?? "") === String(b ?? "");
+}
 
-    if (diffMin < 1)   return "just now";
-    if (diffMin < 60)  return `${diffMin}m ago`;
-    if (diffHr  < 24)  return `${diffHr}h ago`;
-    if (diffDay < 7)   return `${diffDay}d ago`;
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function normalizeRoleLabel(role = "") {
+    const value = String(role || "").trim();
+    if (!value) return "Staff";
+    return value
+        .split(/\s+/)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(" ");
+}
+
+function getInboxRoleLabel(item = {}) {
+    return normalizeRoleLabel(
+        item.user_role_label || item.role_label || item.user_role || item.role || "Staff"
+    );
+}
+
+function formatPanelTime(isoStr) {
+    if (!isoStr) return "";
+
+    const date = new Date(isoStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    if (diffMin < 1) return "just now";
+    if (diffMin < 60) return `${diffMin}m`;
+    if (diffHr < 24) return `${diffHr}h`;
+    if (diffDay < 7) return `${diffDay}d`;
+
+    return date.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric"
+    });
+}
+
+function formatListDate(isoStr) {
+    if (!isoStr) return "";
+
+    return new Date(isoStr).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric"
+    });
 }
 
 function formatBubbleTime(isoStr) {
     if (!isoStr) return "";
+
     return new Date(isoStr).toLocaleTimeString(undefined, {
-        hour: "2-digit", minute: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
     });
 }
 
-// ====================================================================
-// MESSAGING MODAL COMPONENT
-// ====================================================================
-function MessagingModal({ open, onClose, currentUserId }) {
-    const [view, setView] = React.useState("list"); // "list" | "thread"
+function isSameCalendarDay(a, b) {
+    if (!a || !b) return false;
+
+    const first = new Date(a);
+    const second = new Date(b);
+
+    return (
+        first.getFullYear() === second.getFullYear() &&
+        first.getMonth() === second.getMonth() &&
+        first.getDate() === second.getDate()
+    );
+}
+
+function getMessageDayLabel(isoStr) {
+    if (!isoStr) return "";
+
+    const date = new Date(isoStr);
+    const now = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+
+    if (isSameCalendarDay(date, now)) return "Today";
+    if (isSameCalendarDay(date, yesterday)) return "Yesterday";
+
+    return date.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "short",
+        day: "numeric"
+    });
+}
+
+function normalizeThreadUser(user = {}) {
+    return {
+        user_id: user.user_id ?? user.id ?? null,
+        user_name: user.user_name ?? user.name ?? "User",
+        user_role: user.user_role ?? user.role ?? "",
+        user_role_label: user.user_role_label ?? user.role_label ?? user.role ?? "",
+        user_initials:
+            user.user_initials ??
+            user.initials ??
+            getInitials(user.user_name ?? user.name ?? "User"),
+        profile_image: user.profile_image ?? null,
+        profile_image_url: user.profile_image_url ?? "",
+        last_message: user.last_message ?? "",
+        last_time: user.last_time ?? null,
+        unread_count: Number(user.unread_count || 0),
+        has_conversation: Boolean(user.has_conversation)
+    };
+}
+
+function readPinnedConversationIds() {
+    try {
+        const raw = localStorage.getItem(MSG_PINNED_KEY);
+        const parsed = JSON.parse(raw || "[]");
+        return Array.isArray(parsed) ? parsed.map((value) => String(value)) : [];
+    } catch (error) {
+        console.error("Unable to read pinned message ids:", error);
+        return [];
+    }
+}
+
+function mergeInboxEntries(conversations = [], allUsers = []) {
+    const map = new Map();
+
+    allUsers.forEach((user) => {
+        const normalized = normalizeThreadUser({
+            ...user,
+            user_id: user.id,
+            user_name: user.name,
+            user_role: user.role,
+            user_role_label: user.role_label,
+            profile_image: user.profile_image,
+            profile_image_url: user.profile_image_url,
+            has_conversation: false,
+            unread_count: 0,
+            last_message: "",
+            last_time: null
+        });
+
+        map.set(String(normalized.user_id), normalized);
+    });
+
+    conversations.forEach((conversation) => {
+        const normalized = normalizeThreadUser({
+            ...conversation,
+            has_conversation: true
+        });
+
+        const existing = map.get(String(normalized.user_id));
+        map.set(String(normalized.user_id), {
+            ...existing,
+            ...normalized,
+            has_conversation: true,
+            unread_count: Number(conversation.unread_count || 0)
+        });
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+        const aPinnedScore = a.has_conversation ? 0 : 1;
+        const bPinnedScore = b.has_conversation ? 0 : 1;
+        if (aPinnedScore !== bPinnedScore) return aPinnedScore - bPinnedScore;
+
+        const aTime = a.last_time ? new Date(a.last_time).getTime() : 0;
+        const bTime = b.last_time ? new Date(b.last_time).getTime() : 0;
+        if (aTime !== bTime) return bTime - aTime;
+
+        return (a.user_name || "").localeCompare(b.user_name || "");
+    });
+}
+
+function getConversationPreview(item) {
+    const preview = String(item?.last_message || "").trim();
+    if (preview) return preview;
+    return item?.has_conversation ? "No messages yet" : "Start a conversation";
+}
+
+function matchesRole(item, selectedRole) {
+    if (selectedRole === "All") return true;
+    return getInboxRoleLabel(item).toLowerCase() === selectedRole.toLowerCase();
+}
+
+function matchesSearch(item, searchValue) {
+    const term = String(searchValue || "").trim().toLowerCase();
+    if (!term) return true;
+
+    const haystack = [
+        item.user_name,
+        getInboxRoleLabel(item),
+        item.last_message
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+    return haystack.includes(term);
+}
+
+function MessageRow({
+    item,
+    compact = false,
+    selected = false,
+    pinned = false,
+    showPin = true,
+    onOpen,
+    onTogglePin
+}) {
+    const preview = getConversationPreview(item);
+    const unreadCount = Number(item.unread_count || 0);
+    const dateLabel = compact ? formatPanelTime(item.last_time) : formatListDate(item.last_time);
+
+    return (
+        <div className={`msg-row ${compact ? "is-compact" : ""} ${selected ? "is-selected" : ""}`}>
+            {showPin && (
+                <button
+                    type="button"
+                    className={`msg-row-pin ${pinned ? "is-pinned" : ""}`}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onTogglePin(item.user_id);
+                    }}
+                    aria-label={pinned ? "Unpin conversation" : "Pin conversation"}
+                    title={pinned ? "Unpin" : "Pin"}
+                >
+                    <i className={`bi ${pinned ? "bi-pin-angle-fill" : "bi-pin-angle"}`}></i>
+                </button>
+            )}
+
+            <button type="button" className="msg-row-main" onClick={() => onOpen(item)}>
+                <UserAvatar
+                    name={item.user_name}
+                    imageUrl={item.profile_image_url}
+                    size={compact ? 38 : 44}
+                />
+
+                <div className="msg-row-copy">
+                    <div className="msg-row-line1">
+                        <span className="msg-row-name">{item.user_name}</span>
+                        <span className="msg-row-date">{dateLabel}</span>
+                    </div>
+
+                    <div className="msg-row-role">{getInboxRoleLabel(item)}</div>
+                    <div className="msg-row-preview">{preview}</div>
+                </div>
+
+                <div className="msg-row-side">
+                    {unreadCount > 0 ? (
+                        <span className="msg-row-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                    ) : (
+                        <span className="msg-row-dot"></span>
+                    )}
+                </div>
+            </button>
+        </div>
+    );
+}
+
+function MessagingModal({
+    openMode,
+    onClose,
+    onExpand,
+    onCollapse,
+    currentUserId,
+    triggerRef,
+    onUnreadCountChange
+}) {
     const [search, setSearch] = React.useState("");
-    const [tab, setTab] = React.useState("recent"); // "recent" | "all"
+    const [selectedRole, setSelectedRole] = React.useState("All");
+    const [hidePinned, setHidePinned] = React.useState(false);
     const [conversations, setConversations] = React.useState([]);
     const [allUsers, setAllUsers] = React.useState([]);
     const [totalUnread, setTotalUnread] = React.useState(0);
     const [loadingList, setLoadingList] = React.useState(false);
-
     const [activeUser, setActiveUser] = React.useState(null);
     const [messages, setMessages] = React.useState([]);
     const [loadingMsgs, setLoadingMsgs] = React.useState(false);
     const [msgText, setMsgText] = React.useState("");
     const [sending, setSending] = React.useState(false);
+    const [pinnedConversationIds, setPinnedConversationIds] = React.useState(() => readPinnedConversationIds());
 
+    const panelRef = React.useRef(null);
+    const shellRef = React.useRef(null);
     const messagesEndRef = React.useRef(null);
     const inputRef = React.useRef(null);
-    const modalRef = React.useRef(null);
 
     React.useEffect(() => {
-        if (!open) return;
-        function onKey(e) {
-            if (e.key === "Escape") onClose();
+        try {
+            localStorage.setItem(MSG_PINNED_KEY, JSON.stringify(pinnedConversationIds));
+        } catch (error) {
+            console.error("Unable to persist pinned message ids:", error);
         }
-        document.addEventListener("keydown", onKey);
-        return () => document.removeEventListener("keydown", onKey);
-    }, [open, onClose]);
+    }, [pinnedConversationIds]);
+
+    const mergedInbox = React.useMemo(
+        () => mergeInboxEntries(conversations, allUsers),
+        [conversations, allUsers]
+    );
+
+    const roleTabs = React.useMemo(
+        () =>
+            ROLE_FILTERS.map((label) => ({
+                label,
+                count:
+                    label === "All"
+                        ? mergedInbox.length
+                        : mergedInbox.filter((item) => matchesRole(item, label)).length
+            })),
+        [mergedInbox]
+    );
+
+    const visibleInbox = React.useMemo(
+        () =>
+            mergedInbox.filter(
+                (item) => matchesRole(item, selectedRole) && matchesSearch(item, search)
+            ),
+        [mergedInbox, search, selectedRole]
+    );
+
+    const pinnedEntries = React.useMemo(
+        () => visibleInbox.filter((item) => pinnedConversationIds.includes(String(item.user_id))),
+        [pinnedConversationIds, visibleInbox]
+    );
+
+    const regularEntries = React.useMemo(
+        () => visibleInbox.filter((item) => !pinnedConversationIds.includes(String(item.user_id))),
+        [pinnedConversationIds, visibleInbox]
+    );
 
     React.useEffect(() => {
-        if (!open) return;
+        if (!openMode) return undefined;
 
-        setLoadingList(true);
+        function handleKeyDown(event) {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        }
 
-        fetch(MSG_CONVERSATIONS_API, { credentials: "same-origin" })
-            .then(r => r.json())
-            .then(data => {
-                setConversations(Array.isArray(data.conversations) ? data.conversations : []);
-                setAllUsers(Array.isArray(data.all_users) ? data.all_users : []);
-                setTotalUnread(Number(data.total_unread || 0));
-            })
-            .catch(err => {
-                console.error("[MSG] conversations fetch error:", err);
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [onClose, openMode]);
+
+    React.useEffect(() => {
+        if (openMode !== "panel") return undefined;
+
+        function handlePointerDown(event) {
+            const target = event.target;
+            if (panelRef.current?.contains(target) || triggerRef?.current?.contains(target)) {
+                return;
+            }
+            onClose();
+        }
+
+        document.addEventListener("mousedown", handlePointerDown);
+        return () => document.removeEventListener("mousedown", handlePointerDown);
+    }, [onClose, openMode, triggerRef]);
+
+    React.useEffect(() => {
+        if (!openMode) return undefined;
+
+        let active = true;
+
+        async function loadInboxData() {
+            setLoadingList(true);
+            try {
+                const response = await fetch(MSG_CONVERSATIONS_API, {
+                    credentials: "same-origin",
+                    headers: { Accept: "application/json" }
+                });
+
+                const data = await parseJsonResponse(response);
+                if (!response.ok) {
+                    throw new Error(data?.error || "Failed to load messages.");
+                }
+
+                if (!active) return;
+
+                const nextConversations = Array.isArray(data.conversations) ? data.conversations : [];
+                const nextUsers = Array.isArray(data.all_users) ? data.all_users : [];
+                const unread = Number(data.total_unread || 0);
+
+                setConversations(nextConversations);
+                setAllUsers(nextUsers);
+                setTotalUnread(unread);
+                onUnreadCountChange?.(unread);
+            } catch (error) {
+                console.error("[MSG] conversations fetch error:", error);
+                if (!active) return;
                 setConversations([]);
                 setAllUsers([]);
                 setTotalUnread(0);
-            })
-            .finally(() => setLoadingList(false));
-    }, [open]);
+                onUnreadCountChange?.(0);
+            } finally {
+                if (active) setLoadingList(false);
+            }
+        }
+
+        loadInboxData();
+        const intervalId = window.setInterval(loadInboxData, 30000);
+
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+        };
+    }, [openMode, onUnreadCountChange]);
+
+    React.useEffect(() => {
+        if (openMode !== "full") return;
+        if (activeUser) return;
+        if (visibleInbox.length === 0) return;
+
+        const firstItem = visibleInbox[0];
+        setActiveUser(normalizeThreadUser(firstItem));
+        loadThreadMessages(firstItem.user_id ?? firstItem.id);
+    }, [activeUser, openMode, visibleInbox]);
 
     React.useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
     React.useEffect(() => {
-        if (view !== "thread") return;
-        const id = setTimeout(() => inputRef.current?.focus(), 100);
-        return () => clearTimeout(id);
-    }, [view]);
+        if (openMode !== "full" || !activeUser) return undefined;
+        const timeoutId = window.setTimeout(() => inputRef.current?.focus(), 120);
+        return () => window.clearTimeout(timeoutId);
+    }, [activeUser, openMode]);
 
-    function normalizeThreadUser(user = {}) {
-        return {
-            user_id: user.user_id ?? user.id ?? null,
-            user_name: user.user_name ?? user.name ?? "User",
-            user_role: user.user_role ?? user.role ?? "",
-            user_role_label: user.user_role_label ?? user.role_label ?? user.role ?? "",
-            user_initials: user.user_initials ?? user.initials ?? getInitials(user.user_name ?? user.name ?? "User"),
-            profile_image: user.profile_image ?? null,
-            profile_image_url: user.profile_image_url ?? "",
-        };
-    }
+    React.useEffect(() => {
+        if (!inputRef.current) return;
+        inputRef.current.style.height = "46px";
+        inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 132)}px`;
+    }, [msgText, openMode]);
 
-    function sortConversationsByRecent(list = []) {
-        return [...list].sort((a, b) => {
-            const aTime = a?.last_time ? new Date(a.last_time).getTime() : 0;
-            const bTime = b?.last_time ? new Date(b.last_time).getTime() : 0;
-            return bTime - aTime;
-        });
-    }
-
-    function openThread(user) {
-        const normalizedUser = normalizeThreadUser(user);
-        setActiveUser(normalizedUser);
-        setMessages([]);
-        setMsgText("");
-        setView("thread");
-        loadThreadMessages(normalizedUser.user_id);
-    }
-
-    function loadThreadMessages(otherUserId) {
+    async function loadThreadMessages(otherUserId) {
         if (!otherUserId) return;
 
         setLoadingMsgs(true);
-
-        const url = `php/get_user_messages.php?other_user_id=${encodeURIComponent(otherUserId)}`;
-
-        fetch(url, { credentials: "same-origin" })
-            .then(r => r.json())
-            .then(data => {
-                setMessages(Array.isArray(data.messages) ? data.messages : []);
-
-                if (data.other_user) {
-                    setActiveUser(prev => ({
-                        ...normalizeThreadUser(prev || {}),
-                        ...normalizeThreadUser({
-                            user_id: data.other_user.id,
-                            user_name: data.other_user.name,
-                            user_role: data.other_user.role,
-                            user_role_label: data.other_user.role_label,
-                            user_initials: data.other_user.initials,
-                            profile_image: data.other_user.profile_image,
-                            profile_image_url: data.other_user.profile_image_url,
-                        }),
-                    }));
+        try {
+            const response = await fetch(
+                `php/get_user_messages.php?other_user_id=${encodeURIComponent(otherUserId)}`,
+                {
+                    credentials: "same-origin",
+                    headers: { Accept: "application/json" }
                 }
+            );
 
-                setConversations(prev =>
-                    prev.map(c =>
-                        c.user_id === otherUserId
-                            ? { ...c, unread_count: 0 }
-                            : c
-                    )
-                );
+            const data = await parseJsonResponse(response);
+            if (!response.ok) {
+                throw new Error(data?.error || "Failed to load thread messages.");
+            }
 
-                setTotalUnread(prev => Math.max(0, prev - (Array.isArray(data.messages)
-                    ? data.messages.filter(m => m.sender_id === otherUserId && !m.is_read).length
-                    : 0)));
-            })
-            .catch(err => {
-                console.error("[MSG] fetch error:", err);
-                setMessages([]);
-            })
-            .finally(() => setLoadingMsgs(false));
+            setMessages(Array.isArray(data.messages) ? data.messages : []);
+
+            if (data.other_user) {
+                setActiveUser((prev) => ({
+                    ...normalizeThreadUser(prev || {}),
+                    ...normalizeThreadUser({
+                        user_id: data.other_user.id,
+                        user_name: data.other_user.name,
+                        user_role: data.other_user.role,
+                        user_role_label: data.other_user.role_label,
+                        user_initials: data.other_user.initials,
+                        profile_image: data.other_user.profile_image,
+                        profile_image_url: data.other_user.profile_image_url,
+                        has_conversation: true
+                    })
+                }));
+            }
+
+            setConversations((prev) =>
+                prev.map((conversation) =>
+                    sameUserId(conversation.user_id, otherUserId)
+                        ? { ...conversation, unread_count: 0 }
+                        : conversation
+                )
+            );
+
+            const unreadInThread = Array.isArray(data.messages)
+                ? data.messages.filter(
+                      (message) => sameUserId(message.sender_id, otherUserId) && !message.is_read
+                  ).length
+                : 0;
+
+            setTotalUnread((prev) => {
+                const next = Math.max(0, prev - unreadInThread);
+                onUnreadCountChange?.(next);
+                return next;
+            });
+        } catch (error) {
+            console.error("[MSG] thread fetch error:", error);
+            setMessages([]);
+        } finally {
+            setLoadingMsgs(false);
+        }
+    }
+
+    function togglePinned(userId) {
+        const target = String(userId ?? "");
+        if (!target) return;
+
+        setPinnedConversationIds((prev) =>
+            prev.includes(target)
+                ? prev.filter((value) => value !== target)
+                : [target, ...prev]
+        );
+    }
+
+    function openThread(item, expandIfNeeded = true) {
+        const normalized = normalizeThreadUser(item);
+        setActiveUser(normalized);
+        setMsgText("");
+
+        if (expandIfNeeded && openMode !== "full") {
+            onExpand();
+        }
+
+        loadThreadMessages(normalized.user_id);
+    }
+
+    function handleViewAll() {
+        if (!activeUser && visibleInbox.length > 0) {
+            const firstItem = visibleInbox[0];
+            setActiveUser(normalizeThreadUser(firstItem));
+            loadThreadMessages(firstItem.user_id ?? firstItem.id);
+        }
+        onExpand();
     }
 
     async function sendMessage() {
@@ -518,674 +888,508 @@ function MessagingModal({ open, onClose, currentUserId }) {
         if (!trimmed || !activeUser) return;
 
         setSending(true);
-
         try {
             const recipientId = activeUser.user_id || activeUser.id;
 
-            const res = await fetch(MSG_SEND_API, {
+            const response = await fetch(MSG_SEND_API, {
                 method: "POST",
                 credentials: "same-origin",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json"
+                },
                 body: JSON.stringify({
                     recipient_id: recipientId,
-                    message: trimmed,
-                }),
+                    message: trimmed
+                })
             });
 
-            const data = await res.json();
-
-            if (!res.ok || !data.success || !data.message) {
+            const data = await parseJsonResponse(response);
+            if (!response.ok || !data.success || !data.message) {
                 throw new Error(data?.error || "Failed to send message.");
             }
 
-            setMessages(prev => [...prev, data.message]);
+            setMessages((prev) => [...prev, data.message]);
             setMsgText("");
 
-            setConversations(prev => {
-                const exists = prev.some(c => c.user_id === recipientId);
-
+            setConversations((prev) => {
+                const exists = prev.some((conversation) => sameUserId(conversation.user_id, recipientId));
                 const nextItem = {
                     user_id: recipientId,
                     user_name: activeUser.user_name || activeUser.name,
                     user_role: activeUser.user_role || "",
                     user_role_label: activeUser.user_role_label || "",
-                    user_initials: activeUser.user_initials || getInitials(activeUser.user_name || activeUser.name || "User"),
+                    user_initials:
+                        activeUser.user_initials ||
+                        getInitials(activeUser.user_name || activeUser.name || "User"),
                     profile_image: activeUser.profile_image || null,
                     profile_image_url: activeUser.profile_image_url || "",
                     last_message: trimmed,
                     last_time: data.message.time_sent || new Date().toISOString(),
-                    unread_count: 0,
+                    unread_count: 0
                 };
 
-                const updated = exists
-                    ? prev.map(c => (c.user_id === recipientId ? { ...c, ...nextItem } : c))
-                    : [nextItem, ...prev];
+                if (exists) {
+                    return prev.map((conversation) =>
+                        sameUserId(conversation.user_id, recipientId)
+                            ? { ...conversation, ...nextItem }
+                            : conversation
+                    );
+                }
 
-                return sortConversationsByRecent(updated);
+                return [nextItem, ...prev];
             });
-        } catch (err) {
-            console.error("Send failed:", err);
+        } catch (error) {
+            console.error("Send failed:", error);
         } finally {
             setSending(false);
         }
     }
 
-    function handleKeyDown(e) {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
+    function handleComposerKeyDown(event) {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
             sendMessage();
         }
     }
 
-    const lowerSearch = search.toLowerCase();
+    const dropdownMarkup = openMode === "panel" ? (
+        <div className="msg-panel" ref={panelRef} role="dialog" aria-label="Messages inbox">
+            <div className="msg-panel-sticky">
+                <div className="msg-panel-head">
+                    <div>
+                        <div className="msg-panel-title">Inbox · All</div>
+                        <div className="msg-panel-subtitle">
+                            {totalUnread > 0
+                                ? `${totalUnread} unread message${totalUnread > 1 ? "s" : ""}`
+                                : "All conversations"}
+                        </div>
+                    </div>
 
-    const filteredConvos = conversations.filter(c =>
-        c.user_name?.toLowerCase().includes(lowerSearch)
-    );
+                    <div className="msg-panel-actions">
+                        <button
+                            type="button"
+                            className="msg-icon-ghost msg-panel-icon"
+                            onClick={onClose}
+                            aria-label="Close messages"
+                        >
+                            <i className="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
 
-    const filteredUsers = allUsers.filter(u =>
-        u.name?.toLowerCase().includes(lowerSearch)
-    );
+                <div className="msg-role-scroller">
+                    {roleTabs.map((option) => (
+                        <button
+                            key={option.label}
+                            type="button"
+                            className={`msg-role-chip ${selectedRole === option.label ? "is-active" : ""}`}
+                            onClick={() => setSelectedRole(option.label)}
+                        >
+                            <span>{option.label}</span>
+                            <small>{option.count}</small>
+                        </button>
+                    ))}
+                </div>
+            </div>
 
-    if (!open) return null;
-
-    return ReactDOM.createPortal(
-        <>
-            <style>{`
-                .msg-backdrop {
-                    position: fixed; inset: 0; z-index: 99998;
-                    background: rgba(0,0,0,0.45);
-                    backdrop-filter: blur(4px);
-                    animation: msgFadeIn .15s ease;
-                }
-                @keyframes msgFadeIn { from { opacity:0 } to { opacity:1 } }
-                @keyframes msgSlideUp {
-                    from { opacity:0; transform:translateY(24px) scale(.97) }
-                    to   { opacity:1; transform:translateY(0) scale(1) }
-                }
-                .msg-modal {
-                    position: fixed;
-                    top: 50%; left: 50%;
-                    transform: translate(-50%, -50%);
-                    z-index: 99999;
-                    width: min(560px, 96vw);
-                    height: min(680px, 90vh);
-                    background: var(--bs-body-bg);
-                    border: 1px solid var(--bs-border-color);
-                    border-radius: 20px;
-                    box-shadow: 0 24px 80px rgba(0,0,0,.22);
-                    display: flex; flex-direction: column; overflow: hidden;
-                    animation: msgSlideUp .2s cubic-bezier(.34,1.56,.64,1);
-                }
-                .msg-header {
-                    display: flex; align-items: center; gap: 10px;
-                    padding: 18px 20px 14px;
-                    border-bottom: 1px solid var(--bs-border-color);
-                    flex-shrink: 0;
-                }
-                .msg-header-title {
-                    font-size: 17px; font-weight: 700;
-                    color: var(--bs-body-color);
-                    flex: 1; margin: 0;
-                }
-                .msg-close-btn {
-                    background: var(--bs-tertiary-bg);
-                    border: 1px solid var(--bs-border-color);
-                    border-radius: 10px;
-                    width: 32px; height: 32px;
-                    display: flex; align-items: center; justify-content: center;
-                    cursor: pointer; color: var(--bs-body-color);
-                    transition: background .15s;
-                }
-                .msg-close-btn:hover { background: var(--bs-secondary-bg); }
-                .msg-search-wrap {
-                    padding: 12px 16px;
-                    border-bottom: 1px solid var(--bs-border-color);
-                    flex-shrink: 0;
-                }
-                .msg-search {
-                    width: 100%;
-                    background: var(--bs-tertiary-bg);
-                    border: 1px solid var(--bs-border-color);
-                    border-radius: 10px;
-                    padding: 8px 12px 8px 36px;
-                    font-size: 14px; color: var(--bs-body-color);
-                    outline: none; transition: border-color .15s;
-                }
-                .msg-search:focus { border-color: #0d6efd; }
-                .msg-search-icon {
-                    position: absolute; left: 27px; top: 50%;
-                    transform: translateY(-50%);
-                    color: var(--bs-secondary-color); font-size: 14px;
-                    pointer-events: none;
-                }
-                .msg-tabs {
-                    display: flex; gap: 4px;
-                    padding: 8px 16px 0;
-                    border-bottom: 1px solid var(--bs-border-color);
-                    flex-shrink: 0;
-                }
-                .msg-tab {
-                    padding: 7px 14px; font-size: 13px; font-weight: 600;
-                    border: none; background: none; cursor: pointer;
-                    color: var(--bs-secondary-color);
-                    border-bottom: 2px solid transparent;
-                    transition: color .15s, border-color .15s;
-                    border-radius: 0;
-                }
-                .msg-tab.active {
-                    color: #0d6efd;
-                    border-bottom-color: #0d6efd;
-                }
-                .msg-list { flex: 1; overflow-y: auto; padding: 8px 0; }
-                .msg-list::-webkit-scrollbar { width: 4px; }
-                .msg-list::-webkit-scrollbar-thumb {
-                    background: var(--bs-border-color); border-radius: 4px;
-                }
-                .msg-row {
-                    display: flex; align-items: center; gap: 12px;
-                    padding: 10px 16px; cursor: pointer;
-                    transition: background .12s;
-                }
-                .msg-row:hover { background: var(--bs-tertiary-bg); }
-                .msg-row-info { flex: 1; min-width: 0; }
-                .msg-row-name {
-                    font-size: 14px; font-weight: 600;
-                    color: var(--bs-body-color);
-                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-                }
-                .msg-row-preview {
-                    font-size: 12px; color: var(--bs-secondary-color);
-                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-                    margin-top: 2px;
-                }
-                .msg-row-meta {
-                    display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
-                }
-                .msg-row-time { font-size: 11px; color: var(--bs-secondary-color); }
-                .msg-unread-badge {
-                    background: #0d6efd; color: #fff;
-                    border-radius: 99px; font-size: 11px; font-weight: 700;
-                    padding: 1px 6px; min-width: 18px; text-align: center;
-                }
-                .msg-role-chip {
-                    font-size: 11px; font-weight: 500;
-                    color: var(--bs-secondary-color);
-                    margin-top: 1px;
-                }
-                .msg-section-label {
-                    padding: 10px 16px 4px;
-                    font-size: 11px; font-weight: 700; letter-spacing: .06em;
-                    text-transform: uppercase; color: var(--bs-secondary-color);
-                }
-                .msg-empty {
-                    padding: 40px 24px; text-align: center;
-                    color: var(--bs-secondary-color); font-size: 14px;
-                }
-                .msg-thread-header {
-                    display: flex; align-items: center; gap: 12px;
-                    padding: 14px 16px;
-                    border-bottom: 1px solid var(--bs-border-color);
-                    flex-shrink: 0;
-                }
-                .msg-back-btn {
-                    background: var(--bs-tertiary-bg);
-                    border: 1px solid var(--bs-border-color);
-                    border-radius: 8px; width: 30px; height: 30px;
-                    display: flex; align-items: center; justify-content: center;
-                    cursor: pointer; color: var(--bs-body-color);
-                    flex-shrink: 0; transition: background .15s;
-                }
-                .msg-back-btn:hover { background: var(--bs-secondary-bg); }
-                .msg-thread-name {
-                    font-size: 15px; font-weight: 700;
-                    color: var(--bs-body-color); flex: 1;
-                }
-                .msg-bubbles {
-                    flex: 1; overflow-y: auto;
-                    padding: 16px;
-                    display: flex; flex-direction: column; gap: 8px;
-                }
-                .msg-bubbles::-webkit-scrollbar { width: 4px; }
-                .msg-bubbles::-webkit-scrollbar-thumb {
-                    background: var(--bs-border-color); border-radius: 4px;
-                }
-                .msg-bubble-wrap {
-                    display: flex; gap: 8px; align-items: flex-end;
-                    max-width: 80%;
-                }
-                .msg-bubble-wrap.mine {
-                    align-self: flex-end; flex-direction: row-reverse;
-                }
-                .msg-bubble {
-                    padding: 10px 14px;
-                    border-radius: 18px; font-size: 14px;
-                    line-height: 1.45; word-break: break-word;
-                }
-                .msg-bubble-wrap.mine .msg-bubble {
-                    background: #0d6efd; color: #fff;
-                    border-bottom-right-radius: 4px;
-                }
-                .msg-bubble-wrap.theirs .msg-bubble {
-                    background: var(--bs-tertiary-bg);
-                    color: var(--bs-body-color);
-                    border-bottom-left-radius: 4px;
-                    border: 1px solid var(--bs-border-color);
-                }
-                .msg-bubble-time {
-                    font-size: 10px; color: var(--bs-secondary-color);
-                    margin-top: 3px; padding: 0 4px;
-                    align-self: flex-end;
-                }
-                .msg-input-row {
-                    display: flex; gap: 8px; align-items: flex-end;
-                    padding: 12px 14px;
-                    border-top: 1px solid var(--bs-border-color);
-                    flex-shrink: 0;
-                }
-                .msg-textarea {
-                    flex: 1; resize: none;
-                    background: var(--bs-tertiary-bg);
-                    border: 1px solid var(--bs-border-color);
-                    border-radius: 12px;
-                    padding: 10px 14px;
-                    font-size: 14px; color: var(--bs-body-color);
-                    outline: none; min-height: 42px; max-height: 120px;
-                    line-height: 1.45; transition: border-color .15s;
-                    font-family: inherit;
-                }
-                .msg-textarea:focus { border-color: #0d6efd; }
-                .msg-send-btn {
-                    background: #0d6efd; color: #fff;
-                    border: none; border-radius: 12px;
-                    width: 42px; height: 42px;
-                    display: flex; align-items: center; justify-content: center;
-                    cursor: pointer; flex-shrink: 0;
-                    transition: background .15s, transform .1s;
-                }
-                .msg-send-btn:hover:not(:disabled) { background: #0b5ed7; }
-                .msg-send-btn:active:not(:disabled) { transform: scale(.92); }
-                .msg-send-btn:disabled { opacity: .5; cursor: not-allowed; }
-                .msg-loading {
-                    display: flex; align-items: center; justify-content: center;
-                    gap: 6px; padding: 32px; color: var(--bs-secondary-color);
-                    font-size: 14px;
-                }
-                .msg-spinner {
-                    width: 18px; height: 18px;
-                    border: 2px solid var(--bs-border-color);
-                    border-top-color: #0d6efd;
-                    border-radius: 50%;
-                    animation: spin .6s linear infinite;
-                }
-                @keyframes spin { to { transform: rotate(360deg); } }
-            `}</style>
-
-            <div className="msg-backdrop" onClick={onClose} />
-
-            <div className="msg-modal" ref={modalRef} role="dialog" aria-modal="true" aria-label="Messages">
-                {view === "list" && (
+            <div className="msg-panel-scroll">
+                {loadingList ? (
+                    <div className="msg-loading-state compact">Loading messages…</div>
+                ) : visibleInbox.length === 0 ? (
+                    <div className="msg-empty-state compact dark">
+                        <i className="bi bi-chat-left-dots"></i>
+                        <span>No conversations available for this role yet.</span>
+                    </div>
+                ) : (
                     <>
-                        <div className="msg-header">
-                            <i className="bi bi-chat-dots-fill" style={{ fontSize: 20, color: "#0d6efd" }} />
-                            <h2 className="msg-header-title">
-                                Messages
-                                {totalUnread > 0 && (
-                                    <span className="msg-unread-badge" style={{ marginLeft: 8, fontSize: 12 }}>
-                                        {totalUnread}
-                                    </span>
-                                )}
-                            </h2>
-                            <button className="msg-close-btn" onClick={onClose} aria-label="Close">
-                                <i className="bi bi-x-lg" style={{ fontSize: 13 }} />
-                            </button>
-                        </div>
-
-                        <div className="msg-search-wrap" style={{ position: "relative" }}>
-                            <i className="bi bi-search msg-search-icon" />
-                            <input
-                                type="text"
-                                className="msg-search"
-                                placeholder="Search people…"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                autoFocus
-                            />
-                        </div>
-
-                        <div className="msg-tabs">
-                            <button
-                                className={`msg-tab ${tab === "recent" ? "active" : ""}`}
-                                onClick={() => setTab("recent")}
-                            >
-                                Recent {conversations.length > 0 && `(${conversations.length})`}
-                            </button>
-                            <button
-                                className={`msg-tab ${tab === "all" ? "active" : ""}`}
-                                onClick={() => setTab("all")}
-                            >
-                                All People {allUsers.length > 0 && `(${allUsers.length})`}
-                            </button>
-                        </div>
-
-                        <div className="msg-list">
-                            {loadingList ? (
-                                <div className="msg-loading">
-                                    <div className="msg-spinner" />
-                                    Loading…
-                                </div>
-                            ) : tab === "recent" ? (
-                                filteredConvos.length === 0 ? (
-                                    <div className="msg-empty">
-                                        <i className="bi bi-chat-square-text" style={{ fontSize: 32, display: "block", marginBottom: 10 }} />
-                                        {search ? "No conversations match your search." : "No conversations yet. Switch to \"All People\" to start one."}
+                        {pinnedEntries.length > 0 && (
+                            <section className="msg-block">
+                                <div className="msg-block-head">
+                                    <div className="msg-block-title">
+                                        <i className="bi bi-pin-angle"></i>
+                                        <span>Pinned</span>
                                     </div>
-                                ) : (
-                                    filteredConvos.map(c => (
-                                        <div
-                                            key={c.user_id}
-                                            className="msg-row"
-                                            onClick={() => openThread(c)}
-                                        >
-                                            <UserAvatar
-                                                name={c.user_name}
-                                                imageUrl={c.profile_image_url}
-                                                size={40}
+                                    <button
+                                        type="button"
+                                        className="msg-block-action"
+                                        onClick={() => setHidePinned((prev) => !prev)}
+                                    >
+                                        {hidePinned ? "Show" : "Hide"}
+                                    </button>
+                                </div>
+
+                                {!hidePinned && (
+                                    <div className="msg-block-list">
+                                        {pinnedEntries.map((item) => (
+                                            <MessageRow
+                                                key={`panel-pinned-${item.user_id}`}
+                                                item={item}
+                                                compact={true}
+                                                showPin={true}
+                                                pinned={pinnedConversationIds.includes(String(item.user_id))}
+                                                onOpen={(entry) => openThread(entry, true)}
+                                                onTogglePin={togglePinned}
                                             />
-                                            <div className="msg-row-info">
-                                                <div className="msg-row-name">{c.user_name}</div>
-                                                <div className="msg-row-preview">{c.last_message || "No messages yet"}</div>
-                                            </div>
-                                            <div className="msg-row-meta">
-                                                <span className="msg-row-time">{formatMsgTime(c.last_time)}</span>
-                                                {c.unread_count > 0 && (
-                                                    <span className="msg-unread-badge">{c.unread_count}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))
-                                )
-                            ) : (
-                                filteredUsers.length === 0 ? (
-                                    <div className="msg-empty">No people found.</div>
-                                ) : (
-                                    <>
-                                        {filteredUsers.some(u => u.has_history) && (
-                                            <>
-                                                <div className="msg-section-label">Previous Conversations</div>
-                                                {filteredUsers.filter(u => u.has_history).map(u => (
-                                                    <div
-                                                        key={u.id}
-                                                        className="msg-row"
-                                                        onClick={() => openThread({
-                                                            user_id: u.id,
-                                                            user_name: u.name,
-                                                            user_role: u.role,
-                                                            user_role_label: u.role_label || u.role,
-                                                            user_initials: u.initials,
-                                                            profile_image: u.profile_image,
-                                                            profile_image_url: u.profile_image_url,
-                                                        })}
-                                                    >
-                                                        <UserAvatar
-                                                            name={u.name}
-                                                            imageUrl={u.profile_image_url}
-                                                            size={40}
-                                                        />
-                                                        <div className="msg-row-info">
-                                                            <div className="msg-row-name">{u.name}</div>
-                                                            <div className="msg-role-chip">{u.role_label || u.role}</div>
-                                                        </div>
-                                                        <i className="bi bi-clock-history" style={{ fontSize: 13, color: "var(--bs-secondary-color)" }} />
-                                                    </div>
-                                                ))}
-                                            </>
-                                        )}
-
-                                        {filteredUsers.some(u => !u.has_history) && (
-                                            <>
-                                                <div className="msg-section-label">All Users</div>
-                                                {filteredUsers.filter(u => !u.has_history).map(u => (
-                                                    <div
-                                                        key={u.id}
-                                                        className="msg-row"
-                                                        onClick={() => openThread({
-                                                            user_id: u.id,
-                                                            user_name: u.name,
-                                                            user_role: u.role,
-                                                            user_role_label: u.role_label || u.role,
-                                                            user_initials: u.initials,
-                                                            profile_image: u.profile_image,
-                                                            profile_image_url: u.profile_image_url,
-                                                        })}
-                                                    >
-                                                        <UserAvatar
-                                                            name={u.name}
-                                                            imageUrl={u.profile_image_url}
-                                                            size={40}
-                                                        />
-                                                        <div className="msg-row-info">
-                                                            <div className="msg-row-name">{u.name}</div>
-                                                            <div className="msg-role-chip">{u.role_label || u.role}</div>
-                                                        </div>
-                                                        <i className="bi bi-chevron-right" style={{ fontSize: 12, color: "var(--bs-secondary-color)" }} />
-                                                    </div>
-                                                ))}
-                                            </>
-                                        )}
-                                    </>
-                                )
-                            )}
-                        </div>
-                    </>
-                )}
-
-                {view === "thread" && activeUser && (
-                    <>
-                        <div className="msg-thread-header">
-                            <button
-                                className="msg-back-btn"
-                                onClick={() => {
-                                    setView("list");
-                                    setMessages([]);
-                                }}
-                                aria-label="Back"
-                            >
-                                <i className="bi bi-chevron-left" style={{ fontSize: 13 }} />
-                            </button>
-
-                            <UserAvatar
-                                name={activeUser.user_name}
-                                imageUrl={activeUser.profile_image_url}
-                                size={36}
-                            />
-
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div className="msg-thread-name">{activeUser.user_name}</div>
-                                {activeUser.user_role_label && (
-                                    <div className="msg-role-chip">{activeUser.user_role_label}</div>
+                                        ))}
+                                    </div>
                                 )}
+                            </section>
+                        )}
+
+                        <section className="msg-block">
+                            <div className="msg-block-head muted">
+                                <div className="msg-block-title">
+                                    <span>{selectedRole === "All" ? "All messages" : `${selectedRole} messages`}</span>
+                                </div>
                             </div>
 
-                            <button className="msg-close-btn" onClick={onClose} aria-label="Close">
-                                <i className="bi bi-x-lg" style={{ fontSize: 13 }} />
-                            </button>
-                        </div>
-
-                        <div className="msg-bubbles">
-                            {loadingMsgs ? (
-                                <div className="msg-loading">
-                                    <div className="msg-spinner" />
-                                    Loading messages…
-                                </div>
-                            ) : messages.length === 0 ? (
-                                <div
-                                    className="msg-empty"
-                                    style={{
-                                        flex: 1,
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        alignItems: "center",
-                                        justifyContent: "center"
-                                    }}
-                                >
-                                    <i className="bi bi-chat-heart" style={{ fontSize: 36, display: "block", marginBottom: 10, color: "#0d6efd" }} />
-                                    <div>No messages yet.</div>
-                                    <div style={{ fontSize: 12, marginTop: 4 }}>Send the first one!</div>
-                                </div>
-                            ) : (
-                                messages.map(m => {
-                                    const isMine = m.sender_id === currentUserId;
-
-                                    return (
-                                        <div
-                                            key={m.id}
-                                            className={`msg-bubble-wrap ${isMine ? "mine" : "theirs"}`}
-                                        >
-                                            {!isMine && (
-                                                <UserAvatar
-                                                    name={m.sender_name}
-                                                    imageUrl={m.sender_profile_image_url}
-                                                    size={28}
-                                                />
-                                            )}
-
-                                            <div>
-                                                <div className="msg-bubble">{m.message}</div>
-
-                                                {m.attachments?.length > 0 && (
-                                                    <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                                        {m.attachments.map(a => (
-                                                            <a
-                                                                key={a.id}
-                                                                href={a.file_path}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                style={{
-                                                                    fontSize: 12,
-                                                                    padding: "3px 8px",
-                                                                    background: "var(--bs-tertiary-bg)",
-                                                                    border: "1px solid var(--bs-border-color)",
-                                                                    borderRadius: 6,
-                                                                    color: "#0d6efd",
-                                                                    textDecoration: "none",
-                                                                    display: "inline-flex",
-                                                                    alignItems: "center",
-                                                                    gap: 4,
-                                                                }}
-                                                            >
-                                                                <i className="bi bi-paperclip" />
-                                                                {a.file_name}
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                <div
-                                                    className="msg-bubble-time"
-                                                    style={{ textAlign: isMine ? "right" : "left" }}
-                                                >
-                                                    {formatBubbleTime(m.time_sent)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        <div className="msg-input-row">
-                            <textarea
-                                ref={inputRef}
-                                className="msg-textarea"
-                                placeholder={`Message ${activeUser.user_name}…`}
-                                value={msgText}
-                                onChange={e => setMsgText(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                rows={1}
-                                disabled={sending}
-                            />
-                            <button
-                                className="msg-send-btn"
-                                onClick={sendMessage}
-                                disabled={!msgText.trim() || sending}
-                                aria-label="Send message"
-                            >
-                                {sending
-                                    ? <div className="msg-spinner" style={{ borderTopColor: "#fff", width: 16, height: 16 }} />
-                                    : <i className="bi bi-send-fill" style={{ fontSize: 15 }} />
-                                }
-                            </button>
-                        </div>
+                            <div className="msg-block-list">
+                                {regularEntries.map((item) => (
+                                    <MessageRow
+                                        key={`panel-${item.user_id}`}
+                                        item={item}
+                                        compact={true}
+                                        showPin={true}
+                                        pinned={pinnedConversationIds.includes(String(item.user_id))}
+                                        onOpen={(entry) => openThread(entry, true)}
+                                        onTogglePin={togglePinned}
+                                    />
+                                ))}
+                            </div>
+                        </section>
                     </>
                 )}
             </div>
-        </>,
-        document.body
-    );
-}
 
-// ====================================================================
-// CHAT BUTTON — opens the messaging modal
-// ====================================================================
-function ChatButton() {
-    const [open, setOpen]             = React.useState(false);
-    const [unreadCount, setUnreadCount] = React.useState(0);
-    const [currentUserId, setCurrentUserId] = React.useState(null);
+            <div className="msg-panel-footer">
+                <button type="button" className="msg-view-all-btn" onClick={handleViewAll}>
+                    View all messages
+                </button>
+            </div>
+        </div>
+    ) : null;
 
-    // Fetch unread count on mount and periodically
-    React.useEffect(() => {
-        function fetchUnread() {
-            fetch(MSG_CONVERSATIONS_API, { credentials: "same-origin" })
-                .then(r => r.json())
-                .then(data => {
-                    setUnreadCount(data.total_unread || 0);
-                    setCurrentUserId(data.current_user_id || null);
-                })
-                .catch(() => {});
-        }
-        fetchUnread();
-        const id = window.setInterval(fetchUnread, 30_000);
-        return () => window.clearInterval(id);
-    }, []);
+    const fullMarkup = openMode === "full" ? (
+        <div className="msg-workspace-overlay">
+            <div className="msg-workspace-backdrop" onClick={onClose}></div>
+
+            <div className="msg-workspace" ref={shellRef} role="dialog" aria-modal="true" aria-label="Inbox message">
+                <div className="msg-workspace-header">
+                    <div>
+                        <div className="msg-workspace-kicker">Message</div>
+                        <div className="msg-workspace-title">Inbox Message</div>
+                    </div>
+
+                    <div className="msg-workspace-actions">
+                        <button
+                            type="button"
+                            className="msg-icon-ghost"
+                            onClick={onCollapse}
+                            aria-label="Minimize messages"
+                        >
+                            <i className="bi bi-dash-lg"></i>
+                        </button>
+                        <button
+                            type="button"
+                            className="msg-icon-ghost"
+                            onClick={onClose}
+                            aria-label="Close messages"
+                        >
+                            <i className="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="msg-workspace-body">
+                    <aside className="msg-sidebar">
+                        <div className="msg-sidebar-sticky">
+                            <div className="msg-role-scroller sidebar">
+                                {roleTabs.map((option) => (
+                                    <button
+                                        key={`sidebar-${option.label}`}
+                                        type="button"
+                                        className={`msg-role-chip ${selectedRole === option.label ? "is-active" : ""}`}
+                                        onClick={() => setSelectedRole(option.label)}
+                                    >
+                                        <span>{option.label}</span>
+                                        <small>{option.count}</small>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <label className="msg-searchbox">
+                                <i className="bi bi-search"></i>
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                    placeholder="Search chat"
+                                />
+                            </label>
+                        </div>
+
+                        <div className="msg-sidebar-scroll">
+                            {loadingList ? (
+                                <div className="msg-loading-state compact">Loading conversations…</div>
+                            ) : visibleInbox.length === 0 ? (
+                                <div className="msg-empty-state compact">
+                                    <i className="bi bi-chat-left-text"></i>
+                                    <span>No users found for this role.</span>
+                                </div>
+                            ) : (
+                                <>
+                                    {pinnedEntries.length > 0 && (
+                                        <section className="msg-block sidebar-block">
+                                            <div className="msg-block-head">
+                                                <div className="msg-block-title">
+                                                    <span>Pinned</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="msg-block-list compact-list">
+                                                {pinnedEntries.map((item) => (
+                                                    <MessageRow
+                                                        key={`sidebar-pinned-${item.user_id}`}
+                                                        item={item}
+                                                        compact={true}
+                                                        selected={activeUser && sameUserId(activeUser.user_id, item.user_id)}
+                                                        showPin={true}
+                                                        pinned={pinnedConversationIds.includes(String(item.user_id))}
+                                                        onOpen={(entry) => openThread(entry, false)}
+                                                        onTogglePin={togglePinned}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    <section className="msg-block sidebar-block">
+                                        <div className="msg-block-head muted">
+                                            <div className="msg-block-title">
+                                                <span>All Messages</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="msg-block-list compact-list">
+                                            {regularEntries.map((item) => (
+                                                <MessageRow
+                                                    key={`sidebar-${item.user_id}`}
+                                                    item={item}
+                                                    compact={true}
+                                                    selected={activeUser && sameUserId(activeUser.user_id, item.user_id)}
+                                                    showPin={true}
+                                                    pinned={pinnedConversationIds.includes(String(item.user_id))}
+                                                    onOpen={(entry) => openThread(entry, false)}
+                                                    onTogglePin={togglePinned}
+                                                />
+                                            ))}
+                                        </div>
+                                    </section>
+                                </>
+                            )}
+                        </div>
+                    </aside>
+
+                    <section className="msg-thread-pane">
+                        {activeUser ? (
+                            <>
+                                <div className="msg-thread-head">
+                                    <div className="msg-thread-user">
+                                        <UserAvatar
+                                            name={activeUser.user_name}
+                                            imageUrl={activeUser.profile_image_url}
+                                            size={44}
+                                        />
+                                        <div>
+                                            <div className="msg-thread-user-name">{activeUser.user_name}</div>
+                                            <div className="msg-thread-user-meta">{getInboxRoleLabel(activeUser)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="msg-thread-scroll">
+                                    {loadingMsgs ? (
+                                        <div className="msg-loading-state">Loading messages…</div>
+                                    ) : messages.length === 0 ? (
+                                        <div className="msg-empty-state thread">
+                                            <i className="bi bi-chat-heart"></i>
+                                            <span>No conversation yet. Start the first message.</span>
+                                        </div>
+                                    ) : (
+                                        messages.map((message, index) => {
+                                            const isMine = sameUserId(message.sender_id, currentUserId);
+                                            const showDivider =
+                                                index === 0 ||
+                                                !isSameCalendarDay(
+                                                    message.time_sent,
+                                                    messages[index - 1]?.time_sent
+                                                );
+
+                                            return (
+                                                <React.Fragment key={message.id}>
+                                                    {showDivider && (
+                                                        <div className="msg-thread-day">
+                                                            <span>{getMessageDayLabel(message.time_sent)}</span>
+                                                        </div>
+                                                    )}
+
+                                                    <div className={`msg-thread-row ${isMine ? "mine" : "theirs"}`}>
+                                                        {!isMine && (
+                                                            <UserAvatar
+                                                                name={message.sender_name}
+                                                                imageUrl={message.sender_profile_image_url}
+                                                                size={34}
+                                                            />
+                                                        )}
+
+                                                        <div className="msg-thread-stack">
+                                                            <div className={`msg-thread-meta ${isMine ? "mine" : ""}`}>
+                                                                <span>{isMine ? "You" : message.sender_name}</span>
+                                                                <span>{formatBubbleTime(message.time_sent)}</span>
+                                                            </div>
+
+                                                            <div className={`msg-thread-bubble ${isMine ? "mine" : "theirs"}`}>
+                                                                <div>{message.message}</div>
+
+                                                                {message.attachments?.length > 0 && (
+                                                                    <div className="msg-attachment-list">
+                                                                        {message.attachments.map((attachment) => (
+                                                                            <a
+                                                                                key={attachment.id}
+                                                                                href={attachment.file_path}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="msg-attachment-pill"
+                                                                            >
+                                                                                <i className="bi bi-paperclip"></i>
+                                                                                <span>{attachment.file_name}</span>
+                                                                            </a>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </React.Fragment>
+                                            );
+                                        })
+                                    )}
+
+                                    <div ref={messagesEndRef}></div>
+                                </div>
+
+                                <div className="msg-composer-bar">
+                                    <textarea
+                                        ref={inputRef}
+                                        className="msg-composer-input"
+                                        placeholder={`Message ${activeUser.user_name}…`}
+                                        value={msgText}
+                                        onChange={(event) => setMsgText(event.target.value)}
+                                        onKeyDown={handleComposerKeyDown}
+                                        rows={1}
+                                        disabled={sending}
+                                    ></textarea>
+
+                                    <button
+                                        type="button"
+                                        className="msg-composer-send"
+                                        onClick={sendMessage}
+                                        disabled={!msgText.trim() || sending}
+                                        aria-label="Send message"
+                                    >
+                                        {sending ? <i className="bi bi-arrow-repeat spin"></i> : <i className="bi bi-send-fill"></i>}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="msg-empty-state thread">
+                                <i className="bi bi-chat-left-dots"></i>
+                                <span>Select a user to open the conversation.</span>
+                            </div>
+                        )}
+                    </section>
+                </div>
+            </div>
+        </div>
+    ) : null;
 
     return (
         <>
+            {dropdownMarkup}
+            {openMode === "full" ? ReactDOM.createPortal(fullMarkup, document.body) : null}
+        </>
+    );
+}
+
+function ChatButton() {
+    const [openMode, setOpenMode] = React.useState(null);
+    const [unreadCount, setUnreadCount] = React.useState(0);
+    const [currentUserId, setCurrentUserId] = React.useState(null);
+    const triggerRef = React.useRef(null);
+
+    React.useEffect(() => {
+        let active = true;
+
+        async function fetchUnread() {
+            try {
+                const response = await fetch(MSG_CONVERSATIONS_API, {
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json"
+                    }
+                });
+
+                const data = await parseJsonResponse(response);
+                if (!response.ok || !active) return;
+
+                setUnreadCount(Number(data.total_unread || 0));
+                setCurrentUserId(data.current_user_id || null);
+            } catch (error) {
+                console.error("[MSG] unread fetch error:", error);
+            }
+        }
+
+        fetchUnread();
+        const intervalId = window.setInterval(fetchUnread, 30000);
+
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+        };
+    }, []);
+
+    return (
+        <div className="message-hub">
             <button
+                ref={triggerRef}
                 type="button"
-                className="topbar-icon-btn"
+                className={`topbar-icon-btn ${openMode ? "active" : ""}`}
                 aria-label="Messages"
                 title="Messages"
-                onClick={() => setOpen(true)}
+                onClick={() => setOpenMode((current) => (current === "panel" ? null : "panel"))}
                 style={{ position: "relative" }}
             >
                 <i className="bi bi-chat-dots"></i>
                 {unreadCount > 0 && (
-                    <span
-                        style={{
-                            position: "absolute", top: 2, right: 2,
-                            background: "#ef4444", color: "#fff",
-                            borderRadius: "99px", fontSize: "10px", fontWeight: 700,
-                            padding: "1px 5px", lineHeight: 1.4,
-                            border: "2px solid var(--bs-body-bg)",
-                        }}
-                    >
+                    <span className="notif-badge">
                         {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                 )}
             </button>
 
             <MessagingModal
-                open={open}
-                onClose={() => setOpen(false)}
+                openMode={openMode}
+                onClose={() => setOpenMode(null)}
+                onExpand={() => setOpenMode("full")}
+                onCollapse={() => setOpenMode("panel")}
                 currentUserId={currentUserId}
+                triggerRef={triggerRef}
+                onUnreadCountChange={setUnreadCount}
             />
-        </>
+        </div>
     );
 }
-
 
 const TASKS_API = "php/get_tasks.php";
 const MANILA_TIMEZONE = "Asia/Manila";
