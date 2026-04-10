@@ -4,13 +4,39 @@ import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom
 
 window.sileo = sileo;
 
-const API_BASE = "http://localhost/taskmanagement/staff/php";
+const API_BASE = (() => {
+    const { origin, pathname } = window.location;
+    const currentDir = pathname.endsWith("/")
+        ? pathname
+        : pathname.replace(/[^/]*$/, "");
+    return new URL("./php/", `${origin}${currentDir}`).href.replace(/\/$/, "");
+})();
 const TASKS_PER_PAGE = 5;
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
 const STATUS_OPTIONS = ["Ongoing", "Completed"];
 
 function normalizeText(value = "") {
     return String(value).trim().toLowerCase();
+}
+
+function looksLikeHtml(text = "") {
+    return /<(?:!doctype|html|body|head|title|h1|p|address)\b/i.test(String(text));
+}
+
+function getFriendlyHttpError(response, fallbackMessage, rawText = "", parsed = null) {
+    if (parsed?.error || parsed?.message) {
+        return parsed.error || parsed.message;
+    }
+
+    if (looksLikeHtml(rawText)) {
+        if (response.status === 404) {
+            return "API endpoint not found. Please check that the PHP files are inside the staff/php folder.";
+        }
+
+        return `Server error (${response.status} ${response.statusText}).`;
+    }
+
+    return rawText || fallbackMessage;
 }
 
 function showToast(type = "info", title = "Notice", description = "") {
@@ -41,10 +67,31 @@ async function parseServerResponse(response, fallbackMessage) {
     const message = parsed?.message || rawText || fallbackMessage;
 
     if (!success) {
-        throw new Error(message || fallbackMessage);
+        throw new Error(getFriendlyHttpError(response, fallbackMessage, rawText, parsed));
     }
 
     return message;
+}
+
+async function parseJsonResponse(response, fallbackMessage = "Request failed.") {
+    const rawText = (await response.text()).trim();
+    let parsed = null;
+
+    try {
+        parsed = rawText ? JSON.parse(rawText) : null;
+    } catch {
+        parsed = null;
+    }
+
+    if (!response.ok) {
+        throw new Error(getFriendlyHttpError(response, fallbackMessage, rawText, parsed));
+    }
+
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && (parsed.error || parsed.success === false)) {
+        throw new Error(parsed.error || parsed.message || fallbackMessage);
+    }
+
+    return parsed ?? rawText;
 }
 
 function formatDate(dateStr) {
@@ -712,16 +759,27 @@ function TaskCommentModal({ task, currentUserId, recipientId, onClose }) {
 
     // Fetch messages when modal opens
     React.useEffect(() => {
+        let active = true;
+
         setLoading(true);
         setError(null);
+
         fetch(`${API_BASE}/get_task_messages.php?task_id=${task.id}`)
-            .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
+            .then(response => parseJsonResponse(response, "Could not load task comments."))
             .then(data => {
-                if (data.error) throw new Error(data.error);
-                setMessages(Array.isArray(data.messages) ? data.messages : []);
+                if (!active) return;
+                setMessages(Array.isArray(data?.messages) ? data.messages : []);
                 setLoading(false);
             })
-            .catch(err => { setError(`Could not load comments: ${err.message}`); setLoading(false); });
+            .catch(err => {
+                if (!active) return;
+                setError(`Could not load comments: ${err.message}`);
+                setLoading(false);
+            });
+
+        return () => {
+            active = false;
+        };
     }, [task.id]);
 
     // Scroll to bottom whenever messages update
@@ -741,15 +799,16 @@ function TaskCommentModal({ task, currentUserId, recipientId, onClose }) {
         setSendError(null);
 
         const fd = new FormData();
-        fd.append('task_id',      task.id);
-        fd.append('recipient_id', recipientId);
-        fd.append('message',      trimmed);
+        fd.append('task_id', task.id);
+        if (recipientId != null && recipientId !== "") {
+            fd.append('recipient_id', recipientId);
+        }
+        fd.append('message', trimmed);
         files.forEach(f => fd.append('attachments[]', f));
 
         fetch(`${API_BASE}/send_task_message.php`, { method: 'POST', body: fd })
-            .then(r => r.json())
+            .then(response => parseJsonResponse(response, "Failed to send message."))
             .then(data => {
-                if (data.error) throw new Error(data.error);
                 setMessages(prev => [...prev, data.message]);
                 setText('');
                 setFiles([]);
@@ -871,7 +930,7 @@ function TaskCommentModal({ task, currentUserId, recipientId, onClose }) {
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                             {messages.map(msg => {
-                                const isOwn = msg.sender_id === currentUserId;
+                                const isOwn = String(msg.sender_id) === String(currentUserId);
                                 return (
                                     <div key={msg.id} style={{
                                         display: 'flex', gap: 10,
@@ -1080,25 +1139,33 @@ function App() {
     const [tasks, setTasks] = React.useState([]);
     const [currentUserId, setCurrentUserId] = React.useState(null);
     const [period, setPeriod] = React.useState(DEFAULT_PERIOD);
+    const [dueDateFilter, setDueDateFilter] = React.useState("");
+    const [priorityFilter, setPriorityFilter] = React.useState("all");
+    const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
 
-    // Fetch the logged-in user's ID once on mount.
-    // get_current_user.php returns { id, name, ... } from the active session.
     React.useEffect(() => {
+        let active = true;
+
         fetch(`${API_BASE}/get_current_user.php`)
-            .then(r => r.json())
-            .then(data => { if (data.id) setCurrentUserId(data.id); })
-            .catch(() => {});
+            .then(response => parseJsonResponse(response, "Unable to load the current user."))
+            .then(data => {
+                if (active && data?.id != null) {
+                    setCurrentUserId(data.id);
+                }
+            })
+            .catch(error => {
+                console.warn("Unable to load current user:", error);
+            });
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     const fetchTasks = React.useCallback(async ({ silent = true } = {}) => {
         try {
             const response = await fetch(`${API_BASE}/get_tasks.php`);
-
-            if (!response.ok) {
-                throw new Error(`Request failed with status ${response.status}`);
-            }
-
-            const data = await response.json();
+            const data = await parseJsonResponse(response, "Unable to load tasks.");
             setTasks(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error:", error);
@@ -1139,23 +1206,39 @@ function App() {
                             })}
                         </div>
                     </div>
+
+                    <TaskDateFilter
+                        value={dueDateFilter}
+                        onChange={setDueDateFilter}
+                    />
+
+                    <TaskPriorityFilter
+                        value={priorityFilter}
+                        onChange={setPriorityFilter}
+                    />
                 </div>
 
                 <button
                     type="button"
                     className="task-create-btn"
-                    onClick={() => document.getElementById("openReactModalBtn")?.click()}
+                    onClick={() => setIsAddModalOpen(true)}
                 >
                     <i className="bi bi-plus-lg"></i>
                     <span>Add New Task</span>
                 </button>
             </div>
 
-            <ModalController refreshTasks={fetchTasks} />
+            <AddTaskModal
+                show={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                refreshTasks={fetchTasks}
+            />
 
             <TaskTable
                 tasks={tasks}
                 refreshTasks={fetchTasks}
+                currentUserId={currentUserId}
+                period={period}
                 dueDateFilter={dueDateFilter}
                 priorityFilter={priorityFilter}
             />
@@ -1163,7 +1246,7 @@ function App() {
     );
 }
 
-function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
+function TaskTable({ tasks, refreshTasks, currentUserId, period, dueDateFilter, priorityFilter }) {
     const [selectedTask, setSelectedTask] = React.useState(null);
     const [showDetailModal, setShowDetailModal] = React.useState(false);
     const [commentTask, setCommentTask] = React.useState(null); // task whose comment panel is open
@@ -1180,7 +1263,14 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
         completed: 1
     });
 
-    const filteredTasks = tasks.filter(task => isTaskInPeriod(task, period));
+    const filteredTasks = React.useMemo(() => {
+        return tasks.filter(task => {
+            if (!isTaskInPeriod(task, period)) return false;
+            if (dueDateFilter && task.deadline !== dueDateFilter) return false;
+            if (priorityFilter !== "all" && normalizeText(task.priority || "low") !== priorityFilter) return false;
+            return true;
+        });
+    }, [tasks, period, dueDateFilter, priorityFilter]);
 
     const laneTaskMap = {
         ongoing: filteredTasks.filter(task => getLaneKey(task) === "ongoing"),
@@ -1194,7 +1284,7 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
             overdue: 1,
             completed: 1
         });
-    }, [period, tasks]);
+    }, [period, dueDateFilter, priorityFilter, tasks]);
 
     function handleRowClick(task) {
         setSelectedTask(task);
@@ -1239,7 +1329,6 @@ function TaskTable({ tasks, refreshTasks, dueDateFilter, priorityFilter }) {
                     task={selectedTask}
                     onClose={() => setShowDetailModal(false)}
                     refreshTasks={refreshTasks}
-                    currentUserId={currentUserId}
                 />
             )}
 
@@ -1529,7 +1618,7 @@ function TaskFormFields({
     );
 }
 
-function TaskDetailModal({ show, task, onClose, refreshTasks, currentUserId }) {
+function TaskDetailModal({ show, task, onClose, refreshTasks }) {
     const [taskName, setTaskName] = React.useState("");
     const [description, setDescription] = React.useState("");
     const [startDate, setStartDate] = React.useState("");
@@ -1947,30 +2036,6 @@ function AddTaskModal({ show, onClose, refreshTasks }) {
                 </div>
             </div>
         </div>
-    );
-}
-
-function ModalController({ refreshTasks }) {
-    const [show, setShow] = React.useState(false);
-
-    React.useEffect(() => {
-        const btn = document.getElementById("openReactModalBtn");
-
-        if (btn) {
-            btn.onclick = () => setShow(true);
-        }
-
-        return () => {
-            if (btn) btn.onclick = null;
-        };
-    }, []);
-
-    return (
-        <AddTaskModal
-            show={show}
-            onClose={() => setShow(false)}
-            refreshTasks={refreshTasks}
-        />
     );
 }
 
