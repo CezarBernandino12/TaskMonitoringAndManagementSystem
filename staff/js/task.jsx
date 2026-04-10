@@ -754,18 +754,19 @@ function TaskPriorityFilter({ value, onChange }) {
         </div>
     );
 }
+
 function TaskCommentModal({ task, currentUserId, recipientId, onClose }) {
-    const [messages,  setMessages]  = React.useState([]);
-    const [loading,   setLoading]   = React.useState(true);
-    const [error,     setError]     = React.useState(null);
-    const [text,      setText]      = React.useState('');
-    const [files,     setFiles]     = React.useState([]);  // File[] staged for upload
-    const [sending,   setSending]   = React.useState(false);
+    const [messages, setMessages] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
+    const [text, setText] = React.useState("");
+    const [files, setFiles] = React.useState([]);
+    const [sending, setSending] = React.useState(false);
     const [sendError, setSendError] = React.useState(null);
     const bottomRef = React.useRef(null);
-    const fileRef   = React.useRef(null); // hidden <input type="file">
+    const fileRef = React.useRef(null);
+    const textareaRef = React.useRef(null);
 
-    // Fetch messages when modal opens
     React.useEffect(() => {
         let active = true;
 
@@ -790,15 +791,10 @@ function TaskCommentModal({ task, currentUserId, recipientId, onClose }) {
         };
     }, [task.id]);
 
-    // Scroll to bottom whenever messages update
     React.useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // ── Send handler ────────────────────────────────────────────────
-    // Uses FormData so files can travel with the message.
-    // recipient_id is always the person who originally sent the message
-    // to this employee (i.e. task.created_by / the supervisor).
     const handleSend = () => {
         const trimmed = text.trim();
         if (!trimmed && files.length === 0) return;
@@ -807,335 +803,299 @@ function TaskCommentModal({ task, currentUserId, recipientId, onClose }) {
         setSendError(null);
 
         const fd = new FormData();
-        fd.append('task_id', task.id);
+        fd.append("task_id", task.id);
         if (recipientId != null && recipientId !== "") {
-            fd.append('recipient_id', recipientId);
+            fd.append("recipient_id", recipientId);
         }
-        fd.append('message', trimmed);
-        files.forEach(f => fd.append('attachments[]', f));
+        fd.append("message", trimmed);
+        files.forEach(f => fd.append("attachments[]", f));
 
-        fetch(`${API_BASE}/send_task_message.php`, { method: 'POST', body: fd })
+        fetch(`${API_BASE}/send_task_message.php`, { method: "POST", body: fd })
             .then(response => parseJsonResponse(response, "Failed to send message."))
             .then(data => {
                 setMessages(prev => [...prev, data.message]);
-                setText('');
+                setText("");
                 setFiles([]);
                 setSending(false);
             })
-            .catch(err => { setSendError(err.message); setSending(false); });
+            .catch(err => {
+                setSendError(err.message);
+                setSending(false);
+            });
     };
 
-    // Add picked files — deduplicate by name+size to avoid double-adds
-    const handleFileChange = (e) => {
+    React.useEffect(() => {
+        const el = textareaRef.current;
+        if (!el) return;
+
+        el.style.height = "0px";
+        const nextHeight = Math.min(Math.max(el.scrollHeight, 38), 88);
+        el.style.height = `${nextHeight}px`;
+    }, [text]);
+
+    const handleFileChange = e => {
         const picked = Array.from(e.target.files);
         setFiles(prev => {
             const existing = new Set(prev.map(f => `${f.name}|${f.size}`));
             return [...prev, ...picked.filter(f => !existing.has(`${f.name}|${f.size}`))];
         });
-        e.target.value = ''; // reset so same file can be re-selected after removal
+        e.target.value = "";
     };
 
-    const removeFile = (index) => setFiles(prev => prev.filter((_, i) => i !== index));
+    const removeFile = index => setFiles(prev => prev.filter((_, i) => i !== index));
 
-    // ── Helpers ─────────────────────────────────────────────────────
-
-    const fmtTime = (ts) => {
-        if (!ts) return '';
+    const fmtTime = ts => {
+        if (!ts) return "";
         const d = new Date(ts);
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-             + ', '
-             + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+            ", " +
+            d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
     };
 
-    const fmtSize = (bytes) => {
+    const fmtSize = bytes => {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
-    const initials = (name) => name
-        ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-        : '?';
+    const initials = name =>
+        name
+            ? name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
+            : "?";
 
-    const avatarBg = (name) => {
+    const avatarBg = name => {
         const hue = name ? [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360 : 200;
-        return `hsl(${hue},50%,85%)`;
+        return `hsl(${hue}, 58%, 92%)`;
     };
-    const avatarFg = (name) => {
+
+    const avatarFg = name => {
         const hue = name ? [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360 : 200;
-        return `hsl(${hue},50%,30%)`;
+        return `hsl(${hue}, 42%, 34%)`;
     };
 
     const canSend = !sending && (text.trim().length > 0 || files.length > 0);
 
     return (
         <div
-            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-            style={{
-                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
-                zIndex: 2000, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', padding: '1rem',
+            className="comment-modal-backdrop"
+            onClick={e => {
+                if (e.target === e.currentTarget) onClose();
             }}
         >
-            <div style={{
-                background: '#fff', borderRadius: 14, width: '100%',
-                maxWidth: 560, maxHeight: '82vh',
-                display: 'flex', flexDirection: 'column',
-                boxShadow: '0 16px 48px rgba(0,0,0,0.24)',
-            }}>
-                {/* ── Header ─────────────────────────────────────────── */}
-                <div style={{
-                    padding: '0.9rem 1.25rem',
-                    borderBottom: '1px solid #eee',
-                    display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'flex-start', flexShrink: 0,
-                }}>
-                    <div style={{ minWidth: 0, flex: 1, paddingRight: 8 }}>
-                        <div style={{
-                            fontWeight: 700, fontSize: 15, color: '#111',
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        }}>
-                            💬 {task.title}
-                        </div>
-                        <small style={{ color: '#888' }}>
-                            {messages.length} comment{messages.length !== 1 ? 's' : ''}
-                        </small>
-                    </div>
-                    <button
-                        type="button"
-                        aria-label="Close"
-                        onClick={onClose}
-                        style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            fontSize: 18, color: '#aaa', lineHeight: 1, padding: 0,
-                            marginTop: 2, flexShrink: 0,
-                        }}
-                    >
-                        ✕
-                    </button>
-                </div>
+            <div className="comment-modal-shell">
+                <div className="comment-modal-card">
+                    <div className="comment-modal-header">
+                        <div className="comment-modal-title-wrap">
+                            <div className="comment-modal-title-icon">
+                                <i className="bi bi-chat-dots-fill"></i>
+                            </div>
 
-                {/* ── Message thread ──────────────────────────────────── */}
-                <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
-                    {loading ? (
-                        <div style={{ textAlign: 'center', color: '#aaa', padding: '2rem 0' }}>
-                            <div style={{ marginBottom: 8, fontSize: 20 }}>⏳</div>
-                            Loading comments…
-                        </div>
-                    ) : error ? (
-                        <div style={{
-                            background: '#fef2f2', border: '1px solid #fca5a5',
-                            color: '#b91c1c', borderRadius: 8,
-                            padding: '8px 12px', fontSize: 13,
-                        }}>
-                            {error}
-                        </div>
-                    ) : messages.length === 0 ? (
-                        <div style={{ textAlign: 'center', color: '#aaa', padding: '2rem 0', fontSize: 14 }}>
-                            <div style={{ fontSize: 32, marginBottom: 8 }}>💬</div>
-                            No comments yet. Be the first to reply.
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                            {messages.map(msg => {
-                                const isOwn = String(msg.sender_id) === String(currentUserId);
-                                return (
-                                    <div key={msg.id} style={{
-                                        display: 'flex', gap: 10,
-                                        flexDirection: isOwn ? 'row-reverse' : 'row',
-                                        alignItems: 'flex-start',
-                                    }}>
-                                        {/* Avatar */}
-                                        <div style={{
-                                            width: 34, height: 34, borderRadius: '50%',
-                                            background: avatarBg(msg.sender_name),
-                                            color: avatarFg(msg.sender_name),
-                                            display: 'flex', alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontWeight: 700, fontSize: 12, flexShrink: 0,
-                                            border: '2px solid #fff',
-                                            boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
-                                        }}>
-                                            {initials(msg.sender_name)}
-                                        </div>
-
-                                        {/* Bubble */}
-                                        <div style={{ maxWidth: '72%' }}>
-                                            <div style={{
-                                                display: 'flex', alignItems: 'baseline', gap: 6,
-                                                flexDirection: isOwn ? 'row-reverse' : 'row',
-                                                marginBottom: 3,
-                                            }}>
-                                                <span style={{ fontSize: 12, fontWeight: 600, color: '#333' }}>
-                                                    {isOwn ? 'You' : msg.sender_name}
-                                                </span>
-                                                <span style={{ fontSize: 11, color: '#aaa' }}>
-                                                    {fmtTime(msg.time_sent)}
-                                                </span>
-                                            </div>
-
-                                            {/* Text bubble — only shown if there's a body */}
-                                            {msg.message && (
-                                                <div style={{
-                                                    background: isOwn ? '#0d6efd' : '#f3f4f6',
-                                                    color: isOwn ? '#fff' : '#222',
-                                                    borderRadius: isOwn ? '14px 4px 14px 14px' : '4px 14px 14px 14px',
-                                                    padding: '8px 12px',
-                                                    fontSize: 13, lineHeight: 1.5,
-                                                    wordBreak: 'break-word',
-                                                }}>
-                                                    {msg.message}
-                                                </div>
-                                            )}
-
-                                            {/* Attachments from server */}
-                                            {msg.attachments && msg.attachments.length > 0 && (
-                                                <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                                    {msg.attachments.map(att => (
-                                                        <a
-                                                            key={att.id}
-                                                            href={att.file_path}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            style={{
-                                                                display: 'inline-flex', alignItems: 'center', gap: 5,
-                                                                fontSize: 12,
-                                                                color: isOwn ? '#cfe2ff' : '#0d6efd',
-                                                                textDecoration: 'none',
-                                                                background: isOwn ? 'rgba(255,255,255,0.15)' : '#f0f4ff',
-                                                                borderRadius: 6,
-                                                                padding: '3px 8px',
-                                                            }}
-                                                        >
-                                                            📎 {att.file_name}
-                                                        </a>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            <div ref={bottomRef} />
-                        </div>
-                    )}
-                </div>
-
-                {/* ── Compose box ─────────────────────────────────────── */}
-                <div style={{
-                    padding: '0.75rem 1.25rem',
-                    borderTop: '1px solid #eee', flexShrink: 0,
-                }}>
-                    {sendError && (
-                        <div style={{ fontSize: 12, color: '#dc3545', marginBottom: 6 }}>{sendError}</div>
-                    )}
-
-                    {/* Staged file chips */}
-                    {files.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                            {files.map((f, i) => (
-                                <div key={i} style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                                    background: '#f0f4ff', border: '1px solid #c9d8fb',
-                                    borderRadius: 6, padding: '3px 8px',
-                                    fontSize: 12, color: '#2a52a8', maxWidth: 220,
-                                }}>
-                                    <span>📎</span>
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                                        {f.name}
+                            <div className="comment-modal-title-copy">
+                                <h4 className="comment-modal-title" title={task.title}>
+                                    {task.title}
+                                </h4>
+                                <div className="comment-modal-subline">
+                                    <span className="comment-modal-count-pill">
+                                        {messages.length} comment{messages.length !== 1 ? "s" : ""}
                                     </span>
-                                    <span style={{ color: '#888', flexShrink: 0 }}>{fmtSize(f.size)}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeFile(i)}
-                                        style={{
-                                            background: 'none', border: 'none', cursor: 'pointer',
-                                            padding: 0, color: '#888', fontSize: 13, lineHeight: 1, flexShrink: 0,
-                                        }}
-                                        title="Remove file"
-                                    >✕</button>
                                 </div>
-                            ))}
+                            </div>
                         </div>
-                    )}
-
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                        {/* Hidden file input */}
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            multiple
-                            style={{ display: 'none' }}
-                            onChange={handleFileChange}
-                        />
-
-                        {/* Attach button */}
-                        <button
-                            type="button"
-                            onClick={() => fileRef.current?.click()}
-                            disabled={sending}
-                            title="Attach files"
-                            style={{
-                                background: files.length > 0 ? '#e8f0fe' : '#f5f6f7',
-                                border: `1px solid ${files.length > 0 ? '#c9d8fb' : '#dee2e6'}`,
-                                borderRadius: 8,
-                                width: 38, height: 40,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: sending ? 'not-allowed' : 'pointer',
-                                flexShrink: 0, fontSize: 17,
-                                opacity: sending ? 0.5 : 1,
-                                transition: 'background 0.15s, border-color 0.15s',
-                                position: 'relative',
-                            }}
-                        >
-                            📎
-                            {files.length > 0 && (
-                                <span style={{
-                                    position: 'absolute', top: -5, right: -5,
-                                    background: '#0d6efd', color: '#fff',
-                                    borderRadius: '50%', width: 16, height: 16,
-                                    fontSize: 9, fontWeight: 700,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    border: '2px solid #fff',
-                                }}>
-                                    {files.length}
-                                </span>
-                            )}
-                        </button>
-
-                        <textarea
-                            rows={2}
-                            value={text}
-                            onChange={e => setText(e.target.value)}
-                            onKeyDown={e => {
-                                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                                    e.preventDefault();
-                                    handleSend();
-                                }
-                            }}
-                            placeholder="Write a reply…  (Ctrl+Enter to send)"
-                            style={{
-                                flex: 1, resize: 'none', border: '1px solid #dee2e6',
-                                borderRadius: 8, padding: '8px 10px', fontSize: 13,
-                                outline: 'none', fontFamily: 'inherit',
-                            }}
-                        />
 
                         <button
                             type="button"
-                            onClick={handleSend}
-                            disabled={!canSend}
-                            style={{
-                                background: '#0d6efd', color: '#fff',
-                                border: 'none', borderRadius: 8,
-                                padding: '8px 16px', fontWeight: 600,
-                                fontSize: 13, cursor: canSend ? 'pointer' : 'not-allowed',
-                                opacity: canSend ? 1 : 0.6,
-                                whiteSpace: 'nowrap', height: 40, flexShrink: 0,
-                            }}
+                            className="comment-modal-close"
+                            onClick={onClose}
+                            aria-label="Close"
                         >
-                            {sending ? '…' : 'Send'}
+                            <i className="bi bi-x-lg"></i>
                         </button>
+                    </div>
+
+                    <div className="comment-modal-thread">
+                        {loading ? (
+                            <div className="comment-modal-state">
+                                <div className="comment-modal-state-icon">
+                                    <i className="bi bi-hourglass-split"></i>
+                                </div>
+                                <div className="comment-modal-state-title">Loading comments</div>
+                                <div className="comment-modal-state-text">
+                                    Please wait while the conversation loads.
+                                </div>
+                            </div>
+                        ) : error ? (
+                            <div className="comment-modal-alert">
+                                <i className="bi bi-exclamation-octagon-fill"></i>
+                                <span>{error}</span>
+                            </div>
+                        ) : messages.length === 0 ? (
+                            <div className="comment-modal-empty">
+                                <div className="comment-modal-empty-orb">
+                                    <i className="bi bi-chat-quote-fill"></i>
+                                </div>
+                                <div className="comment-modal-empty-title">No comments yet</div>
+                                <div className="comment-modal-empty-text">
+                                    No comments yet. Be the first to reply.
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="comment-thread-list">
+                                {messages.map((msg, index) => {
+                                    const isOwn = String(msg.sender_id) === String(currentUserId);
+                                    const prev = messages[index - 1];
+
+                                    const isGrouped =
+                                        prev &&
+                                        String(prev.sender_id) === String(msg.sender_id);
+
+                                    return (
+                                        <div
+                                            key={msg.id}
+                                            className={`comment-thread-item ${isOwn ? "is-own" : ""} ${isGrouped ? "is-grouped" : ""}`}
+                                        >
+                                            {isGrouped ? (
+                                                <div className="comment-thread-avatar-spacer" aria-hidden="true"></div>
+                                            ) : (
+                                                <div
+                                                    className="comment-thread-avatar"
+                                                    style={{
+                                                        background: avatarBg(msg.sender_name),
+                                                        color: avatarFg(msg.sender_name)
+                                                    }}
+                                                >
+                                                    {initials(msg.sender_name)}
+                                                </div>
+                                            )}
+
+                                            <div className="comment-thread-body">
+                                                {!isGrouped && (
+                                                    <div className="comment-thread-meta">
+                                                        <span className="comment-thread-author">
+                                                            {isOwn ? "You" : msg.sender_name}
+                                                        </span>
+                                                        <span className="comment-thread-time">
+                                                            {fmtTime(msg.time_sent)}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {msg.message && (
+                                                    <div className={`comment-thread-bubble ${isOwn ? "is-own" : ""}`}>
+                                                        {msg.message}
+                                                    </div>
+                                                )}
+
+                                                {msg.attachments && msg.attachments.length > 0 && (
+                                                    <div className="comment-thread-files">
+                                                        {msg.attachments.map(att => (
+                                                            <a
+                                                                key={att.id}
+                                                                href={att.file_path}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className={`comment-thread-file ${isOwn ? "is-own" : ""}`}
+                                                            >
+                                                                <i className="bi bi-paperclip"></i>
+                                                                <span>{att.file_name}</span>
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <div ref={bottomRef} />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="comment-modal-compose">
+                        {sendError && (
+                            <div className="comment-modal-alert is-inline">
+                                <i className="bi bi-exclamation-octagon-fill"></i>
+                                <span>{sendError}</span>
+                            </div>
+                        )}
+
+                        {files.length > 0 && (
+                            <div className="comment-compose-files">
+                                {files.map((f, i) => (
+                                    <div key={i} className="comment-compose-file-chip">
+                                        <i className="bi bi-paperclip"></i>
+                                        <span className="comment-compose-file-name">{f.name}</span>
+                                        <span className="comment-compose-file-size">{fmtSize(f.size)}</span>
+                                        <button
+                                            type="button"
+                                            className="comment-compose-file-remove"
+                                            onClick={() => removeFile(i)}
+                                            title="Remove file"
+                                        >
+                                            <i className="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="comment-compose-box">
+                            <input
+                                ref={fileRef}
+                                type="file"
+                                multiple
+                                className="comment-compose-hidden-input"
+                                onChange={handleFileChange}
+                            />
+
+                            <button
+                                type="button"
+                                className={`comment-compose-attach ${files.length > 0 ? "has-files" : ""}`}
+                                onClick={() => fileRef.current?.click()}
+                                disabled={sending}
+                                title="Attach files"
+                            >
+                                <i className="bi bi-paperclip"></i>
+                                {files.length > 0 && (
+                                    <span className="comment-compose-attach-badge">{files.length}</span>
+                                )}
+                            </button>
+
+                            <div className="comment-compose-input-wrap">
+                                <textarea
+                                    ref={textareaRef}
+                                    rows={1}
+                                    value={text}
+                                    onChange={e => setText(e.target.value)}
+                                    onKeyDown={e => {
+                                        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                                            e.preventDefault();
+                                            handleSend();
+                                        }
+                                    }}
+                                    className="comment-compose-textarea"
+                                    placeholder="Write a thoughtful reply…"
+                                />
+                            </div>
+
+                            <button
+                                type="button"
+                                className="comment-compose-send"
+                                onClick={handleSend}
+                                disabled={!canSend}
+                            >
+                                {sending ? (
+                                    <>
+                                        <span className="comment-compose-spinner"></span>
+                                        Sending
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="bi bi-send-fill"></i>
+                                        Send
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
