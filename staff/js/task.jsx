@@ -1190,16 +1190,6 @@ function App() {
                             })}
                         </div>
                     </div>
-
-                    <TaskDateFilter
-                        value={dueDateFilter}
-                        onChange={setDueDateFilter}
-                    />
-
-                    <TaskPriorityFilter
-                        value={priorityFilter}
-                        onChange={setPriorityFilter}
-                    />
                 </div>
 
                 <button
@@ -1230,10 +1220,10 @@ function App() {
     );
 }
 
-function TaskTable({ tasks, refreshTasks, currentUserId, period, dueDateFilter, priorityFilter }) {
+function TaskTable({ tasks, refreshTasks, currentUserId, period }) {
     const [selectedTask, setSelectedTask] = React.useState(null);
     const [showDetailModal, setShowDetailModal] = React.useState(false);
-    const [commentTask, setCommentTask] = React.useState(null); // task whose comment panel is open
+    const [commentTask, setCommentTask] = React.useState(null);
 
     const [collapsedLanes, setCollapsedLanes] = React.useState({
         ongoing: false,
@@ -1248,13 +1238,8 @@ function TaskTable({ tasks, refreshTasks, currentUserId, period, dueDateFilter, 
     });
 
     const filteredTasks = React.useMemo(() => {
-        return tasks.filter(task => {
-            if (!isTaskInPeriod(task, period)) return false;
-            if (dueDateFilter && task.deadline !== dueDateFilter) return false;
-            if (priorityFilter !== "all" && normalizeText(task.priority || "low") !== priorityFilter) return false;
-            return true;
-        });
-    }, [tasks, period, dueDateFilter, priorityFilter]);
+        return tasks.filter(task => isTaskInPeriod(task, period));
+    }, [tasks, period]);
 
     const laneTaskMap = {
         ongoing: filteredTasks.filter(task => getLaneKey(task) === "ongoing"),
@@ -1268,7 +1253,7 @@ function TaskTable({ tasks, refreshTasks, currentUserId, period, dueDateFilter, 
             overdue: 1,
             completed: 1
         });
-    }, [period, dueDateFilter, priorityFilter, tasks]);
+    }, [period, tasks]);
 
     function handleRowClick(task) {
         setSelectedTask(task);
