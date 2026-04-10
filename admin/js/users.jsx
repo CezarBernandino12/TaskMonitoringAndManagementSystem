@@ -1,61 +1,4 @@
 const { useState, useEffect, useRef, useCallback } = React;
-
-
-
-
-function Sidebar() {
-    const [showUsers,   setShowUsers]   = useState(false);
-    const [showReports, setShowReports] = useState(false);
-
-    const NavGroup = ({ label, open, onToggle, children }) => (
-        <>
-            <a href="#" className="nav-link fw-semibold d-flex justify-content-between align-items-center"
-               onClick={e => { e.preventDefault(); onToggle(); }} style={{ cursor: 'pointer' }}>
-                <span>{label}</span>
-                <span style={{ fontSize: '1em' }}>{open ? '▼' : '▶'}</span>
-            </a>
-            {open && <div style={{ marginLeft: 12 }}>{children}</div>}
-        </>
-    );
-
-    return (
-        <nav className="sidebar-orange d-flex flex-column min-vh-100" style={{ minWidth: 0 }}>
-            <div className="sidebar-logo">⚙ Admin Panel</div>
-
-            {/* Overview */}
-            <div className="sidebar-section">Overview</div>
-            <a href="dashboard.html" className="nav-link active">Dashboard</a>
-
-            {/* User Management */}
-            <div className="sidebar-section">User Management</div>
-            <a href="users.html"  className="nav-link">Manage Users</a>
-            <a href="departments.html"  className="nav-link">Departments</a>
-
-              {/* Event Management */}
-                <div className="sidebar-section">Event Management</div>
-                <a href="calendar.html"    className="nav-link">Calendar</a>
-
-            {/* Reports */}
-            <div className="sidebar-section">Reports</div>
-            <NavGroup label="Reports" open={showReports} onToggle={() => setShowReports(p => !p)}>
-                <a href="daily-reports.html"     className="nav-link">Daily</a>
-                <a href="weekly-reports.html"    className="nav-link">Weekly</a>
-                <a href="monthly-reports.html"   className="nav-link">Monthly</a>
-                <a href="quarterly-reports.html" className="nav-link">Quarterly</a>
-                <a href="annual-reports.html"    className="nav-link">Annually</a>
-            </NavGroup>
-
-            {/* Account */}
-            <div className="sidebar-section">Account</div>
-            <a href="profile.html"  className="nav-link">Profile</a>
-            <a href="logout.php"    className="nav-link text-danger">Log Out</a>
-        </nav>
-    );
-}
-
-// ====================================================================
-// CONSTANTS
-// ====================================================================
 const ROLES      = ['admin', 'supervisor', 'staff', 'executive_director', 'president'];
 const GENDERS    = ['Male', 'Female', 'Rather not say'];
 const ROLE_META  = {
@@ -886,14 +829,8 @@ function UserManagementPage() {
     );
 }
 
-// ====================================================================
-// MOUNT
-// ====================================================================
-const sidebarEl = document.getElementById('sidebarRoot');
-if (sidebarEl) {
-    ReactDOM.createRoot(sidebarEl).render(<Sidebar />);
-}
-const rootEl = document.getElementById('userManagementRoot');
+
+const rootEl = document.getElementById('root');
 if (rootEl) {
     ReactDOM.createRoot(rootEl).render(<UserManagementPage />);
 }

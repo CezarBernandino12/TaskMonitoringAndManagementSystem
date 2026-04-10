@@ -1718,10 +1718,7 @@ const S = {
     }
 };
 
-// ====================================================================
-// MOUNT
-// ====================================================================
-const rootElement = document.getElementById('calendarRoot');
+const rootElement = document.getElementById('root');
 if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);
     root.render(<Calendar />);
