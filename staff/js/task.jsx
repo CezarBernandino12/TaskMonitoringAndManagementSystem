@@ -487,6 +487,30 @@ function getPaginatedItems(items, currentPage, pageSize = TASKS_PER_PAGE) {
     };
 }
 
+function getVisiblePages(currentPage, totalPages, maxVisible = 3) {
+    if (totalPages <= maxVisible) {
+        return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    let startPage = currentPage - Math.floor(maxVisible / 2);
+    let endPage = currentPage + Math.floor(maxVisible / 2);
+
+    if (startPage < 1) {
+        startPage = 1;
+        endPage = maxVisible;
+    }
+
+    if (endPage > totalPages) {
+        endPage = totalPages;
+        startPage = totalPages - maxVisible + 1;
+    }
+
+    return Array.from(
+        { length: endPage - startPage + 1 },
+        (_, index) => startPage + index
+    );
+}
+
 function useDismissiblePopup(rootRef, onClose) {
     React.useEffect(() => {
         function handleOutside(event) {
@@ -1333,6 +1357,7 @@ function TaskLane({
         currentPage: safePage
     } = getPaginatedItems(tasks, currentPage);
 
+    const visiblePages = getVisiblePages(safePage, totalPages, 3);
     const startItem = tasks.length === 0 ? 0 : (safePage - 1) * TASKS_PER_PAGE + 1;
     const endItem = Math.min(safePage * TASKS_PER_PAGE, tasks.length);
 
@@ -1488,23 +1513,19 @@ function TaskLane({
                                 </button>
 
                                 <div className="task-lane-pagination-pages">
-                                    {Array.from({ length: totalPages }, (_, index) => {
-                                        const page = index + 1;
-
-                                        return (
-                                            <button
-                                                key={page}
-                                                type="button"
-                                                className={`task-lane-page-btn ${
-                                                    page === safePage ? "is-active" : ""
-                                                }`}
-                                                onClick={() => onPageChange(page)}
-                                                aria-current={page === safePage ? "page" : undefined}
-                                            >
-                                                {page}
-                                            </button>
-                                        );
-                                    })}
+                                    {visiblePages.map(page => (
+                                        <button
+                                            key={page}
+                                            type="button"
+                                            className={`task-lane-page-btn ${
+                                                page === safePage ? "is-active" : ""
+                                            }`}
+                                            onClick={() => onPageChange(page)}
+                                            aria-current={page === safePage ? "page" : undefined}
+                                        >
+                                            {page}
+                                        </button>
+                                    ))}
                                 </div>
 
                                 <button
