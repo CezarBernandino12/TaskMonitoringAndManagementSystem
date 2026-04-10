@@ -1,0 +1,339 @@
+const { useState, useEffect, useRef } = React;
+
+// ====================================================================
+// SIDEBAR — admin-specific navigation
+// ====================================================================
+function Sidebar() {
+    const [showUsers,   setShowUsers]   = useState(false);
+    const [showReports, setShowReports] = useState(false);
+
+    const NavGroup = ({ label, open, onToggle, children }) => (
+        <>
+            <a href="#" className="nav-link fw-semibold d-flex justify-content-between align-items-center"
+               onClick={e => { e.preventDefault(); onToggle(); }} style={{ cursor: 'pointer' }}>
+                <span>{label}</span>
+                <span style={{ fontSize: '1em' }}>{open ? '▼' : '▶'}</span>
+            </a>
+            {open && <div style={{ marginLeft: 12 }}>{children}</div>}
+        </>
+    );
+
+    return (
+        <nav className="col-md-2 d-none d-md-block bg-white border-end min-vh-100 p-0">
+            <div className="sidebar-orange d-flex flex-column min-vh-100">
+
+                <div className="sidebar-logo">⚙ Admin Panel</div>
+
+                {/* Overview */}
+                <div className="sidebar-section">Overview</div>
+                <a href="admin-dashboard.html" className="nav-link active">Dashboard</a>
+
+                {/* User Management */}
+                <div className="sidebar-section">User Management</div>
+               
+                <a href="users.html"  className="nav-link">Manage Users</a>
+                <a href="departments.html"  className="nav-link">Departments</a>
+
+                {/* Event Management */}
+                <div className="sidebar-section">Event Management</div>
+                <a href="calendar.html"    className="nav-link">Calendar</a>
+
+                {/* Reports */}
+                <div className="sidebar-section">Reports</div>
+                <NavGroup label="Reports" open={showReports} onToggle={() => setShowReports(p => !p)}>
+                    <a href="daily-reports.html"     className="nav-link">Daily</a>
+                    <a href="weekly-reports.html"    className="nav-link">Weekly</a>
+                    <a href="monthly-reports.html"   className="nav-link">Monthly</a>
+                    <a href="quarterly-reports.html" className="nav-link">Quarterly</a>
+                    <a href="annual-reports.html"    className="nav-link">Annually</a>
+                </NavGroup>
+
+                {/* Account */}
+                <div className="sidebar-section">Account</div>
+                <a href="profile.html"  className="nav-link">Profile</a>
+                <a href="logout.php"    className="nav-link text-danger">Log Out</a>
+
+            </div>
+        </nav>
+    );
+}
+
+// ====================================================================
+// TASK RING — doughnut of completed / ongoing / overdue
+// ====================================================================
+function TaskRing({ completed, ongoing, overdue, rate }) {
+    const ref = useRef(null);
+    const chartInst = useRef(null);
+
+    useEffect(() => {
+        if (chartInst.current) chartInst.current.destroy();
+        chartInst.current = new Chart(ref.current, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'Ongoing', 'Overdue'],
+                datasets: [{ data: [completed, ongoing, overdue], backgroundColor: ['#28a745','#ffc107','#dc3545'], borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: { cutout: '72%', responsive: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } } } }
+        });
+        return () => { if (chartInst.current) chartInst.current.destroy(); };
+    }, [completed, ongoing, overdue]);
+
+    return (
+        <div className="ring-wrap">
+            <canvas ref={ref} width="140" height="140"></canvas>
+            <div className="ring-label">
+                <span style={{ fontSize: 24, fontWeight: 700 }}>{rate}%</span>
+                <span style={{ fontSize: 10, color: '#888' }}>completion</span>
+            </div>
+        </div>
+    );
+}
+
+// ====================================================================
+// ROLE PIE — shows user count by role
+// ====================================================================
+function RolePie({ roles }) {
+    const ref = useRef(null);
+    const chartInst = useRef(null);
+    const COLORS = ['#ff9900','#0d6efd','#28a745','#6f42c1','#0dcaf0'];
+
+    useEffect(() => {
+        if (!roles.length) return;
+        if (chartInst.current) chartInst.current.destroy();
+        chartInst.current = new Chart(ref.current, {
+            type: 'pie',
+            data: {
+                labels: roles.map(r => r.role.charAt(0).toUpperCase() + r.role.slice(1)),
+                datasets: [{ data: roles.map(r => r.count), backgroundColor: COLORS.slice(0, roles.length), borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: { responsive: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8 } } } }
+        });
+        return () => { if (chartInst.current) chartInst.current.destroy(); };
+    }, [roles]);
+
+    return <canvas ref={ref} width="200" height="200"></canvas>;
+}
+
+// ====================================================================
+// HELPERS
+// ====================================================================
+function roleBadge(role) {
+    const cls = { admin: 'role-admin', supervisor: 'role-supervisor', staff: 'role-staff', president: 'role-president' }[role] ?? 'role-staff';
+    return <span className={`role-badge ${cls}`}>{role}</span>;
+}
+
+function timeAgo(dateStr) {
+    const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    if (diff < 60)   return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+}
+
+// ====================================================================
+// ADMIN DASHBOARD
+// ====================================================================
+function AdminDashboard() {
+    const [data, setData]       = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError]     = useState(null);
+
+    useEffect(() => {
+        fetch('php/get_admin_dashboard.php')
+            .then(r => r.json())
+            .then(d => {
+                if (d.error) throw new Error(d.error);
+                setData(d);
+                setLoading(false);
+            })
+            .catch(err => { setError(err.message); setLoading(false); });
+    }, []);
+
+    if (loading) return (
+        <div className="container-fluid py-4"><div className="row"><Sidebar />
+            <main className="col-md-10 ms-sm-auto px-4 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+                <div className="text-center text-muted">
+                    <div className="spinner-border mb-3" role="status"></div>
+                    <div>Loading dashboard…</div>
+                </div>
+            </main>
+        </div></div>
+    );
+
+    if (error) return (
+        <div className="container-fluid py-4"><div className="row"><Sidebar />
+            <main className="col-md-10 ms-sm-auto px-4">
+                <div className="alert alert-danger mt-4">Error: {error}</div>
+            </main>
+        </div></div>
+    );
+
+    const { overview, task_snapshot, recent_users, departments, roles, no_tasks } = data;
+
+    return (
+        <div className="container-fluid py-4">
+            <div className="row">
+                <Sidebar />
+
+                <main className="col-md-10 ms-sm-auto px-4">
+
+                    {/* Header */}
+                    <div className="mb-4">
+                        <h3 className="mb-0">Admin Dashboard</h3>
+                        <p className="text-muted mb-0">
+                            System overview · {new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
+                    </div>
+
+                    {/* ── Row 1: System stat cards ── */}
+                    <div className="row mb-4 g-3">
+                        {[
+                            { label: 'Active Users',    value: overview.total_active_users,   cls: 'blue'   },
+                            { label: 'Inactive Users',  value: overview.total_inactive_users, cls: 'red'    },
+                            { label: 'Staff',           value: overview.total_staff,          cls: 'green'  },
+                            { label: 'Supervisors',     value: overview.total_supervisors,    cls: 'purple' },
+                            { label: 'Departments',     value: overview.total_departments,    cls: 'teal'   },
+                            { label: 'Total Tasks',     value: overview.total_tasks,          cls: 'orange' },
+                        ].map(s => (
+                            <div className="col-md-2" key={s.label}>
+                                <div className={`card stat-card ${s.cls} p-3 text-center`}>
+                                    <div className="text-muted mb-1" style={{ fontSize: 12 }}>{s.label}</div>
+                                    <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* ── Row 2: Task ring + Role pie + No-task alert ── */}
+                    <div className="row mb-4 g-3">
+
+                        {/* Task status ring */}
+                        <div className="col-md-3">
+                            <div className="card p-3 h-100 text-center">
+                                <h6 className="fw-semibold mb-3">Task Status (All Time)</h6>
+                                <TaskRing
+                                    completed={task_snapshot.completed}
+                                    ongoing={task_snapshot.ongoing}
+                                    overdue={task_snapshot.overdue}
+                                    rate={task_snapshot.overall_rate}
+                                />
+                                <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap" style={{ fontSize: 12 }}>
+                                    <span><span className="active-dot dot-active"></span>Done: <strong>{task_snapshot.completed}</strong></span>
+                                    <span style={{ color:'#cc8400' }}>●<strong> {task_snapshot.ongoing}</strong> ongoing</span>
+                                    <span className="text-danger">●<strong> {task_snapshot.overdue}</strong> overdue</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Role distribution pie */}
+                        <div className="col-md-3">
+                            <div className="card p-3 h-100 text-center">
+                                <h6 className="fw-semibold mb-2">User Roles</h6>
+                                <p className="text-muted mb-3" style={{ fontSize: 12 }}>Active accounts only</p>
+                                <RolePie roles={roles} />
+                            </div>
+                        </div>
+
+                      
+                    </div>
+
+                    {/* ── Row 3: Department summary table ── */}
+                    <div className="card p-3 mb-4">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h6 className="fw-semibold mb-0">Department Summary</h6>
+                            <a href="departments.html" className="btn btn-sm btn-outline-warning" style={{ fontSize: 12 }}>Manage Departments</a>
+                        </div>
+                        <div className="table-responsive">
+                            <table className="table table-bordered table-hover align-middle mb-0">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Staff</th>
+                                        <th>Total Tasks</th>
+                                        <th>Completed</th>
+                                        <th>Overdue</th>
+                                        <th>Completion Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {departments.length === 0 ? (
+                                        <tr><td colSpan="6" className="text-center text-muted">No departments found.</td></tr>
+                                    ) : departments.map(dept => {
+                                        const rate = dept.completion_rate;
+                                        return (
+                                            <tr key={dept.id}>
+                                                <td style={{ fontWeight: 500 }}>{dept.department}</td>
+                                                <td>{dept.staff_count}</td>
+                                                <td>{dept.total_tasks}</td>
+                                                <td>{dept.completed}</td>
+                                                <td className={dept.overdue > 0 ? 'text-danger fw-bold' : ''}>{dept.overdue}</td>
+                                                <td>
+                                                    {dept.total_tasks === 0 ? (
+                                                        <span className="text-muted" style={{ fontSize: '0.9em' }}>No tasks yet</span>
+                                                    ) : rate === 0 ? (
+                                                        <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>0% — None completed</span>
+                                                    ) : (
+                                                        <div className="d-flex align-items-center gap-2">
+                                                            <span style={{ minWidth: 36, fontSize: 13 }}>{rate}%</span>
+                                                            <div className="progress flex-grow-1" style={{ height: 16 }}>
+                                                                <div className="progress-bar bg-success" style={{ width: `${rate}%` }} aria-valuenow={rate} aria-valuemin="0" aria-valuemax="100" />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* ── Row 4: Recently registered users ── */}
+                    <div className="card p-3">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h6 className="fw-semibold mb-0">Recently Registered Users</h6>
+                            <a href="users.html" className="btn btn-sm btn-outline-warning" style={{ fontSize: 12 }}>View All Users</a>
+                        </div>
+                        <div className="table-responsive">
+                            <table className="table table-bordered table-hover align-middle mb-0">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Department</th>
+                                        <th>Status</th>
+                                        <th>Registered</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recent_users.length === 0 ? (
+                                        <tr><td colSpan="6" className="text-center text-muted">No users found.</td></tr>
+                                    ) : recent_users.map(u => (
+                                        <tr key={u.id}>
+                                            <td style={{ fontWeight: 500 }}>{u.name}</td>
+                                            <td style={{ fontSize: 13, color: '#555' }}>{u.email}</td>
+                                            <td>{roleBadge(u.role)}</td>
+                                            <td style={{ fontSize: 13 }}>{u.department}</td>
+                                            <td>
+                                                <span>
+                                                    <span className={`active-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}`}></span>
+                                                    <span style={{ fontSize: 12 }}>{u.is_active ? 'Active' : 'Inactive'}</span>
+                                                </span>
+                                            </td>
+                                            <td style={{ fontSize: 12, color: '#888' }}>{timeAgo(u.created_at)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </main>
+            </div>
+        </div>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<AdminDashboard />);
