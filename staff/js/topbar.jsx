@@ -589,7 +589,7 @@ function MessageRow({
                 <UserAvatar
                     name={item.user_name}
                     imageUrl={item.profile_image_url}
-                    size={compact ? 38 : 44}
+                    size={compact ? 46 : 44}
                 />
 
                 <div className="msg-row-copy">
@@ -685,6 +685,15 @@ function MessagingModal({
         [pinnedConversationIds, visibleInbox]
     );
 
+    const panelRoleScrollerRef = React.useRef(null);
+    const roleDragRef = React.useRef({
+        isDown: false,
+        startX: 0,
+        scrollLeft: 0,
+        hasMoved: false,
+        suppressClick: false
+    });
+
     React.useEffect(() => {
         if (!openMode) return undefined;
 
@@ -697,6 +706,13 @@ function MessagingModal({
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
     }, [onClose, openMode]);
+
+    React.useEffect(() => {
+        return () => {
+            window.removeEventListener("mousemove", handleRoleDragMove);
+            window.removeEventListener("mouseup", stopRoleDrag);
+        };
+    }, []);
 
     React.useEffect(() => {
         if (openMode !== "panel") return undefined;
@@ -946,6 +962,76 @@ function MessagingModal({
         }
     }
 
+function handleRoleDragMove(event) {
+    const drag = roleDragRef.current;
+    const el = panelRoleScrollerRef.current;
+
+    if (!drag.isDown || !el) return;
+
+    const deltaX = event.clientX - drag.startX;
+
+    if (Math.abs(deltaX) > 4) {
+        drag.hasMoved = true;
+    }
+
+    el.scrollLeft = drag.scrollLeft - deltaX;
+
+    if (drag.hasMoved) {
+        event.preventDefault();
+    }
+}
+
+function stopRoleDrag() {
+    const drag = roleDragRef.current;
+    const el = panelRoleScrollerRef.current;
+
+    if (!drag.isDown) return;
+
+    drag.isDown = false;
+
+    if (el) {
+        el.classList.remove("is-dragging");
+    }
+
+    window.removeEventListener("mousemove", handleRoleDragMove);
+    window.removeEventListener("mouseup", stopRoleDrag);
+
+    if (drag.hasMoved) {
+        drag.suppressClick = true;
+
+        window.setTimeout(() => {
+            roleDragRef.current.suppressClick = false;
+        }, 0);
+    }
+}
+
+    function startRoleDrag(event) {
+        if (event.button !== 0) return;
+
+        const el = panelRoleScrollerRef.current;
+        if (!el) return;
+
+        event.preventDefault();
+
+        const drag = roleDragRef.current;
+        drag.isDown = true;
+        drag.startX = event.clientX;
+        drag.scrollLeft = el.scrollLeft;
+        drag.hasMoved = false;
+
+        el.classList.add("is-dragging");
+
+        window.addEventListener("mousemove", handleRoleDragMove);
+        window.addEventListener("mouseup", stopRoleDrag);
+    }
+
+    function handleRoleScrollerClickCapture(event) {
+        if (roleDragRef.current.suppressClick) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }
+
     function handleComposerKeyDown(event) {
         if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
@@ -978,7 +1064,22 @@ function MessagingModal({
                     </div>
                 </div>
 
-                <div className="msg-role-scroller">
+                <label className="msg-searchbox msg-panel-search">
+                    <i className="bi bi-search"></i>
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Search chat"
+                    />
+                </label>
+
+                <div
+                    ref={panelRoleScrollerRef}
+                    className="msg-role-scroller is-draggable"
+                    onMouseDown={startRoleDrag}
+                    onClickCapture={handleRoleScrollerClickCapture}
+                >
                     {roleTabs.map((option) => (
                         <button
                             key={option.label}
@@ -1321,6 +1422,7 @@ function MessagingModal({
         </>
     );
 }
+
 
 function ChatButton() {
     const [openMode, setOpenMode] = React.useState(null);
