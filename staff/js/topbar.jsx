@@ -636,6 +636,7 @@ function MessagingModal({
     const [msgText, setMsgText] = React.useState("");
     const [sending, setSending] = React.useState(false);
     const [pinnedConversationIds, setPinnedConversationIds] = React.useState(() => readPinnedConversationIds());
+    const [panelSelectedUserId, setPanelSelectedUserId] = React.useState(null);
 
     const panelRef = React.useRef(null);
     const shellRef = React.useRef(null);
@@ -655,35 +656,66 @@ function MessagingModal({
         [conversations, allUsers]
     );
 
-    const roleTabs = React.useMemo(
-        () =>
-            ROLE_FILTERS.map((label) => ({
-                label,
-                count:
-                    label === "All"
-                        ? mergedInbox.length
-                        : mergedInbox.filter((item) => matchesRole(item, label)).length
-            })),
-        [mergedInbox]
-    );
+const panelBaseInbox = React.useMemo(
+    () =>
+        mergedInbox.filter((item) => {
+            const isPinned = pinnedConversationIds.includes(String(item.user_id));
+            const isUnread = Number(item.unread_count || 0) > 0;
+            const isSelectedInPanel =
+                panelSelectedUserId && sameUserId(panelSelectedUserId, item.user_id);
 
-    const visibleInbox = React.useMemo(
-        () =>
-            mergedInbox.filter(
-                (item) => matchesRole(item, selectedRole) && matchesSearch(item, search)
-            ),
-        [mergedInbox, search, selectedRole]
-    );
+            return isPinned || isUnread || Boolean(isSelectedInPanel);
+        }),
+    [mergedInbox, pinnedConversationIds, panelSelectedUserId]
+);
 
-    const pinnedEntries = React.useMemo(
-        () => visibleInbox.filter((item) => pinnedConversationIds.includes(String(item.user_id))),
-        [pinnedConversationIds, visibleInbox]
-    );
+const roleTabs = React.useMemo(() => {
+    const source = openMode === "panel" ? panelBaseInbox : mergedInbox;
 
-    const regularEntries = React.useMemo(
-        () => visibleInbox.filter((item) => !pinnedConversationIds.includes(String(item.user_id))),
-        [pinnedConversationIds, visibleInbox]
-    );
+    return ROLE_FILTERS.map((label) => ({
+        label,
+        count:
+            label === "All"
+                ? source.length
+                : source.filter((item) => matchesRole(item, label)).length
+    }));
+}, [mergedInbox, openMode, panelBaseInbox]);
+
+const fullVisibleInbox = React.useMemo(
+    () =>
+        mergedInbox.filter(
+            (item) => matchesRole(item, selectedRole) && matchesSearch(item, search)
+        ),
+    [mergedInbox, search, selectedRole]
+);
+
+const panelVisibleInbox = React.useMemo(
+    () =>
+        panelBaseInbox.filter(
+            (item) => matchesRole(item, selectedRole) && matchesSearch(item, search)
+        ),
+    [panelBaseInbox, search, selectedRole]
+);
+
+const panelPinnedEntries = React.useMemo(
+    () => panelVisibleInbox.filter((item) => pinnedConversationIds.includes(String(item.user_id))),
+    [panelVisibleInbox, pinnedConversationIds]
+);
+
+const panelRegularEntries = React.useMemo(
+    () => panelVisibleInbox.filter((item) => !pinnedConversationIds.includes(String(item.user_id))),
+    [panelVisibleInbox, pinnedConversationIds]
+);
+
+const fullPinnedEntries = React.useMemo(
+    () => fullVisibleInbox.filter((item) => pinnedConversationIds.includes(String(item.user_id))),
+    [fullVisibleInbox, pinnedConversationIds]
+);
+
+const fullRegularEntries = React.useMemo(
+    () => fullVisibleInbox.filter((item) => !pinnedConversationIds.includes(String(item.user_id))),
+    [fullVisibleInbox, pinnedConversationIds]
+);
 
     const panelRoleScrollerRef = React.useRef(null);
     const roleDragRef = React.useRef({
@@ -706,6 +738,12 @@ function MessagingModal({
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
     }, [onClose, openMode]);
+
+    React.useEffect(() => {
+        if (openMode === "panel") return;
+
+        setPanelSelectedUserId(null);
+    }, [openMode]);
 
     React.useEffect(() => {
         return () => {
@@ -781,12 +819,12 @@ function MessagingModal({
     React.useEffect(() => {
         if (openMode !== "full") return;
         if (activeUser) return;
-        if (visibleInbox.length === 0) return;
+        if (fullVisibleInbox.length === 0) return;
 
-        const firstItem = visibleInbox[0];
+        const firstItem = fullVisibleInbox[0];
         setActiveUser(normalizeThreadUser(firstItem));
         loadThreadMessages(firstItem.user_id ?? firstItem.id);
-    }, [activeUser, openMode, visibleInbox]);
+    }, [activeUser, openMode, fullVisibleInbox]);
 
     React.useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -803,6 +841,14 @@ function MessagingModal({
         inputRef.current.style.height = "46px";
         inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 132)}px`;
     }, [msgText, openMode]);
+
+    React.useEffect(() => {
+        if (openMode) return;
+
+        setActiveUser(null);
+        setMessages([]);
+        setMsgText("");
+    }, [openMode]);
 
     async function loadThreadMessages(otherUserId) {
         if (!otherUserId) return;
@@ -878,7 +924,7 @@ function MessagingModal({
         );
     }
 
-    function openThread(item, expandIfNeeded = true) {
+    function openThread(item, expandIfNeeded = false) {
         const normalized = normalizeThreadUser(item);
         setActiveUser(normalized);
         setMsgText("");
@@ -891,11 +937,12 @@ function MessagingModal({
     }
 
     function handleViewAll() {
-        if (!activeUser && visibleInbox.length > 0) {
-            const firstItem = visibleInbox[0];
+        if (!activeUser && fullVisibleInbox.length > 0) {
+            const firstItem = fullVisibleInbox[0];
             setActiveUser(normalizeThreadUser(firstItem));
             loadThreadMessages(firstItem.user_id ?? firstItem.id);
         }
+
         onExpand();
     }
 
@@ -961,6 +1008,25 @@ function MessagingModal({
             setSending(false);
         }
     }
+
+const isPanelThreadOpen =
+    openMode === "panel" && Boolean(panelSelectedUserId) && Boolean(activeUser);
+
+function openPanelThread(item) {
+    const normalized = normalizeThreadUser(item);
+
+    setPanelSelectedUserId(String(normalized.user_id ?? ""));
+    setActiveUser(normalized);
+    setMsgText("");
+    loadThreadMessages(normalized.user_id);
+}
+
+function closePanelThread() {
+    setPanelSelectedUserId(null);
+    setActiveUser(null);
+    setMessages([]);
+    setMsgText("");
+}
 
 function handleRoleDragMove(event) {
     const drag = roleDragRef.current;
@@ -1094,80 +1160,194 @@ function stopRoleDrag() {
                 </div>
             </div>
 
-            <div className="msg-panel-scroll">
-                {loadingList ? (
-                    <div className="msg-loading-state compact">Loading messages…</div>
-                ) : visibleInbox.length === 0 ? (
-                    <div className="msg-empty-state compact dark">
-                        <i className="bi bi-chat-left-dots"></i>
-                        <span>No conversations available for this role yet.</span>
-                    </div>
-                ) : (
-                    <>
-                        {pinnedEntries.length > 0 && (
-                            <section className="msg-block">
-                                <div className="msg-block-head">
-                                    <div className="msg-block-title">
-                                        <i className="bi bi-pin-angle"></i>
-                                        <span>Pinned</span>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className="msg-block-action"
-                                        onClick={() => setHidePinned((prev) => !prev)}
-                                    >
-                                        {hidePinned ? "Show" : "Hide"}
-                                    </button>
+{isPanelThreadOpen ? (
+    <section className="msg-thread-pane">
+        <div className="msg-thread-head">
+            <div className="msg-thread-user">
+                <button
+                    type="button"
+                    className="msg-icon-ghost"
+                    onClick={closePanelThread}
+                    aria-label="Back to conversations"
+                    style={{ marginRight: 8 }}
+                >
+                    <i className="bi bi-arrow-left"></i>
+                </button>
+
+                <UserAvatar
+                    name={activeUser.user_name}
+                    imageUrl={activeUser.profile_image_url}
+                    size={40}
+                />
+
+                <div>
+                    <div className="msg-thread-user-name">{activeUser.user_name}</div>
+                    <div className="msg-thread-user-meta">{getInboxRoleLabel(activeUser)}</div>
+                </div>
+            </div>
+        </div>
+
+        <div className="msg-thread-scroll">
+            {loadingMsgs ? (
+                <div className="msg-loading-state">Loading messages…</div>
+            ) : messages.length === 0 ? (
+                <div className="msg-empty-state thread">
+                    <i className="bi bi-chat-heart"></i>
+                    <span>No conversation yet. Start the first message.</span>
+                </div>
+            ) : (
+                messages.map((message, index) => {
+                    const isMine = sameUserId(message.sender_id, currentUserId);
+                    const showDivider =
+                        index === 0 ||
+                        !isSameCalendarDay(
+                            message.time_sent,
+                            messages[index - 1]?.time_sent
+                        );
+
+                    return (
+                        <React.Fragment key={message.id}>
+                            {showDivider && (
+                                <div className="msg-thread-day">
+                                    <span>{getMessageDayLabel(message.time_sent)}</span>
                                 </div>
+                            )}
 
-                                {!hidePinned && (
-                                    <div className="msg-block-list">
-                                        {pinnedEntries.map((item) => (
-                                            <MessageRow
-                                                key={`panel-pinned-${item.user_id}`}
-                                                item={item}
-                                                compact={true}
-                                                showPin={true}
-                                                pinned={pinnedConversationIds.includes(String(item.user_id))}
-                                                onOpen={(entry) => openThread(entry, true)}
-                                                onTogglePin={togglePinned}
-                                            />
-                                        ))}
-                                    </div>
+                            <div className={`msg-thread-row ${isMine ? "mine" : "theirs"}`}>
+                                {!isMine && (
+                                    <UserAvatar
+                                        name={message.sender_name}
+                                        imageUrl={message.sender_profile_image_url}
+                                        size={30}
+                                    />
                                 )}
-                            </section>
-                        )}
 
-                        <section className="msg-block">
-                            <div className="msg-block-head muted">
-                                <div className="msg-block-title">
-                                    <span>{selectedRole === "All" ? "All messages" : `${selectedRole} messages`}</span>
+                                <div className="msg-thread-stack">
+                                    <div className={`msg-thread-meta ${isMine ? "mine" : ""}`}>
+                                        <span>{isMine ? "You" : message.sender_name}</span>
+                                        <span>{formatBubbleTime(message.time_sent)}</span>
+                                    </div>
+
+                                    <div className={`msg-thread-bubble ${isMine ? "mine" : "theirs"}`}>
+                                        <div>{message.message}</div>
+                                    </div>
                                 </div>
                             </div>
+                        </React.Fragment>
+                    );
+                })
+            )}
 
+            <div ref={messagesEndRef}></div>
+        </div>
+
+        <div className="msg-composer-bar">
+            <textarea
+                ref={inputRef}
+                className="msg-composer-input"
+                placeholder={`Message ${activeUser.user_name}…`}
+                value={msgText}
+                onChange={(event) => setMsgText(event.target.value)}
+                onKeyDown={handleComposerKeyDown}
+                rows={1}
+                disabled={sending}
+            ></textarea>
+
+            <button
+                type="button"
+                className="msg-composer-send"
+                onClick={sendMessage}
+                disabled={!msgText.trim() || sending}
+                aria-label="Send message"
+            >
+                {sending ? (
+                    <i className="bi bi-arrow-repeat spin"></i>
+                ) : (
+                    <i className="bi bi-send-fill"></i>
+                )}
+            </button>
+        </div>
+    </section>
+) : (
+    <div className="msg-panel-scroll">
+        {loadingList ? (
+            <div className="msg-loading-state compact">Loading messages…</div>
+        ) : panelVisibleInbox.length === 0 ? (
+            <div className="msg-empty-state compact dark">
+                <i className="bi bi-chat-left-dots"></i>
+                <span>No conversations available for this role yet.</span>
+            </div>
+        ) : (
+            <>
+                {panelPinnedEntries.length > 0 && (
+                    <section className="msg-block">
+                        <div className="msg-block-head">
+                            <div className="msg-block-title">
+                                <i className="bi bi-pin-angle"></i>
+                                <span>Pinned</span>
+                            </div>
+                            <button
+                                type="button"
+                                className="msg-block-action"
+                                onClick={() => setHidePinned((prev) => !prev)}
+                            >
+                                {hidePinned ? "Show" : "Hide"}
+                            </button>
+                        </div>
+
+                        {!hidePinned && (
                             <div className="msg-block-list">
-                                {regularEntries.map((item) => (
+                                {panelPinnedEntries.map((item) => (
                                     <MessageRow
-                                        key={`panel-${item.user_id}`}
+                                        key={`panel-pinned-${item.user_id}`}
                                         item={item}
                                         compact={true}
+                                        selected={panelSelectedUserId && sameUserId(panelSelectedUserId, item.user_id)}
                                         showPin={true}
                                         pinned={pinnedConversationIds.includes(String(item.user_id))}
-                                        onOpen={(entry) => openThread(entry, true)}
+                                        onOpen={openPanelThread}
                                         onTogglePin={togglePinned}
                                     />
                                 ))}
                             </div>
-                        </section>
-                    </>
+                        )}
+                    </section>
                 )}
-            </div>
 
-            <div className="msg-panel-footer">
-                <button type="button" className="msg-view-all-btn" onClick={handleViewAll}>
-                    View all messages
-                </button>
-            </div>
+                <section className="msg-block">
+                    <div className="msg-block-head muted">
+                        <div className="msg-block-title">
+                            <span>{selectedRole === "All" ? "All messages" : `${selectedRole} messages`}</span>
+                        </div>
+                    </div>
+
+                    <div className="msg-block-list">
+                        {panelRegularEntries.map((item) => (
+                            <MessageRow
+                                key={`panel-${item.user_id}`}
+                                item={item}
+                                compact={true}
+                                selected={panelSelectedUserId && sameUserId(panelSelectedUserId, item.user_id)}
+                                showPin={true}
+                                pinned={pinnedConversationIds.includes(String(item.user_id))}
+                                onOpen={openPanelThread}
+                                onTogglePin={togglePinned}
+                            />
+                        ))}
+                    </div>
+                </section>
+            </>
+        )}
+    </div>
+)}
+
+{!isPanelThreadOpen && (
+    <div className="msg-panel-footer">
+        <button type="button" className="msg-view-all-btn" onClick={handleViewAll}>
+            View all messages
+        </button>
+    </div>
+)}
         </div>
     ) : null;
 
@@ -1233,14 +1413,14 @@ function stopRoleDrag() {
                         <div className="msg-sidebar-scroll">
                             {loadingList ? (
                                 <div className="msg-loading-state compact">Loading conversations…</div>
-                            ) : visibleInbox.length === 0 ? (
+                            ) : fullVisibleInbox.length === 0 ? (
                                 <div className="msg-empty-state compact">
                                     <i className="bi bi-chat-left-text"></i>
                                     <span>No users found for this role.</span>
                                 </div>
                             ) : (
                                 <>
-                                    {pinnedEntries.length > 0 && (
+                                    {fullPinnedEntries.length > 0 && (
                                         <section className="msg-block sidebar-block">
                                             <div className="msg-block-head">
                                                 <div className="msg-block-title">
@@ -1249,7 +1429,7 @@ function stopRoleDrag() {
                                             </div>
 
                                             <div className="msg-block-list compact-list">
-                                                {pinnedEntries.map((item) => (
+                                                {fullPinnedEntries.map((item) => (
                                                     <MessageRow
                                                         key={`sidebar-pinned-${item.user_id}`}
                                                         item={item}
@@ -1273,7 +1453,7 @@ function stopRoleDrag() {
                                         </div>
 
                                         <div className="msg-block-list compact-list">
-                                            {regularEntries.map((item) => (
+                                            {fullRegularEntries.map((item) => (
                                                 <MessageRow
                                                     key={`sidebar-${item.user_id}`}
                                                     item={item}
