@@ -1,10 +1,4 @@
 <?php
-// ====================================================================
-// get_current_user.php
-// Returns the currently logged-in user's profile.
-// Expects session to be started and $_SESSION['user_id'] to be set
-// by your existing login system.
-// ====================================================================
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 

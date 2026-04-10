@@ -730,22 +730,6 @@ function TaskPriorityFilter({ value, onChange }) {
         </div>
     );
 }
-
-// ====================================================================
-// TASK COMMENT MODAL
-// Shows the message thread for a specific task and lets the recipient
-// reply with optional file attachments.
-//
-// Props:
-//   task          — the task object
-//   currentUserId — logged-in user's ID (fetched from get_current_user.php)
-//   recipientId   — the person to reply TO. On this page the current user
-//                   IS the original recipient, so the reply goes back to
-//                   whoever assigned / messaged them: task.created_by
-//                   (the supervisor). Falls back to task.assigned_by if
-//                   present, otherwise the server resolves it.
-//   onClose       — close handler
-// ====================================================================
 function TaskCommentModal({ task, currentUserId, recipientId, onClose }) {
     const [messages,  setMessages]  = React.useState([]);
     const [loading,   setLoading]   = React.useState(true);
