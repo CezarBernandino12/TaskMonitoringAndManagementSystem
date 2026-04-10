@@ -944,6 +944,93 @@ body.sidebar-mobile-open {
     box-shadow: inset 0 0 0 1px #e7e7e7;
 }
 
+
+/* ---------- SIDEBAR DARK MODE ---------- */
+[data-theme="dark"] .dashboard-sidebar {
+    background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+}
+
+[data-theme="dark"] .sidebar-divider {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .sidebar-role,
+[data-theme="dark"] .sidebar-section-label,
+[data-theme="dark"] .sidebar-section-label-text,
+[data-theme="dark"] .sidebar-section-label-chevron {
+    color: #8f9bb3;
+}
+
+[data-theme="dark"] .sidebar-name {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .sidebar-link {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .sidebar-icon {
+    color: inherit;
+}
+
+[data-theme="dark"] .sidebar-link:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f8fafc;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .sidebar-link:hover .sidebar-icon {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .sidebar-link.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+}
+
+[data-theme="dark"] .sidebar-link.active .sidebar-icon {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .sidebar-link.active:hover {
+    background: rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .dashboard-sidebar.collapsed .sidebar-link:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f8fafc;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .dashboard-sidebar.collapsed .sidebar-link:hover .sidebar-icon {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .dashboard-sidebar.collapsed .sidebar-link.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+}
+
+[data-theme="dark"] .dashboard-sidebar.collapsed .sidebar-link.active .sidebar-icon {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .dashboard-sidebar.collapsed .sidebar-link.active::before {
+    background: #8fb0ff;
+}
+
+[data-theme="dark"] .logout-link,
+[data-theme="dark"] .logout-link .sidebar-icon,
+[data-theme="dark"] .logout-link:hover,
+[data-theme="dark"] .logout-link:hover .sidebar-icon {
+    color: #ff6b5f;
+}
 /* ---------- TABLET ---------- */
 @media (min-width: 768px) and (max-width: 991.98px) {
     .staff-sidebar-col {
