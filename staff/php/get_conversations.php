@@ -1,133 +1,215 @@
 <?php
-// ====================================================================
-// ERROR HANDLER
-// ====================================================================
-ini_set('display_errors', 0);
+declare(strict_types=1);
+
+ini_set('display_errors', '0');
 error_reporting(E_ALL);
+
 set_error_handler(function ($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
+
 set_exception_handler(function ($e) {
-    header('Content-Type: application/json');
-    echo json_encode(['error' => $e->getMessage(), 'file' => basename($e->getFile()), 'line' => $e->getLine()]);
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+
+    echo json_encode([
+        'error' => 'Internal server error'
+    ]);
     exit;
 });
 
-require_once '../../config/db.php';
-date_default_timezone_set('Asia/Manila');
-header('Content-Type: application/json');
 session_start();
+header('Content-Type: application/json; charset=utf-8');
 
-// ====================================================================
-// AUTHENTICATION
-// ====================================================================
-$currentUserId = $_SESSION['user_id'] ?? null;
-if (!$currentUserId) {
+if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Not authenticated.']);
     exit;
 }
 
-// ====================================================================
-// STEP 1 — Find all distinct users the current user has exchanged
-//           messages with (either as sender or recipient).
-// ====================================================================
+require_once '../../config/db.php';
+
+function getInitials(string $name): string
+{
+    $parts = preg_split('/\s+/', trim($name));
+    $parts = array_values(array_filter($parts));
+
+    if (empty($parts)) {
+        return 'U';
+    }
+
+    $initials = '';
+    foreach (array_slice($parts, 0, 2) as $part) {
+        $initials .= mb_strtoupper(mb_substr($part, 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'U';
+}
+
+function getRoleLabel(string $role): string
+{
+    $role = strtolower(trim($role));
+
+    return match ($role) {
+        'admin' => 'Administrator',
+        'supervisor' => 'Supervisor',
+        'staff' => 'Staff',
+        'executive_director' => 'Executive Director',
+        'president' => 'President',
+        default => ucfirst($role !== '' ? $role : 'User'),
+    };
+}
+
+function getProfileImageUrl(?string $profileImage): ?string
+{
+    $profileImage = trim((string) $profileImage);
+
+    if ($profileImage === '') {
+        return null;
+    }
+
+    return '/uploads/profiles/' . ltrim($profileImage, '/\\');
+}
+
+$currentUserId = (int) $_SESSION['user_id'];
+
+/*
+|--------------------------------------------------------------------------
+| STEP 1 — Find all distinct conversation partners
+|--------------------------------------------------------------------------
+*/
 $partnerStmt = $conn->prepare("
     SELECT DISTINCT
         CASE
-            WHEN sender_id = ? THEN recipient_id
+            WHEN sender_id = :current_id THEN recipient_id
             ELSE sender_id
         END AS partner_id
     FROM messages
-    WHERE sender_id = ? OR recipient_id = ?
+    WHERE sender_id = :current_id OR recipient_id = :current_id
 ");
-$partnerStmt->execute([$currentUserId, $currentUserId, $currentUserId]);
-$partnerIds = $partnerStmt->fetchAll(PDO::FETCH_COLUMN);
-$partnerIds = array_map('intval', $partnerIds);
+$partnerStmt->execute([':current_id' => $currentUserId]);
 
-// ====================================================================
-// STEP 2 — For each partner, fetch latest message + unread count.
-// ====================================================================
+$partnerIds = array_map('intval', $partnerStmt->fetchAll(PDO::FETCH_COLUMN));
 $conversations = [];
 
 if (!empty($partnerIds)) {
+    /*
+    |--------------------------------------------------------------------------
+    | Fetch partner user records including profile image
+    |--------------------------------------------------------------------------
+    */
+    $placeholders = implode(',', array_fill(0, count($partnerIds), '?'));
+
+    $userStmt = $conn->prepare("
+        SELECT id, name, role, profile_image
+        FROM users
+        WHERE id IN ($placeholders)
+          AND is_active = 1
+    ");
+    $userStmt->execute($partnerIds);
+
+    $partners = $userStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Prepared statements reused inside loop
+    |--------------------------------------------------------------------------
+    */
     $latestStmt = $conn->prepare("
         SELECT message, time_sent
         FROM messages
         WHERE (sender_id = ? AND recipient_id = ?)
            OR (sender_id = ? AND recipient_id = ?)
-        ORDER BY time_sent DESC
+        ORDER BY time_sent DESC, id DESC
         LIMIT 1
     ");
 
     $unreadStmt = $conn->prepare("
         SELECT COUNT(*) AS cnt
         FROM messages
-        WHERE sender_id = ? AND recipient_id = ? AND is_read = 0
+        WHERE sender_id = ?
+          AND recipient_id = ?
+          AND is_read = 0
     ");
-
-    $placeholders = implode(',', array_fill(0, count($partnerIds), '?'));
-    $userStmt = $conn->prepare("
-        SELECT id, name, role
-        FROM users
-        WHERE id IN ($placeholders) AND is_active = 1
-    ");
-    $userStmt->execute($partnerIds);
-    $partners = $userStmt->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($partners as $partner) {
-        $pid = (int)$partner['id'];
+        $partnerId = (int) $partner['id'];
 
-        $latestStmt->execute([$currentUserId, $pid, $pid, $currentUserId]);
-        $latest = $latestStmt->fetch(PDO::FETCH_ASSOC);
+        $latestStmt->execute([$currentUserId, $partnerId, $partnerId, $currentUserId]);
+        $latest = $latestStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-        $unreadStmt->execute([$pid, $currentUserId]);
-        $unreadRow   = $unreadStmt->fetch(PDO::FETCH_ASSOC);
-        $unreadCount = (int)($unreadRow['cnt'] ?? 0);
+        $unreadStmt->execute([$partnerId, $currentUserId]);
+        $unreadRow = $unreadStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $unreadCount = (int) ($unreadRow['cnt'] ?? 0);
 
         $conversations[] = [
-            'user_id'         => $pid,
-            'user_name'       => $partner['name'],
-            'user_role'       => $partner['role'],
-            'last_message'    => $latest['message']   ?? null,
-            'last_time'       => $latest['time_sent'] ?? null,
-            'unread_count'    => $unreadCount,
+            'user_id'           => $partnerId,
+            'user_name'         => (string) $partner['name'],
+            'user_role'         => (string) $partner['role'],
+            'user_role_label'   => getRoleLabel((string) $partner['role']),
+            'user_initials'     => getInitials((string) $partner['name']),
+            'profile_image'     => $partner['profile_image'] ?? null,
+            'profile_image_url' => getProfileImageUrl($partner['profile_image'] ?? null),
+            'last_message'      => $latest['message'] ?? null,
+            'last_time'         => $latest['time_sent'] ?? null,
+            'unread_count'      => $unreadCount,
         ];
     }
 
-    // Sort by most recent message first
-    usort($conversations, fn($a, $b) => strcmp($b['last_time'] ?? '', $a['last_time'] ?? ''));
+    usort($conversations, function (array $a, array $b): int {
+        return strcmp((string) ($b['last_time'] ?? ''), (string) ($a['last_time'] ?? ''));
+    });
 }
 
-// ====================================================================
-// STEP 3 — All active users (excluding self), flagged with has_history
-// ====================================================================
+/*
+|--------------------------------------------------------------------------
+| STEP 2 — All active users excluding current user
+|--------------------------------------------------------------------------
+*/
 $usersStmt = $conn->prepare("
-    SELECT id, name, role
+    SELECT id, name, role, profile_image
     FROM users
-    WHERE id != ? AND is_active = 1
+    WHERE id != ?
+      AND is_active = 1
     ORDER BY name ASC
 ");
 $usersStmt->execute([$currentUserId]);
+
 $allUsers = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+$convoUserIds = array_map('intval', array_column($conversations, 'user_id'));
 
-$convoUserIds = array_column($conversations, 'user_id');
+$formattedUsers = array_map(function (array $u) use ($convoUserIds): array {
+    $userId = (int) $u['id'];
+    $name = (string) $u['name'];
+    $role = (string) $u['role'];
 
-$formattedUsers = array_map(fn($u) => [
-    'id'          => (int)$u['id'],
-    'name'        => $u['name'],
-    'role'        => $u['role'],
-    'has_history' => in_array((int)$u['id'], $convoUserIds, true),
-], $allUsers);
+    return [
+        'id'                => $userId,
+        'name'              => $name,
+        'role'              => $role,
+        'role_label'        => getRoleLabel($role),
+        'initials'          => getInitials($name),
+        'profile_image'     => $u['profile_image'] ?? null,
+        'profile_image_url' => getProfileImageUrl($u['profile_image'] ?? null),
+        'has_history'       => in_array($userId, $convoUserIds, true),
+    ];
+}, $allUsers);
 
-// ====================================================================
-// STEP 4 — Total unread
-// ====================================================================
-$totalUnread = array_sum(array_column($conversations, 'unread_count'));
+/*
+|--------------------------------------------------------------------------
+| STEP 3 — Total unread
+|--------------------------------------------------------------------------
+*/
+$totalUnread = array_sum(array_map(
+    fn(array $c): int => (int) ($c['unread_count'] ?? 0),
+    $conversations
+));
 
 echo json_encode([
-    'current_user_id' => (int)$currentUserId,
+    'current_user_id' => $currentUserId,
     'conversations'   => $conversations,
     'all_users'       => $formattedUsers,
     'total_unread'    => $totalUnread,
-]);
+], JSON_UNESCAPED_SLASHES);

@@ -16,8 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once '../../config/db.php';
 
-$userId = (int) $_SESSION['user_id'];
-
 function getInitials(string $name): string
 {
     $parts = preg_split('/\s+/', trim($name));
@@ -33,6 +31,17 @@ function getInitials(string $name): string
     }
 
     return $initials ?: 'U';
+}
+
+function getProfileImageUrl(?string $profileImage): ?string
+{
+    $profileImage = trim((string) $profileImage);
+
+    if ($profileImage === '') {
+        return null;
+    }
+
+    return '../uploads/profiles/' . ltrim($profileImage, '/\\');
 }
 
 function respondProfile(PDO $conn, int $userId, string $message = 'Profile updated successfully'): void
@@ -66,10 +75,7 @@ function respondProfile(PDO $conn, int $userId, string $message = 'Profile updat
         exit;
     }
 
-    $row['profile_image_url'] = !empty($row['profile_image'])
-        ? 'uploads/profiles/' . $row['profile_image']
-        : null;
-
+    $row['profile_image_url'] = getProfileImageUrl($row['profile_image'] ?? null);
     $row['initials'] = getInitials($row['name'] ?? '');
 
     echo json_encode([
@@ -80,6 +86,8 @@ function respondProfile(PDO $conn, int $userId, string $message = 'Profile updat
 }
 
 try {
+    $userId = (int) $_SESSION['user_id'];
+
     $stmt = $conn->prepare("SELECT profile_image FROM users WHERE id = ? LIMIT 1");
     $stmt->execute([$userId]);
     $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -133,12 +141,19 @@ try {
     }
 
     $removeProfileImage = isset($_POST['remove_profile_image']) && $_POST['remove_profile_image'] === '1';
-    $profileImageFilename = $existingUser['profile_image'];
-    $uploadDir = dirname(__DIR__) . '/uploads/profiles/';
+    $profileImageFilename = $existingUser['profile_image'] ?? null;
+
+    $uploadDir = dirname(__DIR__, 2) . '/uploads/profiles/';
 
     if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true)) {
         http_response_code(500);
         echo json_encode(['error' => 'Failed to create upload directory.']);
+        exit;
+    }
+
+    if (!is_writable($uploadDir)) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Upload directory is not writable.']);
         exit;
     }
 
