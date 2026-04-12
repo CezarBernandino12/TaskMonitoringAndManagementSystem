@@ -1654,6 +1654,37 @@ body {
     background: var(--bg-page);
     border-bottom-right-radius: 20px;
 }
+/* =========================================
+   FIX: keep message composer at bottom
+========================================= */
+
+/* the panel thread view must fill the remaining panel height */
+.msg-thread-pane,
+.msg-thread-pane-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* the message list should take all free space above the composer */
+.msg-thread-scroll,
+.msg-thread-scroll-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* keep the composer pushed to the bottom */
+.msg-composer-bar,
+.msg-composer-bar-panel,
+.msg-composer-bar-premium {
+    margin-top: auto;
+    flex-shrink: 0;
+    padding: 10px 14px 10px !important;
+    gap: 10px !important;
+}
 
 .msg-thread-head {
     display: flex;
@@ -1688,7 +1719,6 @@ body {
     color: var(--text-secondary);
 }
 
-/* panel thread header */
 .msg-thread-head-panel {
     display: flex;
     align-items: center;
@@ -1842,7 +1872,7 @@ body {
     align-items: flex-end;
     gap: 12px;
     flex-shrink: 0;
-    padding: 14px 20px 18px;
+    padding: 12px 16px 12px;
     border-top: 1px solid rgba(17, 24, 39, 0.06);
     background: rgba(255,255,255,0.8);
     backdrop-filter: blur(10px);
@@ -1900,13 +1930,14 @@ body {
 }
 
 .msg-attach-btn {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    border-radius: 14px;
-    background: #fff;
-    color: #667085;
+    width: 40px !important;
+    height: 40px !important;
+    flex: 0 0 40px !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: #94a3b8 !important;
+    border-radius: 12px !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1924,13 +1955,14 @@ body {
 .msg-composer-input-panel,
 .msg-workspace .msg-composer-input {
     flex: 1;
-    min-height: 50px;
-    max-height: 128px;
+    min-height: 42px !important;
+    height: 42px !important;
+    max-height: 96px !important;
+    padding: 10px 14px !important;
+    border-radius: 14px !important;
     resize: none;
-    border-radius: 18px;
     border: 1px solid rgba(148, 163, 184, 0.18);
     background: #f8fafc;
-    padding: 14px 16px;
     color: var(--text-primary);
     font-size: 13px;
     line-height: 1.35;
@@ -1950,24 +1982,45 @@ body {
 .msg-composer-send-panel,
 .msg-composer-send-premium,
 .msg-workspace .msg-composer-send {
-    width: 50px;
-    height: 50px;
-    flex: 0 0 50px;
-    border: 0;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #4a78ff, #335dff);
-    color: #fff;
+    width: 40px !important;
+    height: 40px !important;
+    flex: 0 0 40px !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: #9db4ff !important;
+    border-radius: 12px !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 15px;
-    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
 }
 
-.msg-composer-send:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    box-shadow: none;
+.msg-composer-send:hover,
+.msg-composer-send-panel:hover,
+.msg-composer-send-premium:hover,
+.msg-workspace .msg-composer-send:hover {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: #6f8fff !important;
+}
+
+.msg-composer-send:disabled,
+.msg-composer-send-panel:disabled,
+.msg-composer-send-premium:disabled,
+.msg-workspace .msg-composer-send:disabled {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    opacity: 0.45 !important;
+}
+
+.msg-attach-btn:hover {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: #64748b !important;
 }
 
 .spin {
