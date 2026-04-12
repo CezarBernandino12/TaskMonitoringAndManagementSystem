@@ -1657,8 +1657,28 @@ body {
 /* =========================================
    FIX: keep message composer at bottom
 ========================================= */
+.msg-presence-text.is-active {
+    color: #16a34a !important;
+    font-weight: 600 !important;
+}
 
-/* the panel thread view must fill the remaining panel height */
+.msg-presence-separator {
+    color: #94a3b8;
+}
+
+.msg-row-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #cbd5e1;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.msg-row-dot.is-active {
+    background: #22c55e !important;
+}
+
 .msg-thread-pane,
 .msg-thread-pane-panel {
     flex: 1 1 auto;

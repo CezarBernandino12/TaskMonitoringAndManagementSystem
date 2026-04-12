@@ -596,7 +596,11 @@ function MessageRow({
                     </div>
 
                     <div className="msg-row-role">
-                        {getPresenceText(item)} · {getInboxRoleLabel(item)}
+                        <span className={`msg-presence-text ${item.is_active_now ? "is-active" : ""}`}>
+                            {getPresenceText(item)}
+                        </span>
+                        <span className="msg-presence-separator"> · </span>
+                        <span>{getInboxRoleLabel(item)}</span>
                     </div>
 
                     <div className="msg-row-preview">{preview}</div>
@@ -606,7 +610,7 @@ function MessageRow({
                     {unreadCount > 0 ? (
                         <span className="msg-row-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
                     ) : (
-                        <span className="msg-row-dot"></span>
+                       <span className={`msg-row-dot ${item.is_active_now ? "is-active" : ""}`}></span>
                     )}
                 </div>
             </button>
@@ -1417,7 +1421,11 @@ React.useEffect(() => {
                         <div className="msg-thread-user-copy">
                             <div className="msg-thread-user-name">{activeUser.user_name}</div>
                             <div className="msg-thread-user-meta">
-                                {getPresenceText(activeUser)} · {getInboxRoleLabel(activeUser)}
+                                <span className={`msg-presence-text ${activeUser?.is_active_now ? "is-active" : ""}`}>
+                                    {getPresenceText(activeUser)}
+                                </span>
+                                <span className="msg-presence-separator"> · </span>
+                                <span>{getInboxRoleLabel(activeUser)}</span>
                             </div>
                         </div>
                     </div>
