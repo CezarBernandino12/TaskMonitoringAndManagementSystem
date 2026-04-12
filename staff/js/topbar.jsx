@@ -1568,7 +1568,7 @@ function handleRoleScrollerClickCapture(event) {
                             aria-label="Minimize messages"
                             title="Minimize"
                         >
-                            <i className="bi bi-dash-lg"></i>
+                            <i className="bi bi-arrows-angle-contract"></i>
                         </button>
 
                         <button

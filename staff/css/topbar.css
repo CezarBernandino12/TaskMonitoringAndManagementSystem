@@ -1501,58 +1501,57 @@ body {
 .msg-workspace-actions {
     display: flex;
     align-items: center;
-    gap: 12px !important;
+    gap: 8px !important;
 }
 
-.msg-window-btn {
-    width: 50px !important;
-    height: 50px !important;
-    border-radius: 16px !important;
-    border: 1px solid rgba(203, 213, 225, 0.9) !important;
-    background: linear-gradient(180deg, #f9fbff 0%, #eef2f7 100%) !important;
+.msg-workspace-actions .msg-window-btn {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 36px !important;
+    border-radius: 10px !important;
+    border: 1px solid #d9dee7 !important;
+    background: #f8fafc !important;
     color: #98a2b3 !important;
-    box-shadow:
-        0 8px 18px rgba(15, 23, 42, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+    box-shadow: none !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    padding: 0 !important;
     transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease,
-        border-color 0.18s ease,
         background 0.18s ease,
-        color 0.18s ease !important;
+        border-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.16s ease !important;
 }
 
-.msg-window-btn i {
-    font-size: 20px !important;
+.msg-workspace-actions .msg-window-btn i {
+    font-size: 16px !important;
     line-height: 1 !important;
-    font-weight: 700;
+    font-weight: 700 !important;
 }
 
-.msg-window-btn:hover {
+.msg-workspace-actions .msg-window-btn:hover {
+    background: #f1f5f9 !important;
+    border-color: #cfd6e2 !important;
     transform: translateY(-1px) !important;
-    box-shadow:
-        0 12px 24px rgba(15, 23, 42, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.98) !important;
+    box-shadow: none !important;
 }
 
-.msg-window-btn:active {
-    transform: scale(0.97) !important;
+.msg-workspace-actions .msg-window-btn:active {
+    transform: translateY(0) scale(0.97) !important;
 }
 
-.msg-window-btn:focus-visible {
+.msg-workspace-actions .msg-window-btn:focus-visible {
     outline: none !important;
-    box-shadow:
-        0 0 0 4px rgba(59, 130, 246, 0.12),
-        0 10px 22px rgba(15, 23, 42, 0.10) !important;
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16) !important;
 }
 
-.msg-window-btn-minimize:hover {
-    color: #2563eb !important;
-    border-color: rgba(59, 130, 246, 0.22) !important;
-    background: linear-gradient(180deg, #f8fbff 0%, #e8f1ff 100%) !important;
+.msg-workspace-actions .msg-window-btn-minimize:hover {
+    color: #64748b !important;
+}
+
+.msg-workspace-actions .msg-window-btn-close:hover {
+    color: #7c8594 !important;
 }
 
 .msg-window-btn-close:hover {
