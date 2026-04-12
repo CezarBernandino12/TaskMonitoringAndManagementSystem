@@ -1563,17 +1563,20 @@ function handleRoleScrollerClickCapture(event) {
                     <div className="msg-workspace-actions">
                         <button
                             type="button"
-                            className="msg-icon-ghost"
+                            className="msg-icon-ghost msg-window-btn msg-window-btn-minimize"
                             onClick={onCollapse}
                             aria-label="Minimize messages"
+                            title="Minimize"
                         >
                             <i className="bi bi-dash-lg"></i>
                         </button>
+
                         <button
                             type="button"
-                            className="msg-icon-ghost"
+                            className="msg-icon-ghost msg-window-btn msg-window-btn-close"
                             onClick={onClose}
                             aria-label="Close messages"
+                            title="Close"
                         >
                             <i className="bi bi-x-lg"></i>
                         </button>
