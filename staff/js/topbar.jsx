@@ -3,6 +3,7 @@ import ReactDOM from "https://esm.sh/react-dom@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { Toaster, sileo } from "https://esm.sh/sileo?deps=react@18.3.1,react-dom@18.3.1";
 
+const HEARTBEAT_API = "php/heartbeat.php";
 const TOPBAR_USER_API = "php/sidebar.php";
 const THEME_KEY = "dashboard-theme";
 const GREETING_REFRESH_MS = 60 * 1000;
@@ -449,6 +450,20 @@ function getMessageDayLabel(isoStr) {
     });
 }
 
+function getPresenceText(user) {
+    if (!user) return "";
+
+    if (user.is_active_now) {
+        return "Active now";
+    }
+
+    if (user.last_active_label) {
+        return `Active ${user.last_active_label}`;
+    }
+
+    return "Offline";
+}
+
 function normalizeThreadUser(user = {}) {
     return {
         user_id: user.user_id ?? user.id ?? null,
@@ -464,7 +479,10 @@ function normalizeThreadUser(user = {}) {
         last_message: user.last_message ?? "",
         last_time: user.last_time ?? null,
         unread_count: Number(user.unread_count || 0),
-        has_conversation: Boolean(user.has_conversation)
+        has_conversation: Boolean(user.has_conversation),
+        is_active_now: Boolean(user.is_active_now),
+        last_active_at: user.last_active_at ?? null,
+        last_active_label: user.last_active_label ?? ""
     };
 }
 
@@ -598,7 +616,9 @@ function MessageRow({
                         <span className="msg-row-date">{dateLabel}</span>
                     </div>
 
-                    <div className="msg-row-role">{getInboxRoleLabel(item)}</div>
+                    <div className="msg-row-role">
+                        {getPresenceText(item)} · {getInboxRoleLabel(item)}
+                    </div>
                     <div className="msg-row-preview">{preview}</div>
                 </div>
 
@@ -655,6 +675,58 @@ function MessagingModal({
         suppressClick: false,
         activeEl: null
     });
+
+React.useEffect(() => {
+    if (!openMode) return undefined;
+    if (!activeUser?.user_id) return undefined;
+
+    let alive = true;
+
+    async function refreshThreadSilently() {
+        try {
+            const response = await fetch(
+                `php/get_user_messages.php?other_user_id=${encodeURIComponent(activeUser.user_id)}`,
+                {
+                    credentials: "same-origin",
+                    headers: { Accept: "application/json" }
+                }
+            );
+
+            const data = await parseJsonResponse(response);
+            if (!response.ok || !alive) return;
+
+            setMessages(Array.isArray(data.messages) ? data.messages : []);
+
+            if (data.other_user) {
+                setActiveUser((prev) => ({
+                    ...normalizeThreadUser(prev || {}),
+                    ...normalizeThreadUser({
+                        user_id: data.other_user.id,
+                        user_name: data.other_user.name,
+                        user_role: data.other_user.role,
+                        user_role_label: data.other_user.role_label,
+                        user_initials: data.other_user.initials,
+                        profile_image: data.other_user.profile_image,
+                        profile_image_url: data.other_user.profile_image_url,
+                        is_active_now: data.other_user.is_active_now,
+                        last_active_at: data.other_user.last_active_at,
+                        last_active_label: data.other_user.last_active_label,
+                        has_conversation: true
+                    })
+                }));
+            }
+        } catch (error) {
+            console.error("[MSG] live thread refresh error:", error);
+        }
+    }
+
+    const intervalId = window.setInterval(refreshThreadSilently, 3000);
+
+    return () => {
+        alive = false;
+        window.clearInterval(intervalId);
+    };
+}, [openMode, activeUser?.user_id]);
 
     React.useEffect(() => {
         try {
@@ -814,7 +886,7 @@ function MessagingModal({
         }
 
         loadInboxData();
-        const intervalId = window.setInterval(loadInboxData, 30000);
+        const intervalId = window.setInterval(loadInboxData, 8000);
 
         return () => {
             active = false;
@@ -1455,7 +1527,9 @@ function handleRoleScrollerClickCapture(event) {
 
                         <div className="msg-thread-user-copy">
                             <div className="msg-thread-user-name">{activeUser.user_name}</div>
-                            <div className="msg-thread-user-meta">{getInboxRoleLabel(activeUser)}</div>
+                            <div className="msg-thread-user-meta">
+                                {getPresenceText(activeUser)} · {getInboxRoleLabel(activeUser)}
+                            </div>
                         </div>
                     </div>
 
@@ -1691,7 +1765,9 @@ function handleRoleScrollerClickCapture(event) {
                                         />
                                         <div>
                                             <div className="msg-thread-user-name">{activeUser.user_name}</div>
-                                            <div className="msg-thread-user-meta">{getInboxRoleLabel(activeUser)}</div>
+                                            <div className="msg-thread-user-meta">
+                                                {getPresenceText(activeUser)} · {getInboxRoleLabel(activeUser)}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1753,7 +1829,7 @@ function ChatButton() {
         }
 
         fetchUnread();
-        const intervalId = window.setInterval(fetchUnread, 30000);
+        const intervalId = window.setInterval(fetchUnread, 8000);
 
         return () => {
             active = false;
@@ -2112,6 +2188,56 @@ function UserChip({ user, userLoaded }) {
     );
 }
 
+function usePresenceHeartbeat() {
+    React.useEffect(() => {
+        let stopped = false;
+
+        async function beat() {
+            if (stopped) return;
+
+            try {
+                await fetch(HEARTBEAT_API, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json"
+                    }
+                });
+            } catch (error) {
+                console.error("[presence] heartbeat failed:", error);
+            }
+        }
+
+        beat();
+
+        const intervalId = window.setInterval(() => {
+            if (document.visibilityState === "visible") {
+                beat();
+            }
+        }, 60000);
+
+        function handleFocus() {
+            beat();
+        }
+
+        function handleVisibility() {
+            if (document.visibilityState === "visible") {
+                beat();
+            }
+        }
+
+        window.addEventListener("focus", handleFocus);
+        document.addEventListener("visibilitychange", handleVisibility);
+
+        return () => {
+            stopped = true;
+            window.clearInterval(intervalId);
+            window.removeEventListener("focus", handleFocus);
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
+    }, []);
+}
+
 function TopBar() {
     const [dark, setDark] = React.useState(() => getStoredTheme() === "dark");
     const [now, setNow] = React.useState(() => new Date());
@@ -2263,6 +2389,7 @@ function TopBar() {
 const greetingMeta = getGreetingMeta(now);
 const greetingText = buildGreeting(user, now);
 const todayText = getFriendlyDate(now);
+usePresenceHeartbeat();
 
 return (
     <header className="topbar">

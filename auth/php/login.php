@@ -24,6 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$_SESSION['user_id'] = $user['id'];
 			$_SESSION['email'] = $user['email'];
 			$_SESSION['role'] = $user['role'];
+
+			require_once '../../config/presence.php';
+			markUserActive($conn, (int) $user['id']);
+
 			// Redirect based on role
 			switch ($user['role']) {
 				case 'admin':

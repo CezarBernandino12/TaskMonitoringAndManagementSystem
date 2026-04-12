@@ -1,25 +1,6 @@
 <?php
 declare(strict_types=1);
 
-ini_set('display_errors', '0');
-error_reporting(E_ALL);
-
-set_error_handler(function ($severity, $message, $file, $line) {
-    throw new ErrorException($message, 0, $severity, $file, $line);
-});
-
-set_exception_handler(function ($e) {
-    if (!headers_sent()) {
-        http_response_code(500);
-        header('Content-Type: application/json; charset=utf-8');
-    }
-
-    echo json_encode([
-        'error' => 'Internal server error'
-    ]);
-    exit;
-});
-
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
@@ -31,21 +12,92 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once '../../config/db.php';
 
-function getInitials(string $name): string
+$presencePath = '../../config/presence.php';
+if (file_exists($presencePath)) {
+    require_once $presencePath;
+}
+
+if (!function_exists('markUserActive')) {
+    function markUserActive(PDO $conn, int $userId): void
+    {
+        $stmt = $conn->prepare("
+            UPDATE users
+            SET last_active_at = NOW()
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+    }
+}
+
+if (!function_exists('formatLastActiveLabel')) {
+    function formatLastActiveLabel(?string $lastActiveAt): string
+    {
+        if (!$lastActiveAt) {
+            return 'recently';
+        }
+
+        $last = strtotime($lastActiveAt);
+        if ($last === false) {
+            return 'recently';
+        }
+
+        $diff = time() - $last;
+
+        if ($diff < 60) {
+            return 'just now';
+        }
+
+        if ($diff < 3600) {
+            $mins = (int) floor($diff / 60);
+            return $mins . ' minute' . ($mins !== 1 ? 's' : '') . ' ago';
+        }
+
+        if ($diff < 86400) {
+            $hours = (int) floor($diff / 3600);
+            return $hours . ' hour' . ($hours !== 1 ? 's' : '') . ' ago';
+        }
+
+        $days = (int) floor($diff / 86400);
+        return $days . ' day' . ($days !== 1 ? 's' : '') . ' ago';
+    }
+}
+
+if (!function_exists('buildPresenceMeta')) {
+    function buildPresenceMeta(?string $lastActiveAt, int $activeWindowSeconds = 120): array
+    {
+        if (!$lastActiveAt) {
+            return [
+                'is_active_now' => false,
+                'last_active_at' => null,
+                'last_active_label' => 'recently',
+            ];
+        }
+
+        $last = strtotime($lastActiveAt);
+        if ($last === false) {
+            return [
+                'is_active_now' => false,
+                'last_active_at' => $lastActiveAt,
+                'last_active_label' => 'recently',
+            ];
+        }
+
+        $isActiveNow = (time() - $last) <= $activeWindowSeconds;
+
+        return [
+            'is_active_now' => $isActiveNow,
+            'last_active_at' => $lastActiveAt,
+            'last_active_label' => $isActiveNow ? 'now' : formatLastActiveLabel($lastActiveAt),
+        ];
+    }
+}
+
+function jsonResponse(array $payload, int $status = 200): void
 {
-    $parts = preg_split('/\s+/', trim($name));
-    $parts = array_values(array_filter($parts));
-
-    if (empty($parts)) {
-        return 'U';
-    }
-
-    $initials = '';
-    foreach (array_slice($parts, 0, 2) as $part) {
-        $initials .= mb_strtoupper(mb_substr($part, 0, 1));
-    }
-
-    return $initials !== '' ? $initials : 'U';
+    http_response_code($status);
+    echo json_encode($payload);
+    exit;
 }
 
 function getRoleLabel(string $role): string
@@ -53,163 +105,193 @@ function getRoleLabel(string $role): string
     $role = strtolower(trim($role));
 
     return match ($role) {
-        'admin' => 'Administrator',
+        'admin' => 'Admin',
+        'executive_director' => 'President',
+        'president' => 'President',
         'supervisor' => 'Supervisor',
         'staff' => 'Staff',
-        'executive_director' => 'Executive Director',
-        'president' => 'President',
-        default => ucfirst($role !== '' ? $role : 'User'),
+        default => ucfirst($role ?: 'User'),
     };
 }
 
-function getProfileImageUrl(?string $profileImage): ?string
+function getInitials(string $name): string
+{
+    $name = trim($name);
+    if ($name === '') {
+        return 'U';
+    }
+
+    $parts = preg_split('/\s+/', $name) ?: [];
+    $parts = array_values(array_filter($parts));
+
+    if (!$parts) {
+        return 'U';
+    }
+
+    $initials = '';
+    foreach (array_slice($parts, 0, 2) as $part) {
+        $initials .= strtoupper(substr($part, 0, 1));
+    }
+
+    return $initials ?: 'U';
+}
+
+function getProfileImageUrl(?string $profileImage): string
 {
     $profileImage = trim((string) $profileImage);
 
     if ($profileImage === '') {
-        return null;
+        return '';
     }
 
-    return '../uploads/profiles/' . ltrim($profileImage, '/\\');
+    if (
+        str_starts_with($profileImage, 'http://') ||
+        str_starts_with($profileImage, 'https://') ||
+        str_starts_with($profileImage, '/') ||
+        str_starts_with($profileImage, './') ||
+        str_starts_with($profileImage, '../') ||
+        str_starts_with($profileImage, 'uploads/')
+    ) {
+        return $profileImage;
+    }
+
+    return 'uploads/profile_images/' . $profileImage;
 }
 
-$currentUserId = (int) $_SESSION['user_id'];
+function getAllowedRolesForUser(string $currentRole): array
+{
+    $currentRole = strtolower(trim($currentRole));
 
-/*
-|--------------------------------------------------------------------------
-| STEP 1 — Find all distinct conversation partners
-|--------------------------------------------------------------------------
-*/
-$partnerStmt = $conn->prepare("
-    SELECT DISTINCT
-        CASE
-            WHEN sender_id = :current_id THEN recipient_id
-            ELSE sender_id
-        END AS partner_id
-    FROM messages
-    WHERE sender_id = :current_id OR recipient_id = :current_id
-");
-$partnerStmt->execute([':current_id' => $currentUserId]);
+    return match ($currentRole) {
+        'admin', 'executive_director', 'president', 'supervisor', 'staff'
+            => ['admin', 'executive_director', 'president', 'supervisor', 'staff'],
+        default
+            => ['admin', 'executive_director', 'president', 'supervisor', 'staff'],
+    };
+}
 
-$partnerIds = array_map('intval', $partnerStmt->fetchAll(PDO::FETCH_COLUMN));
-$conversations = [];
+try {
+    $currentUserId = (int) $_SESSION['user_id'];
+    $currentUserRole = strtolower(trim((string) ($_SESSION['role'] ?? '')));
 
-if (!empty($partnerIds)) {
-    /*
-    |--------------------------------------------------------------------------
-    | Fetch partner user records including profile image
-    |--------------------------------------------------------------------------
-    */
-    $placeholders = implode(',', array_fill(0, count($partnerIds), '?'));
+    markUserActive($conn, $currentUserId);
 
-    $userStmt = $conn->prepare("
-        SELECT id, name, role, profile_image
+    $allowedRoles = getAllowedRolesForUser($currentUserRole);
+    $rolePlaceholders = implode(',', array_fill(0, count($allowedRoles), '?'));
+
+    $usersSql = "
+        SELECT id, name, role, profile_image, last_active_at, is_active
         FROM users
-        WHERE id IN ($placeholders)
+        WHERE id <> ?
           AND is_active = 1
-    ");
-    $userStmt->execute($partnerIds);
+          AND role <> ''
+          AND role IN ($rolePlaceholders)
+        ORDER BY name ASC
+    ";
 
-    $partners = $userStmt->fetchAll(PDO::FETCH_ASSOC);
+    $usersStmt = $conn->prepare($usersSql);
+    $usersStmt->execute([$currentUserId, ...$allowedRoles]);
+    $users = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Prepared statements reused inside loop
-    |--------------------------------------------------------------------------
-    */
-    $latestStmt = $conn->prepare("
-        SELECT message, time_sent
+    $usersById = [];
+    foreach ($users as $user) {
+        $usersById[(int) $user['id']] = $user;
+    }
+
+    $messagesStmt = $conn->prepare("
+        SELECT id, sender_id, recipient_id, message, time_sent, is_read
         FROM messages
-        WHERE (sender_id = ? AND recipient_id = ?)
-           OR (sender_id = ? AND recipient_id = ?)
+        WHERE sender_id = ? OR recipient_id = ?
         ORDER BY time_sent DESC, id DESC
-        LIMIT 1
     ");
+    $messagesStmt->execute([$currentUserId, $currentUserId]);
+    $messages = $messagesStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $unreadStmt = $conn->prepare("
-        SELECT COUNT(*) AS cnt
-        FROM messages
-        WHERE sender_id = ?
-          AND recipient_id = ?
-          AND is_read = 0
-    ");
+    $conversationMap = [];
+    $totalUnread = 0;
 
-    foreach ($partners as $partner) {
-        $partnerId = (int) $partner['id'];
+    foreach ($messages as $message) {
+        $senderId = (int) $message['sender_id'];
+        $recipientId = (int) $message['recipient_id'];
+        $otherUserId = $senderId === $currentUserId ? $recipientId : $senderId;
 
-        $latestStmt->execute([$currentUserId, $partnerId, $partnerId, $currentUserId]);
-        $latest = $latestStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        if (!isset($usersById[$otherUserId])) {
+            continue;
+        }
 
-        $unreadStmt->execute([$partnerId, $currentUserId]);
-        $unreadRow = $unreadStmt->fetch(PDO::FETCH_ASSOC) ?: [];
-        $unreadCount = (int) ($unreadRow['cnt'] ?? 0);
+        if (!isset($conversationMap[$otherUserId])) {
+            $partner = $usersById[$otherUserId];
+            $presence = buildPresenceMeta($partner['last_active_at'] ?? null);
 
-        $conversations[] = [
-            'user_id'           => $partnerId,
-            'user_name'         => (string) $partner['name'],
-            'user_role'         => (string) $partner['role'],
-            'user_role_label'   => getRoleLabel((string) $partner['role']),
-            'user_initials'     => getInitials((string) $partner['name']),
-            'profile_image'     => $partner['profile_image'] ?? null,
-            'profile_image_url' => getProfileImageUrl($partner['profile_image'] ?? null),
-            'last_message'      => $latest['message'] ?? null,
-            'last_time'         => $latest['time_sent'] ?? null,
-            'unread_count'      => $unreadCount,
+            $conversationMap[$otherUserId] = [
+                'user_id'           => $otherUserId,
+                'user_name'         => (string) $partner['name'],
+                'user_role'         => (string) $partner['role'],
+                'user_role_label'   => getRoleLabel((string) $partner['role']),
+                'user_initials'     => getInitials((string) $partner['name']),
+                'profile_image'     => $partner['profile_image'] ?? null,
+                'profile_image_url' => getProfileImageUrl($partner['profile_image'] ?? null),
+                'last_message'      => (string) ($message['message'] ?? ''),
+                'last_time'         => $message['time_sent'] ?? null,
+                'unread_count'      => 0,
+                'has_conversation'  => true,
+                'is_active_now'     => $presence['is_active_now'],
+                'last_active_at'    => $presence['last_active_at'],
+                'last_active_label' => $presence['last_active_label'],
+            ];
+        }
+
+        $isIncomingUnread =
+            $recipientId === $currentUserId &&
+            $senderId !== $currentUserId &&
+            (int) ($message['is_read'] ?? 0) === 0;
+
+        if ($isIncomingUnread) {
+            $conversationMap[$otherUserId]['unread_count']++;
+            $totalUnread++;
+        }
+    }
+
+    $conversations = array_values($conversationMap);
+
+    usort($conversations, static function (array $a, array $b): int {
+        $aTime = !empty($a['last_time']) ? strtotime((string) $a['last_time']) : 0;
+        $bTime = !empty($b['last_time']) ? strtotime((string) $b['last_time']) : 0;
+        return $bTime <=> $aTime;
+    });
+
+    $allUsers = [];
+    foreach ($users as $user) {
+        $userId = (int) $user['id'];
+        $presence = buildPresenceMeta($user['last_active_at'] ?? null);
+
+        $allUsers[] = [
+            'id'                => $userId,
+            'name'              => (string) $user['name'],
+            'role'              => (string) $user['role'],
+            'role_label'        => getRoleLabel((string) $user['role']),
+            'initials'          => getInitials((string) $user['name']),
+            'profile_image'     => $user['profile_image'] ?? null,
+            'profile_image_url' => getProfileImageUrl($user['profile_image'] ?? null),
+            'has_history'       => isset($conversationMap[$userId]),
+            'is_active_now'     => $presence['is_active_now'],
+            'last_active_at'    => $presence['last_active_at'],
+            'last_active_label' => $presence['last_active_label'],
         ];
     }
 
-    usort($conversations, function (array $a, array $b): int {
-        return strcmp((string) ($b['last_time'] ?? ''), (string) ($a['last_time'] ?? ''));
-    });
+    jsonResponse([
+        'success'         => true,
+        'current_user_id' => $currentUserId,
+        'total_unread'    => $totalUnread,
+        'conversations'   => $conversations,
+        'all_users'       => $allUsers,
+    ]);
+} catch (Throwable $e) {
+    error_log('staff/get_conversations.php error: ' . $e->getMessage());
+
+    jsonResponse([
+        'error' => 'Failed to load conversations.',
+        'debug' => $e->getMessage(),
+    ], 500);
 }
-
-/*
-|--------------------------------------------------------------------------
-| STEP 2 — All active users excluding current user
-|--------------------------------------------------------------------------
-*/
-$usersStmt = $conn->prepare("
-    SELECT id, name, role, profile_image
-    FROM users
-    WHERE id != ?
-      AND is_active = 1
-    ORDER BY name ASC
-");
-$usersStmt->execute([$currentUserId]);
-
-$allUsers = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
-$convoUserIds = array_map('intval', array_column($conversations, 'user_id'));
-
-$formattedUsers = array_map(function (array $u) use ($convoUserIds): array {
-    $userId = (int) $u['id'];
-    $name = (string) $u['name'];
-    $role = (string) $u['role'];
-
-    return [
-        'id'                => $userId,
-        'name'              => $name,
-        'role'              => $role,
-        'role_label'        => getRoleLabel($role),
-        'initials'          => getInitials($name),
-        'profile_image'     => $u['profile_image'] ?? null,
-        'profile_image_url' => getProfileImageUrl($u['profile_image'] ?? null),
-        'has_history'       => in_array($userId, $convoUserIds, true),
-    ];
-}, $allUsers);
-
-/*
-|--------------------------------------------------------------------------
-| STEP 3 — Total unread
-|--------------------------------------------------------------------------
-*/
-$totalUnread = array_sum(array_map(
-    fn(array $c): int => (int) ($c['unread_count'] ?? 0),
-    $conversations
-));
-
-echo json_encode([
-    'current_user_id' => $currentUserId,
-    'conversations'   => $conversations,
-    'all_users'       => $formattedUsers,
-    'total_unread'    => $totalUnread,
-], JSON_UNESCAPED_SLASHES);
