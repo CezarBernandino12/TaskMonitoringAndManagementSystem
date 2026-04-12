@@ -614,6 +614,7 @@ function MessageRow({
     );
 }
 
+
 function MessagingModal({
     openMode,
     onClose,
@@ -838,8 +839,13 @@ const fullRegularEntries = React.useMemo(
 
     React.useEffect(() => {
         if (!inputRef.current) return;
-        inputRef.current.style.height = "46px";
-        inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 132)}px`;
+
+        const isPanel = openMode === "panel";
+        const baseHeight = isPanel ? 38 : 46;
+        const maxHeight = isPanel ? 88 : 132;
+
+        inputRef.current.style.height = `${baseHeight}px`;
+        inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, maxHeight)}px`;
     }, [msgText, openMode]);
 
     React.useEffect(() => {
@@ -849,6 +855,7 @@ const fullRegularEntries = React.useMemo(
         setMessages([]);
         setMsgText("");
     }, [openMode]);
+
 
     async function loadThreadMessages(otherUserId) {
         if (!otherUserId) return;
@@ -1161,33 +1168,30 @@ function stopRoleDrag() {
             </div>
 
 {isPanelThreadOpen ? (
-    <section className="msg-thread-pane">
-        <div className="msg-thread-head">
-            <div className="msg-thread-user">
-                <button
-                    type="button"
-                    className="msg-icon-ghost"
-                    onClick={closePanelThread}
-                    aria-label="Back to conversations"
-                    style={{ marginRight: 8 }}
-                >
-                    <i className="bi bi-arrow-left"></i>
-                </button>
+    <section className="msg-thread-pane msg-thread-pane-panel">
+        <div className="msg-thread-head msg-thread-head-panel">
+            <button
+                type="button"
+                className="msg-thread-back"
+                onClick={closePanelThread}
+                aria-label="Back to conversations"
+            >
+                <i className="bi bi-arrow-left"></i>
+            </button>
 
-                <UserAvatar
-                    name={activeUser.user_name}
-                    imageUrl={activeUser.profile_image_url}
-                    size={40}
-                />
+            <UserAvatar
+                name={activeUser.user_name}
+                imageUrl={activeUser.profile_image_url}
+                size={40}
+            />
 
-                <div>
-                    <div className="msg-thread-user-name">{activeUser.user_name}</div>
-                    <div className="msg-thread-user-meta">{getInboxRoleLabel(activeUser)}</div>
-                </div>
+            <div className="msg-thread-user-copy">
+                <div className="msg-thread-user-name">{activeUser.user_name}</div>
+                <div className="msg-thread-user-meta">{getInboxRoleLabel(activeUser)}</div>
             </div>
         </div>
 
-        <div className="msg-thread-scroll">
+        <div className="msg-thread-scroll msg-thread-scroll-panel">
             {loadingMsgs ? (
                 <div className="msg-loading-state">Loading messages…</div>
             ) : messages.length === 0 ? (
@@ -1241,21 +1245,23 @@ function stopRoleDrag() {
             <div ref={messagesEndRef}></div>
         </div>
 
-        <div className="msg-composer-bar">
-            <textarea
-                ref={inputRef}
-                className="msg-composer-input"
-                placeholder={`Message ${activeUser.user_name}…`}
-                value={msgText}
-                onChange={(event) => setMsgText(event.target.value)}
-                onKeyDown={handleComposerKeyDown}
-                rows={1}
-                disabled={sending}
-            ></textarea>
+        <div className="msg-composer-bar msg-composer-bar-panel">
+            <div className="msg-composer-shell">
+                <textarea
+                    ref={inputRef}
+                    className="msg-composer-input msg-composer-input-panel"
+                    placeholder={`Message ${activeUser.user_name}…`}
+                    value={msgText}
+                    onChange={(event) => setMsgText(event.target.value)}
+                    onKeyDown={handleComposerKeyDown}
+                    rows={1}
+                    disabled={sending}
+                ></textarea>
+            </div>
 
             <button
                 type="button"
-                className="msg-composer-send"
+                className="msg-composer-send msg-composer-send-panel"
                 onClick={sendMessage}
                 disabled={!msgText.trim() || sending}
                 aria-label="Send message"

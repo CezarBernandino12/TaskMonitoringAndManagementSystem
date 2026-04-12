@@ -1164,10 +1164,400 @@ body {
     color: #fff !important;
 }
 
+/* =========================================================
+   FINAL MESSAGE WORKSPACE CLEANUP
+   paste at the VERY END of your CSS
+========================================================= */
+
+/* ---------- workspace shell ---------- */
+.msg-workspace {
+    width: min(1380px, calc(100vw - 24px));
+    height: min(92vh, calc(100vh - 24px));
+    border-radius: 30px;
+    border: 1px solid var(--border);
+    background: var(--bg-page);
+    box-shadow: 0 30px 90px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+}
+
+.msg-workspace-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 88px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-page) 96%, var(--bg-card) 4%);
+}
+
+.msg-workspace-header > div:first-child {
+    min-width: 0;
+}
+
+.msg-workspace-kicker {
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--text-secondary);
+}
+
+.msg-workspace-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+.msg-workspace-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* buttons used by full workspace header */
+.msg-icon-ghost {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-page);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.msg-icon-ghost:hover {
+    background: var(--bg-input);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+/* ---------- workspace body ---------- */
+.msg-workspace-body {
+    display: grid;
+    grid-template-columns: 390px minmax(0, 1fr);
+    min-height: 0;
+    flex: 1;
+}
+
+.msg-sidebar {
+    border-right: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-page) 97%, var(--bg-card) 3%);
+    min-height: 0;
+}
+
+.msg-sidebar-sticky {
+    padding: 16px 16px 14px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-page) 97%, var(--bg-card) 3%);
+}
+
+.msg-sidebar-scroll {
+    padding: 14px 12px 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.msg-sidebar-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* ---------- fix sidebar rows in light mode ---------- */
+/* these override the later dark-looking duplicate rules */
+.msg-sidebar .msg-row-name,
+.msg-block-list.compact-list .msg-row-name {
+    color: var(--text-primary) !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+}
+
+.msg-sidebar .msg-row-role,
+.msg-sidebar .msg-row-preview,
+.msg-sidebar .msg-row-date,
+.msg-block-list.compact-list .msg-row-role,
+.msg-block-list.compact-list .msg-row-preview,
+.msg-block-list.compact-list .msg-row-date {
+    color: var(--text-secondary) !important;
+}
+
+.msg-sidebar .msg-row-main,
+.msg-block-list.compact-list .msg-row-main {
+    border: 1px solid transparent !important;
+    border-radius: 18px !important;
+    background: transparent !important;
+}
+
+.msg-sidebar .msg-row-main:hover,
+.msg-block-list.compact-list .msg-row-main:hover {
+    background: var(--bg-input) !important;
+    border-color: var(--border) !important;
+    transform: none !important;
+}
+
+.msg-sidebar .msg-row.is-selected .msg-row-main,
+.msg-block-list.compact-list .msg-row.is-selected .msg-row-main {
+    background: var(--bg-input) !important;
+    border-color: var(--border) !important;
+}
+
+.msg-sidebar .msg-row-pin,
+.msg-block-list.compact-list .msg-row-pin {
+    color: var(--text-muted) !important;
+    background: transparent !important;
+}
+
+.msg-sidebar .msg-row-pin:hover,
+.msg-block-list.compact-list .msg-row-pin:hover {
+    background: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    transform: none !important;
+}
+
+.msg-sidebar .msg-row-dot,
+.msg-block-list.compact-list .msg-row-dot {
+    background: #c7ced8 !important;
+}
+
+/* ---------- thread pane ---------- */
+.msg-thread-pane {
+    min-height: 0;
+    background: var(--bg-page);
+}
+
+.msg-thread-head {
+    display: flex;
+    align-items: center;
+    min-height: 102px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-page) 96%, var(--bg-card) 4%);
+}
+
+.msg-thread-user {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.msg-thread-user-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+}
+
+.msg-thread-user-meta {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.msg-thread-scroll {
+    padding: 20px 20px 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.msg-thread-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.msg-thread-row {
+    max-width: min(72%, 720px);
+}
+
+.msg-thread-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.msg-thread-meta.mine {
+    justify-content: flex-end;
+}
+
+.msg-thread-bubble {
+    box-shadow: none;
+}
+
+/* =========================================
+   LEFT SIDEBAR SCROLL FIX
+   paste at the VERY END of your CSS
+========================================= */
+
+.msg-workspace {
+    overflow: hidden;
+}
+
+.msg-workspace-body {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    display: grid;
+    grid-template-columns: 390px minmax(0, 1fr);
+}
+
+.msg-sidebar {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-page) 97%, var(--bg-card) 3%);
+}
+
+.msg-sidebar-sticky {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.msg-sidebar-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 14px 12px 16px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.msg-sidebar-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+@media (max-width: 767.98px) {
+    .msg-workspace-body {
+        grid-template-columns: 1fr;
+        grid-template-rows: 280px minmax(0, 1fr);
+    }
+
+    .msg-sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .msg-sidebar-scroll {
+        padding: 12px 10px 14px;
+    }
+}
+
+/* ---------- full workspace composer ---------- */
+.msg-workspace .msg-composer-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 18px 18px;
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-page) 96%, var(--bg-card) 4%);
+}
+
+.msg-workspace .msg-composer-input {
+    min-height: 56px;
+    max-height: 132px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    padding: 15px 18px;
+    font-size: 14px;
+    line-height: 1.35;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.msg-workspace .msg-composer-input::-webkit-scrollbar {
+    display: none;
+}
+
+.msg-workspace .msg-composer-send {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    flex: 0 0 56px;
+    box-shadow: 0 10px 20px rgba(51, 93, 255, 0.18);
+}
+
+/* ---------- panel thread final safety overrides ---------- */
+.msg-thread-pane-panel .msg-thread-user-name {
+    color: var(--text-primary) !important;
+}
+
+.msg-thread-pane-panel .msg-thread-user-meta {
+    color: var(--text-secondary) !important;
+}
+
+.msg-thread-pane-panel .msg-thread-scroll-panel {
+    background: var(--bg-page) !important;
+}
+
+.msg-thread-pane-panel .msg-thread-day span {
+    background: var(--bg-input) !important;
+    border-color: var(--border) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 991.98px) {
+    .msg-workspace {
+        width: calc(100vw - 14px);
+        height: calc(100vh - 14px);
+        border-radius: 24px;
+    }
+
+    .msg-workspace-body {
+        grid-template-columns: 320px minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .msg-workspace-body {
+        grid-template-columns: 1fr;
+        grid-template-rows: 280px minmax(0, 1fr);
+    }
+
+    .msg-sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .msg-thread-row {
+        max-width: 92%;
+    }
+
+    .msg-workspace .msg-composer-bar {
+        padding: 12px;
+    }
+
+    .msg-workspace .msg-composer-input {
+        min-height: 48px;
+        padding: 12px 14px;
+    }
+
+    .msg-workspace .msg-composer-send {
+        width: 48px;
+        height: 48px;
+        flex-basis: 48px;
+        border-radius: 16px;
+    }
+}
+
 /* 5) Slightly cleaner footer */
 .msg-view-all-btn {
     font-size: 15px !important;
-    font-weight: 700 !important;
+    font-weight: 600 !important;
     color: var(--msg-panel-accent) !important;
     font-family: "Inter", "Segoe UI", system-ui, sans-serif !important;
 }
@@ -1191,7 +1581,6 @@ body {
     position: relative;
 }
 
-/* mouse-drag horizontal filter row */
 .msg-role-scroller.is-draggable {
     cursor: grab;
     user-select: none;
@@ -1578,7 +1967,7 @@ body {
 
 .msg-view-all-btn {
     width: 100%;
-    height: 52px;
+    height: 40px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -1863,10 +2252,47 @@ body {
 }
 
 .msg-thread-pane {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     min-height: 0;
     background: var(--bg-page);
+}
+
+
+.msg-thread-head,
+.msg-composer-bar {
+    flex-shrink: 0;
+}
+
+.msg-thread-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* optional scrollbar styling */
+.msg-thread-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.msg-thread-scroll::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.35);
+    border-radius: 999px;
+}
+
+/* helps nested flex containers behave correctly */
+.msg-panel,
+.msg-workspace,
+.msg-workspace-body,
+.msg-sidebar,
+.msg-thread-pane {
+    min-height: 0;
 }
 
 .msg-thread-head {
@@ -2059,6 +2485,588 @@ body {
     animation: msgSpin 0.8s linear infinite;
 }
 
+/* =========================================================
+   OPENED PANEL CONVERSATION FIX
+   Messenger-style orientation for dropdown thread
+   Paste at the VERY END of the CSS file
+========================================================= */
+
+/* missing flex alignment in current shared thread layout */
+.msg-thread-user,
+.msg-thread-meta,
+.msg-composer-bar,
+.msg-workspace-actions {
+    display: flex;
+}
+
+.msg-thread-user {
+    align-items: center;
+    min-width: 0;
+}
+
+.msg-thread-meta {
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.msg-composer-bar {
+    align-items: flex-end;
+}
+
+/* panel thread shell */
+.msg-thread-pane-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: #082b74;
+    color: #ffffff;
+}
+
+/* compact top header like the reference */
+.msg-thread-head-panel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 0;
+    background: #082b74;
+    color: #ffffff;
+}
+
+.msg-thread-back {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.msg-thread-back:hover {
+    background: rgba(255, 255, 255, 0.16);
+    transform: translateY(-1px);
+}
+
+.msg-thread-user-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.msg-thread-pane-panel .msg-thread-user-name {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--text-primary) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.msg-thread-pane-panel .msg-thread-user-meta {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.2;
+    color: rgba(255, 255, 255, 0.76);
+}
+
+.notif-panel,
+.msg-thread-scroll,
+.msg-thread-scroll-panel {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.notif-panel::-webkit-scrollbar,
+.msg-thread-scroll::-webkit-scrollbar,
+.msg-thread-scroll-panel::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+/* hide textarea scrollbar */
+.msg-composer-input,
+.msg-composer-input-panel,
+.msg-composer-input.msg-composer-input-panel {
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.msg-composer-input::-webkit-scrollbar,
+.msg-composer-input-panel::-webkit-scrollbar,
+.msg-composer-input.msg-composer-input-panel::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+/* scrollable message area */
+.msg-thread-scroll-panel {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 14px 12px 10px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
+        #082b74;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.28) transparent;
+}
+
+.msg-thread-scroll-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.msg-thread-scroll-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+}
+
+/* date chip */
+.msg-thread-pane-panel .msg-thread-day {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0 8px;
+}
+
+.msg-thread-pane-panel .msg-thread-day span {
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+/* message rows */
+.msg-thread-pane-panel .msg-thread-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 84%;
+    margin-bottom: 12px;
+}
+
+.msg-thread-pane-panel .msg-thread-row.mine {
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.msg-thread-pane-panel .msg-thread-row.theirs {
+    align-self: flex-start;
+}
+
+.msg-thread-pane-panel .msg-thread-stack {
+    min-width: 0;
+    flex: 1;
+}
+
+.msg-thread-pane-panel .msg-thread-meta {
+    margin-bottom: 5px;
+    gap: 8px;
+}
+
+.msg-thread-pane-panel .msg-thread-meta span:first-child {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.msg-thread-pane-panel .msg-thread-meta span:last-child {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.msg-thread-pane-panel .msg-thread-meta.mine {
+    justify-content: flex-end;
+}
+
+/* bubbles */
+.msg-thread-pane-panel .msg-thread-bubble {
+    border: 0;
+    border-radius: 18px;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.45;
+    word-break: break-word;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.msg-thread-pane-panel .msg-thread-bubble.theirs {
+    background: #eef2f7;
+    color: #1f2937;
+    border-bottom-left-radius: 8px;
+}
+
+.msg-thread-pane-panel .msg-thread-bubble.mine {
+    background: linear-gradient(135deg, #53a7ff, #7d95ff);
+    color: #ffffff;
+    border-bottom-right-radius: 8px;
+}
+
+/* empty/loading state inside dark panel */
+.msg-thread-pane-panel .msg-empty-state,
+.msg-thread-pane-panel .msg-loading-state {
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.msg-thread-pane-panel .msg-empty-state i {
+    color: #9ec5ff;
+}
+
+/* bottom composer like the reference */
+.msg-composer-bar-panel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px 14px;
+    border-top: 0;
+    background: #082b74;
+}
+
+.msg-composer-shell {
+    flex: 1;
+    min-width: 0;
+    min-height: 46px;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.msg-composer-input-panel {
+    width: 100%;
+    min-height: 46px;
+    max-height: 110px;
+    resize: none;
+    border: 0;
+    background: transparent;
+    padding: 13px 0;
+    color: #ffffff;
+    line-height: 1.35;
+    box-shadow: none;
+}
+
+.msg-composer-input-panel::placeholder {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.msg-composer-input-panel:focus {
+    border: 0;
+    outline: none;
+    box-shadow: none;
+}
+
+.msg-composer-send-panel {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #42b5ff, #5a8cff);
+    box-shadow: none;
+}
+
+/* keep panel height feeling like chat app */
+.msg-panel {
+    overflow: hidden;
+}
+
+.msg-panel .msg-thread-pane-panel {
+    height: 100%;
+}
+
+/* =========================================
+   PANEL THREAD: KEEP CURRENT THEME
+   cleaner layout + shorter input
+   transparent send button
+========================================= */
+
+.msg-thread-user,
+.msg-thread-meta,
+.msg-composer-bar,
+.msg-workspace-actions {
+    display: flex;
+}
+
+.msg-thread-user {
+    align-items: center;
+    min-width: 0;
+}
+
+.msg-thread-meta {
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+/* panel container keeps your existing app theme */
+.msg-thread-pane-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-page) !important;
+    color: var(--text-primary) !important;
+}
+
+.msg-thread-head-panel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-page) 95%, var(--bg-card) 5%) !important;
+    color: var(--text-primary) !important;
+}
+
+.msg-thread-back {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: none;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.msg-thread-back:hover {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    transform: none;
+}
+
+.msg-thread-user-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.msg-thread-pane-panel .msg-thread-user-meta {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--text-secondary) !important;
+}
+
+/* message area */
+.msg-thread-scroll-panel {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 14px 12px 10px;
+    background: var(--bg-page) !important;
+    scrollbar-width: thin;
+}
+
+.msg-thread-pane-panel .msg-thread-day {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0 8px;
+}
+
+.msg-thread-pane-panel .msg-thread-day span {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.msg-thread-pane-panel .msg-thread-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 84%;
+    margin-bottom: 12px;
+}
+
+.msg-thread-pane-panel .msg-thread-row.mine {
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.msg-thread-pane-panel .msg-thread-row.theirs {
+    align-self: flex-start;
+}
+
+.msg-thread-pane-panel .msg-thread-stack {
+    min-width: 0;
+    flex: 1;
+}
+
+.msg-thread-pane-panel .msg-thread-meta {
+    margin-bottom: 5px;
+    gap: 8px;
+}
+
+.msg-thread-pane-panel .msg-thread-meta span:first-child {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.msg-thread-pane-panel .msg-thread-meta span:last-child {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.msg-thread-pane-panel .msg-thread-meta.mine {
+    justify-content: flex-end;
+}
+
+.msg-thread-pane-panel .msg-thread-bubble {
+    border-radius: 18px;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.45;
+    word-break: break-word;
+    box-shadow: none;
+}
+
+.msg-thread-pane-panel .msg-thread-bubble.theirs {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 8px;
+}
+
+.msg-thread-pane-panel .msg-thread-bubble.mine {
+    background: linear-gradient(135deg, #4a78ff, #335dff);
+    color: #ffffff;
+    border: 0;
+    border-bottom-right-radius: 8px;
+}
+
+/* composer */
+.msg-composer-bar.msg-composer-bar-panel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-page) 95%, var(--bg-card) 5%) !important;
+}
+
+.msg-composer-shell {
+    flex: 1;
+    min-width: 0;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border-radius: 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+}
+
+.msg-composer-input.msg-composer-input-panel {
+    width: 100%;
+    min-height: 38px;
+    max-height: 88px;
+    resize: none;
+    border: 0 !important;
+    background: transparent !important;
+    padding: 8px 0;
+    color: var(--text-primary);
+    line-height: 1.3;
+    font-size: 14px;
+    box-shadow: none !important;
+}
+
+.msg-composer-input.msg-composer-input-panel::placeholder {
+    color: var(--text-secondary);
+}
+
+.msg-composer-input.msg-composer-input-panel:focus {
+    outline: none;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+/* remove send button bg + border */
+.msg-composer-send.msg-composer-send-panel {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent !important;
+    color: #4a78ff;
+    box-shadow: none !important;
+    padding: 0;
+}
+
+.msg-composer-send.msg-composer-send-panel:hover:not(:disabled) {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    transform: none;
+    opacity: 0.85;
+}
+
+.msg-composer-send.msg-composer-send-panel:disabled {
+    background: transparent !important;
+    box-shadow: none !important;
+    opacity: 0.45;
+}
+
+@media (max-width: 767.98px) {
+    .msg-thread-pane-panel .msg-thread-row {
+        max-width: 90%;
+    }
+
+    .msg-thread-head-panel {
+        padding: 12px;
+    }
+
+    .msg-composer-bar.msg-composer-bar-panel {
+        padding: 8px 10px 10px;
+    }
+
+    .msg-composer-shell {
+        min-height: 36px;
+    }
+
+    .msg-composer-input.msg-composer-input-panel {
+        min-height: 36px;
+        padding: 7px 0;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .msg-thread-pane-panel .msg-thread-row {
+        max-width: 90%;
+    }
+
+    .msg-thread-head-panel {
+        padding: 12px;
+    }
+
+    .msg-composer-bar-panel {
+        padding: 10px 10px 12px;
+    }
+}
 @keyframes msgSpin {
     to {
         transform: rotate(360deg);
