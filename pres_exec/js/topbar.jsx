@@ -713,6 +713,7 @@ function MessagingModal({
     const [loadingMsgs, setLoadingMsgs] = React.useState(false);
     const [msgText, setMsgText] = React.useState("");
     const [sending, setSending] = React.useState(false);
+    const [showJumpToLatest, setShowJumpToLatest] = React.useState(false);
     const [pinnedConversationIds, setPinnedConversationIds] = React.useState(() => readPinnedConversationIds());
     const [panelSelectedUserId, setPanelSelectedUserId] = React.useState(null);
 
@@ -726,6 +727,7 @@ function MessagingModal({
     const lastConversationSignatureRef = React.useRef("");
     const lastUserSignatureRef = React.useRef("");
     const lastFocusedThreadKeyRef = React.useRef("");
+    const forceScrollToLatestRef = React.useRef(false);
     const hasLoadedInboxRef = React.useRef(false);
 
     const roleDragRef = React.useRef({
@@ -924,6 +926,41 @@ function MessagingModal({
         };
     }, [openMode, onUnreadCountChange]);
 
+    function isNearThreadBottom(el, threshold = 120) {
+        if (!el) return true;
+        return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+    }
+
+    function scrollThreadToLatest(behavior = "auto") {
+        window.requestAnimationFrame(() => {
+            const el = threadScrollRef.current;
+            if (!el) return;
+
+            el.scrollTo({
+                top: el.scrollHeight,
+                behavior
+            });
+
+            setShowJumpToLatest(false);
+        });
+    }
+
+    React.useEffect(() => {
+        const el = threadScrollRef.current;
+        if (!el || !activeUser?.user_id) return undefined;
+
+        function handleThreadScroll() {
+            setShowJumpToLatest(!isNearThreadBottom(el, 120));
+        }
+
+        handleThreadScroll();
+        el.addEventListener("scroll", handleThreadScroll, { passive: true });
+
+        return () => {
+            el.removeEventListener("scroll", handleThreadScroll);
+        };
+    }, [activeUser?.user_id, openMode, messages.length]);
+
     React.useEffect(() => {
         if (!openMode) return undefined;
         if (!activeUser?.user_id) return undefined;
@@ -948,19 +985,18 @@ function MessagingModal({
 
                 if (nextSignature !== lastMessageSignatureRef.current) {
                     const scroller = threadScrollRef.current;
-                    const isNearBottom = scroller
-                        ? scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 96
-                        : true;
+                    const nearBottom = isNearThreadBottom(scroller, 120);
 
                     lastMessageSignatureRef.current = nextSignature;
                     setMessages(nextMessages);
 
-                    if (isNearBottom) {
+                    if (nearBottom || forceScrollToLatestRef.current) {
                         window.requestAnimationFrame(() => {
                             messagesEndRef.current?.scrollIntoView({
                                 behavior: "auto",
                                 block: "end"
                             });
+                            setShowJumpToLatest(false);
                         });
                     }
                 }
@@ -1005,18 +1041,23 @@ function MessagingModal({
 
         const firstItem = fullVisibleInbox[0];
         setActiveUser(normalizeThreadUser(firstItem));
+        forceScrollToLatestRef.current = true;
         loadThreadMessages(firstItem.user_id ?? firstItem.id);
     }, [activeUser, openMode, fullVisibleInbox]);
 
     React.useEffect(() => {
-        if (!messagesEndRef.current) return;
+        const el = threadScrollRef.current;
+        if (!el || !messagesEndRef.current) return;
 
-        window.requestAnimationFrame(() => {
-            messagesEndRef.current?.scrollIntoView({
-                behavior: "auto",
-                block: "end"
+        if (forceScrollToLatestRef.current || isNearThreadBottom(el, 120)) {
+            window.requestAnimationFrame(() => {
+                messagesEndRef.current?.scrollIntoView({
+                    behavior: "auto",
+                    block: "end"
+                });
+                setShowJumpToLatest(false);
             });
-        });
+        }
     }, [messages.length]);
 
     React.useEffect(() => {
@@ -1057,11 +1098,13 @@ function MessagingModal({
         setMessages([]);
         setMsgText("");
         setPanelSelectedUserId(null);
+        setShowJumpToLatest(false);
 
         lastMessageSignatureRef.current = "";
         lastConversationSignatureRef.current = "";
         lastUserSignatureRef.current = "";
         lastFocusedThreadKeyRef.current = "";
+        forceScrollToLatestRef.current = false;
         hasLoadedInboxRef.current = false;
     }, [openMode]);
 
@@ -1087,6 +1130,15 @@ function MessagingModal({
             const nextMessages = Array.isArray(data.messages) ? data.messages : [];
             lastMessageSignatureRef.current = buildMessageSignature(nextMessages);
             setMessages(nextMessages);
+
+            const shouldForceScroll = forceScrollToLatestRef.current;
+            forceScrollToLatestRef.current = false;
+
+            if (shouldForceScroll) {
+                window.requestAnimationFrame(() => {
+                    scrollThreadToLatest("auto");
+                });
+            }
 
             if (data.other_user) {
                 const nextUser = normalizeThreadUser({
@@ -1144,8 +1196,22 @@ function MessagingModal({
 
     function openThread(item, expandIfNeeded = false) {
         const normalized = normalizeThreadUser(item);
+
+        if (
+            activeUser?.user_id &&
+            sameUserId(activeUser.user_id, normalized.user_id)
+        ) {
+            if (expandIfNeeded && openMode !== "full") {
+                onExpand();
+            }
+            scrollThreadToLatest("smooth");
+            return;
+        }
+
+        forceScrollToLatestRef.current = true;
         setActiveUser(normalized);
         setMsgText("");
+        setShowJumpToLatest(false);
 
         if (expandIfNeeded && openMode !== "full") {
             onExpand();
@@ -1157,9 +1223,21 @@ function MessagingModal({
     function openPanelThread(item) {
         const normalized = normalizeThreadUser(item);
 
+        if (
+            activeUser?.user_id &&
+            sameUserId(activeUser.user_id, normalized.user_id) &&
+            panelSelectedUserId &&
+            sameUserId(panelSelectedUserId, normalized.user_id)
+        ) {
+            scrollThreadToLatest("smooth");
+            return;
+        }
+
+        forceScrollToLatestRef.current = true;
         setPanelSelectedUserId(String(normalized.user_id ?? ""));
         setActiveUser(normalized);
         setMsgText("");
+        setShowJumpToLatest(false);
         loadThreadMessages(normalized.user_id);
     }
 
@@ -1168,14 +1246,17 @@ function MessagingModal({
         setActiveUser(null);
         setMessages([]);
         setMsgText("");
+        setShowJumpToLatest(false);
         lastMessageSignatureRef.current = "";
         lastFocusedThreadKeyRef.current = "";
+        forceScrollToLatestRef.current = false;
     }
 
     function handleViewAll() {
         if (!activeUser && fullVisibleInbox.length > 0) {
             const firstItem = fullVisibleInbox[0];
             setActiveUser(normalizeThreadUser(firstItem));
+            forceScrollToLatestRef.current = true;
             loadThreadMessages(firstItem.user_id ?? firstItem.id);
         }
 
@@ -1306,6 +1387,13 @@ function MessagingModal({
 
             setMsgText("");
 
+            const scroller = threadScrollRef.current;
+            if (!showJumpToLatest || isNearThreadBottom(scroller, 180)) {
+                window.requestAnimationFrame(() => {
+                    scrollThreadToLatest("smooth");
+                });
+            }
+
             setConversations((prev) => {
                 const exists = prev.some((conversation) =>
                     sameUserId(conversation.user_id, recipientId)
@@ -1380,11 +1468,9 @@ function MessagingModal({
             <div className="msg-empty-state thread msg-empty-state-premium">
                 <div className="msg-empty-card msg-empty-card-clean">
                     <div className="msg-empty-wave">👋</div>
-
                     <div className="msg-empty-title">
                         No messages yet with {activeUser?.user_name || "this user"}
                     </div>
-
                     <div className="msg-empty-copy">
                         This conversation is ready whenever you are. Send your first message to get started.
                     </div>
@@ -1504,6 +1590,18 @@ function MessagingModal({
         );
     }
 
+    const jumpToLatestButton = showJumpToLatest ? (
+        <button
+            type="button"
+            className="msg-jump-latest"
+            onClick={() => scrollThreadToLatest("smooth")}
+            aria-label="Jump to latest message"
+            title="Jump to latest message"
+        >
+            <i className="bi bi-arrow-down"></i>
+        </button>
+    ) : null;
+
     const dropdownMarkup = openMode === "panel" ? (
         <div className="msg-panel" ref={panelRef} role="dialog" aria-label="Messages inbox">
             <div className="msg-panel-sticky">
@@ -1595,6 +1693,7 @@ function MessagingModal({
                         <div ref={messagesEndRef}></div>
                     </div>
 
+                    {jumpToLatestButton}
                     {renderComposer("panel")}
                 </section>
             ) : (
@@ -1838,6 +1937,7 @@ function MessagingModal({
                                     <div ref={messagesEndRef}></div>
                                 </div>
 
+                                {jumpToLatestButton}
                                 {renderComposer("full")}
                             </>
                         ) : (

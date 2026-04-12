@@ -291,9 +291,6 @@ function DarkModeToggle({ dark, onToggle }) {
 
 
 
-// ====================================================================
-// MESSAGING UI — constants & helpers
-// ====================================================================
 const MSG_CONVERSATIONS_API = "php/get_conversations.php";
 const MSG_SEND_API = "php/send_task_message.php";
 const MSG_PINNED_KEY = "dashboard-message-pins";
@@ -368,6 +365,7 @@ function sameUserId(a, b) {
 function normalizeRoleLabel(role = "") {
     const value = String(role || "").trim();
     if (!value) return "Staff";
+
     return value
         .split(/\s+/)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
@@ -453,13 +451,8 @@ function getMessageDayLabel(isoStr) {
 function getPresenceText(user) {
     if (!user) return "";
 
-    if (user.is_active_now) {
-        return "Active now";
-    }
-
-    if (user.last_active_label) {
-        return `Active ${user.last_active_label}`;
-    }
+    if (user.is_active_now) return "Active now";
+    if (user.last_active_label) return `Active ${user.last_active_label}`;
 
     return "Offline";
 }
@@ -483,6 +476,18 @@ function normalizeThreadUser(user = {}) {
         is_active_now: Boolean(user.is_active_now),
         last_active_at: user.last_active_at ?? null,
         last_active_label: user.last_active_label ?? ""
+    };
+}
+
+function mergeThreadUserPreservingAvatar(prevUser, nextUser) {
+    const prev = normalizeThreadUser(prevUser || {});
+    const next = normalizeThreadUser(nextUser || {});
+
+    return {
+        ...prev,
+        ...next,
+        profile_image: next.profile_image || prev.profile_image || null,
+        profile_image_url: next.profile_image_url || prev.profile_image_url || ""
     };
 }
 
@@ -529,7 +534,9 @@ function mergeInboxEntries(conversations = [], allUsers = []) {
             ...existing,
             ...normalized,
             has_conversation: true,
-            unread_count: Number(conversation.unread_count || 0)
+            unread_count: Number(conversation.unread_count || 0),
+            profile_image: normalized.profile_image || existing?.profile_image || null,
+            profile_image_url: normalized.profile_image_url || existing?.profile_image_url || ""
         });
     });
 
@@ -571,6 +578,73 @@ function matchesSearch(item, searchValue) {
         .toLowerCase();
 
     return haystack.includes(term);
+}
+
+function buildMessageSignature(items = []) {
+    return items
+        .map((message) => {
+            const attachmentCount = Array.isArray(message.attachments)
+                ? message.attachments.length
+                : 0;
+
+            return [
+                message.id ?? "",
+                message.time_sent ?? "",
+                message.is_read ? "1" : "0",
+                attachmentCount,
+                message.message ?? "",
+                message.sender_profile_image_url ?? ""
+            ].join(":");
+        })
+        .join("|");
+}
+
+function hasThreadMetaChanged(prevUser, nextUser) {
+    if (!prevUser) return true;
+    if (!nextUser) return false;
+
+    return (
+        String(prevUser.user_id ?? prevUser.id ?? "") !==
+            String(nextUser.user_id ?? nextUser.id ?? "") ||
+        (prevUser.user_name ?? prevUser.name ?? "") !==
+            (nextUser.user_name ?? nextUser.name ?? "") ||
+        (prevUser.user_role_label ?? prevUser.role_label ?? prevUser.user_role ?? prevUser.role ?? "") !==
+            (nextUser.user_role_label ?? nextUser.role_label ?? nextUser.user_role ?? nextUser.role ?? "") ||
+        (prevUser.profile_image_url ?? "") !== (nextUser.profile_image_url ?? "") ||
+        Boolean(prevUser.is_active_now) !== Boolean(nextUser.is_active_now) ||
+        (prevUser.last_active_label ?? "") !== (nextUser.last_active_label ?? "")
+    );
+}
+
+function buildConversationSignature(items = []) {
+    return items
+        .map((item) =>
+            [
+                item.user_id ?? "",
+                item.last_time ?? "",
+                item.unread_count ?? 0,
+                item.last_message ?? "",
+                item.profile_image_url ?? "",
+                item.is_active_now ? "1" : "0",
+                item.last_active_label ?? ""
+            ].join(":")
+        )
+        .join("|");
+}
+
+function buildUserSignature(items = []) {
+    return items
+        .map((item) =>
+            [
+                item.id ?? item.user_id ?? "",
+                item.name ?? item.user_name ?? "",
+                item.role ?? item.user_role ?? "",
+                item.profile_image_url ?? "",
+                item.is_active_now ? "1" : "0",
+                item.last_active_label ?? ""
+            ].join(":")
+        )
+        .join("|");
 }
 
 function MessageRow({
@@ -623,6 +697,7 @@ function MessageRow({
                         <span className="msg-presence-separator"> · </span>
                         <span>{getInboxRoleLabel(item)}</span>
                     </div>
+
                     <div className="msg-row-preview">{preview}</div>
                 </div>
 
@@ -636,70 +711,6 @@ function MessageRow({
             </button>
         </div>
     );
-}
-
-function buildMessageSignature(items = []) {
-    return items
-        .map((message) => {
-            const attachmentCount = Array.isArray(message.attachments)
-                ? message.attachments.length
-                : 0;
-
-            return [
-                message.id ?? "",
-                message.time_sent ?? "",
-                message.is_read ? "1" : "0",
-                attachmentCount,
-                message.message ?? ""
-            ].join(":");
-        })
-        .join("|");
-}
-
-function hasThreadMetaChanged(prevUser, nextUser) {
-    if (!prevUser) return true;
-    if (!nextUser) return false;
-
-    return (
-        String(prevUser.user_id ?? prevUser.id ?? "") !==
-            String(nextUser.user_id ?? nextUser.id ?? "") ||
-        (prevUser.user_name ?? prevUser.name ?? "") !==
-            (nextUser.user_name ?? nextUser.name ?? "") ||
-        (prevUser.user_role_label ?? prevUser.role_label ?? prevUser.user_role ?? prevUser.role ?? "") !==
-            (nextUser.user_role_label ?? nextUser.role_label ?? nextUser.user_role ?? nextUser.role ?? "") ||
-        (prevUser.profile_image_url ?? "") !== (nextUser.profile_image_url ?? "") ||
-        Boolean(prevUser.is_active_now) !== Boolean(nextUser.is_active_now) ||
-        (prevUser.last_active_label ?? "") !== (nextUser.last_active_label ?? "")
-    );
-}
-
-function buildConversationSignature(items = []) {
-    return items
-        .map((item) =>
-            [
-                item.user_id ?? "",
-                item.last_time ?? "",
-                item.unread_count ?? 0,
-                item.last_message ?? "",
-                item.is_active_now ? "1" : "0",
-                item.last_active_label ?? ""
-            ].join(":")
-        )
-        .join("|");
-}
-
-function buildUserSignature(items = []) {
-    return items
-        .map((item) =>
-            [
-                item.id ?? item.user_id ?? "",
-                item.name ?? item.user_name ?? "",
-                item.role ?? item.user_role ?? "",
-                item.is_active_now ? "1" : "0",
-                item.last_active_label ?? ""
-            ].join(":")
-        )
-        .join("|");
 }
 
 function MessagingModal({
@@ -724,6 +735,7 @@ function MessagingModal({
     const [msgText, setMsgText] = React.useState("");
     const [sending, setSending] = React.useState(false);
     const [attachedFiles, setAttachedFiles] = React.useState([]);
+    const [showJumpToLatest, setShowJumpToLatest] = React.useState(false);
     const [pinnedConversationIds, setPinnedConversationIds] = React.useState(() => readPinnedConversationIds());
     const [panelSelectedUserId, setPanelSelectedUserId] = React.useState(null);
 
@@ -736,10 +748,10 @@ function MessagingModal({
     const threadScrollRef = React.useRef(null);
     const lastMessageSignatureRef = React.useRef("");
     const lastFocusedThreadKeyRef = React.useRef("");
-
     const lastConversationSignatureRef = React.useRef("");
     const lastUserSignatureRef = React.useRef("");
     const hasLoadedInboxRef = React.useRef(false);
+    const forceScrollToLatestRef = React.useRef(false);
 
     const roleDragRef = React.useRef({
         isDown: false,
@@ -749,86 +761,6 @@ function MessagingModal({
         suppressClick: false,
         activeEl: null
     });
-
-React.useEffect(() => {
-    if (!openMode) return undefined;
-    if (!activeUser?.user_id) return undefined;
-
-    let alive = true;
-
-    async function refreshThreadSilently() {
-        try {
-            const response = await fetch(
-                `php/get_user_messages.php?other_user_id=${encodeURIComponent(activeUser.user_id)}`,
-                {
-                    credentials: "same-origin",
-                    headers: { Accept: "application/json" }
-                }
-            );
-
-            const data = await parseJsonResponse(response);
-            if (!response.ok || !alive) return;
-
-            const nextMessages = Array.isArray(data.messages) ? data.messages : [];
-            const nextSignature = buildMessageSignature(nextMessages);
-
-            if (nextSignature !== lastMessageSignatureRef.current) {
-                const scroller = threadScrollRef.current;
-                const isNearBottom = scroller
-                    ? scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 96
-                    : true;
-
-                lastMessageSignatureRef.current = nextSignature;
-                setMessages(nextMessages);
-
-                if (isNearBottom) {
-                    window.requestAnimationFrame(() => {
-                        messagesEndRef.current?.scrollIntoView({
-                            behavior: "auto",
-                            block: "end"
-                        });
-                    });
-                }
-            }
-
-            if (data.other_user) {
-                const nextUser = normalizeThreadUser({
-                    user_id: data.other_user.id,
-                    user_name: data.other_user.name,
-                    user_role: data.other_user.role,
-                    user_role_label: data.other_user.role_label,
-                    user_initials: data.other_user.initials,
-                    profile_image: data.other_user.profile_image,
-                    profile_image_url: data.other_user.profile_image_url,
-                    is_active_now: data.other_user.is_active_now,
-                    last_active_at: data.other_user.last_active_at,
-                    last_active_label: data.other_user.last_active_label,
-                    has_conversation: true
-                });
-
-                setActiveUser((prev) => {
-                    if (!hasThreadMetaChanged(prev, nextUser)) {
-                        return prev;
-                    }
-
-                    return {
-                        ...normalizeThreadUser(prev || {}),
-                        ...nextUser
-                    };
-                });
-            }
-        } catch (error) {
-            console.error("[MSG] live thread refresh error:", error);
-        }
-    }
-
-    const intervalId = window.setInterval(refreshThreadSilently, 3000);
-
-    return () => {
-        alive = false;
-        window.clearInterval(intervalId);
-    };
-}, [openMode, activeUser?.user_id]);
 
     React.useEffect(() => {
         try {
@@ -947,75 +879,183 @@ React.useEffect(() => {
         return () => document.removeEventListener("mousedown", handlePointerDown);
     }, [onClose, openMode, triggerRef]);
 
-React.useEffect(() => {
-    if (!openMode) return undefined;
+    React.useEffect(() => {
+        if (!openMode) return undefined;
 
-    let active = true;
+        let active = true;
 
-    async function loadInboxData() {
-        const showLoading = !hasLoadedInboxRef.current;
-        if (showLoading) {
-            setLoadingList(true);
+        async function loadInboxData() {
+            const showLoading = !hasLoadedInboxRef.current;
+            if (showLoading) {
+                setLoadingList(true);
+            }
+
+            try {
+                const response = await fetch(MSG_CONVERSATIONS_API, {
+                    credentials: "same-origin",
+                    headers: { Accept: "application/json" }
+                });
+
+                const data = await parseJsonResponse(response);
+                if (!response.ok) {
+                    throw new Error(data?.error || "Failed to load messages.");
+                }
+
+                if (!active) return;
+
+                const nextConversations = Array.isArray(data.conversations) ? data.conversations : [];
+                const nextUsers = Array.isArray(data.all_users) ? data.all_users : [];
+                const unread = Number(data.total_unread || 0);
+
+                const nextConversationSignature = buildConversationSignature(nextConversations);
+                const nextUserSignature = buildUserSignature(nextUsers);
+
+                if (nextConversationSignature !== lastConversationSignatureRef.current) {
+                    lastConversationSignatureRef.current = nextConversationSignature;
+                    setConversations(nextConversations);
+                }
+
+                if (nextUserSignature !== lastUserSignatureRef.current) {
+                    lastUserSignatureRef.current = nextUserSignature;
+                    setAllUsers(nextUsers);
+                }
+
+                setTotalUnread((prev) => (prev === unread ? prev : unread));
+                onUnreadCountChange?.(unread);
+                hasLoadedInboxRef.current = true;
+            } catch (error) {
+                console.error("[MSG] conversations fetch error:", error);
+                if (!active) return;
+
+                if (!hasLoadedInboxRef.current) {
+                    setConversations([]);
+                    setAllUsers([]);
+                    setTotalUnread(0);
+                    onUnreadCountChange?.(0);
+                }
+            } finally {
+                if (active && showLoading) {
+                    setLoadingList(false);
+                }
+            }
         }
 
-        try {
-            const response = await fetch(MSG_CONVERSATIONS_API, {
-                credentials: "same-origin",
-                headers: { Accept: "application/json" }
-            });
+        loadInboxData();
+        const intervalId = window.setInterval(loadInboxData, 8000);
 
-            const data = await parseJsonResponse(response);
-            if (!response.ok) {
-                throw new Error(data?.error || "Failed to load messages.");
-            }
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+        };
+    }, [openMode, onUnreadCountChange]);
 
-            if (!active) return;
-
-            const nextConversations = Array.isArray(data.conversations) ? data.conversations : [];
-            const nextUsers = Array.isArray(data.all_users) ? data.all_users : [];
-            const unread = Number(data.total_unread || 0);
-
-            const nextConversationSignature = buildConversationSignature(nextConversations);
-            const nextUserSignature = buildUserSignature(nextUsers);
-
-            if (nextConversationSignature !== lastConversationSignatureRef.current) {
-                lastConversationSignatureRef.current = nextConversationSignature;
-                setConversations(nextConversations);
-            }
-
-            if (nextUserSignature !== lastUserSignatureRef.current) {
-                lastUserSignatureRef.current = nextUserSignature;
-                setAllUsers(nextUsers);
-            }
-
-            setTotalUnread((prev) => (prev === unread ? prev : unread));
-            onUnreadCountChange?.(unread);
-            hasLoadedInboxRef.current = true;
-        } catch (error) {
-            console.error("[MSG] conversations fetch error:", error);
-            if (!active) return;
-
-            if (!hasLoadedInboxRef.current) {
-                setConversations([]);
-                setAllUsers([]);
-                setTotalUnread(0);
-                onUnreadCountChange?.(0);
-            }
-        } finally {
-            if (active && showLoading) {
-                setLoadingList(false);
-            }
-        }
+    function isNearThreadBottom(el, threshold = 120) {
+        if (!el) return true;
+        return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
     }
 
-    loadInboxData();
-    const intervalId = window.setInterval(loadInboxData, 8000);
+    function scrollThreadToLatest(behavior = "auto") {
+        window.requestAnimationFrame(() => {
+            const el = threadScrollRef.current;
+            if (!el) return;
 
-    return () => {
-        active = false;
-        window.clearInterval(intervalId);
-    };
-}, [openMode, onUnreadCountChange]);
+            el.scrollTo({
+                top: el.scrollHeight,
+                behavior
+            });
+
+            setShowJumpToLatest(false);
+        });
+    }
+
+    React.useEffect(() => {
+        const el = threadScrollRef.current;
+        if (!el || !activeUser?.user_id) return undefined;
+
+        function handleThreadScroll() {
+            setShowJumpToLatest(!isNearThreadBottom(el, 120));
+        }
+
+        handleThreadScroll();
+        el.addEventListener("scroll", handleThreadScroll, { passive: true });
+
+        return () => {
+            el.removeEventListener("scroll", handleThreadScroll);
+        };
+    }, [activeUser?.user_id, openMode, messages.length]);
+
+    React.useEffect(() => {
+        if (!openMode) return undefined;
+        if (!activeUser?.user_id) return undefined;
+
+        let alive = true;
+
+        async function refreshThreadSilently() {
+            try {
+                const response = await fetch(
+                    `php/get_user_messages.php?other_user_id=${encodeURIComponent(activeUser.user_id)}`,
+                    {
+                        credentials: "same-origin",
+                        headers: { Accept: "application/json" }
+                    }
+                );
+
+                const data = await parseJsonResponse(response);
+                if (!response.ok || !alive) return;
+
+                const nextMessages = Array.isArray(data.messages) ? data.messages : [];
+                const nextSignature = buildMessageSignature(nextMessages);
+
+                if (nextSignature !== lastMessageSignatureRef.current) {
+                    const scroller = threadScrollRef.current;
+                    const nearBottom = isNearThreadBottom(scroller, 120);
+
+                    lastMessageSignatureRef.current = nextSignature;
+                    setMessages(nextMessages);
+
+                    if (nearBottom || forceScrollToLatestRef.current) {
+                        window.requestAnimationFrame(() => {
+                            messagesEndRef.current?.scrollIntoView({
+                                behavior: "auto",
+                                block: "end"
+                            });
+                            setShowJumpToLatest(false);
+                        });
+                    }
+                }
+
+                if (data.other_user) {
+                    const nextUser = normalizeThreadUser({
+                        user_id: data.other_user.id,
+                        user_name: data.other_user.name,
+                        user_role: data.other_user.role,
+                        user_role_label: data.other_user.role_label,
+                        user_initials: data.other_user.initials,
+                        profile_image: data.other_user.profile_image,
+                        profile_image_url: data.other_user.profile_image_url,
+                        is_active_now: data.other_user.is_active_now,
+                        last_active_at: data.other_user.last_active_at,
+                        last_active_label: data.other_user.last_active_label,
+                        has_conversation: true
+                    });
+
+                    setActiveUser((prev) => {
+                        const merged = mergeThreadUserPreservingAvatar(prev, nextUser);
+                        return hasThreadMetaChanged(prev, merged) ? merged : prev;
+                    });
+                }
+            } catch (error) {
+                console.error("[MSG] live thread refresh error:", error);
+            }
+        }
+
+        const intervalId = window.setInterval(refreshThreadSilently, 3000);
+
+        return () => {
+            alive = false;
+            window.clearInterval(intervalId);
+        };
+    }, [openMode, activeUser?.user_id]);
 
     React.useEffect(() => {
         if (openMode !== "full") return;
@@ -1024,18 +1064,23 @@ React.useEffect(() => {
 
         const firstItem = fullVisibleInbox[0];
         setActiveUser(normalizeThreadUser(firstItem));
+        forceScrollToLatestRef.current = true;
         loadThreadMessages(firstItem.user_id ?? firstItem.id);
     }, [activeUser, openMode, fullVisibleInbox]);
 
     React.useEffect(() => {
-        if (!messagesEndRef.current) return;
+        const el = threadScrollRef.current;
+        if (!el || !messagesEndRef.current) return;
 
-        window.requestAnimationFrame(() => {
-            messagesEndRef.current?.scrollIntoView({
-                behavior: "auto",
-                block: "end"
+        if (forceScrollToLatestRef.current || isNearThreadBottom(el, 120)) {
+            window.requestAnimationFrame(() => {
+                messagesEndRef.current?.scrollIntoView({
+                    behavior: "auto",
+                    block: "end"
+                });
+                setShowJumpToLatest(false);
             });
-        });
+        }
     }, [messages.length]);
 
     React.useEffect(() => {
@@ -1077,11 +1122,13 @@ React.useEffect(() => {
         setMsgText("");
         setAttachedFiles([]);
         setPanelSelectedUserId(null);
+        setShowJumpToLatest(false);
 
         lastMessageSignatureRef.current = "";
         lastFocusedThreadKeyRef.current = "";
         lastConversationSignatureRef.current = "";
         lastUserSignatureRef.current = "";
+        forceScrollToLatestRef.current = false;
         hasLoadedInboxRef.current = false;
     }, [openMode]);
 
@@ -1089,6 +1136,7 @@ React.useEffect(() => {
         if (!otherUserId) return;
 
         setLoadingMsgs(true);
+
         try {
             const response = await fetch(
                 `php/get_user_messages.php?other_user_id=${encodeURIComponent(otherUserId)}`,
@@ -1107,6 +1155,15 @@ React.useEffect(() => {
             lastMessageSignatureRef.current = buildMessageSignature(nextMessages);
             setMessages(nextMessages);
 
+            const shouldForceScroll = forceScrollToLatestRef.current;
+            forceScrollToLatestRef.current = false;
+
+            if (shouldForceScroll) {
+                window.requestAnimationFrame(() => {
+                    scrollThreadToLatest("auto");
+                });
+            }
+
             if (data.other_user) {
                 const nextUser = normalizeThreadUser({
                     user_id: data.other_user.id,
@@ -1122,10 +1179,7 @@ React.useEffect(() => {
                     has_conversation: true
                 });
 
-                setActiveUser((prev) => ({
-                    ...normalizeThreadUser(prev || {}),
-                    ...nextUser
-                }));
+                setActiveUser((prev) => mergeThreadUserPreservingAvatar(prev, nextUser));
             }
 
             setConversations((prev) =>
@@ -1136,11 +1190,9 @@ React.useEffect(() => {
                 )
             );
 
-            const unreadInThread = Array.isArray(data.messages)
-                ? data.messages.filter(
-                      (message) => sameUserId(message.sender_id, otherUserId) && !message.is_read
-                  ).length
-                : 0;
+            const unreadInThread = nextMessages.filter(
+                (message) => sameUserId(message.sender_id, otherUserId) && !message.is_read
+            ).length;
 
             setTotalUnread((prev) => {
                 const next = Math.max(0, prev - unreadInThread);
@@ -1168,9 +1220,23 @@ React.useEffect(() => {
 
     function openThread(item, expandIfNeeded = false) {
         const normalized = normalizeThreadUser(item);
+
+        if (
+            activeUser?.user_id &&
+            sameUserId(activeUser.user_id, normalized.user_id)
+        ) {
+            if (expandIfNeeded && openMode !== "full") {
+                onExpand();
+            }
+            scrollThreadToLatest("smooth");
+            return;
+        }
+
+        forceScrollToLatestRef.current = true;
         setActiveUser(normalized);
         setMsgText("");
         setAttachedFiles([]);
+        setShowJumpToLatest(false);
 
         if (expandIfNeeded && openMode !== "full") {
             onExpand();
@@ -1182,10 +1248,22 @@ React.useEffect(() => {
     function openPanelThread(item) {
         const normalized = normalizeThreadUser(item);
 
+        if (
+            activeUser?.user_id &&
+            sameUserId(activeUser.user_id, normalized.user_id) &&
+            panelSelectedUserId &&
+            sameUserId(panelSelectedUserId, normalized.user_id)
+        ) {
+            scrollThreadToLatest("smooth");
+            return;
+        }
+
+        forceScrollToLatestRef.current = true;
         setPanelSelectedUserId(String(normalized.user_id ?? ""));
         setActiveUser(normalized);
         setMsgText("");
         setAttachedFiles([]);
+        setShowJumpToLatest(false);
         loadThreadMessages(normalized.user_id);
     }
 
@@ -1195,107 +1273,110 @@ React.useEffect(() => {
         setMessages([]);
         setMsgText("");
         setAttachedFiles([]);
+        setShowJumpToLatest(false);
         lastMessageSignatureRef.current = "";
         lastFocusedThreadKeyRef.current = "";
+        forceScrollToLatestRef.current = false;
     }
 
     function handleViewAll() {
         if (!activeUser && fullVisibleInbox.length > 0) {
             const firstItem = fullVisibleInbox[0];
             setActiveUser(normalizeThreadUser(firstItem));
+            forceScrollToLatestRef.current = true;
             loadThreadMessages(firstItem.user_id ?? firstItem.id);
         }
 
         onExpand();
     }
 
-function handleRoleWheel(event) {
-    const el = event.currentTarget;
-    if (!el) return;
+    function handleRoleWheel(event) {
+        const el = event.currentTarget;
+        if (!el) return;
 
-    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-        el.scrollLeft += event.deltaY;
+        if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+            el.scrollLeft += event.deltaY;
+            event.preventDefault();
+        }
+    }
+
+    function handleRoleDragMove(event) {
+        const drag = roleDragRef.current;
+        const el = drag.activeEl;
+
+        if (!drag.isDown || !el) return;
+
+        const deltaX = event.clientX - drag.startX;
+
+        if (Math.abs(deltaX) > 4) {
+            drag.hasMoved = true;
+        }
+
+        el.scrollLeft = drag.scrollLeft - deltaX;
+
+        if (drag.hasMoved) {
+            event.preventDefault();
+        }
+    }
+
+    function stopRoleDrag() {
+        const drag = roleDragRef.current;
+        const el = drag.activeEl;
+
+        if (!drag.isDown) return;
+
+        drag.isDown = false;
+
+        if (el) {
+            el.classList.remove("is-dragging");
+        }
+
+        window.removeEventListener("mousemove", handleRoleDragMove);
+        window.removeEventListener("mouseup", stopRoleDrag);
+
+        if (drag.hasMoved) {
+            drag.suppressClick = true;
+
+            window.setTimeout(() => {
+                roleDragRef.current.suppressClick = false;
+            }, 0);
+        }
+
+        drag.activeEl = null;
+    }
+
+    function startRoleDragForElement(el, event) {
+        if (event.button !== 0 || !el) return;
+
         event.preventDefault();
-    }
-}
 
-function handleRoleDragMove(event) {
-    const drag = roleDragRef.current;
-    const el = drag.activeEl;
+        const drag = roleDragRef.current;
+        drag.isDown = true;
+        drag.startX = event.clientX;
+        drag.scrollLeft = el.scrollLeft;
+        drag.hasMoved = false;
+        drag.activeEl = el;
 
-    if (!drag.isDown || !el) return;
+        el.classList.add("is-dragging");
 
-    const deltaX = event.clientX - drag.startX;
-
-    if (Math.abs(deltaX) > 4) {
-        drag.hasMoved = true;
-    }
-
-    el.scrollLeft = drag.scrollLeft - deltaX;
-
-    if (drag.hasMoved) {
-        event.preventDefault();
-    }
-}
-
-function stopRoleDrag() {
-    const drag = roleDragRef.current;
-    const el = drag.activeEl;
-
-    if (!drag.isDown) return;
-
-    drag.isDown = false;
-
-    if (el) {
-        el.classList.remove("is-dragging");
+        window.addEventListener("mousemove", handleRoleDragMove);
+        window.addEventListener("mouseup", stopRoleDrag);
     }
 
-    window.removeEventListener("mousemove", handleRoleDragMove);
-    window.removeEventListener("mouseup", stopRoleDrag);
-
-    if (drag.hasMoved) {
-        drag.suppressClick = true;
-
-        window.setTimeout(() => {
-            roleDragRef.current.suppressClick = false;
-        }, 0);
+    function startRoleDrag(event) {
+        startRoleDragForElement(panelRoleScrollerRef.current, event);
     }
 
-    drag.activeEl = null;
-}
-
-function startRoleDragForElement(el, event) {
-    if (event.button !== 0 || !el) return;
-
-    event.preventDefault();
-
-    const drag = roleDragRef.current;
-    drag.isDown = true;
-    drag.startX = event.clientX;
-    drag.scrollLeft = el.scrollLeft;
-    drag.hasMoved = false;
-    drag.activeEl = el;
-
-    el.classList.add("is-dragging");
-
-    window.addEventListener("mousemove", handleRoleDragMove);
-    window.addEventListener("mouseup", stopRoleDrag);
-}
-
-function startRoleDrag(event) {
-    startRoleDragForElement(panelRoleScrollerRef.current, event);
-}
-
-function startFullRoleDrag(event) {
-    startRoleDragForElement(fullRoleScrollerRef.current, event);
-}
-
-function handleRoleScrollerClickCapture(event) {
-    if (roleDragRef.current.suppressClick) {
-        event.preventDefault();
-        event.stopPropagation();
+    function startFullRoleDrag(event) {
+        startRoleDragForElement(fullRoleScrollerRef.current, event);
     }
-}
+
+    function handleRoleScrollerClickCapture(event) {
+        if (roleDragRef.current.suppressClick) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }
 
     function triggerAttachPicker() {
         fileInputRef.current?.click();
@@ -1377,8 +1458,16 @@ function handleRoleScrollerClickCapture(event) {
                 lastMessageSignatureRef.current = buildMessageSignature(next);
                 return next;
             });
+
             setMsgText("");
             setAttachedFiles([]);
+
+            const scroller = threadScrollRef.current;
+            if (!showJumpToLatest || isNearThreadBottom(scroller, 180)) {
+                window.requestAnimationFrame(() => {
+                    scrollThreadToLatest("smooth");
+                });
+            }
 
             setConversations((prev) => {
                 const exists = prev.some((conversation) =>
@@ -1398,7 +1487,10 @@ function handleRoleScrollerClickCapture(event) {
                     last_message: trimmed || (attachedFiles.length > 0 ? "Attachment" : ""),
                     last_time: data.message.time_sent || new Date().toISOString(),
                     unread_count: 0,
-                    has_conversation: true
+                    has_conversation: true,
+                    is_active_now: Boolean(activeUser.is_active_now),
+                    last_active_at: activeUser.last_active_at ?? null,
+                    last_active_label: activeUser.last_active_label ?? ""
                 };
 
                 if (exists) {
@@ -1418,7 +1510,7 @@ function handleRoleScrollerClickCapture(event) {
         }
     }
 
-    function renderAttachmentLinks(attachments = [], bubbleClass = "theirs") {
+    function renderAttachmentLinks(attachments = []) {
         if (!Array.isArray(attachments) || attachments.length === 0) return null;
 
         return (
@@ -1470,10 +1562,7 @@ function handleRoleScrollerClickCapture(event) {
             const isMine = sameUserId(message.sender_id, currentUserId);
             const showDivider =
                 index === 0 ||
-                !isSameCalendarDay(
-                    message.time_sent,
-                    messages[index - 1]?.time_sent
-                );
+                !isSameCalendarDay(message.time_sent, messages[index - 1]?.time_sent);
 
             return (
                 <React.Fragment key={message.id}>
@@ -1487,7 +1576,7 @@ function handleRoleScrollerClickCapture(event) {
                         {!isMine && (
                             <UserAvatar
                                 name={message.sender_name}
-                                imageUrl={message.sender_profile_image_url}
+                                imageUrl={message.sender_profile_image_url || activeUser?.profile_image_url || ""}
                                 size={openMode === "panel" ? 30 : 34}
                             />
                         )}
@@ -1500,7 +1589,7 @@ function handleRoleScrollerClickCapture(event) {
 
                             <div className={`msg-thread-bubble ${isMine ? "mine" : "theirs"}`}>
                                 {message.message ? <div>{message.message}</div> : null}
-                                {renderAttachmentLinks(message.attachments, isMine ? "mine" : "theirs")}
+                                {renderAttachmentLinks(message.attachments)}
                             </div>
                         </div>
                     </div>
@@ -1614,6 +1703,18 @@ function handleRoleScrollerClickCapture(event) {
         );
     }
 
+    const jumpToLatestButton = showJumpToLatest ? (
+        <button
+            type="button"
+            className="msg-jump-latest"
+            onClick={() => scrollThreadToLatest("smooth")}
+            aria-label="Jump to latest message"
+            title="Jump to latest message"
+        >
+            <i className="bi bi-arrow-down"></i>
+        </button>
+    ) : null;
+
     const dropdownMarkup = openMode === "panel" ? (
         <div className="msg-panel" ref={panelRef} role="dialog" aria-label="Messages inbox">
             <div className="msg-panel-sticky">
@@ -1705,6 +1806,7 @@ function handleRoleScrollerClickCapture(event) {
                         <div ref={messagesEndRef}></div>
                     </div>
 
+                    {jumpToLatestButton}
                     {renderComposer("panel")}
                 </section>
             ) : (
@@ -1948,6 +2050,7 @@ function handleRoleScrollerClickCapture(event) {
                                     <div ref={messagesEndRef}></div>
                                 </div>
 
+                                {jumpToLatestButton}
                                 {renderComposer("full")}
                             </>
                         ) : (
@@ -1969,7 +2072,6 @@ function handleRoleScrollerClickCapture(event) {
         </>
     );
 }
-
 
 function ChatButton() {
     const [openMode, setOpenMode] = React.useState(null);
