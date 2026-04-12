@@ -149,13 +149,12 @@ function getProfileImageUrl(?string $profileImage): string
         str_starts_with($profileImage, 'https://') ||
         str_starts_with($profileImage, '/') ||
         str_starts_with($profileImage, './') ||
-        str_starts_with($profileImage, '../') ||
-        str_starts_with($profileImage, 'uploads/')
+        str_starts_with($profileImage, '../')
     ) {
         return $profileImage;
     }
 
-    return 'uploads/profile_images/' . $profileImage;
+    return '../uploads/profiles/' . ltrim($profileImage, "/\\");
 }
 
 function getAllowedRolesForUser(string $currentRole): array
