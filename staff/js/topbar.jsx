@@ -636,13 +636,25 @@ function MessagingModal({
     const [loadingMsgs, setLoadingMsgs] = React.useState(false);
     const [msgText, setMsgText] = React.useState("");
     const [sending, setSending] = React.useState(false);
+    const [attachedFiles, setAttachedFiles] = React.useState([]);
     const [pinnedConversationIds, setPinnedConversationIds] = React.useState(() => readPinnedConversationIds());
     const [panelSelectedUserId, setPanelSelectedUserId] = React.useState(null);
 
     const panelRef = React.useRef(null);
-    const shellRef = React.useRef(null);
     const messagesEndRef = React.useRef(null);
     const inputRef = React.useRef(null);
+    const fileInputRef = React.useRef(null);
+    const panelRoleScrollerRef = React.useRef(null);
+    const fullRoleScrollerRef = React.useRef(null);
+
+    const roleDragRef = React.useRef({
+        isDown: false,
+        startX: 0,
+        scrollLeft: 0,
+        hasMoved: false,
+        suppressClick: false,
+        activeEl: null
+    });
 
     React.useEffect(() => {
         try {
@@ -657,75 +669,69 @@ function MessagingModal({
         [conversations, allUsers]
     );
 
-const panelBaseInbox = React.useMemo(
-    () =>
-        mergedInbox.filter((item) => {
-            const isPinned = pinnedConversationIds.includes(String(item.user_id));
-            const isUnread = Number(item.unread_count || 0) > 0;
-            const isSelectedInPanel =
-                panelSelectedUserId && sameUserId(panelSelectedUserId, item.user_id);
+    const panelBaseInbox = React.useMemo(
+        () =>
+            mergedInbox.filter((item) => {
+                const isPinned = pinnedConversationIds.includes(String(item.user_id));
+                const isUnread = Number(item.unread_count || 0) > 0;
+                const isSelectedInPanel =
+                    panelSelectedUserId && sameUserId(panelSelectedUserId, item.user_id);
 
-            return isPinned || isUnread || Boolean(isSelectedInPanel);
-        }),
-    [mergedInbox, pinnedConversationIds, panelSelectedUserId]
-);
+                return isPinned || isUnread || Boolean(isSelectedInPanel);
+            }),
+        [mergedInbox, pinnedConversationIds, panelSelectedUserId]
+    );
 
-const roleTabs = React.useMemo(() => {
-    const source = openMode === "panel" ? panelBaseInbox : mergedInbox;
+    const roleTabs = React.useMemo(() => {
+        const source = openMode === "panel" ? panelBaseInbox : mergedInbox;
 
-    return ROLE_FILTERS.map((label) => ({
-        label,
-        count:
-            label === "All"
-                ? source.length
-                : source.filter((item) => matchesRole(item, label)).length
-    }));
-}, [mergedInbox, openMode, panelBaseInbox]);
+        return ROLE_FILTERS.map((label) => ({
+            label,
+            count:
+                label === "All"
+                    ? source.length
+                    : source.filter((item) => matchesRole(item, label)).length
+        }));
+    }, [mergedInbox, openMode, panelBaseInbox]);
 
-const fullVisibleInbox = React.useMemo(
-    () =>
-        mergedInbox.filter(
-            (item) => matchesRole(item, selectedRole) && matchesSearch(item, search)
-        ),
-    [mergedInbox, search, selectedRole]
-);
+    const fullVisibleInbox = React.useMemo(
+        () =>
+            mergedInbox.filter(
+                (item) => matchesRole(item, selectedRole) && matchesSearch(item, search)
+            ),
+        [mergedInbox, search, selectedRole]
+    );
 
-const panelVisibleInbox = React.useMemo(
-    () =>
-        panelBaseInbox.filter(
-            (item) => matchesRole(item, selectedRole) && matchesSearch(item, search)
-        ),
-    [panelBaseInbox, search, selectedRole]
-);
+    const panelVisibleInbox = React.useMemo(
+        () =>
+            panelBaseInbox.filter(
+                (item) => matchesRole(item, selectedRole) && matchesSearch(item, search)
+            ),
+        [panelBaseInbox, search, selectedRole]
+    );
 
-const panelPinnedEntries = React.useMemo(
-    () => panelVisibleInbox.filter((item) => pinnedConversationIds.includes(String(item.user_id))),
-    [panelVisibleInbox, pinnedConversationIds]
-);
+    const panelPinnedEntries = React.useMemo(
+        () => panelVisibleInbox.filter((item) => pinnedConversationIds.includes(String(item.user_id))),
+        [panelVisibleInbox, pinnedConversationIds]
+    );
 
-const panelRegularEntries = React.useMemo(
-    () => panelVisibleInbox.filter((item) => !pinnedConversationIds.includes(String(item.user_id))),
-    [panelVisibleInbox, pinnedConversationIds]
-);
+    const panelRegularEntries = React.useMemo(
+        () => panelVisibleInbox.filter((item) => !pinnedConversationIds.includes(String(item.user_id))),
+        [panelVisibleInbox, pinnedConversationIds]
+    );
 
-const fullPinnedEntries = React.useMemo(
-    () => fullVisibleInbox.filter((item) => pinnedConversationIds.includes(String(item.user_id))),
-    [fullVisibleInbox, pinnedConversationIds]
-);
+    const fullPinnedEntries = React.useMemo(
+        () => fullVisibleInbox.filter((item) => pinnedConversationIds.includes(String(item.user_id))),
+        [fullVisibleInbox, pinnedConversationIds]
+    );
 
-const fullRegularEntries = React.useMemo(
-    () => fullVisibleInbox.filter((item) => !pinnedConversationIds.includes(String(item.user_id))),
-    [fullVisibleInbox, pinnedConversationIds]
-);
+    const fullRegularEntries = React.useMemo(
+        () => fullVisibleInbox.filter((item) => !pinnedConversationIds.includes(String(item.user_id))),
+        [fullVisibleInbox, pinnedConversationIds]
+    );
 
-    const panelRoleScrollerRef = React.useRef(null);
-    const roleDragRef = React.useRef({
-        isDown: false,
-        startX: 0,
-        scrollLeft: 0,
-        hasMoved: false,
-        suppressClick: false
-    });
+    const isPanelThreadOpen =
+        openMode === "panel" && Boolean(panelSelectedUserId) && Boolean(activeUser);
 
     React.useEffect(() => {
         if (!openMode) return undefined;
@@ -742,7 +748,6 @@ const fullRegularEntries = React.useMemo(
 
     React.useEffect(() => {
         if (openMode === "panel") return;
-
         setPanelSelectedUserId(null);
     }, [openMode]);
 
@@ -832,7 +837,7 @@ const fullRegularEntries = React.useMemo(
     }, [messages]);
 
     React.useEffect(() => {
-        if (openMode !== "full" || !activeUser) return undefined;
+        if (!activeUser) return undefined;
         const timeoutId = window.setTimeout(() => inputRef.current?.focus(), 120);
         return () => window.clearTimeout(timeoutId);
     }, [activeUser, openMode]);
@@ -841,12 +846,12 @@ const fullRegularEntries = React.useMemo(
         if (!inputRef.current) return;
 
         const isPanel = openMode === "panel";
-        const baseHeight = isPanel ? 38 : 46;
-        const maxHeight = isPanel ? 88 : 132;
+        const baseHeight = isPanel ? 38 : 50;
+        const maxHeight = isPanel ? 88 : 128;
 
         inputRef.current.style.height = `${baseHeight}px`;
         inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, maxHeight)}px`;
-    }, [msgText, openMode]);
+    }, [msgText, openMode, attachedFiles.length]);
 
     React.useEffect(() => {
         if (openMode) return;
@@ -854,8 +859,9 @@ const fullRegularEntries = React.useMemo(
         setActiveUser(null);
         setMessages([]);
         setMsgText("");
+        setAttachedFiles([]);
+        setPanelSelectedUserId(null);
     }, [openMode]);
-
 
     async function loadThreadMessages(otherUserId) {
         if (!otherUserId) return;
@@ -935,12 +941,31 @@ const fullRegularEntries = React.useMemo(
         const normalized = normalizeThreadUser(item);
         setActiveUser(normalized);
         setMsgText("");
+        setAttachedFiles([]);
 
         if (expandIfNeeded && openMode !== "full") {
             onExpand();
         }
 
         loadThreadMessages(normalized.user_id);
+    }
+
+    function openPanelThread(item) {
+        const normalized = normalizeThreadUser(item);
+
+        setPanelSelectedUserId(String(normalized.user_id ?? ""));
+        setActiveUser(normalized);
+        setMsgText("");
+        setAttachedFiles([]);
+        loadThreadMessages(normalized.user_id);
+    }
+
+    function closePanelThread() {
+        setPanelSelectedUserId(null);
+        setActiveUser(null);
+        setMessages([]);
+        setMsgText("");
+        setAttachedFiles([]);
     }
 
     function handleViewAll() {
@@ -953,91 +978,19 @@ const fullRegularEntries = React.useMemo(
         onExpand();
     }
 
-    async function sendMessage() {
-        const trimmed = msgText.trim();
-        if (!trimmed || !activeUser) return;
+function handleRoleWheel(event) {
+    const el = event.currentTarget;
+    if (!el) return;
 
-        setSending(true);
-        try {
-            const recipientId = activeUser.user_id || activeUser.id;
-
-            const response = await fetch(MSG_SEND_API, {
-                method: "POST",
-                credentials: "same-origin",
-                headers: {
-                    "Content-Type": "application/json",
-                    Accept: "application/json"
-                },
-                body: JSON.stringify({
-                    recipient_id: recipientId,
-                    message: trimmed
-                })
-            });
-
-            const data = await parseJsonResponse(response);
-            if (!response.ok || !data.success || !data.message) {
-                throw new Error(data?.error || "Failed to send message.");
-            }
-
-            setMessages((prev) => [...prev, data.message]);
-            setMsgText("");
-
-            setConversations((prev) => {
-                const exists = prev.some((conversation) => sameUserId(conversation.user_id, recipientId));
-                const nextItem = {
-                    user_id: recipientId,
-                    user_name: activeUser.user_name || activeUser.name,
-                    user_role: activeUser.user_role || "",
-                    user_role_label: activeUser.user_role_label || "",
-                    user_initials:
-                        activeUser.user_initials ||
-                        getInitials(activeUser.user_name || activeUser.name || "User"),
-                    profile_image: activeUser.profile_image || null,
-                    profile_image_url: activeUser.profile_image_url || "",
-                    last_message: trimmed,
-                    last_time: data.message.time_sent || new Date().toISOString(),
-                    unread_count: 0
-                };
-
-                if (exists) {
-                    return prev.map((conversation) =>
-                        sameUserId(conversation.user_id, recipientId)
-                            ? { ...conversation, ...nextItem }
-                            : conversation
-                    );
-                }
-
-                return [nextItem, ...prev];
-            });
-        } catch (error) {
-            console.error("Send failed:", error);
-        } finally {
-            setSending(false);
-        }
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+        el.scrollLeft += event.deltaY;
+        event.preventDefault();
     }
-
-const isPanelThreadOpen =
-    openMode === "panel" && Boolean(panelSelectedUserId) && Boolean(activeUser);
-
-function openPanelThread(item) {
-    const normalized = normalizeThreadUser(item);
-
-    setPanelSelectedUserId(String(normalized.user_id ?? ""));
-    setActiveUser(normalized);
-    setMsgText("");
-    loadThreadMessages(normalized.user_id);
-}
-
-function closePanelThread() {
-    setPanelSelectedUserId(null);
-    setActiveUser(null);
-    setMessages([]);
-    setMsgText("");
 }
 
 function handleRoleDragMove(event) {
     const drag = roleDragRef.current;
-    const el = panelRoleScrollerRef.current;
+    const el = drag.activeEl;
 
     if (!drag.isDown || !el) return;
 
@@ -1056,7 +1009,7 @@ function handleRoleDragMove(event) {
 
 function stopRoleDrag() {
     const drag = roleDragRef.current;
-    const el = panelRoleScrollerRef.current;
+    const el = drag.activeEl;
 
     if (!drag.isDown) return;
 
@@ -1076,33 +1029,61 @@ function stopRoleDrag() {
             roleDragRef.current.suppressClick = false;
         }, 0);
     }
+
+    drag.activeEl = null;
 }
 
-    function startRoleDrag(event) {
-        if (event.button !== 0) return;
+function startRoleDragForElement(el, event) {
+    if (event.button !== 0 || !el) return;
 
-        const el = panelRoleScrollerRef.current;
-        if (!el) return;
+    event.preventDefault();
 
+    const drag = roleDragRef.current;
+    drag.isDown = true;
+    drag.startX = event.clientX;
+    drag.scrollLeft = el.scrollLeft;
+    drag.hasMoved = false;
+    drag.activeEl = el;
+
+    el.classList.add("is-dragging");
+
+    window.addEventListener("mousemove", handleRoleDragMove);
+    window.addEventListener("mouseup", stopRoleDrag);
+}
+
+function startRoleDrag(event) {
+    startRoleDragForElement(panelRoleScrollerRef.current, event);
+}
+
+function startFullRoleDrag(event) {
+    startRoleDragForElement(fullRoleScrollerRef.current, event);
+}
+
+function handleRoleScrollerClickCapture(event) {
+    if (roleDragRef.current.suppressClick) {
         event.preventDefault();
+        event.stopPropagation();
+    }
+}
 
-        const drag = roleDragRef.current;
-        drag.isDown = true;
-        drag.startX = event.clientX;
-        drag.scrollLeft = el.scrollLeft;
-        drag.hasMoved = false;
-
-        el.classList.add("is-dragging");
-
-        window.addEventListener("mousemove", handleRoleDragMove);
-        window.addEventListener("mouseup", stopRoleDrag);
+    function triggerAttachPicker() {
+        fileInputRef.current?.click();
     }
 
-    function handleRoleScrollerClickCapture(event) {
-        if (roleDragRef.current.suppressClick) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
+    function handleComposerFilesChange(event) {
+        const picked = Array.from(event.target.files || []);
+        if (!picked.length) return;
+
+        setAttachedFiles((prev) => {
+            const merged = [...prev, ...picked];
+            return merged.slice(0, 5);
+        });
+
+        event.target.value = "";
+    }
+
+    function removeAttachedFile(indexToRemove) {
+        setAttachedFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
     }
 
     function handleComposerKeyDown(event) {
@@ -1110,6 +1091,292 @@ function stopRoleDrag() {
             event.preventDefault();
             sendMessage();
         }
+    }
+
+    async function sendMessage() {
+        const trimmed = msgText.trim();
+        if ((!trimmed && attachedFiles.length === 0) || !activeUser) return;
+
+        setSending(true);
+
+        try {
+            const recipientId = activeUser.user_id || activeUser.id;
+            let response;
+
+            if (attachedFiles.length > 0) {
+                const formData = new FormData();
+                formData.append("recipient_id", recipientId);
+                formData.append("message", trimmed);
+
+                attachedFiles.forEach((file) => {
+                    formData.append("attachments[]", file);
+                });
+
+                response = await fetch(MSG_SEND_API, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json"
+                    },
+                    body: formData
+                });
+            } else {
+                response = await fetch(MSG_SEND_API, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json"
+                    },
+                    body: JSON.stringify({
+                        recipient_id: recipientId,
+                        message: trimmed
+                    })
+                });
+            }
+
+            const data = await parseJsonResponse(response);
+
+            if (!response.ok || !data.success || !data.message) {
+                throw new Error(data?.error || "Failed to send message.");
+            }
+
+            setMessages((prev) => [...prev, data.message]);
+            setMsgText("");
+            setAttachedFiles([]);
+
+            setConversations((prev) => {
+                const exists = prev.some((conversation) =>
+                    sameUserId(conversation.user_id, recipientId)
+                );
+
+                const nextItem = {
+                    user_id: recipientId,
+                    user_name: activeUser.user_name || activeUser.name,
+                    user_role: activeUser.user_role || "",
+                    user_role_label: activeUser.user_role_label || "",
+                    user_initials:
+                        activeUser.user_initials ||
+                        getInitials(activeUser.user_name || activeUser.name || "User"),
+                    profile_image: activeUser.profile_image || null,
+                    profile_image_url: activeUser.profile_image_url || "",
+                    last_message: trimmed || (attachedFiles.length > 0 ? "Attachment" : ""),
+                    last_time: data.message.time_sent || new Date().toISOString(),
+                    unread_count: 0,
+                    has_conversation: true
+                };
+
+                if (exists) {
+                    return prev.map((conversation) =>
+                        sameUserId(conversation.user_id, recipientId)
+                            ? { ...conversation, ...nextItem }
+                            : conversation
+                    );
+                }
+
+                return [nextItem, ...prev];
+            });
+        } catch (error) {
+            console.error("Send failed:", error);
+        } finally {
+            setSending(false);
+        }
+    }
+
+    function renderAttachmentLinks(attachments = [], bubbleClass = "theirs") {
+        if (!Array.isArray(attachments) || attachments.length === 0) return null;
+
+        return (
+            <div className="msg-attachment-list">
+                {attachments.map((attachment) => (
+                    <a
+                        key={attachment.id}
+                        href={attachment.file_path}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="msg-attachment-pill"
+                    >
+                        <i className="bi bi-paperclip"></i>
+                        <span>{attachment.file_name}</span>
+                    </a>
+                ))}
+            </div>
+        );
+    }
+
+    function renderNoConversationState() {
+        return (
+            <div className="msg-empty-state thread msg-empty-state-premium">
+                <div className="msg-empty-card msg-empty-card-clean">
+                    <div className="msg-empty-wave">👋</div>
+
+                    <div className="msg-empty-title">
+                        No messages yet with {activeUser?.user_name || "this user"}
+                    </div>
+
+                    <div className="msg-empty-copy">
+                        This conversation is ready whenever you are. Send your first message to get started.
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function renderThreadMessages() {
+        if (loadingMsgs) {
+            return <div className="msg-loading-state">Loading messages…</div>;
+        }
+
+        if (messages.length === 0) {
+            return renderNoConversationState();
+        }
+
+        return messages.map((message, index) => {
+            const isMine = sameUserId(message.sender_id, currentUserId);
+            const showDivider =
+                index === 0 ||
+                !isSameCalendarDay(
+                    message.time_sent,
+                    messages[index - 1]?.time_sent
+                );
+
+            return (
+                <React.Fragment key={message.id}>
+                    {showDivider && (
+                        <div className="msg-thread-day">
+                            <span>{getMessageDayLabel(message.time_sent)}</span>
+                        </div>
+                    )}
+
+                    <div className={`msg-thread-row ${isMine ? "mine" : "theirs"}`}>
+                        {!isMine && (
+                            <UserAvatar
+                                name={message.sender_name}
+                                imageUrl={message.sender_profile_image_url}
+                                size={openMode === "panel" ? 30 : 34}
+                            />
+                        )}
+
+                        <div className="msg-thread-stack">
+                            <div className={`msg-thread-meta ${isMine ? "mine" : ""}`}>
+                                <span>{isMine ? "You" : message.sender_name}</span>
+                                <span>{formatBubbleTime(message.time_sent)}</span>
+                            </div>
+
+                            <div className={`msg-thread-bubble ${isMine ? "mine" : "theirs"}`}>
+                                {message.message ? <div>{message.message}</div> : null}
+                                {renderAttachmentLinks(message.attachments, isMine ? "mine" : "theirs")}
+                            </div>
+                        </div>
+                    </div>
+                </React.Fragment>
+            );
+        });
+    }
+
+    function renderFileTray() {
+        if (attachedFiles.length === 0) return null;
+
+        return (
+            <div className="msg-file-tray">
+                {attachedFiles.map((file, index) => (
+                    <div key={`${file.name}-${index}`} className="msg-file-chip">
+                        <i className="bi bi-paperclip"></i>
+                        <span title={file.name}>{file.name}</span>
+                        <button
+                            type="button"
+                            className="msg-file-remove"
+                            onClick={() => removeAttachedFile(index)}
+                            aria-label={`Remove ${file.name}`}
+                        >
+                            <i className="bi bi-x"></i>
+                        </button>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    function renderComposer(variant = "full") {
+        const isPanel = variant === "panel";
+
+        return (
+            <div
+                className={
+                    isPanel
+                        ? "msg-composer-bar msg-composer-bar-panel msg-composer-bar-premium"
+                        : "msg-composer-bar msg-composer-bar-premium"
+                }
+            >
+                <div className="msg-composer-main">
+                    {renderFileTray()}
+
+                    <div className="msg-composer-row">
+                        <button
+                            type="button"
+                            className="msg-attach-btn"
+                            onClick={triggerAttachPicker}
+                            aria-label="Attach files"
+                            title="Attach files"
+                        >
+                            <i className="bi bi-paperclip"></i>
+                        </button>
+
+                        {isPanel ? (
+                            <div className="msg-composer-shell">
+                                <textarea
+                                    ref={inputRef}
+                                    className="msg-composer-input msg-composer-input-panel msg-composer-input-premium"
+                                    placeholder={`Message ${activeUser?.user_name || "user"}…`}
+                                    value={msgText}
+                                    onChange={(event) => setMsgText(event.target.value)}
+                                    onKeyDown={handleComposerKeyDown}
+                                    rows={1}
+                                    disabled={sending}
+                                ></textarea>
+                            </div>
+                        ) : (
+                            <textarea
+                                ref={inputRef}
+                                className="msg-composer-input msg-composer-input-premium"
+                                placeholder={`Message ${activeUser?.user_name || "user"}…`}
+                                value={msgText}
+                                onChange={(event) => setMsgText(event.target.value)}
+                                onKeyDown={handleComposerKeyDown}
+                                rows={1}
+                                disabled={sending}
+                            ></textarea>
+                        )}
+
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            hidden
+                            onChange={handleComposerFilesChange}
+                        />
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    className={
+                        isPanel
+                            ? "msg-composer-send msg-composer-send-panel msg-composer-send-premium"
+                            : "msg-composer-send msg-composer-send-premium"
+                    }
+                    onClick={sendMessage}
+                    disabled={(!msgText.trim() && attachedFiles.length === 0) || sending}
+                    aria-label="Send message"
+                >
+                    {sending ? (
+                        <i className="bi bi-arrow-repeat spin"></i>
+                    ) : (
+                        <i className="bi bi-send-fill"></i>
+                    )}
+                </button>
+            </div>
+        );
     }
 
     const dropdownMarkup = openMode === "panel" ? (
@@ -1149,9 +1416,10 @@ function stopRoleDrag() {
 
                 <div
                     ref={panelRoleScrollerRef}
-                    className="msg-role-scroller is-draggable"
+                    className="msg-role-scroller is-draggable msg-role-scroller-premium"
                     onMouseDown={startRoleDrag}
                     onClickCapture={handleRoleScrollerClickCapture}
+                    onWheel={handleRoleWheel}
                 >
                     {roleTabs.map((option) => (
                         <button
@@ -1167,193 +1435,117 @@ function stopRoleDrag() {
                 </div>
             </div>
 
-{isPanelThreadOpen ? (
-    <section className="msg-thread-pane msg-thread-pane-panel">
-        <div className="msg-thread-head msg-thread-head-panel">
-            <button
-                type="button"
-                className="msg-thread-back"
-                onClick={closePanelThread}
-                aria-label="Back to conversations"
-            >
-                <i className="bi bi-arrow-left"></i>
-            </button>
+            {isPanelThreadOpen ? (
+                <section className="msg-thread-pane msg-thread-pane-panel">
+                    <div className="msg-thread-head msg-thread-head-panel">
+                        <button
+                            type="button"
+                            className="msg-thread-back"
+                            onClick={closePanelThread}
+                            aria-label="Back to conversations"
+                        >
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
 
-            <UserAvatar
-                name={activeUser.user_name}
-                imageUrl={activeUser.profile_image_url}
-                size={40}
-            />
+                        <UserAvatar
+                            name={activeUser.user_name}
+                            imageUrl={activeUser.profile_image_url}
+                            size={40}
+                        />
 
-            <div className="msg-thread-user-copy">
-                <div className="msg-thread-user-name">{activeUser.user_name}</div>
-                <div className="msg-thread-user-meta">{getInboxRoleLabel(activeUser)}</div>
-            </div>
-        </div>
+                        <div className="msg-thread-user-copy">
+                            <div className="msg-thread-user-name">{activeUser.user_name}</div>
+                            <div className="msg-thread-user-meta">{getInboxRoleLabel(activeUser)}</div>
+                        </div>
+                    </div>
 
-        <div className="msg-thread-scroll msg-thread-scroll-panel">
-            {loadingMsgs ? (
-                <div className="msg-loading-state">Loading messages…</div>
-            ) : messages.length === 0 ? (
-                <div className="msg-empty-state thread">
-                    <i className="bi bi-chat-heart"></i>
-                    <span>No conversation yet. Start the first message.</span>
-                </div>
+                    <div className="msg-thread-scroll msg-thread-scroll-panel">
+                        {renderThreadMessages()}
+                        <div ref={messagesEndRef}></div>
+                    </div>
+
+                    {renderComposer("panel")}
+                </section>
             ) : (
-                messages.map((message, index) => {
-                    const isMine = sameUserId(message.sender_id, currentUserId);
-                    const showDivider =
-                        index === 0 ||
-                        !isSameCalendarDay(
-                            message.time_sent,
-                            messages[index - 1]?.time_sent
-                        );
+                <div className="msg-panel-scroll">
+                    {loadingList ? (
+                        <div className="msg-loading-state compact">Loading messages…</div>
+                    ) : panelVisibleInbox.length === 0 ? (
+                        <div className="msg-empty-state compact dark">
+                            <i className="bi bi-chat-left-dots"></i>
+                            <span>No conversations available for this role yet.</span>
+                        </div>
+                    ) : (
+                        <>
+                            {panelPinnedEntries.length > 0 && (
+                                <section className="msg-block">
+                                    <div className="msg-block-head">
+                                        <div className="msg-block-title">
+                                            <i className="bi bi-pin-angle"></i>
+                                            <span>Pinned</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="msg-block-action"
+                                            onClick={() => setHidePinned((prev) => !prev)}
+                                        >
+                                            {hidePinned ? "Show" : "Hide"}
+                                        </button>
+                                    </div>
 
-                    return (
-                        <React.Fragment key={message.id}>
-                            {showDivider && (
-                                <div className="msg-thread-day">
-                                    <span>{getMessageDayLabel(message.time_sent)}</span>
-                                </div>
+                                    {!hidePinned && (
+                                        <div className="msg-block-list">
+                                            {panelPinnedEntries.map((item) => (
+                                                <MessageRow
+                                                    key={`panel-pinned-${item.user_id}`}
+                                                    item={item}
+                                                    compact={true}
+                                                    selected={panelSelectedUserId && sameUserId(panelSelectedUserId, item.user_id)}
+                                                    showPin={true}
+                                                    pinned={pinnedConversationIds.includes(String(item.user_id))}
+                                                    onOpen={openPanelThread}
+                                                    onTogglePin={togglePinned}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </section>
                             )}
 
-                            <div className={`msg-thread-row ${isMine ? "mine" : "theirs"}`}>
-                                {!isMine && (
-                                    <UserAvatar
-                                        name={message.sender_name}
-                                        imageUrl={message.sender_profile_image_url}
-                                        size={30}
-                                    />
-                                )}
-
-                                <div className="msg-thread-stack">
-                                    <div className={`msg-thread-meta ${isMine ? "mine" : ""}`}>
-                                        <span>{isMine ? "You" : message.sender_name}</span>
-                                        <span>{formatBubbleTime(message.time_sent)}</span>
-                                    </div>
-
-                                    <div className={`msg-thread-bubble ${isMine ? "mine" : "theirs"}`}>
-                                        <div>{message.message}</div>
+                            <section className="msg-block">
+                                <div className="msg-block-head muted">
+                                    <div className="msg-block-title">
+                                        <span>{selectedRole === "All" ? "Unread messages" : `${selectedRole} messages`}</span>
                                     </div>
                                 </div>
-                            </div>
-                        </React.Fragment>
-                    );
-                })
+
+                                <div className="msg-block-list">
+                                    {panelRegularEntries.map((item) => (
+                                        <MessageRow
+                                            key={`panel-${item.user_id}`}
+                                            item={item}
+                                            compact={true}
+                                            selected={panelSelectedUserId && sameUserId(panelSelectedUserId, item.user_id)}
+                                            showPin={true}
+                                            pinned={pinnedConversationIds.includes(String(item.user_id))}
+                                            onOpen={openPanelThread}
+                                            onTogglePin={togglePinned}
+                                        />
+                                    ))}
+                                </div>
+                            </section>
+                        </>
+                    )}
+                </div>
             )}
 
-            <div ref={messagesEndRef}></div>
-        </div>
-
-        <div className="msg-composer-bar msg-composer-bar-panel">
-            <div className="msg-composer-shell">
-                <textarea
-                    ref={inputRef}
-                    className="msg-composer-input msg-composer-input-panel"
-                    placeholder={`Message ${activeUser.user_name}…`}
-                    value={msgText}
-                    onChange={(event) => setMsgText(event.target.value)}
-                    onKeyDown={handleComposerKeyDown}
-                    rows={1}
-                    disabled={sending}
-                ></textarea>
-            </div>
-
-            <button
-                type="button"
-                className="msg-composer-send msg-composer-send-panel"
-                onClick={sendMessage}
-                disabled={!msgText.trim() || sending}
-                aria-label="Send message"
-            >
-                {sending ? (
-                    <i className="bi bi-arrow-repeat spin"></i>
-                ) : (
-                    <i className="bi bi-send-fill"></i>
-                )}
-            </button>
-        </div>
-    </section>
-) : (
-    <div className="msg-panel-scroll">
-        {loadingList ? (
-            <div className="msg-loading-state compact">Loading messages…</div>
-        ) : panelVisibleInbox.length === 0 ? (
-            <div className="msg-empty-state compact dark">
-                <i className="bi bi-chat-left-dots"></i>
-                <span>No conversations available for this role yet.</span>
-            </div>
-        ) : (
-            <>
-                {panelPinnedEntries.length > 0 && (
-                    <section className="msg-block">
-                        <div className="msg-block-head">
-                            <div className="msg-block-title">
-                                <i className="bi bi-pin-angle"></i>
-                                <span>Pinned</span>
-                            </div>
-                            <button
-                                type="button"
-                                className="msg-block-action"
-                                onClick={() => setHidePinned((prev) => !prev)}
-                            >
-                                {hidePinned ? "Show" : "Hide"}
-                            </button>
-                        </div>
-
-                        {!hidePinned && (
-                            <div className="msg-block-list">
-                                {panelPinnedEntries.map((item) => (
-                                    <MessageRow
-                                        key={`panel-pinned-${item.user_id}`}
-                                        item={item}
-                                        compact={true}
-                                        selected={panelSelectedUserId && sameUserId(panelSelectedUserId, item.user_id)}
-                                        showPin={true}
-                                        pinned={pinnedConversationIds.includes(String(item.user_id))}
-                                        onOpen={openPanelThread}
-                                        onTogglePin={togglePinned}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </section>
-                )}
-
-                <section className="msg-block">
-                    <div className="msg-block-head muted">
-                        <div className="msg-block-title">
-                            <span>{selectedRole === "All" ? "All messages" : `${selectedRole} messages`}</span>
-                        </div>
-                    </div>
-
-                    <div className="msg-block-list">
-                        {panelRegularEntries.map((item) => (
-                            <MessageRow
-                                key={`panel-${item.user_id}`}
-                                item={item}
-                                compact={true}
-                                selected={panelSelectedUserId && sameUserId(panelSelectedUserId, item.user_id)}
-                                showPin={true}
-                                pinned={pinnedConversationIds.includes(String(item.user_id))}
-                                onOpen={openPanelThread}
-                                onTogglePin={togglePinned}
-                            />
-                        ))}
-                    </div>
-                </section>
-            </>
-        )}
-    </div>
-)}
-
-{!isPanelThreadOpen && (
-    <div className="msg-panel-footer">
-        <button type="button" className="msg-view-all-btn" onClick={handleViewAll}>
-            View all messages
-        </button>
-    </div>
-)}
+            {!isPanelThreadOpen && (
+                <div className="msg-panel-footer">
+                    <button type="button" className="msg-view-all-btn" onClick={handleViewAll}>
+                        View all messages
+                    </button>
+                </div>
+            )}
         </div>
     ) : null;
 
@@ -1361,7 +1553,7 @@ function stopRoleDrag() {
         <div className="msg-workspace-overlay">
             <div className="msg-workspace-backdrop" onClick={onClose}></div>
 
-            <div className="msg-workspace" ref={shellRef} role="dialog" aria-modal="true" aria-label="Inbox message">
+            <div className="msg-workspace" role="dialog" aria-modal="true" aria-label="Inbox message">
                 <div className="msg-workspace-header">
                     <div>
                         <div className="msg-workspace-kicker">Message</div>
@@ -1391,7 +1583,13 @@ function stopRoleDrag() {
                 <div className="msg-workspace-body">
                     <aside className="msg-sidebar">
                         <div className="msg-sidebar-sticky">
-                            <div className="msg-role-scroller sidebar">
+                            <div
+                                ref={fullRoleScrollerRef}
+                                className="msg-role-scroller sidebar msg-role-scroller-premium is-draggable"
+                                onMouseDown={startFullRoleDrag}
+                                onClickCapture={handleRoleScrollerClickCapture}
+                                onWheel={handleRoleWheel}
+                            >
                                 {roleTabs.map((option) => (
                                     <button
                                         key={`sidebar-${option.label}`}
@@ -1486,7 +1684,7 @@ function stopRoleDrag() {
                                         <UserAvatar
                                             name={activeUser.user_name}
                                             imageUrl={activeUser.profile_image_url}
-                                            size={44}
+                                            size={36}
                                         />
                                         <div>
                                             <div className="msg-thread-user-name">{activeUser.user_name}</div>
@@ -1496,98 +1694,11 @@ function stopRoleDrag() {
                                 </div>
 
                                 <div className="msg-thread-scroll">
-                                    {loadingMsgs ? (
-                                        <div className="msg-loading-state">Loading messages…</div>
-                                    ) : messages.length === 0 ? (
-                                        <div className="msg-empty-state thread">
-                                            <i className="bi bi-chat-heart"></i>
-                                            <span>No conversation yet. Start the first message.</span>
-                                        </div>
-                                    ) : (
-                                        messages.map((message, index) => {
-                                            const isMine = sameUserId(message.sender_id, currentUserId);
-                                            const showDivider =
-                                                index === 0 ||
-                                                !isSameCalendarDay(
-                                                    message.time_sent,
-                                                    messages[index - 1]?.time_sent
-                                                );
-
-                                            return (
-                                                <React.Fragment key={message.id}>
-                                                    {showDivider && (
-                                                        <div className="msg-thread-day">
-                                                            <span>{getMessageDayLabel(message.time_sent)}</span>
-                                                        </div>
-                                                    )}
-
-                                                    <div className={`msg-thread-row ${isMine ? "mine" : "theirs"}`}>
-                                                        {!isMine && (
-                                                            <UserAvatar
-                                                                name={message.sender_name}
-                                                                imageUrl={message.sender_profile_image_url}
-                                                                size={34}
-                                                            />
-                                                        )}
-
-                                                        <div className="msg-thread-stack">
-                                                            <div className={`msg-thread-meta ${isMine ? "mine" : ""}`}>
-                                                                <span>{isMine ? "You" : message.sender_name}</span>
-                                                                <span>{formatBubbleTime(message.time_sent)}</span>
-                                                            </div>
-
-                                                            <div className={`msg-thread-bubble ${isMine ? "mine" : "theirs"}`}>
-                                                                <div>{message.message}</div>
-
-                                                                {message.attachments?.length > 0 && (
-                                                                    <div className="msg-attachment-list">
-                                                                        {message.attachments.map((attachment) => (
-                                                                            <a
-                                                                                key={attachment.id}
-                                                                                href={attachment.file_path}
-                                                                                target="_blank"
-                                                                                rel="noreferrer"
-                                                                                className="msg-attachment-pill"
-                                                                            >
-                                                                                <i className="bi bi-paperclip"></i>
-                                                                                <span>{attachment.file_name}</span>
-                                                                            </a>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </React.Fragment>
-                                            );
-                                        })
-                                    )}
-
+                                    {renderThreadMessages()}
                                     <div ref={messagesEndRef}></div>
                                 </div>
 
-                                <div className="msg-composer-bar">
-                                    <textarea
-                                        ref={inputRef}
-                                        className="msg-composer-input"
-                                        placeholder={`Message ${activeUser.user_name}…`}
-                                        value={msgText}
-                                        onChange={(event) => setMsgText(event.target.value)}
-                                        onKeyDown={handleComposerKeyDown}
-                                        rows={1}
-                                        disabled={sending}
-                                    ></textarea>
-
-                                    <button
-                                        type="button"
-                                        className="msg-composer-send"
-                                        onClick={sendMessage}
-                                        disabled={!msgText.trim() || sending}
-                                        aria-label="Send message"
-                                    >
-                                        {sending ? <i className="bi bi-arrow-repeat spin"></i> : <i className="bi bi-send-fill"></i>}
-                                    </button>
-                                </div>
+                                {renderComposer("full")}
                             </>
                         ) : (
                             <div className="msg-empty-state thread">
