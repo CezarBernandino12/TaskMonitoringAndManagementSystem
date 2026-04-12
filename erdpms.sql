@@ -3263,3 +3263,8 @@ GABO APRIL 9
 ALTER TABLE tasks
 ADD COLUMN progress_percentage TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER priority;
 
+GABO APRIL 12
+ALTER TABLE users
+ADD COLUMN last_active_at DATETIME NULL AFTER updated_at;
+
+CREATE INDEX idx_users_last_active_at ON users(last_active_at);
