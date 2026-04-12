@@ -289,9 +289,6 @@ function DarkModeToggle({ dark, onToggle }) {
 }
 
 
-// ====================================================================
-// MESSAGING UI — constants & helpers
-// ====================================================================
 const MSG_CONVERSATIONS_API = "php/get_conversations.php";
 const MSG_SEND_API = "php/send_task_message.php";
 const MSG_PINNED_KEY = "dashboard-message-pins";
@@ -366,6 +363,7 @@ function sameUserId(a, b) {
 function normalizeRoleLabel(role = "") {
     const value = String(role || "").trim();
     if (!value) return "Staff";
+
     return value
         .split(/\s+/)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
@@ -448,6 +446,15 @@ function getMessageDayLabel(isoStr) {
     });
 }
 
+function getPresenceText(user) {
+    if (!user) return "";
+
+    if (user.is_active_now) return "Active now";
+    if (user.last_active_label) return `Active ${user.last_active_label}`;
+
+    return "Offline";
+}
+
 function normalizeThreadUser(user = {}) {
     return {
         user_id: user.user_id ?? user.id ?? null,
@@ -470,18 +477,16 @@ function normalizeThreadUser(user = {}) {
     };
 }
 
-function getPresenceText(user) {
-    if (!user) return "";
+function mergeThreadUserPreservingAvatar(prevUser, nextUser) {
+    const prev = normalizeThreadUser(prevUser || {});
+    const next = normalizeThreadUser(nextUser || {});
 
-    if (user.is_active_now) {
-        return "Active now";
-    }
-
-    if (user.last_active_label) {
-        return `Active ${user.last_active_label}`;
-    }
-
-    return "Offline";
+    return {
+        ...prev,
+        ...next,
+        profile_image: next.profile_image || prev.profile_image || null,
+        profile_image_url: next.profile_image_url || prev.profile_image_url || ""
+    };
 }
 
 function readPinnedConversationIds() {
@@ -527,7 +532,9 @@ function mergeInboxEntries(conversations = [], allUsers = []) {
             ...existing,
             ...normalized,
             has_conversation: true,
-            unread_count: Number(conversation.unread_count || 0)
+            unread_count: Number(conversation.unread_count || 0),
+            profile_image: normalized.profile_image || existing?.profile_image || null,
+            profile_image_url: normalized.profile_image_url || existing?.profile_image_url || ""
         });
     });
 
@@ -569,6 +576,73 @@ function matchesSearch(item, searchValue) {
         .toLowerCase();
 
     return haystack.includes(term);
+}
+
+function buildConversationSignature(items = []) {
+    return items
+        .map((item) =>
+            [
+                item.user_id ?? "",
+                item.last_time ?? "",
+                item.unread_count ?? 0,
+                item.last_message ?? "",
+                item.profile_image_url ?? "",
+                item.is_active_now ? "1" : "0",
+                item.last_active_label ?? ""
+            ].join(":")
+        )
+        .join("|");
+}
+
+function buildUserSignature(items = []) {
+    return items
+        .map((item) =>
+            [
+                item.id ?? item.user_id ?? "",
+                item.name ?? item.user_name ?? "",
+                item.role ?? item.user_role ?? "",
+                item.profile_image_url ?? "",
+                item.is_active_now ? "1" : "0",
+                item.last_active_label ?? ""
+            ].join(":")
+        )
+        .join("|");
+}
+
+function buildMessageSignature(items = []) {
+    return items
+        .map((message) => {
+            const attachmentCount = Array.isArray(message.attachments)
+                ? message.attachments.length
+                : 0;
+
+            return [
+                message.id ?? "",
+                message.time_sent ?? "",
+                message.is_read ? "1" : "0",
+                attachmentCount,
+                message.message ?? "",
+                message.sender_profile_image_url ?? ""
+            ].join(":");
+        })
+        .join("|");
+}
+
+function hasThreadMetaChanged(prevUser, nextUser) {
+    if (!prevUser) return true;
+    if (!nextUser) return false;
+
+    return (
+        String(prevUser.user_id ?? prevUser.id ?? "") !==
+            String(nextUser.user_id ?? nextUser.id ?? "") ||
+        (prevUser.user_name ?? prevUser.name ?? "") !==
+            (nextUser.user_name ?? nextUser.name ?? "") ||
+        (prevUser.user_role_label ?? prevUser.role_label ?? prevUser.user_role ?? prevUser.role ?? "") !==
+            (nextUser.user_role_label ?? nextUser.role_label ?? nextUser.user_role ?? nextUser.role ?? "") ||
+        (prevUser.profile_image_url ?? "") !== (nextUser.profile_image_url ?? "") ||
+        Boolean(prevUser.is_active_now) !== Boolean(nextUser.is_active_now) ||
+        (prevUser.last_active_label ?? "") !== (nextUser.last_active_label ?? "")
+    );
 }
 
 function MessageRow({
@@ -621,6 +695,7 @@ function MessageRow({
                         <span className="msg-presence-separator"> · </span>
                         <span>{getInboxRoleLabel(item)}</span>
                     </div>
+
                     <div className="msg-row-preview">{preview}</div>
                 </div>
 
@@ -663,10 +738,16 @@ function MessagingModal({
 
     const panelRef = React.useRef(null);
     const messagesEndRef = React.useRef(null);
+    const threadScrollRef = React.useRef(null);
     const inputRef = React.useRef(null);
     const fileInputRef = React.useRef(null);
     const panelRoleScrollerRef = React.useRef(null);
     const fullRoleScrollerRef = React.useRef(null);
+    const lastMessageSignatureRef = React.useRef("");
+    const lastConversationSignatureRef = React.useRef("");
+    const lastUserSignatureRef = React.useRef("");
+    const lastFocusedThreadKeyRef = React.useRef("");
+    const hasLoadedInboxRef = React.useRef(false);
 
     const roleDragRef = React.useRef({
         isDown: false,
@@ -676,58 +757,6 @@ function MessagingModal({
         suppressClick: false,
         activeEl: null
     });
-
-React.useEffect(() => {
-    if (!openMode) return undefined;
-    if (!activeUser?.user_id) return undefined;
-
-    let alive = true;
-
-    async function refreshThreadSilently() {
-        try {
-            const response = await fetch(
-                `php/get_user_messages.php?other_user_id=${encodeURIComponent(activeUser.user_id)}`,
-                {
-                    credentials: "same-origin",
-                    headers: { Accept: "application/json" }
-                }
-            );
-
-            const data = await parseJsonResponse(response);
-            if (!response.ok || !alive) return;
-
-            setMessages(Array.isArray(data.messages) ? data.messages : []);
-
-            if (data.other_user) {
-                setActiveUser((prev) => ({
-                    ...normalizeThreadUser(prev || {}),
-                    ...normalizeThreadUser({
-                        user_id: data.other_user.id,
-                        user_name: data.other_user.name,
-                        user_role: data.other_user.role,
-                        user_role_label: data.other_user.role_label,
-                        user_initials: data.other_user.initials,
-                        profile_image: data.other_user.profile_image,
-                        profile_image_url: data.other_user.profile_image_url,
-                        is_active_now: data.other_user.is_active_now,
-                        last_active_at: data.other_user.last_active_at,
-                        last_active_label: data.other_user.last_active_label,
-                        has_conversation: true
-                    })
-                }));
-            }
-        } catch (error) {
-            console.error("[MSG] live thread refresh error:", error);
-        }
-    }
-
-    const intervalId = window.setInterval(refreshThreadSilently, 3000);
-
-    return () => {
-        alive = false;
-        window.clearInterval(intervalId);
-    };
-}, [openMode, activeUser?.user_id]);
 
     React.useEffect(() => {
         try {
@@ -849,10 +878,14 @@ React.useEffect(() => {
     React.useEffect(() => {
         if (!openMode) return undefined;
 
-        let active = true;
+        let alive = true;
 
         async function loadInboxData() {
-            setLoadingList(true);
+            const showLoading = !hasLoadedInboxRef.current;
+            if (showLoading) {
+                setLoadingList(true);
+            }
+
             try {
                 const response = await fetch(MSG_CONVERSATIONS_API, {
                     credentials: "same-origin",
@@ -864,25 +897,42 @@ React.useEffect(() => {
                     throw new Error(data?.error || "Failed to load messages.");
                 }
 
-                if (!active) return;
+                if (!alive) return;
 
                 const nextConversations = Array.isArray(data.conversations) ? data.conversations : [];
                 const nextUsers = Array.isArray(data.all_users) ? data.all_users : [];
                 const unread = Number(data.total_unread || 0);
 
-                setConversations(nextConversations);
-                setAllUsers(nextUsers);
-                setTotalUnread(unread);
+                const nextConversationSignature = buildConversationSignature(nextConversations);
+                const nextUserSignature = buildUserSignature(nextUsers);
+
+                if (nextConversationSignature !== lastConversationSignatureRef.current) {
+                    lastConversationSignatureRef.current = nextConversationSignature;
+                    setConversations(nextConversations);
+                }
+
+                if (nextUserSignature !== lastUserSignatureRef.current) {
+                    lastUserSignatureRef.current = nextUserSignature;
+                    setAllUsers(nextUsers);
+                }
+
+                setTotalUnread((prev) => (prev === unread ? prev : unread));
                 onUnreadCountChange?.(unread);
+                hasLoadedInboxRef.current = true;
             } catch (error) {
                 console.error("[MSG] conversations fetch error:", error);
-                if (!active) return;
-                setConversations([]);
-                setAllUsers([]);
-                setTotalUnread(0);
-                onUnreadCountChange?.(0);
+                if (!alive) return;
+
+                if (!hasLoadedInboxRef.current) {
+                    setConversations([]);
+                    setAllUsers([]);
+                    setTotalUnread(0);
+                    onUnreadCountChange?.(0);
+                }
             } finally {
-                if (active) setLoadingList(false);
+                if (alive && showLoading) {
+                    setLoadingList(false);
+                }
             }
         }
 
@@ -890,10 +940,84 @@ React.useEffect(() => {
         const intervalId = window.setInterval(loadInboxData, 8000);
 
         return () => {
-            active = false;
+            alive = false;
             window.clearInterval(intervalId);
         };
     }, [openMode, onUnreadCountChange]);
+
+    React.useEffect(() => {
+        if (!openMode) return undefined;
+        if (!activeUser?.user_id) return undefined;
+
+        let alive = true;
+
+        async function refreshThreadSilently() {
+            try {
+                const response = await fetch(
+                    `php/get_user_messages.php?other_user_id=${encodeURIComponent(activeUser.user_id)}`,
+                    {
+                        credentials: "same-origin",
+                        headers: { Accept: "application/json" }
+                    }
+                );
+
+                const data = await parseJsonResponse(response);
+                if (!response.ok || !alive) return;
+
+                const nextMessages = Array.isArray(data.messages) ? data.messages : [];
+                const nextSignature = buildMessageSignature(nextMessages);
+
+                if (nextSignature !== lastMessageSignatureRef.current) {
+                    const scroller = threadScrollRef.current;
+                    const isNearBottom = scroller
+                        ? scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 96
+                        : true;
+
+                    lastMessageSignatureRef.current = nextSignature;
+                    setMessages(nextMessages);
+
+                    if (isNearBottom) {
+                        window.requestAnimationFrame(() => {
+                            messagesEndRef.current?.scrollIntoView({
+                                behavior: "auto",
+                                block: "end"
+                            });
+                        });
+                    }
+                }
+
+                if (data.other_user) {
+                    const nextUser = normalizeThreadUser({
+                        user_id: data.other_user.id,
+                        user_name: data.other_user.name,
+                        user_role: data.other_user.role,
+                        user_role_label: data.other_user.role_label,
+                        user_initials: data.other_user.initials,
+                        profile_image: data.other_user.profile_image,
+                        profile_image_url: data.other_user.profile_image_url,
+                        is_active_now: data.other_user.is_active_now,
+                        last_active_at: data.other_user.last_active_at,
+                        last_active_label: data.other_user.last_active_label,
+                        has_conversation: true
+                    });
+
+                    setActiveUser((prev) => {
+                        const merged = mergeThreadUserPreservingAvatar(prev, nextUser);
+                        return hasThreadMetaChanged(prev, merged) ? merged : prev;
+                    });
+                }
+            } catch (error) {
+                console.error("[MSG] live thread refresh error:", error);
+            }
+        }
+
+        const intervalId = window.setInterval(refreshThreadSilently, 3000);
+
+        return () => {
+            alive = false;
+            window.clearInterval(intervalId);
+        };
+    }, [openMode, activeUser?.user_id]);
 
     React.useEffect(() => {
         if (openMode !== "full") return;
@@ -906,14 +1030,32 @@ React.useEffect(() => {
     }, [activeUser, openMode, fullVisibleInbox]);
 
     React.useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+        if (!messagesEndRef.current) return;
+
+        window.requestAnimationFrame(() => {
+            messagesEndRef.current?.scrollIntoView({
+                behavior: "auto",
+                block: "end"
+            });
+        });
+    }, [messages.length]);
 
     React.useEffect(() => {
-        if (!activeUser) return undefined;
-        const timeoutId = window.setTimeout(() => inputRef.current?.focus(), 120);
+        if (!activeUser?.user_id || !openMode) return undefined;
+
+        const threadKey = `${openMode}:${activeUser.user_id}`;
+        if (lastFocusedThreadKeyRef.current === threadKey) {
+            return undefined;
+        }
+
+        lastFocusedThreadKeyRef.current = threadKey;
+
+        const timeoutId = window.setTimeout(() => {
+            inputRef.current?.focus();
+        }, 120);
+
         return () => window.clearTimeout(timeoutId);
-    }, [activeUser, openMode]);
+    }, [activeUser?.user_id, openMode]);
 
     React.useEffect(() => {
         if (!inputRef.current) return;
@@ -922,8 +1064,11 @@ React.useEffect(() => {
         const baseHeight = isPanel ? 38 : 50;
         const maxHeight = isPanel ? 88 : 128;
 
-        inputRef.current.style.height = `${baseHeight}px`;
-        inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, maxHeight)}px`;
+        inputRef.current.style.height = "auto";
+        inputRef.current.style.height = `${Math.max(
+            baseHeight,
+            Math.min(inputRef.current.scrollHeight, maxHeight)
+        )}px`;
     }, [msgText, openMode, attachedFiles.length]);
 
     React.useEffect(() => {
@@ -934,12 +1079,19 @@ React.useEffect(() => {
         setMsgText("");
         setAttachedFiles([]);
         setPanelSelectedUserId(null);
+
+        lastMessageSignatureRef.current = "";
+        lastConversationSignatureRef.current = "";
+        lastUserSignatureRef.current = "";
+        lastFocusedThreadKeyRef.current = "";
+        hasLoadedInboxRef.current = false;
     }, [openMode]);
 
     async function loadThreadMessages(otherUserId) {
         if (!otherUserId) return;
 
         setLoadingMsgs(true);
+
         try {
             const response = await fetch(
                 `php/get_user_messages.php?other_user_id=${encodeURIComponent(otherUserId)}`,
@@ -954,22 +1106,26 @@ React.useEffect(() => {
                 throw new Error(data?.error || "Failed to load thread messages.");
             }
 
-            setMessages(Array.isArray(data.messages) ? data.messages : []);
+            const nextMessages = Array.isArray(data.messages) ? data.messages : [];
+            lastMessageSignatureRef.current = buildMessageSignature(nextMessages);
+            setMessages(nextMessages);
 
             if (data.other_user) {
-                setActiveUser((prev) => ({
-                    ...normalizeThreadUser(prev || {}),
-                    ...normalizeThreadUser({
-                        user_id: data.other_user.id,
-                        user_name: data.other_user.name,
-                        user_role: data.other_user.role,
-                        user_role_label: data.other_user.role_label,
-                        user_initials: data.other_user.initials,
-                        profile_image: data.other_user.profile_image,
-                        profile_image_url: data.other_user.profile_image_url,
-                        has_conversation: true
-                    })
-                }));
+                const nextUser = normalizeThreadUser({
+                    user_id: data.other_user.id,
+                    user_name: data.other_user.name,
+                    user_role: data.other_user.role,
+                    user_role_label: data.other_user.role_label,
+                    user_initials: data.other_user.initials,
+                    profile_image: data.other_user.profile_image,
+                    profile_image_url: data.other_user.profile_image_url,
+                    is_active_now: data.other_user.is_active_now,
+                    last_active_at: data.other_user.last_active_at,
+                    last_active_label: data.other_user.last_active_label,
+                    has_conversation: true
+                });
+
+                setActiveUser((prev) => mergeThreadUserPreservingAvatar(prev, nextUser));
             }
 
             setConversations((prev) =>
@@ -980,11 +1136,9 @@ React.useEffect(() => {
                 )
             );
 
-            const unreadInThread = Array.isArray(data.messages)
-                ? data.messages.filter(
-                      (message) => sameUserId(message.sender_id, otherUserId) && !message.is_read
-                  ).length
-                : 0;
+            const unreadInThread = nextMessages.filter(
+                (message) => sameUserId(message.sender_id, otherUserId) && !message.is_read
+            ).length;
 
             setTotalUnread((prev) => {
                 const next = Math.max(0, prev - unreadInThread);
@@ -1039,6 +1193,8 @@ React.useEffect(() => {
         setMessages([]);
         setMsgText("");
         setAttachedFiles([]);
+        lastMessageSignatureRef.current = "";
+        lastFocusedThreadKeyRef.current = "";
     }
 
     function handleViewAll() {
@@ -1214,7 +1370,12 @@ React.useEffect(() => {
                 throw new Error(data?.error || "Failed to send message.");
             }
 
-            setMessages((prev) => [...prev, data.message]);
+            setMessages((prev) => {
+                const next = [...prev, data.message];
+                lastMessageSignatureRef.current = buildMessageSignature(next);
+                return next;
+            });
+
             setMsgText("");
             setAttachedFiles([]);
 
@@ -1236,7 +1397,10 @@ React.useEffect(() => {
                     last_message: trimmed || (attachedFiles.length > 0 ? "Attachment" : ""),
                     last_time: data.message.time_sent || new Date().toISOString(),
                     unread_count: 0,
-                    has_conversation: true
+                    has_conversation: true,
+                    is_active_now: Boolean(activeUser.is_active_now),
+                    last_active_at: activeUser.last_active_at ?? null,
+                    last_active_label: activeUser.last_active_label ?? ""
                 };
 
                 if (exists) {
@@ -1308,10 +1472,7 @@ React.useEffect(() => {
             const isMine = sameUserId(message.sender_id, currentUserId);
             const showDivider =
                 index === 0 ||
-                !isSameCalendarDay(
-                    message.time_sent,
-                    messages[index - 1]?.time_sent
-                );
+                !isSameCalendarDay(message.time_sent, messages[index - 1]?.time_sent);
 
             return (
                 <React.Fragment key={message.id}>
@@ -1325,7 +1486,7 @@ React.useEffect(() => {
                         {!isMine && (
                             <UserAvatar
                                 name={message.sender_name}
-                                imageUrl={message.sender_profile_image_url}
+                                imageUrl={message.sender_profile_image_url || activeUser?.profile_image_url || ""}
                                 size={openMode === "panel" ? 30 : 34}
                             />
                         )}
@@ -1538,7 +1699,7 @@ React.useEffect(() => {
                         </div>
                     </div>
 
-                    <div className="msg-thread-scroll msg-thread-scroll-panel">
+                    <div className="msg-thread-scroll msg-thread-scroll-panel" ref={threadScrollRef}>
                         {renderThreadMessages()}
                         <div ref={messagesEndRef}></div>
                     </div>
@@ -1781,7 +1942,7 @@ React.useEffect(() => {
                                     </div>
                                 </div>
 
-                                <div className="msg-thread-scroll">
+                                <div className="msg-thread-scroll" ref={threadScrollRef}>
                                     {renderThreadMessages()}
                                     <div ref={messagesEndRef}></div>
                                 </div>
