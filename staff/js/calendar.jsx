@@ -586,62 +586,82 @@ function EmployeeAvatar({ employee, size = 24, fontSize = 10, style = {} }) {
     );
     const initials = employee?.initials || getInitials(employee?.name || '');
 
-    if (src && !imgError) {
-        return (
-            <img
-                src={src}
-                alt={employee?.name || 'User'}
-                onError={() => setImgError(true)}
-                style={{
-                    width: size,
-                    height: size,
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    display: 'block',
-                    flexShrink: 0,
-                    ...style
-                }}
-            />
-        );
-    }
-
     return (
-        <div
+        <span
             style={{
                 width: size,
                 height: size,
                 borderRadius: '50%',
-                background: getAvatarColor(employee?.name || ''),
-                color: '#fff',
+                overflow: 'hidden',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
+                background: getAvatarColor(employee?.name || ''),
+                color: '#fff',
                 fontSize,
                 fontWeight: 700,
-                flexShrink: 0,
+                lineHeight: 1,
+                boxSizing: 'border-box',
                 ...style
             }}
         >
-            {initials}
-        </div>
+            {src && !imgError ? (
+                <img
+                    src={src}
+                    alt={employee?.name || 'User'}
+                    onError={() => setImgError(true)}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block'
+                    }}
+                />
+            ) : (
+                initials
+            )}
+        </span>
     );
 }
 
 function AvatarStack({ employees = [], size = 18, max = 3 }) {
-    const shown = employees.slice(0, max);
+    const shown = employees.filter(Boolean).slice(0, max);
     const extra = employees.length - shown.length;
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                minHeight: size
+            }}
+        >
             {shown.map((emp, idx) => (
                 <div
                     key={emp.id}
                     style={{
-                        marginLeft: idx === 0 ? 0 : -5,
-                        borderRadius: '50%'
+                        width: size,
+                        height: size,
+                        marginLeft: idx === 0 ? 0 : -6,
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: '1.5px solid #fff',
+                        background: '#fff',
+                        boxShadow: '0 0 0 1px rgba(0,0,0,.04)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        position: 'relative',
+                        zIndex: shown.length - idx
                     }}
                 >
-                    <EmployeeAvatar employee={emp} size={size} fontSize={Math.max(8, size * 0.38)} />
+                    <EmployeeAvatar
+                        employee={emp}
+                        size={size}
+                        fontSize={Math.max(8, size * 0.38)}
+                    />
                 </div>
             ))}
 
@@ -653,14 +673,17 @@ function AvatarStack({ employees = [], size = 18, max = 3 }) {
                         height: size,
                         padding: '0 6px',
                         borderRadius: 999,
-                        background: '#F2F2F4',
+                        background: '#F2F3F5',
                         border: '1.5px solid #fff',
+                        boxShadow: '0 0 0 1px rgba(0,0,0,.04)',
                         color: '#6B7280',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: 10,
-                        fontWeight: 700
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        flexShrink: 0
                     }}
                 >
                     +{extra}
@@ -799,15 +822,15 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             background: '#F8F8FA',
             borderRadius: 20,
             width: '100%',
-            maxWidth: 660,
-            maxHeight: '86vh',
+            maxWidth: 720,
+            maxHeight: '90vh',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
             boxShadow: '0 20px 56px rgba(0,0,0,.14)'
         },
         body: {
-            padding: '22px 24px 14px',
+            padding: '22px 24px 16px',
             overflowY: 'auto',
             flex: 1
         },
@@ -837,7 +860,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
         },
         input: {
             width: '100%',
-            height: 38,
+            height: 40,
             border: '1px solid #E5E5E8',
             borderRadius: 12,
             background: '#fff',
@@ -853,7 +876,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             background: '#fff',
             border: '1px solid #EFEFF2',
             borderRadius: 14,
-            padding: '12px'
+            padding: '14px'
         },
         rowIcon: {
             width: 18,
@@ -871,26 +894,26 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             color: '#2A2A2E'
         },
         employeeList: {
-            maxHeight: 118,
+            maxHeight: 165,
             overflowY: 'auto',
             border: '1px solid #EBEBEB',
-            borderRadius: 10,
-            padding: '5px',
+            borderRadius: 12,
+            padding: '6px',
             background: '#fff'
         },
         smallBtn: {
-            height: 32,
-            padding: '0 11px',
-            borderRadius: 9,
+            height: 40,
+            padding: '0 14px',
+            borderRadius: 11,
             border: '1px solid #DCDCDC',
             background: '#fff',
             color: '#555',
-            fontSize: 11,
+            fontSize: 11.5,
             fontWeight: 600,
             cursor: 'pointer'
         },
         softBtn: {
-            height: 38,
+            height: 42,
             padding: '0 16px',
             borderRadius: 11,
             border: 'none',
@@ -901,8 +924,8 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             cursor: 'pointer'
         },
         primaryBtn: {
-            height: 38,
-            padding: '0 16px',
+            height: 42,
+            padding: '0 18px',
             borderRadius: 11,
             border: 'none',
             background: '#2F6DF6',
@@ -920,6 +943,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     return (
         <ModalPortal>
             <div
+                className="hide-scrollbar"
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
@@ -943,7 +967,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                         }}
                     />
 
-                    <div style={L.body}>
+                    <div className="hide-scrollbar" style={L.body}>
                         <div style={L.title}>
                             {isEdit ? 'Edit Event' : 'Add Event'}
                         </div>
@@ -1091,17 +1115,50 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                             <div
                                 style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '1fr auto',
+                                    gridTemplateColumns: 'minmax(0, 1fr) auto',
                                     gap: 10,
                                     marginBottom: 10
                                 }}
                             >
-                                <input
-                                    style={L.input}
-                                    placeholder="Search employees"
-                                    value={empQ}
-                                    onChange={e => setEmpQ(e.target.value)}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        style={{
+                                            ...L.input,
+                                            paddingRight: empQ ? 34 : 12
+                                        }}
+                                        placeholder="Search employees"
+                                        value={empQ}
+                                        onChange={e => setEmpQ(e.target.value)}
+                                    />
+
+                                    {empQ && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setEmpQ('')}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '50%',
+                                                right: 10,
+                                                transform: 'translateY(-50%)',
+                                                width: 18,
+                                                height: 18,
+                                                border: 'none',
+                                                borderRadius: '50%',
+                                                background: '#F2F3F5',
+                                                color: '#8B8B94',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                fontSize: 12,
+                                                lineHeight: 1
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
 
                                 {filtered.length > 0 && (
                                     <button
@@ -1119,7 +1176,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                 )}
                             </div>
 
-                            <div style={L.employeeList}>
+                            <div className="hide-scrollbar" style={L.employeeList}>
                                 {filtered.length === 0 ? (
                                     <div
                                         style={{
@@ -1142,8 +1199,8 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                                 style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: 8,
-                                                    padding: '8px 7px',
+                                                    gap: 10,
+                                                    padding: '9px 8px',
                                                     borderRadius: 10,
                                                     cursor: 'pointer',
                                                     background: chk ? cfg.bg : 'transparent',
@@ -1154,64 +1211,81 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                                     type="checkbox"
                                                     readOnly
                                                     checked={chk}
-                                                    style={{ pointerEvents: 'none', accentColor: cfg.badge }}
+                                                    style={{ pointerEvents: 'none', accentColor: cfg.badge, margin: 0 }}
                                                 />
-                                                <>
-                                                    <EmployeeAvatar employee={emp} size={24} fontSize={9} />
-                                                    <span style={{ fontSize: 12, color: '#2A2A2E' }}>
-                                                        <strong>{emp.name}</strong>
-                                                    </span>
-                                                </>
+
+                                                <EmployeeAvatar employee={emp} size={28} fontSize={10} />
+
+                                                <span
+                                                    style={{
+                                                        fontSize: 12,
+                                                        color: '#2A2A2E',
+                                                        fontWeight: 600,
+                                                        lineHeight: 1.2
+                                                    }}
+                                                >
+                                                    {emp.name}
+                                                </span>
                                             </div>
                                         );
                                     })
                                 )}
                             </div>
 
-                                {form.tagged_employees.length > 0 && (
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-                                        {form.tagged_employees.map(id => {
-                                            const emp = employees.find(e => e.id === id);
-                                            return emp ? (
-                                                <div
-                                                    key={id}
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: 7,
-                                                        background: '#F7F7F8',
-                                                        border: '1px solid #ECECEE',
-                                                        borderRadius: 999,
-                                                        padding: '4px 8px 4px 4px'
-                                                    }}
-                                                >
-                                                    <EmployeeAvatar employee={emp} size={22} fontSize={9} />
-                                                    <span
-                                                        style={{
-                                                            fontSize: 11,
-                                                            fontWeight: 500,
-                                                            color: '#444',
-                                                            lineHeight: 1
-                                                        }}
-                                                    >
-                                                        {emp.name}
-                                                    </span>
-                                                    <span
-                                                        onClick={() => toggleEmp(id)}
-                                                        style={{
-                                                            cursor: 'pointer',
-                                                            opacity: 0.65,
-                                                            fontSize: 11,
-                                                            lineHeight: 1
-                                                        }}
-                                                    >
-                                                        ✕
-                                                    </span>
-                                                </div>
-                                            ) : null;
-                                        })}
-                                    </div>
-                                )}
+                        {form.tagged_employees.length > 0 && (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                                {form.tagged_employees.map(id => {
+                                    const emp = employees.find(e => e.id === id);
+                                    return emp ? (
+                                        <div
+                                            key={id}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                                background: '#F7F7F8',
+                                                border: '1px solid #ECECEE',
+                                                borderRadius: 999,
+                                                padding: '4px 10px 4px 4px',
+                                                minHeight: 34
+                                            }}
+                                        >
+                                            <EmployeeAvatar employee={emp} size={24} fontSize={9} />
+                                            <span
+                                                style={{
+                                                    fontSize: 11.5,
+                                                    fontWeight: 500,
+                                                    color: '#444',
+                                                    lineHeight: 1,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                {emp.name}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleEmp(id)}
+                                                style={{
+                                                    border: 'none',
+                                                    background: 'transparent',
+                                                    color: '#8B8B94',
+                                                    cursor: 'pointer',
+                                                    padding: 0,
+                                                    fontSize: 13,
+                                                    lineHeight: 1,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ) : null;
+                                })}
+                            </div>
+                        )}
                         </div>
                     </div>
 
@@ -1283,10 +1357,16 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
     return (
         <ModalPortal>
             <div
+                className="hide-scrollbar"
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
-                style={S.backdrop}
+                style={{
+                    ...S.backdrop,
+                    padding: '14px',
+                    alignItems: 'center',
+                    background: 'rgba(0,0,0,.18)'
+                }}
             >
                 <div style={{ ...S.modal, maxWidth: 440, overflow: 'hidden' }}>
                     <div
@@ -1484,12 +1564,18 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
 function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
     return (
         <ModalPortal>
-            <div
-                onClick={e => {
-                    if (e.target === e.currentTarget) onClose();
-                }}
-                style={S.backdrop}
-            >
+<div
+    className="hide-scrollbar"
+    onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+    }}
+    style={{
+        ...S.backdrop,
+        padding: '14px',
+        alignItems: 'center',
+        background: 'rgba(0,0,0,.18)'
+    }}
+>
                 <div style={{ ...S.modal, maxWidth: 360 }}>
                     <div style={S.mHead}>
                         <span style={{ fontWeight: 700, fontSize: 14, color: '#222' }}>
@@ -1712,7 +1798,7 @@ function EventCard({ event, employees, onClick }) {
                         alignItems: 'center'
                     }}
                 >
-                    <AvatarStack employees={tagged} size={16} max={3} />
+                    <AvatarStack employees={tagged} size={17} max={3} />
                 </div>
             )}
         </div>
