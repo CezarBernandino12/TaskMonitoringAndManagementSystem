@@ -35,7 +35,8 @@ function ModalPortal({ children }) {
         };
     }, []);
 
-    return ReactDOM.createPortal(children, document.body);
+    const modalRoot = document.getElementById('react-modal-root') || document.body;
+    return ReactDOM.createPortal(children, modalRoot);
 }
 
 function fromDateStr(s) {
@@ -252,13 +253,13 @@ function CustomSelect({
                 style={{
                     width: '100%',
                     height: 38,
-                    border: '1px solid #E5E5E8',
+                    border: '1px solid var(--cal-border)',
                     borderRadius: 12,
-                    background: '#fff',
+                    background: 'var(--cal-input-bg)',
                     padding: '0 12px',
                     fontSize: 11.5,
                     fontWeight: 600,
-                    color: value ? selectedColor : '#9A9AA1',
+                    color: value ? selectedColor : 'var(--cal-text-3)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -266,19 +267,20 @@ function CustomSelect({
                 }}
             >
                 <span>{selected ? selected.label : placeholder}</span>
-                <span style={{ color: '#777', display: 'inline-flex' }}>
+                <span style={{ color: 'var(--cal-text-3)', display: 'inline-flex' }}>
                     <ChevronDownIcon />
                 </span>
             </button>
 
             <FloatingLayer anchorRef={btnRef} open={open} width={panelWidth} offset={6}>
                 <div
+                    className="hide-scrollbar"
                     style={{
-                        background: '#fff',
-                        border: '1px solid #EAEAF0',
+                        background: 'var(--cal-panel)',
+                        border: '1px solid var(--cal-border)',
                         borderRadius: 18,
                         padding: '6px 0',
-                        boxShadow: '0 14px 34px rgba(0,0,0,.10)'
+                        boxShadow: 'var(--cal-shadow)'
                     }}
                 >
                     {options.map(opt => {
@@ -295,12 +297,12 @@ function CustomSelect({
                                 style={{
                                     width: '100%',
                                     border: 'none',
-                                    background: active ? '#F7F7FA' : '#fff',
+                                    background: active ? 'var(--cal-panel-2)' : 'transparent',
                                     padding: '13px 20px',
                                     textAlign: 'left',
                                     fontSize: 11.5,
                                     fontWeight: 600,
-                                    color: active ? selectedColor : '#2B2B31',
+                                    color: active ? selectedColor : 'var(--cal-text)',
                                     cursor: 'pointer'
                                 }}
                             >
@@ -345,9 +347,9 @@ function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
                 style={{
                     width: '100%',
                     height: 38,
-                    border: '1px solid #E5E5E8',
+                    border: '1px solid var(--cal-border)',
                     borderRadius: 12,
-                    background: '#fff',
+                    background: 'var(--cal-input-bg)',
                     padding: '0 10px 0 12px',
                     display: 'flex',
                     alignItems: 'center',
@@ -360,25 +362,26 @@ function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
                     style={{
                         fontSize: 11.5,
                         fontWeight: 600,
-                        color: value ? '#222' : '#9A9AA1'
+                        color: value ? 'var(--cal-text)' : 'var(--cal-text-3)'
                     }}
                 >
                     {value ? fmtPickerValue(value) : placeholder}
                 </span>
 
-                <span style={{ color: '#111', display: 'inline-flex', flexShrink: 0 }}>
+                <span style={{ color: 'var(--cal-text)', display: 'inline-flex', flexShrink: 0 }}>
                     <CalendarIcon />
                 </span>
             </button>
 
             <FloatingLayer anchorRef={btnRef} open={open} width={330} offset={6}>
                 <div
+                    className="hide-scrollbar"
                     style={{
-                        background: '#fff',
-                        border: '1px solid #E8E8EE',
+                        background: 'var(--cal-panel)',
+                        border: '1px solid var(--cal-border)',
                         borderRadius: 22,
                         padding: '14px 14px 12px',
-                        boxShadow: '0 16px 40px rgba(0,0,0,.10)'
+                        boxShadow: 'var(--cal-shadow)'
                     }}
                 >
                     <div
@@ -401,12 +404,12 @@ function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
                                 gap: 4,
                                 fontSize: 11.5,
                                 fontWeight: 700,
-                                color: '#2C2C33',
+                                color: 'var(--cal-text)',
                                 cursor: 'default'
                             }}
                         >
                             {fmtPickerMonth(viewMonth)}
-                            <span style={{ color: '#666', display: 'inline-flex' }}>
+                            <span style={{ color: 'var(--cal-text-3)', display: 'inline-flex' }}>
                                 <ChevronDownIcon />
                             </span>
                         </button>
@@ -421,7 +424,7 @@ function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
                                     border: 'none',
                                     borderRadius: 999,
                                     background: 'transparent',
-                                    color: '#4C4C52',
+                                    color: 'var(--cal-text-2)',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -440,7 +443,7 @@ function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
                                     border: 'none',
                                     borderRadius: 999,
                                     background: 'transparent',
-                                    color: '#4C4C52',
+                                    color: 'var(--cal-text-2)',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -466,7 +469,7 @@ function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
                                     textAlign: 'center',
                                     fontSize: 9.5,
                                     fontWeight: 600,
-                                    color: '#6E6E75',
+                                    color: 'var(--cal-text-3)',
                                     padding: '6px 0 8px'
                                 }}
                             >
@@ -512,8 +515,8 @@ function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
                                                 color: isSelected
                                                     ? '#E33B3B'
                                                     : isCurrentMonth
-                                                    ? '#2F2F35'
-                                                    : '#C9C9CF',
+                                                    ? 'var(--cal-text)'
+                                                    : 'var(--cal-muted)',
                                                 fontSize: 10.5,
                                                 fontWeight: isSelected ? 700 : 600
                                             }}
@@ -527,7 +530,7 @@ function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
                                                     background: isSelected
                                                         ? '#E33B3B'
                                                         : isTodayCell
-                                                        ? '#D9D9DE'
+                                                        ? 'var(--cal-text-3)'
                                                         : 'transparent'
                                                 }}
                                             />
@@ -625,9 +628,32 @@ function EmployeeAvatar({ employee, size = 24, fontSize = 10, style = {} }) {
     );
 }
 
+function isDarkMode() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
+function colorWithAlpha(hex, alpha = '22') {
+    if (!hex || typeof hex !== 'string') return hex;
+
+    let normalized = hex.trim();
+    if (!normalized.startsWith('#')) return normalized;
+
+    if (normalized.length === 4) {
+        normalized =
+            '#' +
+            normalized[1] + normalized[1] +
+            normalized[2] + normalized[2] +
+            normalized[3] + normalized[3];
+    }
+
+    if (normalized.length !== 7) return normalized;
+    return normalized + alpha;
+}
+
 function AvatarStack({ employees = [], size = 18, max = 3 }) {
     const shown = employees.filter(Boolean).slice(0, max);
     const extra = employees.length - shown.length;
+    const darkMode = isDarkMode();
 
     return (
         <div
@@ -646,9 +672,11 @@ function AvatarStack({ employees = [], size = 18, max = 3 }) {
                         marginLeft: idx === 0 ? 0 : -6,
                         borderRadius: '50%',
                         overflow: 'hidden',
-                        border: '1.5px solid #fff',
-                        background: '#fff',
-                        boxShadow: '0 0 0 1px rgba(0,0,0,.04)',
+                        border: `1.5px solid ${darkMode ? 'var(--cal-panel)' : '#fff'}`,
+                        background: 'var(--cal-panel)',
+                        boxShadow: darkMode
+                            ? '0 0 0 1px rgba(255,255,255,.05)'
+                            : '0 0 0 1px rgba(0,0,0,.04)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -673,10 +701,12 @@ function AvatarStack({ employees = [], size = 18, max = 3 }) {
                         height: size,
                         padding: '0 6px',
                         borderRadius: 999,
-                        background: '#F2F3F5',
-                        border: '1.5px solid #fff',
-                        boxShadow: '0 0 0 1px rgba(0,0,0,.04)',
-                        color: '#6B7280',
+                        background: 'var(--cal-panel-2)',
+                        border: `1.5px solid ${darkMode ? 'var(--cal-panel)' : '#fff'}`,
+                        boxShadow: darkMode
+                            ? '0 0 0 1px rgba(255,255,255,.05)'
+                            : '0 0 0 1px rgba(0,0,0,.04)',
+                        color: 'var(--cal-text-2)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -816,10 +846,16 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
 
     const cfg = STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming;
 
+    const darkMode = isDarkMode();
+    const activeRowBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
+    const selectedToggleBg = darkMode ? colorWithAlpha(cfg.badge, '14') : cfg.bg;
+    const selectedToggleBorder = darkMode ? colorWithAlpha(cfg.badge, '50') : `${cfg.badge}66`;
+    const modalCloseFilter = darkMode ? 'invert(1) opacity(.72)' : 'opacity(.75)';
+
     const L = {
         shell: {
             position: 'relative',
-            background: '#F8F8FA',
+            background: 'var(--cal-panel)',
             borderRadius: 20,
             width: '100%',
             maxWidth: 720,
@@ -827,17 +863,19 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            boxShadow: '0 20px 56px rgba(0,0,0,.14)'
+            boxShadow: 'var(--cal-shadow)',
+            border: '1px solid var(--cal-border)'
         },
         body: {
             padding: '22px 24px 16px',
             overflowY: 'auto',
-            flex: 1
+            flex: 1,
+            background: 'var(--cal-panel)'
         },
         footer: {
             padding: '12px 24px 16px',
-            borderTop: '1px solid #ECECF0',
-            background: '#F8F8FA',
+            borderTop: '1px solid var(--cal-border-soft)',
+            background: 'var(--cal-panel)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -848,35 +886,49 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             lineHeight: 1.08,
             fontWeight: 700,
             letterSpacing: '-.02em',
-            color: '#222',
+            color: 'var(--cal-text)',
             marginBottom: 14
         },
         label: {
             fontSize: 10,
             fontWeight: 700,
-            color: '#76767C',
+            color: 'var(--cal-text-3)',
             letterSpacing: '.02em',
             marginBottom: 6
         },
         input: {
             width: '100%',
             height: 40,
-            border: '1px solid #E5E5E8',
+            border: '1px solid var(--cal-border)',
             borderRadius: 12,
-            background: '#fff',
+            background: 'var(--cal-input-bg)',
             padding: '0 12px',
             fontSize: 11.5,
             fontWeight: 500,
-            color: '#222',
+            color: 'var(--cal-text)',
             boxSizing: 'border-box',
             outline: 'none',
             fontFamily: 'inherit'
         },
         section: {
-            background: '#fff',
-            border: '1px solid #EFEFF2',
+            background: 'var(--cal-panel)',
+            border: '1px solid var(--cal-border)',
             borderRadius: 14,
             padding: '14px'
+        },
+        chip: {
+            minWidth: 24,
+            height: 24,
+            borderRadius: 999,
+            background: 'var(--cal-panel-2)',
+            border: '1px solid var(--cal-border)',
+            color: 'var(--cal-text-2)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 8px',
+            fontSize: 11,
+            fontWeight: 700
         },
         rowIcon: {
             width: 18,
@@ -884,30 +936,30 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#8D8D92',
+            color: 'var(--cal-text-3)',
             fontSize: 15,
             flexShrink: 0
         },
         rowText: {
             fontSize: 13,
             fontWeight: 600,
-            color: '#2A2A2E'
+            color: 'var(--cal-text)'
         },
         employeeList: {
             maxHeight: 165,
             overflowY: 'auto',
-            border: '1px solid #EBEBEB',
+            border: '1px solid var(--cal-border)',
             borderRadius: 12,
             padding: '6px',
-            background: '#fff'
+            background: 'var(--cal-input-bg)'
         },
         smallBtn: {
             height: 40,
             padding: '0 14px',
             borderRadius: 11,
-            border: '1px solid #DCDCDC',
-            background: '#fff',
-            color: '#555',
+            border: '1px solid var(--cal-border)',
+            background: 'var(--cal-input-bg)',
+            color: 'var(--cal-text-2)',
             fontSize: 11.5,
             fontWeight: 600,
             cursor: 'pointer'
@@ -916,9 +968,9 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             height: 42,
             padding: '0 16px',
             borderRadius: 11,
-            border: 'none',
-            background: '#EEF0F4',
-            color: '#222',
+            border: '1px solid var(--cal-border)',
+            background: 'var(--cal-panel-2)',
+            color: 'var(--cal-text)',
             fontSize: 11.5,
             fontWeight: 600,
             cursor: 'pointer'
@@ -958,13 +1010,14 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                     <button
                         className="btn-close"
                         onClick={onClose}
-                        style={{
-                            position: 'absolute',
-                            top: 16,
-                            right: 16,
-                            zIndex: 2,
-                            fontSize: 10
-                        }}
+                    style={{
+                        position: 'absolute',
+                        top: 16,
+                        right: 16,
+                        zIndex: 2,
+                        fontSize: 10,
+                        filter: modalCloseFilter
+                    }}
                     />
 
                     <div className="hide-scrollbar" style={L.body}>
@@ -1144,8 +1197,8 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                                 height: 18,
                                                 border: 'none',
                                                 borderRadius: '50%',
-                                                background: '#F2F3F5',
-                                                color: '#8B8B94',
+                                                background: 'var(--cal-panel-2)',
+                                                color: 'var(--cal-text-3)',
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
@@ -1166,9 +1219,9 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                         onClick={toggleSelectAll}
                                         style={{
                                             ...L.smallBtn,
-                                            border: `1px solid ${allFilteredSelected ? cfg.badge + '66' : '#DCDCDC'}`,
-                                            background: allFilteredSelected ? cfg.bg : '#fff',
-                                            color: allFilteredSelected ? cfg.text : '#555'
+                                            border: `1px solid ${allFilteredSelected ? selectedToggleBorder : 'var(--cal-border)'}`,
+                                            background: allFilteredSelected ? selectedToggleBg : 'var(--cal-panel)',
+                                            color: allFilteredSelected ? cfg.text : 'var(--cal-text-2)'
                                         }}
                                     >
                                         {allFilteredSelected ? 'Deselect' : 'Select all'}
@@ -1180,7 +1233,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                 {filtered.length === 0 ? (
                                     <div
                                         style={{
-                                            color: '#aaa',
+                                            color: 'var(--cal-text-3)',
                                             fontSize: 12,
                                             padding: '12px 0',
                                             textAlign: 'center'
@@ -1203,7 +1256,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                                     padding: '9px 8px',
                                                     borderRadius: 10,
                                                     cursor: 'pointer',
-                                                    background: chk ? cfg.bg : 'transparent',
+                                                    background: chk ? activeRowBg : 'transparent',
                                                     marginBottom: 4
                                                 }}
                                             >
@@ -1219,7 +1272,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                                 <span
                                                     style={{
                                                         fontSize: 12,
-                                                        color: '#2A2A2E',
+                                                        color: 'var(--cal-text)',
                                                         fontWeight: 600,
                                                         lineHeight: 1.2
                                                     }}
@@ -1232,60 +1285,60 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                 )}
                             </div>
 
-                        {form.tagged_employees.length > 0 && (
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                                {form.tagged_employees.map(id => {
-                                    const emp = employees.find(e => e.id === id);
-                                    return emp ? (
-                                        <div
-                                            key={id}
+                    {form.tagged_employees.length > 0 && (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                            {form.tagged_employees.map(id => {
+                                const emp = employees.find(e => e.id === id);
+                                return emp ? (
+                                    <div
+                                        key={id}
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            background: 'var(--cal-panel-2)',
+                                            border: '1px solid var(--cal-border)',
+                                            borderRadius: 999,
+                                            padding: '4px 10px 4px 4px',
+                                            minHeight: 34
+                                        }}
+                                    >
+                                        <EmployeeAvatar employee={emp} size={24} fontSize={9} />
+                                        <span
                                             style={{
+                                                fontSize: 11.5,
+                                                fontWeight: 500,
+                                                color: 'var(--cal-text-2)',
+                                                lineHeight: 1,
                                                 display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: 8,
-                                                background: '#F7F7F8',
-                                                border: '1px solid #ECECEE',
-                                                borderRadius: 999,
-                                                padding: '4px 10px 4px 4px',
-                                                minHeight: 34
+                                                alignItems: 'center'
                                             }}
                                         >
-                                            <EmployeeAvatar employee={emp} size={24} fontSize={9} />
-                                            <span
-                                                style={{
-                                                    fontSize: 11.5,
-                                                    fontWeight: 500,
-                                                    color: '#444',
-                                                    lineHeight: 1,
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center'
-                                                }}
-                                            >
-                                                {emp.name}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleEmp(id)}
-                                                style={{
-                                                    border: 'none',
-                                                    background: 'transparent',
-                                                    color: '#8B8B94',
-                                                    cursor: 'pointer',
-                                                    padding: 0,
-                                                    fontSize: 13,
-                                                    lineHeight: 1,
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}
-                                            >
-                                                ×
-                                            </button>
-                                        </div>
-                                    ) : null;
-                                })}
-                            </div>
-                        )}
+                                            {emp.name}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleEmp(id)}
+                                            style={{
+                                                border: 'none',
+                                                background: 'transparent',
+                                                color: 'var(--cal-text-3)',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                fontSize: 13,
+                                                lineHeight: 1,
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ) : null;
+                            })}
+                        </div>
+                    )}
                         </div>
                     </div>
 
@@ -1297,8 +1350,8 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                     disabled={deling}
                                     style={{
                                         ...L.softBtn,
-                                        background: '#fff',
-                                        border: '1px solid #F0C8C8',
+                                        background: darkMode ? 'rgba(214,67,67,.08)' : '#fff',
+                                        border: `1px solid ${colorWithAlpha('#D64343', '45')}`,
                                         color: '#D64343'
                                     }}
                                 >
@@ -1354,6 +1407,12 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
         .map(id => employees.find(e => e.id === id))
         .filter(Boolean);
 
+    const darkMode = isDarkMode();
+    const headerBg = darkMode ? colorWithAlpha(cfg.badge, '18') : cfg.bg;
+    const headerBorder = darkMode ? colorWithAlpha(cfg.badge, '35') : colorWithAlpha(cfg.badge, '33');
+    const statusChipBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
+    const closeBtnFilter = darkMode ? 'invert(1) opacity(.72)' : 'opacity(.75)';
+
     return (
         <ModalPortal>
             <div
@@ -1365,39 +1424,44 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                     ...S.backdrop,
                     padding: '14px',
                     alignItems: 'center',
-                    background: 'rgba(0,0,0,.18)'
+                    background: 'rgba(0,0,0,.32)'
                 }}
             >
-                <div style={{ ...S.modal, maxWidth: 440, overflow: 'hidden' }}>
+                <div style={{ ...S.modal, maxWidth: 560, overflow: 'hidden' }}>
                     <div
                         style={{
-                            background: cfg.bg,
-                            padding: '1.125rem 1.5rem',
-                            borderBottom: `2px solid ${cfg.badge}33`,
+                            background: headerBg,
+                            padding: '1.25rem 1.5rem',
+                            borderBottom: `1px solid ${headerBorder}`,
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'flex-start'
                         }}
                     >
                         <div>
-                            <div style={{ fontWeight: 700, fontSize: 16, color: cfg.text }}>
+                            <div style={{ fontWeight: 700, fontSize: 18, color: cfg.text }}>
                                 {event.title}
                             </div>
-                            <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
+                            <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginTop: 4 }}>
                                 {fmtShort(event.start_date)} – {fmtShort(event.end_date)}
                             </div>
                         </div>
-                        <button className="btn-close" onClick={onClose} style={{ fontSize: 11 }} />
+                        <button
+                            className="btn-close"
+                            onClick={onClose}
+                            style={{ fontSize: 11, filter: closeBtnFilter }}
+                        />
                     </div>
 
-                    <div style={{ padding: '1.125rem 1.5rem' }}>
-                        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                    <div style={{ padding: '1.25rem 1.5rem', background: 'var(--cal-panel)' }}>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
                             <span
                                 style={{
                                     ...S.chip,
-                                    background: cfg.bg,
+                                    background: statusChipBg,
                                     color: cfg.text,
-                                    border: `1px solid ${cfg.badge}33`
+                                    border: `1px solid ${headerBorder}`,
+                                    fontWeight: 700
                                 }}
                             >
                                 {cfg.icon} {event.status}
@@ -1407,7 +1471,9 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                 style={{
                                     ...S.chip,
                                     color: pColor,
-                                    border: `1px solid ${pColor}44`
+                                    border: `1px solid ${colorWithAlpha(pColor, '55')}`,
+                                    background: 'transparent',
+                                    fontWeight: 700
                                 }}
                             >
                                 ● {event.priority}
@@ -1415,32 +1481,30 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                         </div>
 
                         {event.description && (
-                            <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}>
+                            <p style={{ fontSize: 13.5, color: 'var(--cal-text-2)', marginBottom: 12 }}>
                                 {event.description}
                             </p>
                         )}
 
                         {event.location && (
-                            <div style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>
+                            <div style={{ fontSize: 13.5, color: 'var(--cal-text-2)', marginBottom: 14 }}>
                                 📍 {event.location}
                             </div>
                         )}
 
                         {tagged.length > 0 && (() => {
-                            // When all employees are tagged, or the list is very large,
-                            // show a compact summary instead of individual chips.
-                            const isAll     = tagged.length === employees.length && employees.length > 0;
-                            const SHOW_MAX  = 6; // max individual chips before collapsing
-                            const isLarge   = !isAll && tagged.length > SHOW_MAX;
+                            const isAll = tagged.length === employees.length && employees.length > 0;
+                            const SHOW_MAX = 6;
+                            const isLarge = !isAll && tagged.length > SHOW_MAX;
 
                             return (
                                 <div style={{ marginTop: 8 }}>
                                     <div
                                         style={{
                                             fontSize: 11,
-                                            fontWeight: 600,
-                                            color: '#bbb',
-                                            marginBottom: 6,
+                                            fontWeight: 700,
+                                            color: 'var(--cal-text-3)',
+                                            marginBottom: 8,
                                             textTransform: 'uppercase',
                                             letterSpacing: '.05em'
                                         }}
@@ -1449,17 +1513,16 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                     </div>
 
                                     {isAll ? (
-                                        // All employees — single pill
                                         <span
                                             style={{
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 gap: 6,
                                                 fontSize: 12,
-                                                background: cfg.bg,
-                                                border: `1px solid ${cfg.badge}44`,
+                                                background: statusChipBg,
+                                                border: `1px solid ${headerBorder}`,
                                                 borderRadius: 20,
-                                                padding: '3px 12px',
+                                                padding: '4px 12px',
                                                 color: cfg.text,
                                                 fontWeight: 600
                                             }}
@@ -1471,7 +1534,7 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                                     background: cfg.badge,
                                                     color: '#fff',
                                                     borderRadius: 20,
-                                                    padding: '0px 7px',
+                                                    padding: '0 7px',
                                                     fontWeight: 700
                                                 }}
                                             >
@@ -1479,7 +1542,6 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                             </span>
                                         </span>
                                     ) : isLarge ? (
-                                        // Large partial group — show first few + overflow count
                                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                                             {tagged.slice(0, SHOW_MAX).map(emp => (
                                                 <div
@@ -1488,10 +1550,11 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         gap: 7,
-                                                        background: '#F5F5F5',
+                                                        background: 'var(--cal-panel-2)',
+                                                        border: '1px solid var(--cal-border)',
                                                         borderRadius: 999,
                                                         padding: '4px 10px 4px 4px',
-                                                        color: '#444'
+                                                        color: 'var(--cal-text-2)'
                                                     }}
                                                 >
                                                     <EmployeeAvatar employee={emp} size={22} fontSize={9} />
@@ -1503,10 +1566,11 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                             <span
                                                 style={{
                                                     fontSize: 12,
-                                                    background: '#EDEDF0',
+                                                    background: 'var(--cal-panel-2)',
+                                                    border: '1px solid var(--cal-border)',
                                                     borderRadius: 20,
-                                                    padding: '2px 10px',
-                                                    color: '#666',
+                                                    padding: '3px 10px',
+                                                    color: 'var(--cal-text-2)',
                                                     fontWeight: 600
                                                 }}
                                             >
@@ -1514,41 +1578,69 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                             </span>
                                         </div>
                                     ) : (
-                                        
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                        {tagged.map(emp => (
-                                            <div
-                                                key={emp.id}
-                                                style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: 7,
-                                                    background: '#F5F5F5',
-                                                    borderRadius: 999,
-                                                    padding: '4px 10px 4px 4px',
-                                                    color: '#444'
-                                                }}
-                                            >
-                                                <EmployeeAvatar employee={emp} size={22} fontSize={9} />
-                                                <span style={{ fontSize: 11.5, fontWeight: 500 }}>
-                                                    {emp.name}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
+                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                            {tagged.map(emp => (
+                                                <div
+                                                    key={emp.id}
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: 7,
+                                                        background: 'var(--cal-panel-2)',
+                                                        border: '1px solid var(--cal-border)',
+                                                        borderRadius: 999,
+                                                        padding: '4px 10px 4px 4px',
+                                                        color: 'var(--cal-text-2)'
+                                                    }}
+                                                >
+                                                    <EmployeeAvatar employee={emp} size={22} fontSize={9} />
+                                                    <span style={{ fontSize: 11.5, fontWeight: 500 }}>
+                                                        {emp.name}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
                             );
                         })()}
                     </div>
 
-                    <div style={{ ...S.mFoot, justifyContent: 'flex-end', gap: 8 }}>
+                    <div
+                        style={{
+                            ...S.mFoot,
+                            justifyContent: 'flex-end',
+                            gap: 10,
+                            background: 'var(--cal-panel)',
+                            borderTop: '1px solid var(--cal-border-soft)'
+                        }}
+                    >
                         {canEdit && (
-                            <button onClick={onEdit} style={S.btnGhost}>
+                            <button
+                                onClick={onEdit}
+                                style={{
+                                    ...S.btnGhost,
+                                    height: 40,
+                                    borderRadius: 999,
+                                    padding: '0 18px',
+                                    fontWeight: 700
+                                }}
+                            >
                                 Edit Event
                             </button>
                         )}
-                        <button onClick={onClose} style={{ ...S.btnPrimary, background: cfg.badge }}>
+
+                        <button
+                            onClick={onClose}
+                            style={{
+                                ...S.btnPrimary,
+                                background: cfg.badge,
+                                height: 40,
+                                borderRadius: 999,
+                                padding: '0 20px',
+                                fontWeight: 700
+                            }}
+                        >
                             Close
                         </button>
                     </div>
@@ -1562,31 +1654,47 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
 // DAY EVENTS MODAL
 // ====================================================================
 function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
+    const darkMode = isDarkMode();
+    const closeBtnFilter = darkMode ? 'invert(1) opacity(.72)' : 'opacity(.75)';
+
     return (
         <ModalPortal>
-<div
-    className="hide-scrollbar"
-    onClick={e => {
-        if (e.target === e.currentTarget) onClose();
-    }}
-    style={{
-        ...S.backdrop,
-        padding: '14px',
-        alignItems: 'center',
-        background: 'rgba(0,0,0,.18)'
-    }}
->
+            <div
+                className="hide-scrollbar"
+                onClick={e => {
+                    if (e.target === e.currentTarget) onClose();
+                }}
+                style={{
+                    ...S.backdrop,
+                    padding: '14px',
+                    alignItems: 'center',
+                    background: 'rgba(0,0,0,.22)'
+                }}
+            >
                 <div style={{ ...S.modal, maxWidth: 360 }}>
                     <div style={S.mHead}>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: '#222' }}>
+                        <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--cal-text)' }}>
                             {fmtLong(dateStr)}
                         </span>
-                        <button className="btn-close" onClick={onClose} style={{ fontSize: 11 }} />
+                        <button
+                            className="btn-close"
+                            onClick={onClose}
+                            style={{ fontSize: 11, filter: closeBtnFilter }}
+                        />
                     </div>
 
-                    <div style={{ padding: '0.75rem 1rem', maxHeight: '60vh', overflowY: 'auto' }}>
+                    <div
+                        className="hide-scrollbar"
+                        style={{
+                            padding: '0.75rem 1rem',
+                            maxHeight: '60vh',
+                            overflowY: 'auto',
+                            background: 'var(--cal-panel)'
+                        }}
+                    >
                         {events.map(ev => {
                             const cfg = STATUS_CFG[ev.status] ?? STATUS_CFG.Upcoming;
+                            const hoverBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
 
                             return (
                                 <div
@@ -1600,10 +1708,11 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                                         borderRadius: 10,
                                         cursor: 'pointer',
                                         marginBottom: 4,
-                                        border: '1px solid #F0F0F0'
+                                        border: '1px solid var(--cal-border)',
+                                        background: 'transparent'
                                     }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = cfg.bg)}
-                                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                    onMouseEnter={e => (e.currentTarget.style.background = hoverBg)}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >
                                     <div
                                         style={{
@@ -1616,10 +1725,10 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                                     />
 
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 600, fontSize: 13, color: '#222' }}>
+                                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--cal-text)' }}>
                                             {ev.title}
                                         </div>
-                                        <div style={{ fontSize: 11, color: '#bbb' }}>
+                                        <div style={{ fontSize: 11, color: 'var(--cal-text-3)' }}>
                                             {fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}
                                         </div>
                                     </div>
@@ -1627,9 +1736,10 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                                     <span
                                         style={{
                                             ...S.chip,
-                                            background: cfg.bg,
+                                            background: darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg,
                                             color: cfg.text,
-                                            fontSize: 10
+                                            fontSize: 10,
+                                            border: `1px solid ${colorWithAlpha(cfg.badge, '35')}`
                                         }}
                                     >
                                         {ev.status}
@@ -1651,16 +1761,17 @@ function FilterSidebar({ activeFilters, onToggle }) {
     return (
         <div
             style={{
-                width: 155,
+                width: 185,
                 flexShrink: 0,
-                background: '#fff',
-                border: '1px solid #EBEBEB',
-                borderRadius: 14,
-                padding: '16px 14px',
-                alignSelf: 'flex-start'
+                background: 'var(--cal-panel)',
+                border: '1px solid var(--cal-border)',
+                borderRadius: 18,
+                padding: '18px 16px',
+                alignSelf: 'flex-start',
+                boxShadow: 'var(--cal-shadow)'
             }}
         >
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#111', marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--cal-text)', marginBottom: 16 }}>
                 Filters
             </div>
 
@@ -1675,7 +1786,7 @@ function FilterSidebar({ activeFilters, onToggle }) {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 9,
-                            marginBottom: 12,
+                            marginBottom: 13,
                             cursor: 'pointer',
                             userSelect: 'none'
                         }}
@@ -1686,8 +1797,8 @@ function FilterSidebar({ activeFilters, onToggle }) {
                                 height: 18,
                                 borderRadius: 5,
                                 flexShrink: 0,
-                                background: active ? cfg.filter : '#F0F0F0',
-                                border: `1.5px solid ${active ? cfg.filter : '#DDD'}`,
+                                background: active ? cfg.filter : 'var(--cal-panel-2)',
+                                border: `1.5px solid ${active ? cfg.filter : 'var(--cal-border)'}`,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -1710,9 +1821,9 @@ function FilterSidebar({ activeFilters, onToggle }) {
 
                         <span
                             style={{
-                                fontSize: 12.5,
-                                color: active ? '#222' : '#BBB',
-                                fontWeight: active ? 500 : 400,
+                                fontSize: 13,
+                                color: active ? 'var(--cal-text)' : 'var(--cal-text-3)',
+                                fontWeight: active ? 600 : 500,
                                 transition: 'color .15s'
                             }}
                         >
@@ -1983,25 +2094,25 @@ function Calendar() {
                     onClick={() => openDate(dateStr)}
                     style={{ ...G.cell, cursor: dayEvs.length > 0 || isEditor ? 'pointer' : 'default' }}
                     onMouseEnter={e => {
-                        if (!isTodayCell) e.currentTarget.style.background = '#FAFAFA';
+                        if (!isTodayCell) e.currentTarget.style.background = 'var(--cal-hover)';
                     }}
                     onMouseLeave={e => {
-                        e.currentTarget.style.background = '#fff';
+                        e.currentTarget.style.background = 'var(--cal-panel)';
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                         <span
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: 24,
-                                height: 24,
+                                width: 26,
+                                height: 26,
                                 borderRadius: '50%',
                                 fontSize: 12,
-                                fontWeight: isTodayCell ? 700 : 500,
-                                background: isTodayCell ? '#111' : 'transparent',
-                                color: isTodayCell ? '#fff' : isSun ? '#E53935' : '#222',
+                                fontWeight: isTodayCell ? 800 : 600,
+                                background: isTodayCell ? 'var(--cal-today)' : 'transparent',
+                                color: isTodayCell ? 'var(--cal-today-text)' : isSun ? '#E85B5B' : 'var(--cal-text)',
                                 flexShrink: 0
                             }}
                         >
@@ -2009,7 +2120,7 @@ function Calendar() {
                         </span>
 
                         {isFirstRow && (
-                            <span style={{ fontSize: 10, color: '#CCCCCC', fontWeight: 500 }}>
+                            <span style={{ fontSize: 10.5, color: 'var(--cal-muted)', fontWeight: 600 }}>
                                 {dayName}
                             </span>
                         )}
@@ -2028,7 +2139,7 @@ function Calendar() {
                     ))}
 
                     {dayEvs.length > 3 && (
-                        <div style={{ fontSize: 9.5, color: '#BBB', marginTop: 3, paddingLeft: 2 }}>
+                        <div style={{ fontSize: 10, color: 'var(--cal-text-3)', marginTop: 4, paddingLeft: 2 }}>
                             +{dayEvs.length - 3} more
                         </div>
                     )}
@@ -2049,7 +2160,7 @@ function Calendar() {
 
         return (
             <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 520 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 980 }}>
                     <tbody>{rows}</tbody>
                 </table>
             </div>
@@ -2058,7 +2169,7 @@ function Calendar() {
 
     const renderWeekView = () => {
         return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minWidth: 840 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minWidth: 980 }}>
                 {weekDates.map((date, idx) => {
                     const dateStr = toDateOnly(date);
                     const dayEvs = getDay(dateStr);
@@ -2069,28 +2180,28 @@ function Calendar() {
                             key={dateStr}
                             onClick={() => openDate(dateStr)}
                             style={{
-                                minHeight: 420,
-                                padding: '10px 8px',
-                                borderRight: idx === 6 ? 'none' : '1px solid #F0F0F0',
+                                minHeight: 500,
+                                padding: '12px 10px',
+                                borderRight: idx === 6 ? 'none' : '1px solid var(--cal-border-soft)',
                                 cursor: dayEvs.length > 0 || isEditor ? 'pointer' : 'default',
-                                background: '#fff'
+                                background: 'var(--cal-panel)'
                             }}
                         >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
-                                <span style={{ fontSize: 11, color: '#B5B5B5', fontWeight: 600 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
+                                <span style={{ fontSize: 11, color: 'var(--cal-text-3)', fontWeight: 600 }}>
                                     {DAY_ABBR[date.getDay()]}
                                 </span>
 
                                 <span
                                     style={{
-                                        width: 28,
-                                        height: 28,
+                                        width: 30,
+                                        height: 30,
                                         borderRadius: '50%',
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        background: isTodayCell ? '#111' : '#F7F7F7',
-                                        color: isTodayCell ? '#fff' : '#222',
+                                        background: isTodayCell ? 'var(--cal-today)' : 'var(--cal-panel-2)',
+                                        color: isTodayCell ? 'var(--cal-today-text)' : 'var(--cal-text)',
                                         fontSize: 13,
                                         fontWeight: 700
                                     }}
@@ -2100,7 +2211,7 @@ function Calendar() {
                             </div>
 
                             {dayEvs.length === 0 ? (
-                                <div style={{ fontSize: 12, color: '#C8C8C8', marginTop: 10 }}>
+                                <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 10 }}>
                                     No events
                                 </div>
                             ) : (
@@ -2127,8 +2238,8 @@ function Calendar() {
         const dayEvs = getDay(selectedDateStr);
 
         return (
-            <div style={{ padding: '18px 20px 20px' }}>
-                <div style={{ fontSize: 12, color: '#A5A5A5', marginBottom: 12 }}>
+            <div style={{ padding: '20px 22px 22px' }}>
+                <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginBottom: 12 }}>
                     {fmtLong(selectedDateStr)}
                 </div>
 
@@ -2140,13 +2251,14 @@ function Calendar() {
                             setShowForm(true);
                         }}
                         style={{
-                            border: '1px dashed #E3E3E3',
-                            borderRadius: 12,
-                            padding: '22px 16px',
+                            border: '1px dashed var(--cal-border)',
+                            borderRadius: 14,
+                            padding: '24px 16px',
                             textAlign: 'center',
-                            color: '#B8B8B8',
+                            color: 'var(--cal-text-3)',
                             fontSize: 13,
-                            cursor: isEditor ? 'pointer' : 'default'
+                            cursor: isEditor ? 'pointer' : 'default',
+                            background: 'var(--cal-panel-2)'
                         }}
                     >
                         No events for this day
@@ -2160,26 +2272,26 @@ function Calendar() {
                                 key={ev.id}
                                 onClick={() => setDetail(ev)}
                                 style={{
-                                    border: '1px solid #EFEFEF',
+                                    border: '1px solid var(--cal-border)',
                                     borderLeft: `4px solid ${cfg.badge}`,
-                                    borderRadius: 12,
+                                    borderRadius: 14,
                                     padding: '14px 16px',
                                     marginBottom: 10,
                                     cursor: 'pointer',
-                                    background: '#fff'
+                                    background: 'var(--cal-panel)'
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                                     <div>
-                                        <div style={{ fontSize: 15, fontWeight: 700, color: '#222' }}>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cal-text)' }}>
                                             {ev.title}
                                         </div>
-                                        <div style={{ fontSize: 12, color: '#999', marginTop: 3 }}>
+                                        <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 3 }}>
                                             {fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}
                                         </div>
 
                                         {ev.location && (
-                                            <div style={{ fontSize: 12, color: '#777', marginTop: 6 }}>
+                                            <div style={{ fontSize: 12, color: 'var(--cal-text-2)', marginTop: 6 }}>
                                                 📍 {ev.location}
                                             </div>
                                         )}
@@ -2207,14 +2319,13 @@ function Calendar() {
     return (
         <div
             style={{
-                padding: '20px 24px',
-                background: '#F7F8FA',
-                minHeight: '100%',
+                padding: '12px 12px 0',
+                background: 'var(--cal-page-bg)',
+                minHeight: 'calc(100vh - 110px)',
                 fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
                 boxSizing: 'border-box'
             }}
         >
-            {/* TOP BAR */}
             <div
                 style={{
                     display: 'grid',
@@ -2229,8 +2340,8 @@ function Calendar() {
                     style={{
                         justifySelf: 'center',
                         display: 'flex',
-                        background: '#EFEFEF',
-                        borderRadius: 12,
+                        background: 'var(--cal-switch-bg)',
+                        borderRadius: 14,
                         padding: 4,
                         gap: 2
                     }}
@@ -2240,16 +2351,16 @@ function Calendar() {
                             key={v}
                             onClick={() => setView(v)}
                             style={{
-                                background: view === v ? '#111' : 'transparent',
-                                color: view === v ? '#fff' : '#666',
+                                background: view === v ? 'var(--cal-switch-active)' : 'transparent',
+                                color: view === v ? 'var(--cal-switch-active-text)' : 'var(--cal-text-2)',
                                 border: 'none',
-                                borderRadius: 10,
-                                padding: '8px 28px',
-                                fontSize: 13,
-                                fontWeight: 600,
+                                borderRadius: 11,
+                                padding: '10px 34px',
+                                fontSize: 14,
+                                fontWeight: 700,
                                 cursor: 'pointer',
                                 transition: 'all .15s',
-                                minWidth: 88
+                                minWidth: 96
                             }}
                         >
                             {v}
@@ -2268,18 +2379,18 @@ function Calendar() {
                                 setShowForm(true);
                             }}
                             style={{
-                                background: '#000000',
-                                color: '#fff',
+                                background: 'var(--cal-btn)',
+                                color: 'var(--cal-btn-text)',
                                 border: 'none',
-                                borderRadius: 10,
-                                padding: '9px 18px',
-                                fontSize: 13,
+                                borderRadius: 12,
+                                padding: '10px 20px',
+                                fontSize: 14,
                                 fontWeight: 700,
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 6,
-                                boxShadow: '0 2px 10px rgba(255,107,78,.35)',
+                                boxShadow: '0 8px 24px rgba(47,109,246,.18)',
                                 transition: 'opacity .15s'
                             }}
                             onMouseEnter={e => (e.currentTarget.style.opacity = '.88')}
@@ -2321,29 +2432,29 @@ function Calendar() {
                 </div>
             </div>
 
-            {/* BODY */}
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
                 <FilterSidebar activeFilters={filters} onToggle={toggleFilter} />
 
                 <div
                     style={{
                         flex: 1,
                         minWidth: 0,
-                        background: '#fff',
-                        border: '1px solid #EBEBEB',
-                        borderRadius: 14,
-                        overflow: 'hidden'
+                        minHeight: 'calc(100vh - 180px)',
+                        background: 'var(--cal-panel)',
+                        border: '1px solid var(--cal-border)',
+                        borderRadius: 18,
+                        overflow: 'hidden',
+                        boxShadow: 'var(--cal-shadow)'
                     }}
                 >
-                    {/* HEADER */}
                     <div
                         style={{
                             display: 'grid',
                             gridTemplateColumns: '1fr auto 1fr',
                             alignItems: 'center',
-                            padding: '10px 14px',
-                            borderBottom: '1px solid #F0F0F0',
-                            background: '#fff'
+                            padding: '14px 16px',
+                            borderBottom: '1px solid var(--cal-border-soft)',
+                            background: 'var(--cal-panel)'
                         }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -2358,13 +2469,13 @@ function Calendar() {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: 8,
-                                    padding: '8px 12px',
-                                    border: '1px solid #E8E8E8',
-                                    borderRadius: 10,
-                                    background: '#fff',
-                                    color: '#666',
-                                    fontSize: 13,
-                                    fontWeight: 600
+                                    padding: '10px 14px',
+                                    border: '1px solid var(--cal-border)',
+                                    borderRadius: 12,
+                                    background: 'var(--cal-panel-2)',
+                                    color: 'var(--cal-text-2)',
+                                    fontSize: 14,
+                                    fontWeight: 700
                                 }}
                             >
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -2383,8 +2494,8 @@ function Calendar() {
                             </button>
                         </div>
 
-                        <div style={{ justifySelf: 'center', color: '#6B6B6B', fontSize: 14 }}>
-                            <strong style={{ fontSize: 18, color: '#111', marginRight: 6 }}>
+                        <div style={{ justifySelf: 'center', color: 'var(--cal-text-2)', fontSize: 15 }}>
+                            <strong style={{ fontSize: 19, color: 'var(--cal-text)', marginRight: 6 }}>
                                 {totalEvents}
                             </strong>
                             {summaryLabel}
@@ -2450,34 +2561,34 @@ function Calendar() {
 const G = {
     cell: {
         verticalAlign: 'top',
-        padding: '6px 8px',
-        borderBottom: '1px solid #F0F0F0',
-        borderRight: '1px solid #F0F0F0',
-        background: '#fff',
-        minHeight: 100,
-        height: 100,
-        transition: 'background .1s'
+        padding: '10px 12px',
+        borderBottom: '1px solid var(--cal-border-soft)',
+        borderRight: '1px solid var(--cal-border-soft)',
+        background: 'var(--cal-panel)',
+        minHeight: 118,
+        height: 118,
+        transition: 'background .12s'
     },
 
     empty: {
-        borderBottom: '1px solid #F0F0F0',
-        borderRight: '1px solid #F0F0F0',
-        background: '#FAFAFA',
-        minHeight: 100,
-        height: 100
+        borderBottom: '1px solid var(--cal-border-soft)',
+        borderRight: '1px solid var(--cal-border-soft)',
+        background: 'var(--cal-empty)',
+        minHeight: 118,
+        height: 118
     },
 
     navBtn: {
-        background: '#F5F5F5',
-        border: '1px solid #E8E8E8',
-        borderRadius: 8,
-        width: 30,
-        height: 30,
+        background: 'var(--cal-nav)',
+        border: '1px solid var(--cal-nav-border)',
+        borderRadius: 10,
+        width: 36,
+        height: 36,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
-        color: '#555'
+        color: 'var(--cal-text-2)'
     }
 };
 
@@ -2486,7 +2597,7 @@ const S = {
     backdrop: {
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.44)',
+        background: 'rgba(0,0,0,0.52)',
         zIndex: 99999,
         display: 'flex',
         justifyContent: 'center',
@@ -2497,51 +2608,55 @@ const S = {
     },
 
     modal: {
-        background: '#fff',
-        borderRadius: 16,
+        background: 'var(--cal-panel)',
+        borderRadius: 18,
         width: '100%',
         maxHeight: 'calc(100vh - 112px)',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 20px 60px rgba(0,0,0,.18)',
-        margin: '0 auto'
+        boxShadow: 'var(--cal-shadow)',
+        margin: '0 auto',
+        border: '1px solid var(--cal-border)'
     },
 
     mHead: {
         padding: '1rem 1.5rem',
-        borderBottom: '1px solid #F0F0F0',
+        borderBottom: '1px solid var(--cal-border-soft)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        flexShrink: 0
+        flexShrink: 0,
+        background: 'var(--cal-panel)'
     },
 
     mBody: {
         overflowY: 'auto',
         padding: '1.125rem 1.5rem',
-        flex: 1
+        flex: 1,
+        background: 'var(--cal-panel)'
     },
 
     mFoot: {
         padding: '0.75rem 1.5rem',
-        borderTop: '1px solid #F0F0F0',
+        borderTop: '1px solid var(--cal-border-soft)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        flexShrink: 0
+        flexShrink: 0,
+        background: 'var(--cal-panel)'
     },
 
     inp: {
         width: '100%',
         padding: '8px 11px',
-        border: '1px solid #EBEBEB',
+        border: '1px solid var(--cal-border)',
         borderRadius: 8,
         fontSize: 13,
-        color: '#222',
+        color: 'var(--cal-text)',
         outline: 'none',
         boxSizing: 'border-box',
         fontFamily: 'inherit',
-        background: '#fff'
+        background: 'var(--cal-input-bg)'
     },
 
     chip: {
@@ -2554,7 +2669,7 @@ const S = {
     },
 
     btnPrimary: {
-        background: '#FF6B4E',
+        background: '#2F6DF6',
         color: '#fff',
         border: 'none',
         borderRadius: 20,
@@ -2565,9 +2680,9 @@ const S = {
     },
 
     btnGhost: {
-        background: '#fff',
-        color: '#555',
-        border: '1px solid #E0E0E0',
+        background: 'var(--cal-panel)',
+        color: 'var(--cal-text-2)',
+        border: '1px solid var(--cal-border)',
         borderRadius: 20,
         padding: '7px 18px',
         fontSize: 13,
@@ -2576,7 +2691,7 @@ const S = {
     },
 
     btnDanger: {
-        background: '#fff',
+        background: 'var(--cal-panel)',
         color: '#E74C3C',
         border: '1px solid #E74C3C44',
         borderRadius: 20,
@@ -2587,9 +2702,9 @@ const S = {
     },
 
     errBox: {
-        background: '#FDECEA',
-        border: '1px solid #F5C6C4',
-        color: '#C0392B',
+        background: 'rgba(231,76,60,.10)',
+        border: '1px solid rgba(231,76,60,.24)',
+        color: '#E96B61',
         borderRadius: 8,
         padding: '8px 12px',
         fontSize: 13,
