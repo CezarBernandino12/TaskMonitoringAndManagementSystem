@@ -24,10 +24,8 @@ register_shutdown_function(function () {
 require_once '../../config/db.php';
 header('Content-Type: application/json');
 
-// ── AUTH (optional — remove if no session) ───────────────────────────
-// session_start();
-// $createdBy = $_SESSION['user_id'] ?? null;
-$createdBy = null; // set from session if you have auth
+session_start();
+$createdBy = $_SESSION['user_id'] ?? null;
 
 // ── INPUT ────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
