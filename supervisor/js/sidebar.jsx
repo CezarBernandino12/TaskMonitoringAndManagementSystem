@@ -518,6 +518,13 @@ function SupervisorSidebar() {
                         onNavigate={handleNavigate}
                     />
 
+                    <SidebarLink
+                        href="strategic-plan.html"
+                        icon="bi-clipboard-data"
+                        label="Strategic Plan"
+                        isActive={isActivePage("strategic-plan.html")}
+                        onNavigate={handleNavigate}
+                    />
 
 
                     <div className="sidebar-divider mt-3"></div>

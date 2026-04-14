@@ -3264,7 +3264,45 @@ ALTER TABLE tasks
 ADD COLUMN progress_percentage TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER priority;
 
 GABO APRIL 12
+
 ALTER TABLE users
 ADD COLUMN last_active_at DATETIME NULL AFTER updated_at;
 
 CREATE INDEX idx_users_last_active_at ON users(last_active_at);
+
+
+
+
+CEZAR APRIL 13
+
+   CREATE TABLE strategic_plans (
+     id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+     plan_title    VARCHAR(255)  NOT NULL,
+     department    VARCHAR(255)  NOT NULL,
+     vision        TEXT          NOT NULL,
+     mission       TEXT          NOT NULL,
+     prepared_by   VARCHAR(255)  NOT NULL,
+     prepared_by_title VARCHAR(255) DEFAULT NULL,
+     created_by    INT UNSIGNED  DEFAULT NULL,   -- FK to users.id if you have auth
+     created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     INDEX idx_created_by (created_by)
+   );
+
+   CREATE TABLE strategic_plan_goals (
+     id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+     plan_id       INT UNSIGNED  NOT NULL,
+     sort_order    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+     goal          VARCHAR(500)  NOT NULL,
+     objectives    TEXT          DEFAULT NULL,
+     plans         JSON          NOT NULL,   
+     timeline      VARCHAR(500)  DEFAULT NULL,
+     personnel     TEXT          DEFAULT NULL,
+     metric        TEXT          DEFAULT NULL,
+     remarks       TEXT          DEFAULT NULL,
+     CONSTRAINT fk_spg_plan FOREIGN KEY (plan_id)
+         REFERENCES strategic_plans(id) ON DELETE CASCADE,
+     INDEX idx_spg_plan (plan_id)
+   );
+   
+   ALTER TABLE `strategic_plans` ADD `noted_by_exec_dir` VARCHAR(255) NOT NULL AFTER `prepared_by_title`, ADD `noted_by_president` VARCHAR(255) NOT NULL AFTER `noted_by_exec_dir`;
