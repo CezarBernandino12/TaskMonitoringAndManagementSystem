@@ -13,7 +13,7 @@
 
 /* Global theme tokens so portal modals can use them too */
 :root {
-    --cal-page-bg: #F4F6FA;
+    --cal-page-bg: transparent;
     --cal-panel: #FFFFFF;
     --cal-panel-2: #FAFBFD;
     --cal-border: #E8ECF2;
@@ -38,7 +38,7 @@
 }
 
 html[data-theme="dark"] {
-    --cal-page-bg: #0C111B;
+    --cal-page-bg: transparent;
     --cal-panel: #121926;
     --cal-panel-2: #0F1622;
     --cal-border: #243042;
