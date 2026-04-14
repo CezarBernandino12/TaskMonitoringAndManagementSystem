@@ -426,6 +426,7 @@ const pageContainer = {
 
 const companyStyle = {
   fontSize: 25,
+  fontFamily: "'Matura MT Script Capitals', 'Brush Script MT', cursive",
   fontWeight: "bold",
   color: "#bb0000",
 };
@@ -438,7 +439,7 @@ const taglineStyle = {
 };
 
 const titleStyle = {
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: "bold",
   marginTop: 13,
 };

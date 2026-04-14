@@ -245,6 +245,54 @@ const GLOBAL_CSS = `
     animation: shimmer 1.4s infinite;
     border-radius: 8px;
   }
+
+  /* ── History Sidebar ── */
+  .history-sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 73px;
+    max-height: calc(100vh - 93px);
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 12px rgba(26,26,46,.04);
+    overflow: hidden;
+  }
+
+  .history-sidebar-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #FAF9F5 0%, #F5F3EE 100%);
+    flex-shrink: 0;
+  }
+
+  .history-sidebar-body {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .history-item {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .15s;
+    text-decoration: none;
+    display: block;
+    color: inherit;
+  }
+  .history-item:hover { background: var(--cream); }
+  .history-item.active { background: var(--indigo-lt); border-left: 3px solid var(--indigo); }
+  .history-item:last-child { border-bottom: none; }
+
+  @media (max-width: 1100px) {
+    .history-sidebar { width: 260px; }
+  }
+  @media (max-width: 900px) {
+    .history-sidebar { display: none; }
+  }
 `;
 
 // ── Field ─────────────────────────────────────────────────────────────────────
@@ -678,7 +726,160 @@ function GoalCard({ goal, index, onRemove, onUpdate, onAddPlan, onRemovePlan, on
   );
 }
 
-// ── Progress indicator ────────────────────────────────────────────────────────
+// ── Plan History Sidebar ──────────────────────────────────────────────────────
+function PlanHistorySidebar({ deptPlans, loadingHistory, currentPlanId }) {
+  const fmt = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  return (
+    <aside className="history-sidebar">
+      <div className="history-sidebar-header">
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 30, height: 30, borderRadius: 8,
+            background: "var(--navy)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 14, flexShrink: 0,
+          }}>🗂</div>
+          <div>
+            <div style={{
+              fontFamily: "'Playfair Display', serif",
+              fontWeight: 700, fontSize: 14, color: "var(--navy)",
+            }}>Department Plans</div>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1, fontWeight: 300 }}>
+              {loadingHistory
+                ? "Loading…"
+                : `${deptPlans.length} plan${deptPlans.length !== 1 ? "s" : ""} from your department`}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="history-sidebar-body">
+        {loadingHistory ? (
+          <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+            {[1, 2, 3].map(i => (
+              <div key={i}>
+                <Skeleton h={13} mb={6} />
+                <Skeleton h={10} mb={0} />
+              </div>
+            ))}
+          </div>
+        ) : deptPlans.length === 0 ? (
+          <div style={{
+            padding: "28px 18px",
+            textAlign: "center",
+            color: "var(--muted)",
+            fontSize: 13,
+            fontWeight: 300,
+            lineHeight: 1.6,
+          }}>
+            <div style={{ fontSize: 26, marginBottom: 8 }}>📭</div>
+            No other plans found for your department yet.
+          </div>
+        ) : (
+          deptPlans.map(plan => {
+            const isActive = plan.id === currentPlanId;
+            return (
+              <a
+                key={plan.id}
+                href={plan.preview_url || `strategic-plan-preview.html?id=${plan.id}`}
+                className={`history-item${isActive ? " active" : ""}`}
+              >
+                <div style={{
+                  fontWeight: 600,
+                  fontSize: 13,
+                  color: isActive ? "var(--indigo)" : "var(--navy)",
+                  lineHeight: 1.4,
+                  marginBottom: 4,
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}>
+                  {plan.plan_title || "Untitled Plan"}
+                  {isActive && (
+                    <span style={{
+                      display: "inline-block", marginLeft: 6,
+                      fontSize: 10, fontWeight: 700,
+                      background: "var(--indigo)", color: "#fff",
+                      borderRadius: 4, padding: "1px 6px", verticalAlign: "middle",
+                    }}>Current</span>
+                  )}
+                </div>
+
+                {/* Vision snippet */}
+                {plan.vision && (
+                  <div style={{
+                    fontSize: 11, color: "var(--muted)", fontWeight: 300,
+                    lineHeight: 1.5, marginBottom: 6,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}>
+                    {plan.vision}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+                  {/* Created by */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: "50%",
+                      background: "var(--indigo-lt)", color: "var(--indigo)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 9, fontWeight: 700, flexShrink: 0,
+                    }}>
+                      {(plan.creator_name || "?")[0].toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {plan.creator_name || "Unknown"}
+                    </span>
+                  </div>
+
+                  {/* Date */}
+                  <span style={{
+                    fontSize: 10, color: "var(--muted)", fontWeight: 300,
+                    background: "var(--cream)", borderRadius: 6, padding: "2px 7px",
+                    border: "1px solid var(--border)",
+                  }}>
+                    {fmt(plan.updated_at || plan.created_at)}
+                  </span>
+                </div>
+              </a>
+            );
+          })
+        )}
+      </div>
+
+      {/* Footer link */}
+      {!loadingHistory && deptPlans.length > 0 && (
+        <div style={{
+          padding: "11px 18px",
+          borderTop: "1px solid var(--border)",
+          background: "var(--cream)",
+          flexShrink: 0,
+        }}>
+          <a
+            href="strategic-plans.php"
+            style={{
+              fontSize: 12, color: "var(--indigo)", fontWeight: 600,
+              textDecoration: "none", display: "flex", alignItems: "center", gap: 4,
+            }}
+          >
+            View all department plans →
+          </a>
+        </div>
+      )}
+    </aside>
+  );
+}
+
+
 function ProgressDots({ total, current }) {
   return (
     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -707,6 +908,8 @@ function StrategicPlanGenerator() {
   const [mission,          setMission]          = useState("");
   const [goals,            setGoals]            = useState([]);
   const [deptUsers,        setDeptUsers]        = useState([]);
+  const [deptPlans,        setDeptPlans]        = useState([]);
+  const [loadingHistory,   setLoadingHistory]   = useState(true);
   const [saving,           setSaving]           = useState(false);
   const [toast,            setToast]            = useState({ message: "", type: "success" });
   const [notedByExecDir,   setNotedByExecDir]   = useState("");
@@ -774,6 +977,18 @@ function StrategicPlanGenerator() {
           setGoals([makeGoal()]);
         }
         setLoading(false);
+
+        // ── Fetch dept plan history ──────────────────────────────────────
+        // After main load, fetch plans from the same department as current user
+        fetch("php/strategic_plan_history.php")
+          .then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`)))
+          .then(histData => {
+            setDeptPlans(histData.plans ?? []);
+          })
+          .catch(err => {
+            console.warn("Could not load plan history:", err.message);
+          })
+          .finally(() => setLoadingHistory(false));
       })
       .catch(err => {
         console.error(err);
@@ -950,8 +1165,18 @@ function StrategicPlanGenerator() {
         </div>
       </div>
 
-      {/* Main content */}
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 24px 100px" }}>
+      {/* Two-column layout: form + history sidebar */}
+      <div style={{
+        display: "flex",
+        gap: 24,
+        maxWidth: 1220,
+        margin: "0 auto",
+        padding: "28px 24px 100px",
+        alignItems: "flex-start",
+      }}>
+
+      {/* Main form column */}
+      <div style={{ flex: 1, minWidth: 0 }}>
 
         {/* 1 — Document Info */}
         <SectionCard
@@ -1009,7 +1234,7 @@ function StrategicPlanGenerator() {
           badge={
             deptUsers.length > 0 && (
               <span className="tag" style={{ background: "var(--green-lt)", color: "var(--green)", fontSize: 12 }}>
-                👥 {deptUsers.length} dept. user{deptUsers.length !== 1 ? "s" : ""}
+                 {deptUsers.length} dept. user{deptUsers.length !== 1 ? "s" : ""}
               </span>
             )
           }
@@ -1067,9 +1292,16 @@ function StrategicPlanGenerator() {
           </div>
         </SectionCard>
 
-      </div>
+      </div>{/* end main form column */}
 
-      {/* Sticky Save Bar */}
+        {/* History Sidebar */}
+        <PlanHistorySidebar
+          deptPlans={deptPlans}
+          loadingHistory={loadingHistory}
+          currentPlanId={URL_PLAN_ID}
+        />
+
+      </div>{/* end two-column layout */}
       <div className="save-bar">
         <div style={{ display: "flex", align: "center", gap: 16 }}>
           <div style={{ color: "#94A3B8", fontSize: 13 }}>

@@ -9,8 +9,8 @@ const MANILA_TIMEZONE = "Asia/Manila";
 const ITEMS_PER_PAGE = 10;
 
 const TASK_PROGRESS_STEP = 1;
-const TASK_PROGRESS_LONG_PRESS_DELAY = 320;
-const TASK_PROGRESS_REPEAT_INTERVAL = 120;
+const TASK_PROGRESS_LONG_PRESS_DELAY = 400;
+const TASK_PROGRESS_REPEAT_INTERVAL = 80;
 
 function clampProgress(value = 0) {
     const num = Number(value);
@@ -538,6 +538,7 @@ function TaskSummary({ tasks }) {
     );
 }
 
+
 function TaskProgressCard({ task, isMutating, onIncrease, onDecrease, onSetProgress }) {
     const rawProgress = Number(task?.progress ?? task?.progress_percentage ?? 0);
     const progressValue = Math.max(0, Math.min(100, Number.isFinite(rawProgress) ? rawProgress : 0));
@@ -587,7 +588,6 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease, onSetProgr
             window.clearTimeout(pressStateRef.current.timeoutId);
             pressStateRef.current.timeoutId = null;
         }
-
         if (pressStateRef.current.intervalId) {
             window.clearInterval(pressStateRef.current.intervalId);
             pressStateRef.current.intervalId = null;
@@ -598,38 +598,36 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease, onSetProgr
         return () => clearPressTimers();
     }, [clearPressTimers]);
 
-    const startPress = React.useCallback((action, disabled) => (event) => {
-        if (disabled) return;
-        if (event.pointerType === "mouse" && event.button !== 0) return;
+const startPress = React.useCallback((action, disabled) => (event) => {
+    if (disabled) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
 
-        clearPressTimers();
-        pressStateRef.current.didLongPress = false;
+    // Capture pointer so pointerup fires even if cursor drifts off the button
+    event.currentTarget.setPointerCapture(event.pointerId);
 
-        pressStateRef.current.timeoutId = window.setTimeout(() => {
-            pressStateRef.current.didLongPress = true;
+    clearPressTimers();
+    pressStateRef.current.didLongPress = false;
 
-            action({ silent: true });
+    action();
 
-            pressStateRef.current.intervalId = window.setInterval(() => {
-                action({ silent: true });
-            }, TASK_PROGRESS_REPEAT_INTERVAL);
-        }, TASK_PROGRESS_LONG_PRESS_DELAY);
-    }, [clearPressTimers]);
+    pressStateRef.current.timeoutId = window.setTimeout(() => {
+        pressStateRef.current.didLongPress = true;
+
+        pressStateRef.current.intervalId = window.setInterval(() => {
+            action();
+        }, TASK_PROGRESS_REPEAT_INTERVAL);
+    }, TASK_PROGRESS_LONG_PRESS_DELAY);
+}, [clearPressTimers]);
 
     const endPress = React.useCallback(() => {
         clearPressTimers();
     }, [clearPressTimers]);
 
-    const handlePressClick = React.useCallback((action) => (event) => {
-        if (pressStateRef.current.didLongPress) {
-            event.preventDefault();
-            event.stopPropagation();
-            pressStateRef.current.didLongPress = false;
-            return;
-        }
-
-        action({ silent: false });
-    }, []);
+const handlePressClick = React.useCallback(() => (event) => {
+    // Action already fired on pointerdown — always suppress the click
+    event.preventDefault();
+    event.stopPropagation();
+}, []);
 
     const getProgressFromPointer = React.useCallback((clientX, clientY) => {
         const rect = chartShellRef.current?.getBoundingClientRect();
@@ -656,79 +654,77 @@ function TaskProgressCard({ task, isMutating, onIncrease, onDecrease, onSetProgr
         }
     }, [onSetProgress]);
 
-const handleGaugePointerDown = React.useCallback((event) => {
-    if (isMutating || typeof onSetProgress !== "function") return;
-    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const handleGaugePointerDown = React.useCallback((event) => {
+        if (isMutating || typeof onSetProgress !== "function") return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
 
-    gaugePointerRef.current = {
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        moved: false
-    };
+        gaugePointerRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false
+        };
 
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-}, [isMutating, onSetProgress]);
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+    }, [isMutating, onSetProgress]);
 
-const handleGaugePointerMove = React.useCallback((event) => {
-    const state = gaugePointerRef.current;
-    if (state.pointerId !== event.pointerId) return;
+    const handleGaugePointerMove = React.useCallback((event) => {
+        const state = gaugePointerRef.current;
+        if (state.pointerId !== event.pointerId) return;
 
-    const dx = event.clientX - state.startX;
-    const dy = event.clientY - state.startY;
+        const dx = event.clientX - state.startX;
+        const dy = event.clientY - state.startY;
 
-    if (!state.moved && Math.hypot(dx, dy) < 6) {
-        return;
-    }
+        if (!state.moved && Math.hypot(dx, dy) < 6) return;
 
-    if (!state.moved) {
-        state.moved = true;
-        setIsGaugeDragging(true);
-    }
+        if (!state.moved) {
+            state.moved = true;
+            setIsGaugeDragging(true);
+        }
 
-    const nextValue = getProgressFromPointer(event.clientX, event.clientY);
-    setDragProgress(nextValue);
-}, [getProgressFromPointer]);
+        const nextValue = getProgressFromPointer(event.clientX, event.clientY);
+        setDragProgress(nextValue);
+    }, [getProgressFromPointer]);
 
-const handleGaugePointerUp = React.useCallback(async (event) => {
-    const state = gaugePointerRef.current;
-    if (state.pointerId !== event.pointerId) return;
+    const handleGaugePointerUp = React.useCallback(async (event) => {
+        const state = gaugePointerRef.current;
+        if (state.pointerId !== event.pointerId) return;
 
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
+        event.currentTarget.releasePointerCapture?.(event.pointerId);
 
-    gaugePointerRef.current = {
-        pointerId: null,
-        startX: 0,
-        startY: 0,
-        moved: false
-    };
+        gaugePointerRef.current = {
+            pointerId: null,
+            startX: 0,
+            startY: 0,
+            moved: false
+        };
 
-    if (!state.moved) {
+        if (!state.moved) {
+            setIsGaugeDragging(false);
+            setDragProgress(null);
+            return;
+        }
+
+        const nextValue = getProgressFromPointer(event.clientX, event.clientY);
+        await commitGaugeProgress(nextValue);
+    }, [getProgressFromPointer, commitGaugeProgress]);
+
+    const handleGaugePointerCancel = React.useCallback((event) => {
+        const state = gaugePointerRef.current;
+        if (state.pointerId !== event.pointerId) return;
+
+        event.currentTarget.releasePointerCapture?.(event.pointerId);
+
+        gaugePointerRef.current = {
+            pointerId: null,
+            startX: 0,
+            startY: 0,
+            moved: false
+        };
+
         setIsGaugeDragging(false);
         setDragProgress(null);
-        return;
-    }
-
-    const nextValue = getProgressFromPointer(event.clientX, event.clientY);
-    await commitGaugeProgress(nextValue);
-}, [getProgressFromPointer, commitGaugeProgress]);
-
-const handleGaugePointerCancel = React.useCallback((event) => {
-    const state = gaugePointerRef.current;
-    if (state.pointerId !== event.pointerId) return;
-
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-
-    gaugePointerRef.current = {
-        pointerId: null,
-        startX: 0,
-        startY: 0,
-        moved: false
-    };
-
-    setIsGaugeDragging(false);
-    setDragProgress(null);
-}, []);
+    }, []);
 
     React.useEffect(() => {
         setDragProgress(null);
@@ -769,7 +765,6 @@ const handleGaugePointerCancel = React.useCallback((event) => {
                         <i className="bi bi-chevron-down"></i>
                     </div>
                 </div>
-
                 <div className="task-progress-empty-copy">
                     Select a task from the table to track its progress.
                 </div>
@@ -876,37 +871,33 @@ const handleGaugePointerCancel = React.useCallback((event) => {
                     role="group"
                     aria-label={`Update progress for ${task.title}`}
                 >
-                    <button
-                        type="button"
-                        className="task-progress-split-btn is-minus"
-                        onPointerDown={startPress(onDecrease, decreaseDisabled)}
-                        onPointerUp={endPress}
-                        onPointerLeave={endPress}
-                        onPointerCancel={endPress}
-                        onClick={handlePressClick(onDecrease)}
-                        disabled={decreaseDisabled}
-                        aria-label={`Decrease progress for ${task.title}`}
-                        title="Decrease progress"
-                    >
-                        <span className="task-progress-split-icon is-minus" aria-hidden="true"></span>
-                    </button>
+<button
+    type="button"
+    className="task-progress-split-btn is-minus"
+    onPointerDown={startPress(onDecrease, decreaseDisabled)}
+    onPointerUp={endPress}
+    onPointerCancel={endPress}
+    disabled={decreaseDisabled}
+    aria-label={`Decrease progress for ${task.title}`}
+    title="Decrease progress"
+>
+    <span className="task-progress-split-icon is-minus" aria-hidden="true"></span>
+</button>
 
-                    <span className="task-progress-split-divider" aria-hidden="true"></span>
+<span className="task-progress-split-divider" aria-hidden="true"></span>
 
-                    <button
-                        type="button"
-                        className="task-progress-split-btn is-plus"
-                        onPointerDown={startPress(onIncrease, increaseDisabled)}
-                        onPointerUp={endPress}
-                        onPointerLeave={endPress}
-                        onPointerCancel={endPress}
-                        onClick={handlePressClick(onIncrease)}
-                        disabled={increaseDisabled}
-                        aria-label={`Increase progress for ${task.title}`}
-                        title="Increase progress"
-                    >
-                        <span className="task-progress-split-icon is-plus" aria-hidden="true"></span>
-                    </button>
+<button
+    type="button"
+    className="task-progress-split-btn is-plus"
+    onPointerDown={startPress(onIncrease, increaseDisabled)}
+    onPointerUp={endPress}
+    onPointerCancel={endPress}
+    disabled={increaseDisabled}
+    aria-label={`Increase progress for ${task.title}`}
+    title="Increase progress"
+>
+    <span className="task-progress-split-icon is-plus" aria-hidden="true"></span>
+</button>
                 </div>
             </div>
         </aside>
