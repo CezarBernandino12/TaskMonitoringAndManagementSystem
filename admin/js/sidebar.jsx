@@ -291,6 +291,7 @@ function AdminSidebar() {
 
                     <SidebarLink href="users.html" icon="bi-people" label="Manage Users" isActive={isActivePage("users.html")} onNavigate={handleNavigate} />
                     <SidebarLink href="departments.html" icon="bi-diagram-3" label="Departments" isActive={isActivePage("departments.html")} onNavigate={handleNavigate} />
+                    <SidebarLink href="activity-logs.html" icon="bi-journal-text" label="Activity Logs" isActive={isActivePage("activity-logs.html")} onNavigate={handleNavigate} />
 
                     <div className="sidebar-divider mt-3"></div>
 

@@ -292,6 +292,11 @@ function SupervisorSidebar() {
 
                 if (!active) return;
 
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = "../auth/login.html";
+                    return;
+                }
+
                 if (!response.ok || !data || data.error) {
                     console.error("Sidebar API error:", data?.error || response.status);
                     setUserLoaded(true);

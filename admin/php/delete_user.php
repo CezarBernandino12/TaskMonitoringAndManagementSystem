@@ -18,10 +18,11 @@ set_exception_handler(function ($e) {
 });
 
 require '../../config/db.php';
+require_once '../../config/log_activity.php';
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 if (empty($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Not authenticated.']);
@@ -70,6 +71,14 @@ if (!$checkStmt->fetch()) {
 // created_by, etc.), either SET NULL / CASCADE must be defined
 // in the schema, or handle those here before deleting the user.
 // ----------------------------------------------------------------
+// Capture name before deleting
+$nameStmt = $conn->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
+$nameStmt->execute([$id]);
+$deletedRow = $nameStmt->fetch(PDO::FETCH_ASSOC);
+$deletedName = $deletedRow['name'] ?? "ID {$id}";
+
 $conn->prepare("DELETE FROM users WHERE id = ?")->execute([$id]);
+
+logActivity($conn, 'user.deleted', 'user', $id, "Deleted user: {$deletedName}");
 
 echo json_encode(['success' => true, 'id' => $id]);

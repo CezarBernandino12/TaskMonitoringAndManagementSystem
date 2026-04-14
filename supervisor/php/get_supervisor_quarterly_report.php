@@ -28,7 +28,7 @@ require_once '../../config/db.php';
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // ====================================================================
 // AUTHENTICATION & DEPARTMENT SCOPING

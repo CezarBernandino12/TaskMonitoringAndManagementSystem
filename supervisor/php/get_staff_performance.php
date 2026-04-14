@@ -3,7 +3,7 @@
 date_default_timezone_set('Asia/Manila');
 
 // Start session
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // Database connection
 require_once '../../config/db.php';

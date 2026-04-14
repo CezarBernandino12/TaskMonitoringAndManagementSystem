@@ -1,5 +1,5 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once '../../config/db.php';
 header('Content-Type: application/json; charset=utf-8');
 

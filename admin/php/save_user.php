@@ -20,10 +20,11 @@ set_exception_handler(function ($e) {
 });
 
 require '../../config/db.php';
+require_once '../../config/log_activity.php';
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 if (empty($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Not authenticated.']);
@@ -195,6 +196,7 @@ if ($id) {
         $departmentName, $departmentId, $employeeId, $now, $now,
     ]);
     $id = (int)$conn->lastInsertId();
+    logActivity($conn, 'user.created', 'user', $id, "Created user: {$name} ({$email})");
 }
 
 // ----------------------------------------------------------------

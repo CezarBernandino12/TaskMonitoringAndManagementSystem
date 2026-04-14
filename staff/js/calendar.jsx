@@ -97,6 +97,602 @@ function fmtHeaderDate(date, view) {
 // ====================================================================
 // EVENT FORM MODAL
 // ====================================================================
+
+
+function useOutsideClick(ref, onClose, when = true) {
+    useEffect(() => {
+        if (!when) return;
+
+        const handler = e => {
+            if (ref.current && !ref.current.contains(e.target)) {
+                onClose();
+            }
+        };
+
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [ref, onClose, when]);
+}
+
+function getCalendarMatrix(monthDate) {
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+
+    const first = new Date(year, month, 1);
+    const firstDay = first.getDay(); // 0 = Sun
+    const startOffset = (firstDay + 6) % 7; // make Monday first
+
+    const start = new Date(year, month, 1 - startOffset);
+    const weeks = [];
+
+    for (let w = 0; w < 6; w++) {
+        const row = [];
+        for (let d = 0; d < 7; d++) {
+            const cell = new Date(start);
+            cell.setDate(start.getDate() + w * 7 + d);
+            row.push(cell);
+        }
+        weeks.push(row);
+    }
+
+    return weeks;
+}
+
+function fmtPickerMonth(date) {
+    return `${MONTH_NAMES[date.getMonth()].slice(0, 3)} ${date.getFullYear()}`;
+}
+
+function fmtPickerValue(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${m}/${d}/${y}`;
+}
+
+function CalendarIcon() {
+    return (
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+    );
+}
+
+function ChevronDownIcon() {
+    return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 9 6 6 6-6" />
+        </svg>
+    );
+}
+
+function ChevronLeftIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+        </svg>
+    );
+}
+
+function ChevronRightIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m9 18 6-6-6-6" />
+        </svg>
+    );
+}
+
+function FloatingLayer({ anchorRef, children, open, width = 370, offset = 8 }) {
+    const [pos, setPos] = useState(null);
+
+    useEffect(() => {
+        if (!open || !anchorRef.current) return;
+
+        const update = () => {
+            const rect = anchorRef.current.getBoundingClientRect();
+            setPos({
+                top: rect.bottom + offset + window.scrollY,
+                left: rect.left + window.scrollX,
+                width: Math.max(width, rect.width)
+            });
+        };
+
+        update();
+        window.addEventListener('resize', update);
+        window.addEventListener('scroll', update, true);
+
+        return () => {
+            window.removeEventListener('resize', update);
+            window.removeEventListener('scroll', update, true);
+        };
+    }, [open, anchorRef, width, offset]);
+
+    if (!open || !pos) return null;
+
+    return ReactDOM.createPortal(
+        <div
+            style={{
+                position: 'absolute',
+                top: pos.top,
+                left: pos.left,
+                width: pos.width,
+                zIndex: 100000
+            }}
+        >
+            {children}
+        </div>,
+        document.body
+    );
+}
+
+function CustomSelect({
+    value,
+    options,
+    onChange,
+    placeholder = 'Select',
+    width = '100%',
+    selectedColor = '#222',
+    panelWidth = 250
+}) {
+    const [open, setOpen] = useState(false);
+    const wrapRef = React.useRef(null);
+    const btnRef = React.useRef(null);
+
+    useOutsideClick(wrapRef, () => setOpen(false), open);
+
+    const selected = options.find(opt => opt.value === value);
+
+    return (
+        <div ref={wrapRef} style={{ position: 'relative', width }}>
+            <button
+                ref={btnRef}
+                type="button"
+                onClick={() => setOpen(v => !v)}
+                style={{
+                    width: '100%',
+                    height: 38,
+                    border: '1px solid #E5E5E8',
+                    borderRadius: 12,
+                    background: '#fff',
+                    padding: '0 12px',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: value ? selectedColor : '#9A9AA1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer'
+                }}
+            >
+                <span>{selected ? selected.label : placeholder}</span>
+                <span style={{ color: '#777', display: 'inline-flex' }}>
+                    <ChevronDownIcon />
+                </span>
+            </button>
+
+            <FloatingLayer anchorRef={btnRef} open={open} width={panelWidth} offset={6}>
+                <div
+                    style={{
+                        background: '#fff',
+                        border: '1px solid #EAEAF0',
+                        borderRadius: 18,
+                        padding: '6px 0',
+                        boxShadow: '0 14px 34px rgba(0,0,0,.10)'
+                    }}
+                >
+                    {options.map(opt => {
+                        const active = opt.value === value;
+
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange(opt.value);
+                                    setOpen(false);
+                                }}
+                                style={{
+                                    width: '100%',
+                                    border: 'none',
+                                    background: active ? '#F7F7FA' : '#fff',
+                                    padding: '13px 20px',
+                                    textAlign: 'left',
+                                    fontSize: 11.5,
+                                    fontWeight: 600,
+                                    color: active ? selectedColor : '#2B2B31',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {opt.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </FloatingLayer>
+        </div>
+    );
+}
+
+function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
+    const [open, setOpen] = useState(false);
+    const [viewMonth, setViewMonth] = useState(value ? fromDateStr(value) : new Date());
+    const wrapRef = React.useRef(null);
+    const btnRef = React.useRef(null);
+
+    useOutsideClick(wrapRef, () => setOpen(false), open);
+
+    useEffect(() => {
+        if (value) setViewMonth(fromDateStr(value));
+    }, [value]);
+
+    const selectedDate = value ? fromDateStr(value) : null;
+    const today = new Date();
+    const weeks = getCalendarMatrix(viewMonth);
+
+    const prevMonth = () =>
+        setViewMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+
+    const nextMonth = () =>
+        setViewMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+
+    return (
+        <div ref={wrapRef} style={{ position: 'relative', width: '100%' }}>
+            <button
+                ref={btnRef}
+                type="button"
+                onClick={() => setOpen(v => !v)}
+                style={{
+                    width: '100%',
+                    height: 38,
+                    border: '1px solid #E5E5E8',
+                    borderRadius: 12,
+                    background: '#fff',
+                    padding: '0 10px 0 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    cursor: 'pointer'
+                }}
+            >
+                <span
+                    style={{
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        color: value ? '#222' : '#9A9AA1'
+                    }}
+                >
+                    {value ? fmtPickerValue(value) : placeholder}
+                </span>
+
+                <span style={{ color: '#111', display: 'inline-flex', flexShrink: 0 }}>
+                    <CalendarIcon />
+                </span>
+            </button>
+
+            <FloatingLayer anchorRef={btnRef} open={open} width={330} offset={6}>
+                <div
+                    style={{
+                        background: '#fff',
+                        border: '1px solid #E8E8EE',
+                        borderRadius: 22,
+                        padding: '14px 14px 12px',
+                        boxShadow: '0 16px 40px rgba(0,0,0,.10)'
+                    }}
+                >
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: 10
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => {}}
+                            style={{
+                                border: 'none',
+                                background: 'transparent',
+                                padding: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                fontSize: 11.5,
+                                fontWeight: 700,
+                                color: '#2C2C33',
+                                cursor: 'default'
+                            }}
+                        >
+                            {fmtPickerMonth(viewMonth)}
+                            <span style={{ color: '#666', display: 'inline-flex' }}>
+                                <ChevronDownIcon />
+                            </span>
+                        </button>
+
+                        <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                                type="button"
+                                onClick={prevMonth}
+                                style={{
+                                    width: 26,
+                                    height: 26,
+                                    border: 'none',
+                                    borderRadius: 999,
+                                    background: 'transparent',
+                                    color: '#4C4C52',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <ChevronLeftIcon />
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={nextMonth}
+                                style={{
+                                    width: 26,
+                                    height: 26,
+                                    border: 'none',
+                                    borderRadius: 999,
+                                    background: 'transparent',
+                                    color: '#4C4C52',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <ChevronRightIcon />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(7, 1fr)',
+                            marginBottom: 4
+                        }}
+                    >
+                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                            <div
+                                key={day}
+                                style={{
+                                    textAlign: 'center',
+                                    fontSize: 9.5,
+                                    fontWeight: 600,
+                                    color: '#6E6E75',
+                                    padding: '6px 0 8px'
+                                }}
+                            >
+                                {day}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'grid', gap: 0 }}>
+                        {weeks.map((week, wi) => (
+                            <div
+                                key={wi}
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(7, 1fr)'
+                                }}
+                            >
+                                {week.map(day => {
+                                    const isCurrentMonth = day.getMonth() === viewMonth.getMonth();
+                                    const isSelected =
+                                        selectedDate && isSameDay(day, selectedDate);
+                                    const isTodayCell = isSameDay(day, today);
+
+                                    return (
+                                        <button
+                                            key={day.toISOString()}
+                                            type="button"
+                                            onClick={() => {
+                                                onChange(toDateOnly(day));
+                                                setOpen(false);
+                                            }}
+                                            style={{
+                                                border: 'none',
+                                                background: 'transparent',
+                                                height: 32,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: 2,
+                                                cursor: 'pointer',
+                                                borderRadius: 10,
+                                                color: isSelected
+                                                    ? '#E33B3B'
+                                                    : isCurrentMonth
+                                                    ? '#2F2F35'
+                                                    : '#C9C9CF',
+                                                fontSize: 10.5,
+                                                fontWeight: isSelected ? 700 : 600
+                                            }}
+                                        >
+                                            <span>{day.getDate()}</span>
+                                            <span
+                                                style={{
+                                                    width: 4,
+                                                    height: 4,
+                                                    borderRadius: '50%',
+                                                    background: isSelected
+                                                        ? '#E33B3B'
+                                                        : isTodayCell
+                                                        ? '#D9D9DE'
+                                                        : 'transparent'
+                                                }}
+                                            />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </FloatingLayer>
+        </div>
+    );
+}
+
+function getInitials(name = '') {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return 'U';
+    return parts.slice(0, 2).map(p => p[0].toUpperCase()).join('');
+}
+
+function getAvatarColor(name = '') {
+    const colors = ['#F59E0B', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+}
+
+function normalizeProfileImageUrl(src) {
+    if (!src) return null;
+
+    const raw = String(src).trim();
+    if (!raw) return null;
+
+    if (
+        raw.startsWith('data:') ||
+        raw.startsWith('blob:') ||
+        /^https?:\/\//i.test(raw)
+    ) {
+        return raw;
+    }
+
+    try {
+        return new URL(raw, window.location.href).href;
+    } catch {
+        return raw;
+    }
+}
+
+function EmployeeAvatar({ employee, size = 24, fontSize = 10, style = {} }) {
+    const [imgError, setImgError] = useState(false);
+    const src = normalizeProfileImageUrl(
+        employee?.profile_image_url || employee?.profile_image || null
+    );
+    const initials = employee?.initials || getInitials(employee?.name || '');
+
+    return (
+        <span
+            style={{
+                width: size,
+                height: size,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                background: getAvatarColor(employee?.name || ''),
+                color: '#fff',
+                fontSize,
+                fontWeight: 700,
+                lineHeight: 1,
+                boxSizing: 'border-box',
+                ...style
+            }}
+        >
+            {src && !imgError ? (
+                <img
+                    src={src}
+                    alt={employee?.name || 'User'}
+                    onError={() => setImgError(true)}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block'
+                    }}
+                />
+            ) : (
+                initials
+            )}
+        </span>
+    );
+}
+
+function AvatarStack({ employees = [], size = 18, max = 3 }) {
+    const shown = employees.filter(Boolean).slice(0, max);
+    const extra = employees.length - shown.length;
+
+    return (
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                minHeight: size
+            }}
+        >
+            {shown.map((emp, idx) => (
+                <div
+                    key={emp.id}
+                    style={{
+                        width: size,
+                        height: size,
+                        marginLeft: idx === 0 ? 0 : -6,
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: '1.5px solid #fff',
+                        background: '#fff',
+                        boxShadow: '0 0 0 1px rgba(0,0,0,.04)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        position: 'relative',
+                        zIndex: shown.length - idx
+                    }}
+                >
+                    <EmployeeAvatar
+                        employee={emp}
+                        size={size}
+                        fontSize={Math.max(8, size * 0.38)}
+                    />
+                </div>
+            ))}
+
+            {extra > 0 && (
+                <div
+                    style={{
+                        marginLeft: shown.length ? -6 : 0,
+                        minWidth: size,
+                        height: size,
+                        padding: '0 6px',
+                        borderRadius: 999,
+                        background: '#F2F3F5',
+                        border: '1.5px solid #fff',
+                        boxShadow: '0 0 0 1px rgba(0,0,0,.04)',
+                        color: '#6B7280',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        flexShrink: 0
+                    }}
+                >
+                    +{extra}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     const isEdit = !!event?.id;
 
@@ -125,31 +721,28 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
     const toggleEmp = id => {
-        set(
-            'tagged_employees',
-            form.tagged_employees.includes(id)
-                ? form.tagged_employees.filter(e => e !== id)
-                : [...form.tagged_employees, id]
-        );
+        setForm(prev => ({
+            ...prev,
+            tagged_employees: prev.tagged_employees.includes(id)
+                ? prev.tagged_employees.filter(e => e !== id)
+                : [...prev.tagged_employees, id]
+        }));
     };
 
     const filtered = employees.filter(e =>
         `${e.name} ${e.department}`.toLowerCase().includes(empQ.toLowerCase())
     );
 
-    // Are all currently-visible (filtered) employees already tagged?
     const allFilteredSelected =
         filtered.length > 0 &&
         filtered.every(e => form.tagged_employees.includes(e.id));
 
-    // Select all visible employees (merges with any already-tagged ones outside the filter)
     const selectAllFiltered = () => {
         const filteredIds = filtered.map(e => e.id);
         const merged = Array.from(new Set([...form.tagged_employees, ...filteredIds]));
         set('tagged_employees', merged);
     };
 
-    // Deselect all visible employees (keeps any tagged ones outside the current filter)
     const deselectAllFiltered = () => {
         const filteredIds = new Set(filtered.map(e => e.id));
         set('tagged_employees', form.tagged_employees.filter(id => !filteredIds.has(id)));
@@ -223,199 +816,373 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
 
     const cfg = STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming;
 
+    const L = {
+        shell: {
+            position: 'relative',
+            background: '#F8F8FA',
+            borderRadius: 20,
+            width: '100%',
+            maxWidth: 720,
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 20px 56px rgba(0,0,0,.14)'
+        },
+        body: {
+            padding: '22px 24px 16px',
+            overflowY: 'auto',
+            flex: 1
+        },
+        footer: {
+            padding: '12px 24px 16px',
+            borderTop: '1px solid #ECECF0',
+            background: '#F8F8FA',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 10
+        },
+        title: {
+            fontSize: 22,
+            lineHeight: 1.08,
+            fontWeight: 700,
+            letterSpacing: '-.02em',
+            color: '#222',
+            marginBottom: 14
+        },
+        label: {
+            fontSize: 10,
+            fontWeight: 700,
+            color: '#76767C',
+            letterSpacing: '.02em',
+            marginBottom: 6
+        },
+        input: {
+            width: '100%',
+            height: 40,
+            border: '1px solid #E5E5E8',
+            borderRadius: 12,
+            background: '#fff',
+            padding: '0 12px',
+            fontSize: 11.5,
+            fontWeight: 500,
+            color: '#222',
+            boxSizing: 'border-box',
+            outline: 'none',
+            fontFamily: 'inherit'
+        },
+        section: {
+            background: '#fff',
+            border: '1px solid #EFEFF2',
+            borderRadius: 14,
+            padding: '14px'
+        },
+        rowIcon: {
+            width: 18,
+            height: 18,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#8D8D92',
+            fontSize: 15,
+            flexShrink: 0
+        },
+        rowText: {
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#2A2A2E'
+        },
+        employeeList: {
+            maxHeight: 165,
+            overflowY: 'auto',
+            border: '1px solid #EBEBEB',
+            borderRadius: 12,
+            padding: '6px',
+            background: '#fff'
+        },
+        smallBtn: {
+            height: 40,
+            padding: '0 14px',
+            borderRadius: 11,
+            border: '1px solid #DCDCDC',
+            background: '#fff',
+            color: '#555',
+            fontSize: 11.5,
+            fontWeight: 600,
+            cursor: 'pointer'
+        },
+        softBtn: {
+            height: 42,
+            padding: '0 16px',
+            borderRadius: 11,
+            border: 'none',
+            background: '#EEF0F4',
+            color: '#222',
+            fontSize: 11.5,
+            fontWeight: 600,
+            cursor: 'pointer'
+        },
+        primaryBtn: {
+            height: 42,
+            padding: '0 18px',
+            borderRadius: 11,
+            border: 'none',
+            background: '#2F6DF6',
+            color: '#fff',
+            fontSize: 11.5,
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 8px 16px rgba(47,109,246,.16)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
+        }
+    };
+
     return (
         <ModalPortal>
             <div
+                className="hide-scrollbar"
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
-                style={S.backdrop}
+                style={{
+                    ...S.backdrop,
+                    padding: '14px',
+                    alignItems: 'center',
+                    background: 'rgba(0,0,0,.18)'
+                }}
             >
-                <div style={{ ...S.modal, maxWidth: 560 }}>
-                    <div style={{ ...S.mHead, background: cfg.bg, borderBottom: `2px solid ${cfg.badge}33` }}>
-                        <span style={{ fontWeight: 700, fontSize: 15, color: cfg.text }}>
-                            {isEdit ? 'Edit Event' : 'New Event'}
-                        </span>
-                        <button className="btn-close" onClick={onClose} style={{ fontSize: 11 }} />
-                    </div>
+                <div style={L.shell}>
+                    <button
+                        className="btn-close"
+                        onClick={onClose}
+                        style={{
+                            position: 'absolute',
+                            top: 16,
+                            right: 16,
+                            zIndex: 2,
+                            fontSize: 10
+                        }}
+                    />
 
-                    <div style={S.mBody}>
-                        {error && <div style={S.errBox}>{error}</div>}
+                    <div className="hide-scrollbar" style={L.body}>
+                        <div style={L.title}>
+                            {isEdit ? 'Edit Event' : 'Add Event'}
+                        </div>
 
-                        <Fg label="Title *">
+                        {error && <div style={{ ...S.errBox, marginBottom: 14 }}>{error}</div>}
+
+                        <div style={{ marginBottom: 14 }}>
+                            <div style={L.label}>Event name</div>
                             <input
-                                style={S.inp}
+                                style={L.input}
                                 value={form.title}
                                 onChange={e => set('title', e.target.value)}
-                                placeholder="Event title"
+                                placeholder="Enter event name"
                             />
-                        </Fg>
-
-                        <Fg label="Description">
-                            <textarea
-                                style={{ ...S.inp, resize: 'vertical' }}
-                                rows={3}
-                                value={form.description}
-                                onChange={e => set('description', e.target.value)}
-                                placeholder="Optional details…"
-                            />
-                        </Fg>
-
-                        <Fg label="Location">
-                            <input
-                                style={S.inp}
-                                value={form.location}
-                                onChange={e => set('location', e.target.value)}
-                                placeholder="Venue or link"
-                            />
-                        </Fg>
-
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            <Fg label="Start Date *" style={{ flex: 1 }}>
-                                <input
-                                    type="date"
-                                    style={S.inp}
-                                    value={form.start_date}
-                                    onChange={e => set('start_date', e.target.value)}
-                                />
-                            </Fg>
-
-                            <Fg label="End Date *" style={{ flex: 1 }}>
-                                <input
-                                    type="date"
-                                    style={S.inp}
-                                    value={form.end_date}
-                                    onChange={e => set('end_date', e.target.value)}
-                                />
-                            </Fg>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            <Fg label="Status" style={{ flex: 1 }}>
-                                <select
-                                    style={S.inp}
-                                    value={form.status}
-                                    onChange={e => set('status', e.target.value)}
-                                >
-                                    {Object.keys(STATUS_CFG).map(s => (
-                                        <option key={s}>{s}</option>
-                                    ))}
-                                </select>
-                            </Fg>
-
-                            <Fg label="Priority" style={{ flex: 1 }}>
-                                <select
-                                    style={S.inp}
-                                    value={form.priority}
-                                    onChange={e => set('priority', e.target.value)}
-                                >
-                                    <option>High</option>
-                                    <option>Medium</option>
-                                    <option>Low</option>
-                                </select>
-                            </Fg>
-                        </div>
-
-                        <Fg label="Tag Employees">
-                            <input
-                                style={{ ...S.inp, marginBottom: 6 }}
-                                placeholder="Search…"
-                                value={empQ}
-                                onChange={e => setEmpQ(e.target.value)}
-                            />
-
-                            {/* Select All / Deselect All row */}
-                            {filtered.length > 0 && (
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'minmax(0, 1.35fr) minmax(210px, .9fr)',
+                                gap: 14,
+                                marginBottom: 14
+                            }}
+                        >
+                            <div style={L.section}>
                                 <div
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        marginBottom: 5,
-                                        padding: '0 2px'
+                                        gap: 10,
+                                        marginBottom: 12
                                     }}
                                 >
+                                    <span style={L.rowIcon}>
+                                        <i className="bi bi-calendar4-event" />
+                                    </span>
+                                    <div style={L.rowText}>
+                                        {form.start_date ? fmtLong(form.start_date) : 'Select event date'}
+                                    </div>
+                                </div>
+
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: 12
+                                    }}
+                                >
+                                    <div>
+                                        <div style={L.label}>Start date</div>
+                                        <CustomDatePicker
+                                            value={form.start_date}
+                                            onChange={v => set('start_date', v)}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <div style={L.label}>End date</div>
+                                        <CustomDatePicker
+                                            value={form.end_date}
+                                            onChange={v => set('end_date', v)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gap: 14 }}>
+                                <div style={L.section}>
+                                    <div style={L.label}>Status</div>
+                                    <CustomSelect
+                                        value={form.status}
+                                        onChange={v => set('status', v)}
+                                        selectedColor={(STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming).text}
+                                        panelWidth={245}
+                                        options={Object.keys(STATUS_CFG).map(s => ({
+                                            value: s,
+                                            label: s
+                                        }))}
+                                    />
+                                </div>
+                                <div style={L.section}>
+                                    <div style={L.label}>Priority</div>
+                                    <CustomSelect
+                                        value={form.priority}
+                                        onChange={v => set('priority', v)}
+                                        selectedColor={PRIORITY_COLORS[form.priority] ?? '#666'}
+                                        panelWidth={245}
+                                        options={[
+                                            { value: 'High', label: 'High' },
+                                            { value: 'Medium', label: 'Medium' },
+                                            { value: 'Low', label: 'Low' }
+                                        ]}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ ...L.section, marginBottom: 14 }}>
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <span style={L.rowIcon}>
+                                    <i className="bi bi-geo-alt" />
+                                </span>
+                                <div style={{ ...L.label, marginBottom: 0, fontSize: 12 }}>Location</div>
+                            </div>
+
+                            <input
+                                style={L.input}
+                                value={form.location}
+                                onChange={e => set('location', e.target.value)}
+                                placeholder="Venue or link"
+                            />
+                        </div>
+
+                        <div style={L.section}>
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span style={L.rowIcon}>
+                                        <i className="bi bi-people" />
+                                    </span>
+                                    <div style={{ ...L.label, marginBottom: 0, fontSize: 12 }}>
+                                        Tag employees
+                                    </div>
+                                </div>
+
+                                {form.tagged_employees.length > 0 && (
+                                    <span style={L.chip}>{form.tagged_employees.length}</span>
+                                )}
+                            </div>
+
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'minmax(0, 1fr) auto',
+                                    gap: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        style={{
+                                            ...L.input,
+                                            paddingRight: empQ ? 34 : 12
+                                        }}
+                                        placeholder="Search employees"
+                                        value={empQ}
+                                        onChange={e => setEmpQ(e.target.value)}
+                                    />
+
+                                    {empQ && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setEmpQ('')}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '50%',
+                                                right: 10,
+                                                transform: 'translateY(-50%)',
+                                                width: 18,
+                                                height: 18,
+                                                border: 'none',
+                                                borderRadius: '50%',
+                                                background: '#F2F3F5',
+                                                color: '#8B8B94',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                fontSize: 12,
+                                                lineHeight: 1
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
+
+                                {filtered.length > 0 && (
                                     <button
                                         type="button"
                                         onClick={toggleSelectAll}
                                         style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 6,
-                                            background: allFilteredSelected ? cfg.bg : '#F5F5F5',
-                                            border: `1.5px solid ${allFilteredSelected ? cfg.badge + '88' : '#DCDCDC'}`,
-                                            borderRadius: 6,
-                                            padding: '4px 10px',
-                                            fontSize: 11.5,
-                                            fontWeight: 600,
-                                            color: allFilteredSelected ? cfg.text : '#555',
-                                            cursor: 'pointer',
-                                            transition: 'all .15s'
+                                            ...L.smallBtn,
+                                            border: `1px solid ${allFilteredSelected ? cfg.badge + '66' : '#DCDCDC'}`,
+                                            background: allFilteredSelected ? cfg.bg : '#fff',
+                                            color: allFilteredSelected ? cfg.text : '#555'
                                         }}
                                     >
-                                        {/* Mini checkbox indicator */}
-                                        <span
-                                            style={{
-                                                width: 13,
-                                                height: 13,
-                                                borderRadius: 3,
-                                                border: `1.5px solid ${allFilteredSelected ? cfg.badge : '#AAAAAA'}`,
-                                                background: allFilteredSelected ? cfg.badge : '#fff',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                flexShrink: 0,
-                                                transition: 'all .15s'
-                                            }}
-                                        >
-                                            {allFilteredSelected && (
-                                                <span style={{ color: '#fff', fontSize: 9, fontWeight: 900, lineHeight: 1 }}>✓</span>
-                                            )}
-                                        </span>
-                                        {allFilteredSelected
-                                            ? empQ
-                                                ? `Deselect all ${filtered.length} shown`
-                                                : 'Deselect all'
-                                            : empQ
-                                                ? `Select all ${filtered.length} shown`
-                                                : 'Select all'
-                                        }
+                                        {allFilteredSelected ? 'Deselect' : 'Select all'}
                                     </button>
+                                )}
+                            </div>
 
-                                    {/* Live count badge */}
-                                    {form.tagged_employees.length > 0 && (
-                                        <span
-                                            style={{
-                                                fontSize: 11,
-                                                color: cfg.text,
-                                                background: cfg.bg,
-                                                border: `1px solid ${cfg.badge}44`,
-                                                borderRadius: 20,
-                                                padding: '2px 8px',
-                                                fontWeight: 600
-                                            }}
-                                        >
-                                            {form.tagged_employees.length} tagged
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-
-                            <div
-                                style={{
-                                    maxHeight: 148,
-                                    overflowY: 'auto',
-                                    border: '1px solid #EBEBEB',
-                                    borderRadius: 8,
-                                    padding: '4px 8px'
-                                }}
-                            >
+                            <div className="hide-scrollbar" style={L.employeeList}>
                                 {filtered.length === 0 ? (
                                     <div
                                         style={{
                                             color: '#aaa',
                                             fontSize: 12,
-                                            padding: '6px 0',
+                                            padding: '12px 0',
                                             textAlign: 'center'
                                         }}
                                     >
@@ -432,22 +1199,32 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                                 style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: 8,
-                                                    padding: '5px 4px',
-                                                    borderRadius: 6,
+                                                    gap: 10,
+                                                    padding: '9px 8px',
+                                                    borderRadius: 10,
                                                     cursor: 'pointer',
-                                                    background: chk ? cfg.bg : 'transparent'
+                                                    background: chk ? cfg.bg : 'transparent',
+                                                    marginBottom: 4
                                                 }}
                                             >
                                                 <input
                                                     type="checkbox"
                                                     readOnly
                                                     checked={chk}
-                                                    style={{ pointerEvents: 'none', accentColor: cfg.badge }}
+                                                    style={{ pointerEvents: 'none', accentColor: cfg.badge, margin: 0 }}
                                                 />
-                                                <span style={{ fontSize: 13 }}>
-                                                    <strong>{emp.name}</strong>{' '}
-                                                    <span style={{ color: '#aaa' }}>— {emp.department}</span>
+
+                                                <EmployeeAvatar employee={emp} size={28} fontSize={10} />
+
+                                                <span
+                                                    style={{
+                                                        fontSize: 12,
+                                                        color: '#2A2A2E',
+                                                        fontWeight: 600,
+                                                        lineHeight: 1.2
+                                                    }}
+                                                >
+                                                    {emp.name}
                                                 </span>
                                             </div>
                                         );
@@ -455,55 +1232,88 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                 )}
                             </div>
 
-                            {form.tagged_employees.length > 0 && (
-                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                                    {form.tagged_employees.map(id => {
-                                        const emp = employees.find(e => e.id === id);
-                                        return emp ? (
+                        {form.tagged_employees.length > 0 && (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                                {form.tagged_employees.map(id => {
+                                    const emp = employees.find(e => e.id === id);
+                                    return emp ? (
+                                        <div
+                                            key={id}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                                background: '#F7F7F8',
+                                                border: '1px solid #ECECEE',
+                                                borderRadius: 999,
+                                                padding: '4px 10px 4px 4px',
+                                                minHeight: 34
+                                            }}
+                                        >
+                                            <EmployeeAvatar employee={emp} size={24} fontSize={9} />
                                             <span
-                                                key={id}
                                                 style={{
-                                                    background: cfg.bg,
-                                                    color: cfg.text,
-                                                    border: `1px solid ${cfg.badge}44`,
-                                                    borderRadius: 20,
-                                                    fontSize: 11,
-                                                    padding: '2px 10px'
+                                                    fontSize: 11.5,
+                                                    fontWeight: 500,
+                                                    color: '#444',
+                                                    lineHeight: 1,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center'
                                                 }}
                                             >
-                                                {emp.name}{' '}
-                                                <span
-                                                    onClick={() => toggleEmp(id)}
-                                                    style={{ marginLeft: 4, cursor: 'pointer', opacity: 0.7 }}
-                                                >
-                                                    ✕
-                                                </span>
+                                                {emp.name}
                                             </span>
-                                        ) : null;
-                                    })}
-                                </div>
-                            )}
-                        </Fg>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleEmp(id)}
+                                                style={{
+                                                    border: 'none',
+                                                    background: 'transparent',
+                                                    color: '#8B8B94',
+                                                    cursor: 'pointer',
+                                                    padding: 0,
+                                                    fontSize: 13,
+                                                    lineHeight: 1,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ) : null;
+                                })}
+                            </div>
+                        )}
+                        </div>
                     </div>
 
-                    <div style={S.mFoot}>
+                    <div style={L.footer}>
                         <div>
                             {isEdit && (
-                                <button onClick={del} disabled={deling} style={S.btnDanger}>
+                                <button
+                                    onClick={del}
+                                    disabled={deling}
+                                    style={{
+                                        ...L.softBtn,
+                                        background: '#fff',
+                                        border: '1px solid #F0C8C8',
+                                        color: '#D64343'
+                                    }}
+                                >
                                     {deling ? 'Deleting…' : 'Delete'}
                                 </button>
                             )}
                         </div>
 
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <button onClick={onClose} style={S.btnGhost}>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button onClick={onClose} style={L.softBtn}>
                                 Cancel
                             </button>
-                            <button
-                                onClick={save}
-                                disabled={saving}
-                                style={{ ...S.btnPrimary, background: cfg.badge }}
-                            >
+
+                            <button onClick={save} disabled={saving} style={L.primaryBtn}>
+                                <i className="bi bi-check2" style={{ fontSize: 16, lineHeight: 1 }} />
                                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Event'}
                             </button>
                         </div>
@@ -547,10 +1357,16 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
     return (
         <ModalPortal>
             <div
+                className="hide-scrollbar"
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
-                style={S.backdrop}
+                style={{
+                    ...S.backdrop,
+                    padding: '14px',
+                    alignItems: 'center',
+                    background: 'rgba(0,0,0,.18)'
+                }}
             >
                 <div style={{ ...S.modal, maxWidth: 440, overflow: 'hidden' }}>
                     <div
@@ -664,20 +1480,25 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                         </span>
                                     ) : isLarge ? (
                                         // Large partial group — show first few + overflow count
-                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                                             {tagged.slice(0, SHOW_MAX).map(emp => (
-                                                <span
+                                                <div
                                                     key={emp.id}
                                                     style={{
-                                                        fontSize: 12,
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: 7,
                                                         background: '#F5F5F5',
-                                                        borderRadius: 20,
-                                                        padding: '2px 10px',
+                                                        borderRadius: 999,
+                                                        padding: '4px 10px 4px 4px',
                                                         color: '#444'
                                                     }}
                                                 >
-                                                    {emp.name} <span style={{ color: '#aaa' }}>· {emp.department}</span>
-                                                </span>
+                                                    <EmployeeAvatar employee={emp} size={22} fontSize={9} />
+                                                    <span style={{ fontSize: 11.5, fontWeight: 500 }}>
+                                                        {emp.name}
+                                                    </span>
+                                                </div>
                                             ))}
                                             <span
                                                 style={{
@@ -693,23 +1514,28 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                             </span>
                                         </div>
                                     ) : (
-                                        // Small list — show all chips normally
-                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                            {tagged.map(emp => (
-                                                <span
-                                                    key={emp.id}
-                                                    style={{
-                                                        fontSize: 12,
-                                                        background: '#F5F5F5',
-                                                        borderRadius: 20,
-                                                        padding: '2px 10px',
-                                                        color: '#444'
-                                                    }}
-                                                >
-                                                    {emp.name} <span style={{ color: '#aaa' }}>· {emp.department}</span>
+                                        
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                        {tagged.map(emp => (
+                                            <div
+                                                key={emp.id}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: 7,
+                                                    background: '#F5F5F5',
+                                                    borderRadius: 999,
+                                                    padding: '4px 10px 4px 4px',
+                                                    color: '#444'
+                                                }}
+                                            >
+                                                <EmployeeAvatar employee={emp} size={22} fontSize={9} />
+                                                <span style={{ fontSize: 11.5, fontWeight: 500 }}>
+                                                    {emp.name}
                                                 </span>
-                                            ))}
-                                        </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                     )}
                                 </div>
                             );
@@ -738,12 +1564,18 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
 function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
     return (
         <ModalPortal>
-            <div
-                onClick={e => {
-                    if (e.target === e.currentTarget) onClose();
-                }}
-                style={S.backdrop}
-            >
+<div
+    className="hide-scrollbar"
+    onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+    }}
+    style={{
+        ...S.backdrop,
+        padding: '14px',
+        alignItems: 'center',
+        background: 'rgba(0,0,0,.18)'
+    }}
+>
                 <div style={{ ...S.modal, maxWidth: 360 }}>
                     <div style={S.mHead}>
                         <span style={{ fontWeight: 700, fontSize: 14, color: '#222' }}>
@@ -937,40 +1769,36 @@ function EventCard({ event, employees, onClick }) {
                     </span>
                 </div>
 
-                <div
-                    style={{
-                        background: cfg.badge,
-                        color: '#fff',
-                        borderRadius: 10,
-                        minWidth: 17,
-                        height: 17,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 9,
-                        fontWeight: 700,
-                        flexShrink: 0,
-                        padding: '0 4px'
-                    }}
-                >
-                    ●
-                </div>
+        <span
+            style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color: cfg.badge,
+                marginLeft: 4
+            }}
+        >
+            <i
+                className="bi bi-pin-fill"
+                style={{
+                    fontSize: 12,
+                    lineHeight: 1
+                }}
+            />
+        </span>
             </div>
 
             {tagged.length > 0 && (
                 <div
                     style={{
-                        fontSize: 9.5,
-                        color: cfg.text,
-                        opacity: 0.72,
-                        marginTop: 1.5,
+                        marginTop: 4,
                         paddingLeft: 14,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        display: 'flex',
+                        alignItems: 'center'
                     }}
                 >
-                    ↗ {tagged[0].name}{tagged.length > 1 ? ` +${tagged.length - 1}` : ''}
+                    <AvatarStack employees={tagged} size={17} max={3} />
                 </div>
             )}
         </div>
@@ -1387,12 +2215,26 @@ function Calendar() {
             }}
         >
             {/* TOP BAR */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#111', letterSpacing: '-.02em' }}>
-                    Calendar
-                </div>
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto 1fr',
+                    alignItems: 'center',
+                    marginBottom: 20
+                }}
+            >
+                <div />
 
-                <div style={{ display: 'flex', background: '#EFEFEF', borderRadius: 10, padding: 3, gap: 2 }}>
+                <div
+                    style={{
+                        justifySelf: 'center',
+                        display: 'flex',
+                        background: '#EFEFEF',
+                        borderRadius: 12,
+                        padding: 4,
+                        gap: 2
+                    }}
+                >
                     {['Day', 'Week', 'Month'].map(v => (
                         <button
                             key={v}
@@ -1401,12 +2243,13 @@ function Calendar() {
                                 background: view === v ? '#111' : 'transparent',
                                 color: view === v ? '#fff' : '#666',
                                 border: 'none',
-                                borderRadius: 8,
-                                padding: '6px 20px',
+                                borderRadius: 10,
+                                padding: '8px 28px',
                                 fontSize: 13,
                                 fontWeight: 600,
                                 cursor: 'pointer',
-                                transition: 'all .15s'
+                                transition: 'all .15s',
+                                minWidth: 88
                             }}
                         >
                             {v}
@@ -1414,49 +2257,68 @@ function Calendar() {
                     ))}
                 </div>
 
-                {isEditor ? (
-                    <button
-                        onClick={() => {
-                            setEdit({
-                                start_date: selectedDateStr,
-                                end_date: selectedDateStr
-                            });
-                            setShowForm(true);
-                        }}
-                        style={{
-                            background: '#FF6B4E',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: 10,
-                            padding: '9px 22px',
-                            fontSize: 13,
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            boxShadow: '0 2px 10px rgba(255,107,78,.35)',
-                            transition: 'opacity .15s'
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.opacity = '.88')}
-                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                    >
-                        + Add Event
-                    </button>
-                ) : (
-                    <span
-                        style={{
-                            fontSize: 11,
-                            background: '#EEE',
-                            borderRadius: 8,
-                            padding: '7px 14px',
-                            color: '#999',
-                            fontWeight: 500
-                        }}
-                    >
-                        View Only
-                    </span>
-                )}
+                <div style={{ justifySelf: 'end' }}>
+                    {isEditor ? (
+                        <button
+                            onClick={() => {
+                                setEdit({
+                                    start_date: selectedDateStr,
+                                    end_date: selectedDateStr
+                                });
+                                setShowForm(true);
+                            }}
+                            style={{
+                                background: '#000000',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 10,
+                                padding: '9px 18px',
+                                fontSize: 13,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                boxShadow: '0 2px 10px rgba(255,107,78,.35)',
+                                transition: 'opacity .15s'
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.opacity = '.88')}
+                            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                        >
+                            + Add Event
+                        </button>
+                    ) : (
+                        <span
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                fontSize: 11,
+                                background: '#EAF7EC',
+                                border: '1px solid #BFE3C8',
+                                borderRadius: 8,
+                                padding: '7px 14px',
+                                color: '#1E8449',
+                                fontWeight: 600
+                            }}
+                        >
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            View Only
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* BODY */}
@@ -1530,22 +2392,6 @@ function Calendar() {
 
                         <div />
                     </div>
-
-                    {currentUser && !isEditor && (
-                        <div
-                            style={{
-                                margin: '10px 16px 0',
-                                padding: '6px 12px',
-                                background: '#FEF9E7',
-                                borderRadius: 8,
-                                fontSize: 12,
-                                color: '#B7770D',
-                                fontWeight: 500
-                            }}
-                        >
-                            View-only mode — Marketing & HR staff can create events.
-                        </div>
-                    )}
 
                     <div style={{ overflowX: 'auto' }}>
                         {view === 'Month' && renderMonthView()}
