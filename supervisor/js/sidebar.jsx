@@ -524,6 +524,14 @@ function SupervisorSidebar() {
                     />
 
                     <SidebarLink
+                        href="my-tasks.html"
+                        icon="bi-check2-square"
+                        label="My Tasks"
+                        isActive={isActivePage("my-tasks.html")}
+                        onNavigate={handleNavigate}
+                    />
+
+                    <SidebarLink
                         href="strategic-plan.html"
                         icon="bi-clipboard-data"
                         label="Strategic Plan"
