@@ -1,10 +1,26 @@
 <?php
-session_start();
 require_once '../../config/db.php';
 
 ob_start();
 include '../../config/db.php';
 ob_end_clean();
+
+/**
+ * Returns a unique session name per role so that each role maintains
+ * its own independent session cookie in the browser. This allows, for
+ * example, a Staff tab and a Supervisor tab to coexist in the same
+ * browser without one login overwriting the other's session.
+ */
+function getRoleSessionName(string $role): string {
+    switch ($role) {
+        case 'staff':              return 'STAFF_SESSION';
+        case 'supervisor':         return 'SUPERVISOR_SESSION';
+        case 'admin':              return 'ADMIN_SESSION';
+        case 'president':
+        case 'executive_director': return 'EXEC_SESSION';
+        default:                   return 'APP_SESSION';
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$email = isset($_POST['email']) ? trim($_POST['email']) : '';
@@ -20,6 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 		if ($user && password_verify($password, $user['password'])) {
+			// Start the role-specific named session before setting variables.
+			session_name(getRoleSessionName($user['role']));
+			session_start();
+			session_regenerate_id(true);
+
 			// Set session variables
 			$_SESSION['user_id'] = $user['id'];
 			$_SESSION['email'] = $user['email'];

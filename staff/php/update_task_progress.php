@@ -1,7 +1,7 @@
 <?php
 
 date_default_timezone_set('Asia/Manila');
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once '../../config/db.php';
 
 header('Content-Type: application/json; charset=UTF-8');

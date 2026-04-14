@@ -23,7 +23,7 @@ set_exception_handler(function ($e) {
 // BOOTSTRAP
 // ====================================================================
 require '../../config/db.php';
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 

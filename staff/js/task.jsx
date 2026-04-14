@@ -83,6 +83,11 @@ async function parseJsonResponse(response, fallbackMessage = "Request failed.") 
         parsed = null;
     }
 
+    if (response.status === 401 || response.status === 403) {
+        window.location.href = "../auth/login.html";
+        return null;
+    }
+
     if (!response.ok) {
         throw new Error(getFriendlyHttpError(response, fallbackMessage, rawText, parsed));
     }
