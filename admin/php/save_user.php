@@ -20,6 +20,7 @@ set_exception_handler(function ($e) {
 });
 
 require '../../config/db.php';
+require_once '../../config/log_activity.php';
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
@@ -195,6 +196,7 @@ if ($id) {
         $departmentName, $departmentId, $employeeId, $now, $now,
     ]);
     $id = (int)$conn->lastInsertId();
+    logActivity($conn, 'user.created', 'user', $id, "Created user: {$name} ({$email})");
 }
 
 // ----------------------------------------------------------------

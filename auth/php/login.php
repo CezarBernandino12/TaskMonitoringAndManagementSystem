@@ -49,6 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			require_once '../../config/presence.php';
 			markUserActive($conn, (int) $user['id']);
 
+			require_once '../../config/log_activity.php';
+			logActivity($conn, 'auth.login', 'user', (int)$user['id'],
+				"Login successful: {$user['name']} ({$user['email']})");
+
 			// Redirect based on role
 			switch ($user['role']) {
 				case 'admin':
@@ -73,6 +77,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			exit();
 		} else {
 			$error = 'Invalid email or password.';
+
+			// Log failed attempt (no session yet — write directly)
+			require_once '../../config/log_activity.php';
+			try {
+				$ins = $conn->prepare("
+					INSERT INTO activity_logs (user_id, user_name, role, action, target_type, description)
+					VALUES (0, ?, '', 'auth.login_failed', 'user', ?)
+				");
+				$ins->execute([
+					$email,
+					"Failed login attempt for: {$email}",
+				]);
+			} catch (Throwable $e) {
+				error_log('[activity_log] ' . $e->getMessage());
+			}
 		}
 	}
 }
