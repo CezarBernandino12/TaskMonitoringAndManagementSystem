@@ -11,44 +11,109 @@
     all: unset;
 }
 
+/* Global theme tokens so portal modals can use them too */
+:root {
+    --cal-page-bg: #F4F6FA;
+    --cal-panel: #FFFFFF;
+    --cal-panel-2: #FAFBFD;
+    --cal-border: #E8ECF2;
+    --cal-border-soft: #EEF1F5;
+    --cal-text: #111827;
+    --cal-text-2: #5B6475;
+    --cal-text-3: #8A93A5;
+    --cal-muted: #B6BECC;
+    --cal-switch-bg: #EEF1F5;
+    --cal-switch-active: #111111;
+    --cal-switch-active-text: #FFFFFF;
+    --cal-btn: #000000;
+    --cal-btn-text: #FFFFFF;
+    --cal-input-bg: #FFFFFF;
+    --cal-nav: #F4F6F8;
+    --cal-nav-border: #E4E8EE;
+    --cal-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+    --cal-empty: #FAFBFD;
+    --cal-hover: #F8FAFC;
+    --cal-today: #111111;
+    --cal-today-text: #FFFFFF;
+}
+
+html[data-theme="dark"] {
+    --cal-page-bg: #0C111B;
+    --cal-panel: #121926;
+    --cal-panel-2: #0F1622;
+    --cal-border: #243042;
+    --cal-border-soft: #1D2736;
+    --cal-text: #F3F7FF;
+    --cal-text-2: #B7C1D3;
+    --cal-text-3: #8B96AA;
+    --cal-muted: #657086;
+    --cal-switch-bg: #171F2D;
+    --cal-switch-active: #2F6DF6;
+    --cal-switch-active-text: #FFFFFF;
+    --cal-btn: #2F6DF6;
+    --cal-btn-text: #FFFFFF;
+    --cal-input-bg: #0F1622;
+    --cal-nav: #171F2D;
+    --cal-nav-border: #2A3548;
+    --cal-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+    --cal-empty: #0F1622;
+    --cal-hover: #151D2A;
+    --cal-today: #2F6DF6;
+    --cal-today-text: #FFFFFF;
+}
+
 /* Scrollbar */
-#calendarRoot ::-webkit-scrollbar { width:5px; height:5px; }
-#calendarRoot ::-webkit-scrollbar-track { background:transparent; }
-#calendarRoot ::-webkit-scrollbar-thumb { background:#E0E0E0; border-radius:3px; }
-#calendarRoot ::-webkit-scrollbar-thumb:hover { background:#BDBDBD; }
+#calendarRoot ::-webkit-scrollbar { width: 5px; height: 5px; }
+#calendarRoot ::-webkit-scrollbar-track { background: transparent; }
+#calendarRoot ::-webkit-scrollbar-thumb { background: #D4DAE3; border-radius: 3px; }
+#calendarRoot ::-webkit-scrollbar-thumb:hover { background: #AEB7C5; }
+
+html[data-theme="dark"] #calendarRoot ::-webkit-scrollbar-thumb {
+    background: #39465B;
+}
+html[data-theme="dark"] #calendarRoot ::-webkit-scrollbar-thumb:hover {
+    background: #55627A;
+}
 
 /* Input focus ring */
 #calendarRoot input:focus,
 #calendarRoot select:focus,
 #calendarRoot textarea:focus {
     outline: none !important;
-    border-color: #FF6B4E !important;
-    box-shadow: 0 0 0 2px rgba(255,107,78,.18) !important;
+    border-color: #2F6DF6 !important;
+    box-shadow: 0 0 0 2px rgba(47,109,246,.18) !important;
 }
 
 /* Checkbox accent */
 #calendarRoot input[type="checkbox"] {
-    accent-color: #FF6B4E;
+    accent-color: #2F6DF6;
 }
 
-/* Nav button hover */
-#calendarRoot button[style*="background:#F5F5F5"]:hover {
-    background: #EBEBEB !important;
-}
-
-/* Ensure calendarRoot fills available space */
+/* Ensure calendar root still fills area */
 #calendarRoot {
     min-height: 100%;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+
+/* Hidden scrollbars */
 .hide-scrollbar {
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
 }
-
 .hide-scrollbar::-webkit-scrollbar {
     width: 0 !important;
     height: 0 !important;
     display: none !important;
     background: transparent !important;
-}   
+}
+
+#react-modal-root input::placeholder,
+#react-modal-root textarea::placeholder,
+#react-modal-root select::placeholder {
+    color: var(--cal-text-3);
+    opacity: 1;
+}
+
+html[data-theme="dark"] #react-modal-root .btn-close {
+    filter: invert(1) opacity(.72);
+}
