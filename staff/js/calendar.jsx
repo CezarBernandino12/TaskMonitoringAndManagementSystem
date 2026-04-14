@@ -2317,35 +2317,35 @@ function Calendar() {
     };
 
     return (
-        <div
-            style={{
-                padding: '12px 12px 0',
-                background: 'var(--cal-page-bg)',
-                minHeight: 'calc(100vh - 110px)',
-                fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
-                boxSizing: 'border-box'
-            }}
-        >
+            <div
+                style={{
+                    padding: '8px 8px 0',
+                    background: 'transparent',
+                    minHeight: 'calc(100vh - 110px)',
+                    fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
+                    boxSizing: 'border-box'
+                }}
+            >
             <div
                 style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr auto 1fr',
                     alignItems: 'center',
-                    marginBottom: 20
+                    marginBottom: 14
                 }}
             >
                 <div />
 
-                <div
-                    style={{
-                        justifySelf: 'center',
-                        display: 'flex',
-                        background: 'var(--cal-switch-bg)',
-                        borderRadius: 14,
-                        padding: 4,
-                        gap: 2
-                    }}
-                >
+                    <div
+                        style={{
+                            justifySelf: 'center',
+                            display: 'flex',
+                            background: 'var(--cal-switch-bg)',
+                            borderRadius: 12,
+                            padding: 3,
+                            gap: 2
+                        }}
+                    >
                     {['Day', 'Week', 'Month'].map(v => (
                         <button
                             key={v}
@@ -2354,13 +2354,13 @@ function Calendar() {
                                 background: view === v ? 'var(--cal-switch-active)' : 'transparent',
                                 color: view === v ? 'var(--cal-switch-active-text)' : 'var(--cal-text-2)',
                                 border: 'none',
-                                borderRadius: 11,
-                                padding: '10px 34px',
-                                fontSize: 14,
+                                borderRadius: 10,
+                                padding: '8px 24px',
+                                fontSize: 12.5,
                                 fontWeight: 700,
                                 cursor: 'pointer',
                                 transition: 'all .15s',
-                                minWidth: 96
+                                minWidth: 78
                             }}
                         >
                             {v}
@@ -2382,15 +2382,15 @@ function Calendar() {
                                 background: 'var(--cal-btn)',
                                 color: 'var(--cal-btn-text)',
                                 border: 'none',
-                                borderRadius: 12,
-                                padding: '10px 20px',
-                                fontSize: 14,
+                                borderRadius: 11,
+                                padding: '8px 16px',
+                                fontSize: 12.5,
                                 fontWeight: 700,
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 6,
-                                boxShadow: '0 8px 24px rgba(47,109,246,.18)',
+                                boxShadow: '0 8px 20px rgba(47,109,246,.14)',
                                 transition: 'opacity .15s'
                             }}
                             onMouseEnter={e => (e.currentTarget.style.opacity = '.88')}
