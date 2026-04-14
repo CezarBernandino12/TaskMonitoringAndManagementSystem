@@ -35,13 +35,15 @@ function getInitials(string $name): string
 
 function getProfileImageUrl(?string $profileImage): ?string
 {
-    $profileImage = trim((string) $profileImage);
+    $profileImage = trim((string)$profileImage);
 
     if ($profileImage === '') {
         return null;
     }
 
-    return '../uploads/profiles/' . ltrim($profileImage, '/\\');
+    $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'], 3)), '/');
+
+    return $basePath . '/uploads/profiles/' . rawurlencode($profileImage);
 }
 
 function respondProfile(PDO $conn, int $userId, string $message = 'Profile updated successfully'): void
