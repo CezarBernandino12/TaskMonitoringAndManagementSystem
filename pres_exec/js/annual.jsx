@@ -414,7 +414,7 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
         setActiveTab("all");
 
         fetch(
-            `php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${yearStart}&week_end=${yearEnd}`
+            `php/get_employee_tasks_annual.php?employee_id=${emp.id}&year_start=${yearStart}&year_end=${yearEnd}`
         )
             .then((res) => {
                 if (!res.ok) throw new Error(`Server returned ${res.status}`);
