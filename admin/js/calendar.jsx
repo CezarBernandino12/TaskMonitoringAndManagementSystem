@@ -35,7 +35,8 @@ function ModalPortal({ children }) {
         };
     }, []);
 
-    return ReactDOM.createPortal(children, document.body);
+    const modalRoot = document.getElementById('react-modal-root') || document.body;
+    return ReactDOM.createPortal(children, modalRoot);
 }
 
 function fromDateStr(s) {
@@ -94,6 +95,200 @@ function fmtHeaderDate(date, view) {
     return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
+function isDarkMode() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
+function colorWithAlpha(hex, alpha = '22') {
+    if (!hex || typeof hex !== 'string') return hex;
+
+    let normalized = hex.trim();
+    if (!normalized.startsWith('#')) return normalized;
+
+    if (normalized.length === 4) {
+        normalized =
+            '#' +
+            normalized[1] + normalized[1] +
+            normalized[2] + normalized[2] +
+            normalized[3] + normalized[3];
+    }
+
+    if (normalized.length !== 7) return normalized;
+    return normalized + alpha;
+}
+
+function getInitials(name = '') {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return 'U';
+    return parts.slice(0, 2).map(p => p[0].toUpperCase()).join('');
+}
+
+function getAvatarColor(name = '') {
+    const colors = ['#F59E0B', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+}
+
+function normalizeProfileImageUrl(src) {
+    if (!src) return null;
+
+    const raw = String(src).trim();
+    if (!raw) return null;
+
+    if (
+        raw.startsWith('data:') ||
+        raw.startsWith('blob:') ||
+        /^https?:\/\//i.test(raw)
+    ) {
+        return raw;
+    }
+
+    try {
+        return new URL(raw, window.location.href).href;
+    } catch {
+        return raw;
+    }
+}
+
+function EmployeeAvatar({ employee, size = 24, fontSize = 10, style = {} }) {
+    const [imgError, setImgError] = useState(false);
+    const src = normalizeProfileImageUrl(
+        employee?.profile_image_url || employee?.profile_image || null
+    );
+    const initials = employee?.initials || getInitials(employee?.name || '');
+
+    return (
+        <span
+            style={{
+                width: size,
+                height: size,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                background: getAvatarColor(employee?.name || ''),
+                color: '#fff',
+                fontSize,
+                fontWeight: 700,
+                lineHeight: 1,
+                boxSizing: 'border-box',
+                ...style
+            }}
+        >
+            {src && !imgError ? (
+                <img
+                    src={src}
+                    alt={employee?.name || 'User'}
+                    onError={() => setImgError(true)}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block'
+                    }}
+                />
+            ) : (
+                initials
+            )}
+        </span>
+    );
+}
+
+function AvatarStack({ employees = [], size = 18, max = 3 }) {
+    const shown = employees.filter(Boolean).slice(0, max);
+    const extra = employees.length - shown.length;
+    const darkMode = isDarkMode();
+
+    return (
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                minHeight: size
+            }}
+        >
+            {shown.map((emp, idx) => (
+                <div
+                    key={emp.id}
+                    style={{
+                        width: size,
+                        height: size,
+                        marginLeft: idx === 0 ? 0 : -6,
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: `1.5px solid ${darkMode ? 'var(--cal-panel)' : '#fff'}`,
+                        background: 'var(--cal-panel)',
+                        boxShadow: darkMode
+                            ? '0 0 0 1px rgba(255,255,255,.05)'
+                            : '0 0 0 1px rgba(0,0,0,.04)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        position: 'relative',
+                        zIndex: shown.length - idx
+                    }}
+                >
+                    <EmployeeAvatar
+                        employee={emp}
+                        size={size}
+                        fontSize={Math.max(8, size * 0.38)}
+                    />
+                </div>
+            ))}
+
+            {extra > 0 && (
+                <div
+                    style={{
+                        marginLeft: shown.length ? -6 : 0,
+                        minWidth: size,
+                        height: size,
+                        padding: '0 6px',
+                        borderRadius: 999,
+                        background: 'var(--cal-panel-2)',
+                        border: `1.5px solid ${darkMode ? 'var(--cal-panel)' : '#fff'}`,
+                        color: 'var(--cal-text-2)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        flexShrink: 0
+                    }}
+                >
+                    +{extra}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function Fg({ label, children, style }) {
+    return (
+        <div style={{ marginBottom: 14, ...style }}>
+            <div
+                style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: 'var(--cal-text-3)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '.05em',
+                    marginBottom: 6
+                }}
+            >
+                {label}
+            </div>
+            {children}
+        </div>
+    );
+}
+
 // ====================================================================
 // EVENT FORM MODAL
 // ====================================================================
@@ -125,31 +320,28 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
     const toggleEmp = id => {
-        set(
-            'tagged_employees',
-            form.tagged_employees.includes(id)
-                ? form.tagged_employees.filter(e => e !== id)
-                : [...form.tagged_employees, id]
-        );
+        setForm(prev => ({
+            ...prev,
+            tagged_employees: prev.tagged_employees.includes(id)
+                ? prev.tagged_employees.filter(e => e !== id)
+                : [...prev.tagged_employees, id]
+        }));
     };
 
     const filtered = employees.filter(e =>
         `${e.name} ${e.department}`.toLowerCase().includes(empQ.toLowerCase())
     );
 
-    // Are all currently-visible (filtered) employees already tagged?
     const allFilteredSelected =
         filtered.length > 0 &&
         filtered.every(e => form.tagged_employees.includes(e.id));
 
-    // Select all visible employees (merges with any already-tagged ones outside the filter)
     const selectAllFiltered = () => {
         const filteredIds = filtered.map(e => e.id);
         const merged = Array.from(new Set([...form.tagged_employees, ...filteredIds]));
         set('tagged_employees', merged);
     };
 
-    // Deselect all visible employees (keeps any tagged ones outside the current filter)
     const deselectAllFiltered = () => {
         const filteredIds = new Set(filtered.map(e => e.id));
         set('tagged_employees', form.tagged_employees.filter(id => !filteredIds.has(id)));
@@ -164,6 +356,23 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     };
 
     const save = () => {
+        if (!form.title.trim()) {
+            setError('Title is required.');
+            return;
+        }
+        if (!form.start_date) {
+            setError('Start date is required.');
+            return;
+        }
+        if (!form.end_date) {
+            setError('End date is required.');
+            return;
+        }
+        if (form.end_date < form.start_date) {
+            setError('End must be on or after start.');
+            return;
+        }
+
         setSaving(true);
         setError(null);
 
@@ -205,200 +414,447 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     };
 
     const cfg = STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming;
+    const darkMode = isDarkMode();
+    const activeRowBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
+    const selectedToggleBg = darkMode ? colorWithAlpha(cfg.badge, '14') : cfg.bg;
+    const selectedToggleBorder = darkMode ? colorWithAlpha(cfg.badge, '50') : `${cfg.badge}66`;
+    const modalCloseFilter = darkMode ? 'invert(1) opacity(.72)' : 'opacity(.75)';
 
     return (
         <ModalPortal>
             <div
+                className="hide-scrollbar"
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
-                style={S.backdrop}
+                style={{
+                    ...S.backdrop,
+                    padding: '14px',
+                    alignItems: 'center',
+                    background: 'rgba(0,0,0,.18)'
+                }}
             >
-                <div style={{ ...S.modal, maxWidth: 560 }}>
-                    <div style={{ ...S.mHead, background: cfg.bg, borderBottom: `2px solid ${cfg.badge}33` }}>
-                        <span style={{ fontWeight: 700, fontSize: 15, color: cfg.text }}>
-                            {isEdit ? 'Edit Event' : 'New Event'}
-                        </span>
-                        <button className="btn-close" onClick={onClose} style={{ fontSize: 11 }} />
-                    </div>
+                <div style={{ ...S.modal, maxWidth: 720, maxHeight: '90vh', overflow: 'hidden' }}>
+                    <button
+                        className="btn-close"
+                        onClick={onClose}
+                        style={{
+                            position: 'absolute',
+                            top: 16,
+                            right: 16,
+                            zIndex: 2,
+                            fontSize: 10,
+                            filter: modalCloseFilter
+                        }}
+                    />
 
-                    <div style={S.mBody}>
-                        {error && <div style={S.errBox}>{error}</div>}
+                    <div
+                        className="hide-scrollbar"
+                        style={{
+                            ...S.mBody,
+                            padding: '22px 24px 16px'
+                        }}
+                    >
+                        <div
+                            style={{
+                                fontSize: 22,
+                                lineHeight: 1.08,
+                                fontWeight: 700,
+                                letterSpacing: '-.02em',
+                                color: 'var(--cal-text)',
+                                marginBottom: 14
+                            }}
+                        >
+                            {isEdit ? 'Edit Event' : 'Add Event'}
+                        </div>
 
-                        <Fg label="Title *">
+                        {error && <div style={{ ...S.errBox, marginBottom: 14 }}>{error}</div>}
+
+                        <div style={{ marginBottom: 14 }}>
+                            <div
+                                style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: 'var(--cal-text-3)',
+                                    letterSpacing: '.02em',
+                                    marginBottom: 6
+                                }}
+                            >
+                                Event name
+                            </div>
                             <input
-                                style={S.inp}
+                                style={{ ...S.inp, height: 40, borderRadius: 12 }}
                                 value={form.title}
                                 onChange={e => set('title', e.target.value)}
-                                placeholder="Event title"
+                                placeholder="Enter event name"
                             />
-                        </Fg>
+                        </div>
 
-                        <Fg label="Description">
+                        <div style={{ marginBottom: 14 }}>
+                            <div
+                                style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: 'var(--cal-text-3)',
+                                    letterSpacing: '.02em',
+                                    marginBottom: 6
+                                }}
+                            >
+                                Description
+                            </div>
                             <textarea
-                                style={{ ...S.inp, resize: 'vertical' }}
                                 rows={3}
+                                style={{
+                                    ...S.inp,
+                                    minHeight: 92,
+                                    padding: '10px 12px',
+                                    borderRadius: 12,
+                                    resize: 'vertical'
+                                }}
                                 value={form.description}
                                 onChange={e => set('description', e.target.value)}
-                                placeholder="Optional details…"
+                                placeholder="Optional details"
                             />
-                        </Fg>
-
-                        <Fg label="Location">
-                            <input
-                                style={S.inp}
-                                value={form.location}
-                                onChange={e => set('location', e.target.value)}
-                                placeholder="Venue or link"
-                            />
-                        </Fg>
-
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            <Fg label="Start Date *" style={{ flex: 1 }}>
-                                <input
-                                    type="date"
-                                    style={S.inp}
-                                    value={form.start_date}
-                                    onChange={e => set('start_date', e.target.value)}
-                                />
-                            </Fg>
-
-                            <Fg label="End Date *" style={{ flex: 1 }}>
-                                <input
-                                    type="date"
-                                    style={S.inp}
-                                    value={form.end_date}
-                                    onChange={e => set('end_date', e.target.value)}
-                                />
-                            </Fg>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            <Fg label="Status" style={{ flex: 1 }}>
-                                <select
-                                    style={S.inp}
-                                    value={form.status}
-                                    onChange={e => set('status', e.target.value)}
-                                >
-                                    {Object.keys(STATUS_CFG).map(s => (
-                                        <option key={s}>{s}</option>
-                                    ))}
-                                </select>
-                            </Fg>
-
-                            <Fg label="Priority" style={{ flex: 1 }}>
-                                <select
-                                    style={S.inp}
-                                    value={form.priority}
-                                    onChange={e => set('priority', e.target.value)}
-                                >
-                                    <option>High</option>
-                                    <option>Medium</option>
-                                    <option>Low</option>
-                                </select>
-                            </Fg>
-                        </div>
-
-                        <Fg label="Tag Employees">
-                            <input
-                                style={{ ...S.inp, marginBottom: 6 }}
-                                placeholder="Search…"
-                                value={empQ}
-                                onChange={e => setEmpQ(e.target.value)}
-                            />
-
-                            {/* Select All / Deselect All row */}
-                            {filtered.length > 0 && (
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'minmax(0, 1.35fr) minmax(210px, .9fr)',
+                                gap: 14,
+                                marginBottom: 14
+                            }}
+                        >
+                            <div
+                                style={{
+                                    background: 'var(--cal-panel)',
+                                    border: '1px solid var(--cal-border)',
+                                    borderRadius: 14,
+                                    padding: '14px'
+                                }}
+                            >
                                 <div
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        marginBottom: 5,
-                                        padding: '0 2px'
+                                        gap: 10,
+                                        marginBottom: 12
                                     }}
                                 >
+                                    <span
+                                        style={{
+                                            width: 18,
+                                            height: 18,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: 'var(--cal-text-3)',
+                                            fontSize: 15,
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        <i className="bi bi-calendar4-event" />
+                                    </span>
+                                    <div
+                                        style={{
+                                            fontSize: 13,
+                                            fontWeight: 600,
+                                            color: 'var(--cal-text)'
+                                        }}
+                                    >
+                                        {form.start_date ? fmtLong(form.start_date) : 'Select event date'}
+                                    </div>
+                                </div>
+
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: 12
+                                    }}
+                                >
+                                    <Fg label="Start date" style={{ marginBottom: 0 }}>
+                                        <input
+                                            type="date"
+                                            style={{ ...S.inp, height: 40, borderRadius: 12 }}
+                                            value={form.start_date}
+                                            onChange={e => set('start_date', e.target.value)}
+                                        />
+                                    </Fg>
+
+                                    <Fg label="End date" style={{ marginBottom: 0 }}>
+                                        <input
+                                            type="date"
+                                            style={{ ...S.inp, height: 40, borderRadius: 12 }}
+                                            value={form.end_date}
+                                            onChange={e => set('end_date', e.target.value)}
+                                        />
+                                    </Fg>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gap: 14 }}>
+                                <div
+                                    style={{
+                                        background: 'var(--cal-panel)',
+                                        border: '1px solid var(--cal-border)',
+                                        borderRadius: 14,
+                                        padding: '14px'
+                                    }}
+                                >
+                                    <Fg label="Status" style={{ marginBottom: 0 }}>
+                                        <select
+                                            style={{
+                                                ...S.inp,
+                                                height: 40,
+                                                borderRadius: 12,
+                                                fontWeight: 600,
+                                                color: (STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming).text
+                                            }}
+                                            value={form.status}
+                                            onChange={e => set('status', e.target.value)}
+                                        >
+                                            {Object.keys(STATUS_CFG).map(s => (
+                                                <option key={s}>{s}</option>
+                                            ))}
+                                        </select>
+                                    </Fg>
+                                </div>
+
+                                <div
+                                    style={{
+                                        background: 'var(--cal-panel)',
+                                        border: '1px solid var(--cal-border)',
+                                        borderRadius: 14,
+                                        padding: '14px'
+                                    }}
+                                >
+                                    <Fg label="Priority" style={{ marginBottom: 0 }}>
+                                        <select
+                                            style={{
+                                                ...S.inp,
+                                                height: 40,
+                                                borderRadius: 12,
+                                                fontWeight: 600,
+                                                color: PRIORITY_COLORS[form.priority] ?? 'var(--cal-text)'
+                                            }}
+                                            value={form.priority}
+                                            onChange={e => set('priority', e.target.value)}
+                                        >
+                                            <option>High</option>
+                                            <option>Medium</option>
+                                            <option>Low</option>
+                                        </select>
+                                    </Fg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            style={{
+                                background: 'var(--cal-panel)',
+                                border: '1px solid var(--cal-border)',
+                                borderRadius: 14,
+                                padding: '14px',
+                                marginBottom: 14
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        width: 18,
+                                        height: 18,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'var(--cal-text-3)',
+                                        fontSize: 15,
+                                        flexShrink: 0
+                                    }}
+                                >
+                                    <i className="bi bi-geo-alt" />
+                                </span>
+                                <div
+                                    style={{
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        color: 'var(--cal-text-3)',
+                                        letterSpacing: '.02em'
+                                    }}
+                                >
+                                    Location
+                                </div>
+                            </div>
+
+                            <input
+                                style={{ ...S.inp, height: 40, borderRadius: 12 }}
+                                value={form.location}
+                                onChange={e => set('location', e.target.value)}
+                                placeholder="Venue or link"
+                            />
+                        </div>
+
+                        <div
+                            style={{
+                                background: 'var(--cal-panel)',
+                                border: '1px solid var(--cal-border)',
+                                borderRadius: 14,
+                                padding: '14px'
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span
+                                        style={{
+                                            width: 18,
+                                            height: 18,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: 'var(--cal-text-3)',
+                                            fontSize: 15,
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        <i className="bi bi-people" />
+                                    </span>
+                                    <div
+                                        style={{
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: 'var(--cal-text-3)',
+                                            letterSpacing: '.02em'
+                                        }}
+                                    >
+                                        Tag employees
+                                    </div>
+                                </div>
+
+                                {form.tagged_employees.length > 0 && (
+                                    <span
+                                        style={{
+                                            minWidth: 24,
+                                            height: 24,
+                                            borderRadius: 999,
+                                            background: 'var(--cal-panel-2)',
+                                            border: '1px solid var(--cal-border)',
+                                            color: 'var(--cal-text-2)',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '0 8px',
+                                            fontSize: 11,
+                                            fontWeight: 700
+                                        }}
+                                    >
+                                        {form.tagged_employees.length}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'minmax(0, 1fr) auto',
+                                    gap: 10,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        style={{
+                                            ...S.inp,
+                                            height: 40,
+                                            borderRadius: 12,
+                                            paddingRight: empQ ? 34 : 12
+                                        }}
+                                        placeholder="Search employees"
+                                        value={empQ}
+                                        onChange={e => setEmpQ(e.target.value)}
+                                    />
+
+                                    {empQ && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setEmpQ('')}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '50%',
+                                                right: 10,
+                                                transform: 'translateY(-50%)',
+                                                width: 18,
+                                                height: 18,
+                                                border: 'none',
+                                                borderRadius: '50%',
+                                                background: 'var(--cal-panel-2)',
+                                                color: 'var(--cal-text-3)',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                fontSize: 12,
+                                                lineHeight: 1
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
+
+                                {filtered.length > 0 && (
                                     <button
                                         type="button"
                                         onClick={toggleSelectAll}
                                         style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 6,
-                                            background: allFilteredSelected ? cfg.bg : '#F5F5F5',
-                                            border: `1.5px solid ${allFilteredSelected ? cfg.badge + '88' : '#DCDCDC'}`,
-                                            borderRadius: 6,
-                                            padding: '4px 10px',
+                                            height: 40,
+                                            padding: '0 14px',
+                                            borderRadius: 11,
+                                            border: `1px solid ${allFilteredSelected ? selectedToggleBorder : 'var(--cal-border)'}`,
+                                            background: allFilteredSelected ? selectedToggleBg : 'var(--cal-panel)',
+                                            color: allFilteredSelected ? cfg.text : 'var(--cal-text-2)',
                                             fontSize: 11.5,
                                             fontWeight: 600,
-                                            color: allFilteredSelected ? cfg.text : '#555',
-                                            cursor: 'pointer',
-                                            transition: 'all .15s'
+                                            cursor: 'pointer'
                                         }}
                                     >
-                                        {/* Mini checkbox indicator */}
-                                        <span
-                                            style={{
-                                                width: 13,
-                                                height: 13,
-                                                borderRadius: 3,
-                                                border: `1.5px solid ${allFilteredSelected ? cfg.badge : '#AAAAAA'}`,
-                                                background: allFilteredSelected ? cfg.badge : '#fff',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                flexShrink: 0,
-                                                transition: 'all .15s'
-                                            }}
-                                        >
-                                            {allFilteredSelected && (
-                                                <span style={{ color: '#fff', fontSize: 9, fontWeight: 900, lineHeight: 1 }}>✓</span>
-                                            )}
-                                        </span>
-                                        {allFilteredSelected
-                                            ? empQ
-                                                ? `Deselect all ${filtered.length} shown`
-                                                : 'Deselect all'
-                                            : empQ
-                                                ? `Select all ${filtered.length} shown`
-                                                : 'Select all'
-                                        }
+                                        {allFilteredSelected ? 'Deselect' : 'Select all'}
                                     </button>
-
-                                    {/* Live count badge */}
-                                    {form.tagged_employees.length > 0 && (
-                                        <span
-                                            style={{
-                                                fontSize: 11,
-                                                color: cfg.text,
-                                                background: cfg.bg,
-                                                border: `1px solid ${cfg.badge}44`,
-                                                borderRadius: 20,
-                                                padding: '2px 8px',
-                                                fontWeight: 600
-                                            }}
-                                        >
-                                            {form.tagged_employees.length} tagged
-                                        </span>
-                                    )}
-                                </div>
-                            )}
+                                )}
+                            </div>
 
                             <div
+                                className="hide-scrollbar"
                                 style={{
-                                    maxHeight: 148,
+                                    maxHeight: 165,
                                     overflowY: 'auto',
-                                    border: '1px solid #EBEBEB',
-                                    borderRadius: 8,
-                                    padding: '4px 8px'
+                                    border: '1px solid var(--cal-border)',
+                                    borderRadius: 12,
+                                    padding: '6px',
+                                    background: 'var(--cal-input-bg)'
                                 }}
                             >
                                 {filtered.length === 0 ? (
                                     <div
                                         style={{
-                                            color: '#aaa',
+                                            color: 'var(--cal-text-3)',
                                             fontSize: 12,
-                                            padding: '6px 0',
+                                            padding: '12px 0',
                                             textAlign: 'center'
                                         }}
                                     >
@@ -415,22 +871,36 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                                 style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: 8,
-                                                    padding: '5px 4px',
-                                                    borderRadius: 6,
+                                                    gap: 10,
+                                                    padding: '9px 8px',
+                                                    borderRadius: 10,
                                                     cursor: 'pointer',
-                                                    background: chk ? cfg.bg : 'transparent'
+                                                    background: chk ? activeRowBg : 'transparent',
+                                                    marginBottom: 4
                                                 }}
                                             >
                                                 <input
                                                     type="checkbox"
                                                     readOnly
                                                     checked={chk}
-                                                    style={{ pointerEvents: 'none', accentColor: cfg.badge }}
+                                                    style={{
+                                                        pointerEvents: 'none',
+                                                        accentColor: cfg.badge,
+                                                        margin: 0
+                                                    }}
                                                 />
-                                                <span style={{ fontSize: 13 }}>
-                                                    <strong>{emp.name}</strong>{' '}
-                                                    <span style={{ color: '#aaa' }}>— {emp.department}</span>
+
+                                                <EmployeeAvatar employee={emp} size={28} fontSize={10} />
+
+                                                <span
+                                                    style={{
+                                                        fontSize: 12,
+                                                        color: 'var(--cal-text)',
+                                                        fontWeight: 600,
+                                                        lineHeight: 1.2
+                                                    }}
+                                                >
+                                                    {emp.name}
                                                 </span>
                                             </div>
                                         );
@@ -439,54 +909,113 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                             </div>
 
                             {form.tagged_employees.length > 0 && (
-                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
                                     {form.tagged_employees.map(id => {
                                         const emp = employees.find(e => e.id === id);
+
                                         return emp ? (
-                                            <span
+                                            <div
                                                 key={id}
                                                 style={{
-                                                    background: cfg.bg,
-                                                    color: cfg.text,
-                                                    border: `1px solid ${cfg.badge}44`,
-                                                    borderRadius: 20,
-                                                    fontSize: 11,
-                                                    padding: '2px 10px'
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: 8,
+                                                    background: 'var(--cal-panel-2)',
+                                                    border: '1px solid var(--cal-border)',
+                                                    borderRadius: 999,
+                                                    padding: '4px 10px 4px 4px',
+                                                    minHeight: 34
                                                 }}
                                             >
-                                                {emp.name}{' '}
+                                                <EmployeeAvatar employee={emp} size={24} fontSize={9} />
                                                 <span
-                                                    onClick={() => toggleEmp(id)}
-                                                    style={{ marginLeft: 4, cursor: 'pointer', opacity: 0.7 }}
+                                                    style={{
+                                                        fontSize: 11.5,
+                                                        fontWeight: 500,
+                                                        color: 'var(--cal-text-2)',
+                                                        lineHeight: 1,
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center'
+                                                    }}
                                                 >
-                                                    ✕
+                                                    {emp.name}
                                                 </span>
-                                            </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleEmp(id)}
+                                                    style={{
+                                                        border: 'none',
+                                                        background: 'transparent',
+                                                        color: 'var(--cal-text-3)',
+                                                        cursor: 'pointer',
+                                                        padding: 0,
+                                                        fontSize: 13,
+                                                        lineHeight: 1,
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
                                         ) : null;
                                     })}
                                 </div>
                             )}
-                        </Fg>
+                        </div>
                     </div>
 
-                    <div style={S.mFoot}>
+                    <div style={{ ...S.mFoot, padding: '12px 24px 16px' }}>
                         <div>
                             {isEdit && (
-                                <button onClick={del} disabled={deling} style={S.btnDanger}>
+                                <button
+                                    onClick={del}
+                                    disabled={deling}
+                                    style={{
+                                        ...S.btnGhost,
+                                        height: 42,
+                                        borderRadius: 11,
+                                        background: darkMode ? 'rgba(214,67,67,.08)' : '#fff',
+                                        border: `1px solid ${colorWithAlpha('#D64343', '45')}`,
+                                        color: '#D64343',
+                                        fontWeight: 600
+                                    }}
+                                >
                                     {deling ? 'Deleting…' : 'Delete'}
                                 </button>
                             )}
                         </div>
 
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <button onClick={onClose} style={S.btnGhost}>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    ...S.btnGhost,
+                                    height: 42,
+                                    borderRadius: 11,
+                                    background: 'var(--cal-panel-2)',
+                                    fontWeight: 600
+                                }}
+                            >
                                 Cancel
                             </button>
+
                             <button
                                 onClick={save}
                                 disabled={saving}
-                                style={{ ...S.btnPrimary, background: cfg.badge }}
+                                style={{
+                                    ...S.btnPrimary,
+                                    height: 42,
+                                    borderRadius: 11,
+                                    padding: '0 18px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    boxShadow: '0 8px 16px rgba(47,109,246,.16)'
+                                }}
                             >
+                                <i className="bi bi-check2" style={{ fontSize: 16, lineHeight: 1 }} />
                                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Event'}
                             </button>
                         </div>
@@ -494,26 +1023,6 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                 </div>
             </div>
         </ModalPortal>
-    );
-}
-
-function Fg({ label, children, style }) {
-    return (
-        <div style={{ marginBottom: 14, ...style }}>
-            <div
-                style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: '#999',
-                    textTransform: 'uppercase',
-                    letterSpacing: '.05em',
-                    marginBottom: 4
-                }}
-            >
-                {label}
-            </div>
-            {children}
-        </div>
     );
 }
 
@@ -527,44 +1036,61 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
         .map(id => employees.find(e => e.id === id))
         .filter(Boolean);
 
+    const darkMode = isDarkMode();
+    const headerBg = darkMode ? colorWithAlpha(cfg.badge, '18') : cfg.bg;
+    const headerBorder = darkMode ? colorWithAlpha(cfg.badge, '35') : colorWithAlpha(cfg.badge, '33');
+    const statusChipBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
+    const closeBtnFilter = darkMode ? 'invert(1) opacity(.72)' : 'opacity(.75)';
+
     return (
         <ModalPortal>
             <div
+                className="hide-scrollbar"
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
-                style={S.backdrop}
+                style={{
+                    ...S.backdrop,
+                    padding: '14px',
+                    alignItems: 'center',
+                    background: 'rgba(0,0,0,.32)'
+                }}
             >
-                <div style={{ ...S.modal, maxWidth: 440, overflow: 'hidden' }}>
+                <div style={{ ...S.modal, maxWidth: 560, overflow: 'hidden' }}>
                     <div
                         style={{
-                            background: cfg.bg,
-                            padding: '1.125rem 1.5rem',
-                            borderBottom: `2px solid ${cfg.badge}33`,
+                            background: headerBg,
+                            padding: '1.25rem 1.5rem',
+                            borderBottom: `1px solid ${headerBorder}`,
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'flex-start'
                         }}
                     >
                         <div>
-                            <div style={{ fontWeight: 700, fontSize: 16, color: cfg.text }}>
+                            <div style={{ fontWeight: 700, fontSize: 18, color: cfg.text }}>
                                 {event.title}
                             </div>
-                            <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
+                            <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginTop: 4 }}>
                                 {fmtShort(event.start_date)} – {fmtShort(event.end_date)}
                             </div>
                         </div>
-                        <button className="btn-close" onClick={onClose} style={{ fontSize: 11 }} />
+                        <button
+                            className="btn-close"
+                            onClick={onClose}
+                            style={{ fontSize: 11, filter: closeBtnFilter }}
+                        />
                     </div>
 
-                    <div style={{ padding: '1.125rem 1.5rem' }}>
-                        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                    <div style={{ padding: '1.25rem 1.5rem', background: 'var(--cal-panel)' }}>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
                             <span
                                 style={{
                                     ...S.chip,
-                                    background: cfg.bg,
+                                    background: statusChipBg,
                                     color: cfg.text,
-                                    border: `1px solid ${cfg.badge}33`
+                                    border: `1px solid ${headerBorder}`,
+                                    fontWeight: 700
                                 }}
                             >
                                 {cfg.icon} {event.status}
@@ -574,7 +1100,9 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                 style={{
                                     ...S.chip,
                                     color: pColor,
-                                    border: `1px solid ${pColor}44`
+                                    border: `1px solid ${colorWithAlpha(pColor, '55')}`,
+                                    background: 'transparent',
+                                    fontWeight: 700
                                 }}
                             >
                                 ● {event.priority}
@@ -582,32 +1110,30 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                         </div>
 
                         {event.description && (
-                            <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}>
+                            <p style={{ fontSize: 13.5, color: 'var(--cal-text-2)', marginBottom: 12 }}>
                                 {event.description}
                             </p>
                         )}
 
                         {event.location && (
-                            <div style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>
+                            <div style={{ fontSize: 13.5, color: 'var(--cal-text-2)', marginBottom: 14 }}>
                                 📍 {event.location}
                             </div>
                         )}
 
                         {tagged.length > 0 && (() => {
-                            // When all employees are tagged, or the list is very large,
-                            // show a compact summary instead of individual chips.
-                            const isAll     = tagged.length === employees.length && employees.length > 0;
-                            const SHOW_MAX  = 6; // max individual chips before collapsing
-                            const isLarge   = !isAll && tagged.length > SHOW_MAX;
+                            const isAll = tagged.length === employees.length && employees.length > 0;
+                            const SHOW_MAX = 6;
+                            const isLarge = !isAll && tagged.length > SHOW_MAX;
 
                             return (
                                 <div style={{ marginTop: 8 }}>
                                     <div
                                         style={{
                                             fontSize: 11,
-                                            fontWeight: 600,
-                                            color: '#bbb',
-                                            marginBottom: 6,
+                                            fontWeight: 700,
+                                            color: 'var(--cal-text-3)',
+                                            marginBottom: 8,
                                             textTransform: 'uppercase',
                                             letterSpacing: '.05em'
                                         }}
@@ -616,17 +1142,16 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                     </div>
 
                                     {isAll ? (
-                                        // All employees — single pill
                                         <span
                                             style={{
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 gap: 6,
                                                 fontSize: 12,
-                                                background: cfg.bg,
-                                                border: `1px solid ${cfg.badge}44`,
+                                                background: statusChipBg,
+                                                border: `1px solid ${headerBorder}`,
                                                 borderRadius: 20,
-                                                padding: '3px 12px',
+                                                padding: '4px 12px',
                                                 color: cfg.text,
                                                 fontWeight: 600
                                             }}
@@ -638,7 +1163,7 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                                     background: cfg.badge,
                                                     color: '#fff',
                                                     borderRadius: 20,
-                                                    padding: '0px 7px',
+                                                    padding: '0 7px',
                                                     fontWeight: 700
                                                 }}
                                             >
@@ -646,29 +1171,35 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                             </span>
                                         </span>
                                     ) : isLarge ? (
-                                        // Large partial group — show first few + overflow count
-                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                                             {tagged.slice(0, SHOW_MAX).map(emp => (
-                                                <span
+                                                <div
                                                     key={emp.id}
                                                     style={{
-                                                        fontSize: 12,
-                                                        background: '#F5F5F5',
-                                                        borderRadius: 20,
-                                                        padding: '2px 10px',
-                                                        color: '#444'
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: 7,
+                                                        background: 'var(--cal-panel-2)',
+                                                        border: '1px solid var(--cal-border)',
+                                                        borderRadius: 999,
+                                                        padding: '4px 10px 4px 4px',
+                                                        color: 'var(--cal-text-2)'
                                                     }}
                                                 >
-                                                    {emp.name} <span style={{ color: '#aaa' }}>· {emp.department}</span>
-                                                </span>
+                                                    <EmployeeAvatar employee={emp} size={22} fontSize={9} />
+                                                    <span style={{ fontSize: 11.5, fontWeight: 500 }}>
+                                                        {emp.name}
+                                                    </span>
+                                                </div>
                                             ))}
                                             <span
                                                 style={{
                                                     fontSize: 12,
-                                                    background: '#EDEDF0',
+                                                    background: 'var(--cal-panel-2)',
+                                                    border: '1px solid var(--cal-border)',
                                                     borderRadius: 20,
-                                                    padding: '2px 10px',
-                                                    color: '#666',
+                                                    padding: '3px 10px',
+                                                    color: 'var(--cal-text-2)',
                                                     fontWeight: 600
                                                 }}
                                             >
@@ -676,21 +1207,26 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                             </span>
                                         </div>
                                     ) : (
-                                        // Small list — show all chips normally
-                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                             {tagged.map(emp => (
-                                                <span
+                                                <div
                                                     key={emp.id}
                                                     style={{
-                                                        fontSize: 12,
-                                                        background: '#F5F5F5',
-                                                        borderRadius: 20,
-                                                        padding: '2px 10px',
-                                                        color: '#444'
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: 7,
+                                                        background: 'var(--cal-panel-2)',
+                                                        border: '1px solid var(--cal-border)',
+                                                        borderRadius: 999,
+                                                        padding: '4px 10px 4px 4px',
+                                                        color: 'var(--cal-text-2)'
                                                     }}
                                                 >
-                                                    {emp.name} <span style={{ color: '#aaa' }}>· {emp.department}</span>
-                                                </span>
+                                                    <EmployeeAvatar employee={emp} size={22} fontSize={9} />
+                                                    <span style={{ fontSize: 11.5, fontWeight: 500 }}>
+                                                        {emp.name}
+                                                    </span>
+                                                </div>
                                             ))}
                                         </div>
                                     )}
@@ -699,13 +1235,41 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                         })()}
                     </div>
 
-                    <div style={{ ...S.mFoot, justifyContent: 'flex-end', gap: 8 }}>
+                    <div
+                        style={{
+                            ...S.mFoot,
+                            justifyContent: 'flex-end',
+                            gap: 10,
+                            background: 'var(--cal-panel)',
+                            borderTop: '1px solid var(--cal-border-soft)'
+                        }}
+                    >
                         {canEdit && (
-                            <button onClick={onEdit} style={S.btnGhost}>
+                            <button
+                                onClick={onEdit}
+                                style={{
+                                    ...S.btnGhost,
+                                    height: 40,
+                                    borderRadius: 999,
+                                    padding: '0 18px',
+                                    fontWeight: 700
+                                }}
+                            >
                                 Edit Event
                             </button>
                         )}
-                        <button onClick={onClose} style={{ ...S.btnPrimary, background: cfg.badge }}>
+
+                        <button
+                            onClick={onClose}
+                            style={{
+                                ...S.btnPrimary,
+                                background: cfg.badge,
+                                height: 40,
+                                borderRadius: 999,
+                                padding: '0 20px',
+                                fontWeight: 700
+                            }}
+                        >
                             Close
                         </button>
                     </div>
@@ -719,25 +1283,47 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
 // DAY EVENTS MODAL
 // ====================================================================
 function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
+    const darkMode = isDarkMode();
+    const closeBtnFilter = darkMode ? 'invert(1) opacity(.72)' : 'opacity(.75)';
+
     return (
         <ModalPortal>
             <div
+                className="hide-scrollbar"
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
-                style={S.backdrop}
+                style={{
+                    ...S.backdrop,
+                    padding: '14px',
+                    alignItems: 'center',
+                    background: 'rgba(0,0,0,.22)'
+                }}
             >
                 <div style={{ ...S.modal, maxWidth: 360 }}>
                     <div style={S.mHead}>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: '#222' }}>
+                        <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--cal-text)' }}>
                             {fmtLong(dateStr)}
                         </span>
-                        <button className="btn-close" onClick={onClose} style={{ fontSize: 11 }} />
+                        <button
+                            className="btn-close"
+                            onClick={onClose}
+                            style={{ fontSize: 11, filter: closeBtnFilter }}
+                        />
                     </div>
 
-                    <div style={{ padding: '0.75rem 1rem', maxHeight: '60vh', overflowY: 'auto' }}>
+                    <div
+                        className="hide-scrollbar"
+                        style={{
+                            padding: '0.75rem 1rem',
+                            maxHeight: '60vh',
+                            overflowY: 'auto',
+                            background: 'var(--cal-panel)'
+                        }}
+                    >
                         {events.map(ev => {
                             const cfg = STATUS_CFG[ev.status] ?? STATUS_CFG.Upcoming;
+                            const hoverBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
 
                             return (
                                 <div
@@ -751,10 +1337,11 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                                         borderRadius: 10,
                                         cursor: 'pointer',
                                         marginBottom: 4,
-                                        border: '1px solid #F0F0F0'
+                                        border: '1px solid var(--cal-border)',
+                                        background: 'transparent'
                                     }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = cfg.bg)}
-                                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                    onMouseEnter={e => (e.currentTarget.style.background = hoverBg)}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >
                                     <div
                                         style={{
@@ -767,10 +1354,10 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                                     />
 
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 600, fontSize: 13, color: '#222' }}>
+                                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--cal-text)' }}>
                                             {ev.title}
                                         </div>
-                                        <div style={{ fontSize: 11, color: '#bbb' }}>
+                                        <div style={{ fontSize: 11, color: 'var(--cal-text-3)' }}>
                                             {fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}
                                         </div>
                                     </div>
@@ -778,9 +1365,10 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                                     <span
                                         style={{
                                             ...S.chip,
-                                            background: cfg.bg,
+                                            background: darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg,
                                             color: cfg.text,
-                                            fontSize: 10
+                                            fontSize: 10,
+                                            border: `1px solid ${colorWithAlpha(cfg.badge, '35')}`
                                         }}
                                     >
                                         {ev.status}
@@ -802,16 +1390,17 @@ function FilterSidebar({ activeFilters, onToggle }) {
     return (
         <div
             style={{
-                width: 155,
+                width: 185,
                 flexShrink: 0,
-                background: '#fff',
-                border: '1px solid #EBEBEB',
-                borderRadius: 14,
-                padding: '16px 14px',
-                alignSelf: 'flex-start'
+                background: 'var(--cal-panel)',
+                border: '1px solid var(--cal-border)',
+                borderRadius: 18,
+                padding: '18px 16px',
+                alignSelf: 'flex-start',
+                boxShadow: 'var(--cal-shadow)'
             }}
         >
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#111', marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--cal-text)', marginBottom: 16 }}>
                 Filters
             </div>
 
@@ -826,7 +1415,7 @@ function FilterSidebar({ activeFilters, onToggle }) {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 9,
-                            marginBottom: 12,
+                            marginBottom: 13,
                             cursor: 'pointer',
                             userSelect: 'none'
                         }}
@@ -837,8 +1426,8 @@ function FilterSidebar({ activeFilters, onToggle }) {
                                 height: 18,
                                 borderRadius: 5,
                                 flexShrink: 0,
-                                background: active ? cfg.filter : '#F0F0F0',
-                                border: `1.5px solid ${active ? cfg.filter : '#DDD'}`,
+                                background: active ? cfg.filter : 'var(--cal-panel-2)',
+                                border: `1.5px solid ${active ? cfg.filter : 'var(--cal-border)'}`,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -861,10 +1450,9 @@ function FilterSidebar({ activeFilters, onToggle }) {
 
                         <span
                             style={{
-                                fontSize: 12.5,
-                                color: active ? '#222' : '#BBB',
-                                fontWeight: active ? 500 : 400,
-                                transition: 'color .15s'
+                                fontSize: 13,
+                                color: active ? 'var(--cal-text)' : 'var(--cal-text-3)',
+                                fontWeight: active ? 600 : 500
                             }}
                         >
                             {status}
@@ -920,40 +1508,30 @@ function EventCard({ event, employees, onClick }) {
                     </span>
                 </div>
 
-                <div
+                <span
                     style={{
-                        background: cfg.badge,
-                        color: '#fff',
-                        borderRadius: 10,
-                        minWidth: 17,
-                        height: 17,
-                        display: 'flex',
+                        display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 9,
-                        fontWeight: 700,
                         flexShrink: 0,
-                        padding: '0 4px'
+                        color: cfg.badge,
+                        marginLeft: 4
                     }}
                 >
-                    ●
-                </div>
+                    <i className="bi bi-pin-fill" style={{ fontSize: 12, lineHeight: 1 }} />
+                </span>
             </div>
 
             {tagged.length > 0 && (
                 <div
                     style={{
-                        fontSize: 9.5,
-                        color: cfg.text,
-                        opacity: 0.72,
-                        marginTop: 1.5,
+                        marginTop: 4,
                         paddingLeft: 14,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        display: 'flex',
+                        alignItems: 'center'
                     }}
                 >
-                    ↗ {tagged[0].name}{tagged.length > 1 ? ` +${tagged.length - 1}` : ''}
+                    <AvatarStack employees={tagged} size={17} max={3} />
                 </div>
             )}
         </div>
@@ -1136,25 +1714,25 @@ function Calendar() {
                     onClick={() => openDate(dateStr)}
                     style={{ ...G.cell, cursor: dayEvs.length > 0 || isEditor ? 'pointer' : 'default' }}
                     onMouseEnter={e => {
-                        if (!isTodayCell) e.currentTarget.style.background = '#FAFAFA';
+                        if (!isTodayCell) e.currentTarget.style.background = 'var(--cal-hover)';
                     }}
                     onMouseLeave={e => {
-                        e.currentTarget.style.background = '#fff';
+                        e.currentTarget.style.background = 'var(--cal-panel)';
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                         <span
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: 24,
-                                height: 24,
+                                width: 26,
+                                height: 26,
                                 borderRadius: '50%',
                                 fontSize: 12,
-                                fontWeight: isTodayCell ? 700 : 500,
-                                background: isTodayCell ? '#111' : 'transparent',
-                                color: isTodayCell ? '#fff' : isSun ? '#E53935' : '#222',
+                                fontWeight: isTodayCell ? 800 : 600,
+                                background: isTodayCell ? 'var(--cal-today)' : 'transparent',
+                                color: isTodayCell ? 'var(--cal-today-text)' : isSun ? '#E85B5B' : 'var(--cal-text)',
                                 flexShrink: 0
                             }}
                         >
@@ -1162,7 +1740,7 @@ function Calendar() {
                         </span>
 
                         {isFirstRow && (
-                            <span style={{ fontSize: 10, color: '#CCCCCC', fontWeight: 500 }}>
+                            <span style={{ fontSize: 10.5, color: 'var(--cal-muted)', fontWeight: 600 }}>
                                 {dayName}
                             </span>
                         )}
@@ -1181,7 +1759,7 @@ function Calendar() {
                     ))}
 
                     {dayEvs.length > 3 && (
-                        <div style={{ fontSize: 9.5, color: '#BBB', marginTop: 3, paddingLeft: 2 }}>
+                        <div style={{ fontSize: 10, color: 'var(--cal-text-3)', marginTop: 4, paddingLeft: 2 }}>
                             +{dayEvs.length - 3} more
                         </div>
                     )}
@@ -1202,7 +1780,7 @@ function Calendar() {
 
         return (
             <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 520 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 980 }}>
                     <tbody>{rows}</tbody>
                 </table>
             </div>
@@ -1211,7 +1789,7 @@ function Calendar() {
 
     const renderWeekView = () => {
         return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minWidth: 840 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minWidth: 980 }}>
                 {weekDates.map((date, idx) => {
                     const dateStr = toDateOnly(date);
                     const dayEvs = getDay(dateStr);
@@ -1222,28 +1800,28 @@ function Calendar() {
                             key={dateStr}
                             onClick={() => openDate(dateStr)}
                             style={{
-                                minHeight: 420,
-                                padding: '10px 8px',
-                                borderRight: idx === 6 ? 'none' : '1px solid #F0F0F0',
+                                minHeight: 500,
+                                padding: '12px 10px',
+                                borderRight: idx === 6 ? 'none' : '1px solid var(--cal-border-soft)',
                                 cursor: dayEvs.length > 0 || isEditor ? 'pointer' : 'default',
-                                background: '#fff'
+                                background: 'var(--cal-panel)'
                             }}
                         >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
-                                <span style={{ fontSize: 11, color: '#B5B5B5', fontWeight: 600 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
+                                <span style={{ fontSize: 11, color: 'var(--cal-text-3)', fontWeight: 600 }}>
                                     {DAY_ABBR[date.getDay()]}
                                 </span>
 
                                 <span
                                     style={{
-                                        width: 28,
-                                        height: 28,
+                                        width: 30,
+                                        height: 30,
                                         borderRadius: '50%',
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        background: isTodayCell ? '#111' : '#F7F7F7',
-                                        color: isTodayCell ? '#fff' : '#222',
+                                        background: isTodayCell ? 'var(--cal-today)' : 'var(--cal-panel-2)',
+                                        color: isTodayCell ? 'var(--cal-today-text)' : 'var(--cal-text)',
                                         fontSize: 13,
                                         fontWeight: 700
                                     }}
@@ -1253,7 +1831,7 @@ function Calendar() {
                             </div>
 
                             {dayEvs.length === 0 ? (
-                                <div style={{ fontSize: 12, color: '#C8C8C8', marginTop: 10 }}>
+                                <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 10 }}>
                                     No events
                                 </div>
                             ) : (
@@ -1280,8 +1858,8 @@ function Calendar() {
         const dayEvs = getDay(selectedDateStr);
 
         return (
-            <div style={{ padding: '18px 20px 20px' }}>
-                <div style={{ fontSize: 12, color: '#A5A5A5', marginBottom: 12 }}>
+            <div style={{ padding: '20px 22px 22px' }}>
+                <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginBottom: 12 }}>
                     {fmtLong(selectedDateStr)}
                 </div>
 
@@ -1293,13 +1871,14 @@ function Calendar() {
                             setShowForm(true);
                         }}
                         style={{
-                            border: '1px dashed #E3E3E3',
-                            borderRadius: 12,
-                            padding: '22px 16px',
+                            border: '1px dashed var(--cal-border)',
+                            borderRadius: 14,
+                            padding: '24px 16px',
                             textAlign: 'center',
-                            color: '#B8B8B8',
+                            color: 'var(--cal-text-3)',
                             fontSize: 13,
-                            cursor: isEditor ? 'pointer' : 'default'
+                            cursor: isEditor ? 'pointer' : 'default',
+                            background: 'var(--cal-panel-2)'
                         }}
                     >
                         No events for this day
@@ -1313,26 +1892,26 @@ function Calendar() {
                                 key={ev.id}
                                 onClick={() => setDetail(ev)}
                                 style={{
-                                    border: '1px solid #EFEFEF',
+                                    border: '1px solid var(--cal-border)',
                                     borderLeft: `4px solid ${cfg.badge}`,
-                                    borderRadius: 12,
+                                    borderRadius: 14,
                                     padding: '14px 16px',
                                     marginBottom: 10,
                                     cursor: 'pointer',
-                                    background: '#fff'
+                                    background: 'var(--cal-panel)'
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                                     <div>
-                                        <div style={{ fontSize: 15, fontWeight: 700, color: '#222' }}>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cal-text)' }}>
                                             {ev.title}
                                         </div>
-                                        <div style={{ fontSize: 12, color: '#999', marginTop: 3 }}>
+                                        <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 3 }}>
                                             {fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}
                                         </div>
 
                                         {ev.location && (
-                                            <div style={{ fontSize: 12, color: '#777', marginTop: 6 }}>
+                                            <div style={{ fontSize: 12, color: 'var(--cal-text-2)', marginTop: 6 }}>
                                                 📍 {ev.location}
                                             </div>
                                         )}
@@ -1360,34 +1939,48 @@ function Calendar() {
     return (
         <div
             style={{
-                padding: '20px 24px',
-                background: '#F7F8FA',
-                minHeight: '100%',
+                padding: '8px 8px 0',
+                background: 'transparent',
+                minHeight: 'calc(100vh - 110px)',
                 fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
                 boxSizing: 'border-box'
             }}
         >
-            {/* TOP BAR */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#111', letterSpacing: '-.02em' }}>
-                    Calendar
-                </div>
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto 1fr',
+                    alignItems: 'center',
+                    marginBottom: 14
+                }}
+            >
+                <div />
 
-                <div style={{ display: 'flex', background: '#EFEFEF', borderRadius: 10, padding: 3, gap: 2 }}>
+                <div
+                    style={{
+                        justifySelf: 'center',
+                        display: 'flex',
+                        background: 'var(--cal-switch-bg)',
+                        borderRadius: 12,
+                        padding: 3,
+                        gap: 2
+                    }}
+                >
                     {['Day', 'Week', 'Month'].map(v => (
                         <button
                             key={v}
                             onClick={() => setView(v)}
                             style={{
-                                background: view === v ? '#111' : 'transparent',
-                                color: view === v ? '#fff' : '#666',
+                                background: view === v ? 'var(--cal-switch-active)' : 'transparent',
+                                color: view === v ? 'var(--cal-switch-active-text)' : 'var(--cal-text-2)',
                                 border: 'none',
-                                borderRadius: 8,
-                                padding: '6px 20px',
-                                fontSize: 13,
-                                fontWeight: 600,
+                                borderRadius: 10,
+                                padding: '8px 24px',
+                                fontSize: 12.5,
+                                fontWeight: 700,
                                 cursor: 'pointer',
-                                transition: 'all .15s'
+                                transition: 'all .15s',
+                                minWidth: 78
                             }}
                         >
                             {v}
@@ -1395,74 +1988,80 @@ function Calendar() {
                     ))}
                 </div>
 
-                {isEditor ? (
-                    <button
-                        onClick={() => {
-                            setEdit({
-                                start_date: selectedDateStr,
-                                end_date: selectedDateStr
-                            });
-                            setShowForm(true);
-                        }}
-                        style={{
-                            background: '#FF6B4E',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: 10,
-                            padding: '9px 22px',
-                            fontSize: 13,
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            boxShadow: '0 2px 10px rgba(255,107,78,.35)',
-                            transition: 'opacity .15s'
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.opacity = '.88')}
-                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                    >
-                        + Add Event
-                    </button>
-                ) : (
-                    <span
-                        style={{
-                            fontSize: 11,
-                            background: '#EEE',
-                            borderRadius: 8,
-                            padding: '7px 14px',
-                            color: '#999',
-                            fontWeight: 500
-                        }}
-                    >
-                        View Only
-                    </span>
-                )}
+                <div style={{ justifySelf: 'end' }}>
+                    {isEditor ? (
+                        <button
+                            onClick={() => {
+                                setEdit({
+                                    start_date: selectedDateStr,
+                                    end_date: selectedDateStr
+                                });
+                                setShowForm(true);
+                            }}
+                            style={{
+                                background: 'var(--cal-btn)',
+                                color: 'var(--cal-btn-text)',
+                                border: 'none',
+                                borderRadius: 11,
+                                padding: '8px 16px',
+                                fontSize: 12.5,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                boxShadow: '0 8px 20px rgba(47,109,246,.14)',
+                                transition: 'opacity .15s'
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.opacity = '.88')}
+                            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                        >
+                            + Add Event
+                        </button>
+                    ) : (
+                        <span
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                fontSize: 11,
+                                background: '#EAF7EC',
+                                border: '1px solid #BFE3C8',
+                                borderRadius: 8,
+                                padding: '7px 14px',
+                                color: '#1E8449',
+                                fontWeight: 600
+                            }}
+                        >
+                            View Only
+                        </span>
+                    )}
+                </div>
             </div>
 
-            {/* BODY */}
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
                 <FilterSidebar activeFilters={filters} onToggle={toggleFilter} />
 
                 <div
                     style={{
                         flex: 1,
                         minWidth: 0,
-                        background: '#fff',
-                        border: '1px solid #EBEBEB',
-                        borderRadius: 14,
-                        overflow: 'hidden'
+                        minHeight: 'calc(100vh - 180px)',
+                        background: 'var(--cal-panel)',
+                        border: '1px solid var(--cal-border)',
+                        borderRadius: 18,
+                        overflow: 'hidden',
+                        boxShadow: 'var(--cal-shadow)'
                     }}
                 >
-                    {/* HEADER */}
                     <div
                         style={{
                             display: 'grid',
                             gridTemplateColumns: '1fr auto 1fr',
                             alignItems: 'center',
-                            padding: '10px 14px',
-                            borderBottom: '1px solid #F0F0F0',
-                            background: '#fff'
+                            padding: '14px 16px',
+                            borderBottom: '1px solid var(--cal-border-soft)',
+                            background: 'var(--cal-panel)'
                         }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1477,13 +2076,13 @@ function Calendar() {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: 8,
-                                    padding: '8px 12px',
-                                    border: '1px solid #E8E8E8',
-                                    borderRadius: 10,
-                                    background: '#fff',
-                                    color: '#666',
-                                    fontSize: 13,
-                                    fontWeight: 600
+                                    padding: '10px 14px',
+                                    border: '1px solid var(--cal-border)',
+                                    borderRadius: 12,
+                                    background: 'var(--cal-panel-2)',
+                                    color: 'var(--cal-text-2)',
+                                    fontSize: 14,
+                                    fontWeight: 700
                                 }}
                             >
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1502,8 +2101,8 @@ function Calendar() {
                             </button>
                         </div>
 
-                        <div style={{ justifySelf: 'center', color: '#6B6B6B', fontSize: 14 }}>
-                            <strong style={{ fontSize: 18, color: '#111', marginRight: 6 }}>
+                        <div style={{ justifySelf: 'center', color: 'var(--cal-text-2)', fontSize: 15 }}>
+                            <strong style={{ fontSize: 19, color: 'var(--cal-text)', marginRight: 6 }}>
                                 {totalEvents}
                             </strong>
                             {summaryLabel}
@@ -1511,8 +2110,6 @@ function Calendar() {
 
                         <div />
                     </div>
-
-
 
                     <div style={{ overflowX: 'auto' }}>
                         {view === 'Month' && renderMonthView()}
@@ -1571,34 +2168,34 @@ function Calendar() {
 const G = {
     cell: {
         verticalAlign: 'top',
-        padding: '6px 8px',
-        borderBottom: '1px solid #F0F0F0',
-        borderRight: '1px solid #F0F0F0',
-        background: '#fff',
-        minHeight: 100,
-        height: 100,
-        transition: 'background .1s'
+        padding: '10px 12px',
+        borderBottom: '1px solid var(--cal-border-soft)',
+        borderRight: '1px solid var(--cal-border-soft)',
+        background: 'var(--cal-panel)',
+        minHeight: 118,
+        height: 118,
+        transition: 'background .12s'
     },
 
     empty: {
-        borderBottom: '1px solid #F0F0F0',
-        borderRight: '1px solid #F0F0F0',
-        background: '#FAFAFA',
-        minHeight: 100,
-        height: 100
+        borderBottom: '1px solid var(--cal-border-soft)',
+        borderRight: '1px solid var(--cal-border-soft)',
+        background: 'var(--cal-empty)',
+        minHeight: 118,
+        height: 118
     },
 
     navBtn: {
-        background: '#F5F5F5',
-        border: '1px solid #E8E8E8',
-        borderRadius: 8,
-        width: 30,
-        height: 30,
+        background: 'var(--cal-nav)',
+        border: '1px solid var(--cal-nav-border)',
+        borderRadius: 10,
+        width: 36,
+        height: 36,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
-        color: '#555'
+        color: 'var(--cal-text-2)'
     }
 };
 
@@ -1607,7 +2204,7 @@ const S = {
     backdrop: {
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.44)',
+        background: 'rgba(0,0,0,0.52)',
         zIndex: 99999,
         display: 'flex',
         justifyContent: 'center',
@@ -1618,51 +2215,56 @@ const S = {
     },
 
     modal: {
-        background: '#fff',
-        borderRadius: 16,
+        background: 'var(--cal-panel)',
+        borderRadius: 18,
         width: '100%',
         maxHeight: 'calc(100vh - 112px)',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 20px 60px rgba(0,0,0,.18)',
-        margin: '0 auto'
+        boxShadow: 'var(--cal-shadow)',
+        margin: '0 auto',
+        border: '1px solid var(--cal-border)',
+        position: 'relative'
     },
 
     mHead: {
         padding: '1rem 1.5rem',
-        borderBottom: '1px solid #F0F0F0',
+        borderBottom: '1px solid var(--cal-border-soft)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        flexShrink: 0
+        flexShrink: 0,
+        background: 'var(--cal-panel)'
     },
 
     mBody: {
         overflowY: 'auto',
         padding: '1.125rem 1.5rem',
-        flex: 1
+        flex: 1,
+        background: 'var(--cal-panel)'
     },
 
     mFoot: {
         padding: '0.75rem 1.5rem',
-        borderTop: '1px solid #F0F0F0',
+        borderTop: '1px solid var(--cal-border-soft)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        flexShrink: 0
+        flexShrink: 0,
+        background: 'var(--cal-panel)'
     },
 
     inp: {
         width: '100%',
         padding: '8px 11px',
-        border: '1px solid #EBEBEB',
+        border: '1px solid var(--cal-border)',
         borderRadius: 8,
         fontSize: 13,
-        color: '#222',
+        color: 'var(--cal-text)',
         outline: 'none',
         boxSizing: 'border-box',
         fontFamily: 'inherit',
-        background: '#fff'
+        background: 'var(--cal-input-bg)'
     },
 
     chip: {
@@ -1675,8 +2277,8 @@ const S = {
     },
 
     btnPrimary: {
-        background: '#FF6B4E',
-        color: '#fff',
+        background: 'var(--cal-btn)',
+        color: 'var(--cal-btn-text)',
         border: 'none',
         borderRadius: 20,
         padding: '7px 18px',
@@ -1686,9 +2288,9 @@ const S = {
     },
 
     btnGhost: {
-        background: '#fff',
-        color: '#555',
-        border: '1px solid #E0E0E0',
+        background: 'var(--cal-panel)',
+        color: 'var(--cal-text-2)',
+        border: '1px solid var(--cal-border)',
         borderRadius: 20,
         padding: '7px 18px',
         fontSize: 13,
@@ -1697,7 +2299,7 @@ const S = {
     },
 
     btnDanger: {
-        background: '#fff',
+        background: 'var(--cal-panel)',
         color: '#E74C3C',
         border: '1px solid #E74C3C44',
         borderRadius: 20,
@@ -1708,9 +2310,9 @@ const S = {
     },
 
     errBox: {
-        background: '#FDECEA',
-        border: '1px solid #F5C6C4',
-        color: '#C0392B',
+        background: 'rgba(231,76,60,.10)',
+        border: '1px solid rgba(231,76,60,.24)',
+        color: '#E96B61',
         borderRadius: 8,
         padding: '8px 12px',
         fontSize: 13,
@@ -1718,6 +2320,9 @@ const S = {
     }
 };
 
+// ====================================================================
+// MOUNT
+// ====================================================================
 const rootElement = document.getElementById('root');
 if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);

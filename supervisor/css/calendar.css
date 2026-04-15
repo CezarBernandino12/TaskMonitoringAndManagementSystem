@@ -1,57 +1,119 @@
-        body {
-            background-color: #fffaf3;
-            color: #333;
-            font-family: Arial, sans-serif;
-        }
+#calendarRoot .btn-primary,
+#calendarRoot .table thead,
+#calendarRoot .table th,
+#calendarRoot .card,
+#calendarRoot .summary-card,
+#calendarRoot .overdue,
+#calendarRoot .form-control:focus,
+#calendarRoot h3,
+#calendarRoot h5,
+#calendarRoot h6 {
+    all: unset;
+}
 
-        .card {
-            border-radius: 12px;
-            background: #ffffff;
-            border: 1px solid #ffb84d;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            color: #222;
-        }
+/* Global theme tokens so portal modals can use them too */
+:root {
+    --cal-page-bg: transparent;
+    --cal-panel: #FFFFFF;
+    --cal-panel-2: #FAFBFD;
+    --cal-border: #E8ECF2;
+    --cal-border-soft: #EEF1F5;
+    --cal-text: #111827;
+    --cal-text-2: #5B6475;
+    --cal-text-3: #8A93A5;
+    --cal-muted: #B6BECC;
+    --cal-switch-bg: #EEF1F5;
+    --cal-switch-active: #111111;
+    --cal-switch-active-text: #FFFFFF;
+    --cal-btn: #000000;
+    --cal-btn-text: #FFFFFF;
+    --cal-input-bg: #FFFFFF;
+    --cal-nav: #F4F6F8;
+    --cal-nav-border: #E4E8EE;
+    --cal-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+    --cal-empty: #FAFBFD;
+    --cal-hover: #F8FAFC;
+    --cal-today: #111111;
+    --cal-today-text: #FFFFFF;
+}
 
-        .overdue {
-            background-color: #fff0b3 !important;
-            color: #665200;
-        }
+html[data-theme="dark"] {
+    --cal-page-bg: transparent;
+    --cal-panel: #121926;
+    --cal-panel-2: #0F1622;
+    --cal-border: #243042;
+    --cal-border-soft: #1D2736;
+    --cal-text: #F3F7FF;
+    --cal-text-2: #B7C1D3;
+    --cal-text-3: #8B96AA;
+    --cal-muted: #657086;
+    --cal-switch-bg: #171F2D;
+    --cal-switch-active: #2F6DF6;
+    --cal-switch-active-text: #FFFFFF;
+    --cal-btn: #2F6DF6;
+    --cal-btn-text: #FFFFFF;
+    --cal-input-bg: #0F1622;
+    --cal-nav: #171F2D;
+    --cal-nav-border: #2A3548;
+    --cal-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+    --cal-empty: #0F1622;
+    --cal-hover: #151D2A;
+    --cal-today: #2F6DF6;
+    --cal-today-text: #FFFFFF;
+}
 
-        .btn-primary {
-            background-color: #ff9900;
-            border-color: #ff9900;
-        }
+/* Scrollbar */
+#calendarRoot ::-webkit-scrollbar { width: 5px; height: 5px; }
+#calendarRoot ::-webkit-scrollbar-track { background: transparent; }
+#calendarRoot ::-webkit-scrollbar-thumb { background: #D4DAE3; border-radius: 3px; }
+#calendarRoot ::-webkit-scrollbar-thumb:hover { background: #AEB7C5; }
 
-        .btn-primary:hover,
-        .btn-primary:focus {
-            background-color: #ffb84d;
-            border-color: #ffb84d;
-            color: #333;
-        }
+html[data-theme="dark"] #calendarRoot ::-webkit-scrollbar-thumb {
+    background: #39465B;
+}
+html[data-theme="dark"] #calendarRoot ::-webkit-scrollbar-thumb:hover {
+    background: #55627A;
+}
 
-        .table thead {
-            background: #ffe7b3;
-        }
+/* Input focus ring */
+#calendarRoot input:focus,
+#calendarRoot select:focus,
+#calendarRoot textarea:focus {
+    outline: none !important;
+    border-color: #2F6DF6 !important;
+    box-shadow: 0 0 0 2px rgba(47,109,246,.18) !important;
+}
 
-        .table th {
-            color: #cc7a00;
-        }
+/* Checkbox accent */
+#calendarRoot input[type="checkbox"] {
+    accent-color: #2F6DF6;
+}
 
-        .table-hover tbody tr:hover {
-            background: #fff0b3;
-        }
+/* Ensure calendar root still fills area */
+#calendarRoot {
+    min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
-        .form-control:focus {
-            border-color: #ffb84d;
-            box-shadow: 0 0 0 0.2rem rgba(255, 184, 77, 0.2);
-        }
+/* Hidden scrollbars */
+.hide-scrollbar {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+.hide-scrollbar::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+    background: transparent !important;
+}
 
-        h3, h5, h6 {
-            color: #cc7a00;
-        }
+#react-modal-root input::placeholder,
+#react-modal-root textarea::placeholder,
+#react-modal-root select::placeholder {
+    color: var(--cal-text-3);
+    opacity: 1;
+}
 
-        .summary-card {
-            background: linear-gradient(135deg, #ffe7b3 0%, #ffd27f 100%);
-            border: 1px solid #ffb84d;
-            color: #cc7a00;
-        }
+html[data-theme="dark"] #react-modal-root .btn-close {
+    filter: invert(1) opacity(.72);
+}
