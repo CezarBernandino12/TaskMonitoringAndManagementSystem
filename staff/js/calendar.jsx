@@ -1,8 +1,5 @@
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
-// ====================================================================
-// CONSTANTS
-// ====================================================================
 const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -22,14 +19,10 @@ const PRIORITY_COLORS = {
     Low: '#27AE60'
 };
 
-// ====================================================================
-// HELPERS
-// ====================================================================
 function ModalPortal({ children }) {
     useEffect(() => {
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
-
         return () => {
             document.body.style.overflow = previousOverflow;
         };
@@ -95,455 +88,43 @@ function fmtHeaderDate(date, view) {
     return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
-// ====================================================================
-// EVENT FORM MODAL
-// ====================================================================
-
-
-function useOutsideClick(ref, onClose, when = true) {
-    useEffect(() => {
-        if (!when) return;
-
-        const handler = e => {
-            if (ref.current && !ref.current.contains(e.target)) {
-                onClose();
-            }
-        };
-
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [ref, onClose, when]);
+function fmtTime(timeStr) {
+    if (!timeStr) return '—';
+    const [rawHour = '0', rawMinute = '00'] = String(timeStr).split(':');
+    let hour = Number(rawHour);
+    const minute = String(rawMinute).padStart(2, '0');
+    const suffix = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return `${hour}:${minute} ${suffix}`;
 }
 
-function getCalendarMatrix(monthDate) {
-    const year = monthDate.getFullYear();
-    const month = monthDate.getMonth();
-
-    const first = new Date(year, month, 1);
-    const firstDay = first.getDay(); // 0 = Sun
-    const startOffset = (firstDay + 6) % 7; // make Monday first
-
-    const start = new Date(year, month, 1 - startOffset);
-    const weeks = [];
-
-    for (let w = 0; w < 6; w++) {
-        const row = [];
-        for (let d = 0; d < 7; d++) {
-            const cell = new Date(start);
-            cell.setDate(start.getDate() + w * 7 + d);
-            row.push(cell);
-        }
-        weeks.push(row);
-    }
-
-    return weeks;
+function fmtPickerDate(s) {
+    if (!s) return 'MM/DD/YYYY';
+    const [y, mo, d] = s.split('-');
+    return `${mo}/${d}/${y}`;
 }
 
-function fmtPickerMonth(date) {
-    return `${MONTH_NAMES[date.getMonth()].slice(0, 3)} ${date.getFullYear()}`;
+function fmtTimeRange(startTime, endTime) {
+    if (!startTime && !endTime) return '';
+    if (!startTime) return fmtTime(endTime);
+    if (!endTime) return fmtTime(startTime);
+    return `${fmtTime(startTime)} – ${fmtTime(endTime)}`;
 }
 
-function fmtPickerValue(dateStr) {
+function fmtDayShort(dateStr) {
     if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-');
-    return `${m}/${d}/${y}`;
+    return DAY_ABBR[fromDateStr(dateStr).getDay()];
 }
 
-function CalendarIcon() {
-    return (
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-        </svg>
-    );
-}
+function fmtDayRange(startDate, endDate) {
+    if (!startDate || !endDate) return '';
+    const startDay = fmtDayShort(startDate);
+    const endDay = fmtDayShort(endDate);
 
-function ChevronDownIcon() {
-    return (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m6 9 6 6 6-6" />
-        </svg>
-    );
-}
+    if (startDate === endDate) return startDay;
+    if (startDay === endDay) return startDay;
 
-function ChevronLeftIcon() {
-    return (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6" />
-        </svg>
-    );
-}
-
-function ChevronRightIcon() {
-    return (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m9 18 6-6-6-6" />
-        </svg>
-    );
-}
-
-function FloatingLayer({ anchorRef, children, open, width = 370, offset = 8 }) {
-    const [pos, setPos] = useState(null);
-
-    useEffect(() => {
-        if (!open || !anchorRef.current) return;
-
-        const update = () => {
-            const rect = anchorRef.current.getBoundingClientRect();
-            setPos({
-                top: rect.bottom + offset + window.scrollY,
-                left: rect.left + window.scrollX,
-                width: Math.max(width, rect.width)
-            });
-        };
-
-        update();
-        window.addEventListener('resize', update);
-        window.addEventListener('scroll', update, true);
-
-        return () => {
-            window.removeEventListener('resize', update);
-            window.removeEventListener('scroll', update, true);
-        };
-    }, [open, anchorRef, width, offset]);
-
-    if (!open || !pos) return null;
-
-    return ReactDOM.createPortal(
-        <div
-            style={{
-                position: 'absolute',
-                top: pos.top,
-                left: pos.left,
-                width: pos.width,
-                zIndex: 100000
-            }}
-        >
-            {children}
-        </div>,
-        document.body
-    );
-}
-
-function CustomSelect({
-    value,
-    options,
-    onChange,
-    placeholder = 'Select',
-    width = '100%',
-    selectedColor = '#222',
-    panelWidth = 250
-}) {
-    const [open, setOpen] = useState(false);
-    const wrapRef = React.useRef(null);
-    const btnRef = React.useRef(null);
-
-    useOutsideClick(wrapRef, () => setOpen(false), open);
-
-    const selected = options.find(opt => opt.value === value);
-
-    return (
-        <div ref={wrapRef} style={{ position: 'relative', width }}>
-            <button
-                ref={btnRef}
-                type="button"
-                onClick={() => setOpen(v => !v)}
-                style={{
-                    width: '100%',
-                    height: 38,
-                    border: '1px solid var(--cal-border)',
-                    borderRadius: 12,
-                    background: 'var(--cal-input-bg)',
-                    padding: '0 12px',
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    color: value ? selectedColor : 'var(--cal-text-3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer'
-                }}
-            >
-                <span>{selected ? selected.label : placeholder}</span>
-                <span style={{ color: 'var(--cal-text-3)', display: 'inline-flex' }}>
-                    <ChevronDownIcon />
-                </span>
-            </button>
-
-            <FloatingLayer anchorRef={btnRef} open={open} width={panelWidth} offset={6}>
-                <div
-                    className="hide-scrollbar"
-                    style={{
-                        background: 'var(--cal-panel)',
-                        border: '1px solid var(--cal-border)',
-                        borderRadius: 18,
-                        padding: '6px 0',
-                        boxShadow: 'var(--cal-shadow)'
-                    }}
-                >
-                    {options.map(opt => {
-                        const active = opt.value === value;
-
-                        return (
-                            <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => {
-                                    onChange(opt.value);
-                                    setOpen(false);
-                                }}
-                                style={{
-                                    width: '100%',
-                                    border: 'none',
-                                    background: active ? 'var(--cal-panel-2)' : 'transparent',
-                                    padding: '13px 20px',
-                                    textAlign: 'left',
-                                    fontSize: 11.5,
-                                    fontWeight: 600,
-                                    color: active ? selectedColor : 'var(--cal-text)',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                {opt.label}
-                            </button>
-                        );
-                    })}
-                </div>
-            </FloatingLayer>
-        </div>
-    );
-}
-
-function CustomDatePicker({ value, onChange, placeholder = 'MM/DD/YYYY' }) {
-    const [open, setOpen] = useState(false);
-    const [viewMonth, setViewMonth] = useState(value ? fromDateStr(value) : new Date());
-    const wrapRef = React.useRef(null);
-    const btnRef = React.useRef(null);
-
-    useOutsideClick(wrapRef, () => setOpen(false), open);
-
-    useEffect(() => {
-        if (value) setViewMonth(fromDateStr(value));
-    }, [value]);
-
-    const selectedDate = value ? fromDateStr(value) : null;
-    const today = new Date();
-    const weeks = getCalendarMatrix(viewMonth);
-
-    const prevMonth = () =>
-        setViewMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
-
-    const nextMonth = () =>
-        setViewMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
-
-    return (
-        <div ref={wrapRef} style={{ position: 'relative', width: '100%' }}>
-            <button
-                ref={btnRef}
-                type="button"
-                onClick={() => setOpen(v => !v)}
-                style={{
-                    width: '100%',
-                    height: 38,
-                    border: '1px solid var(--cal-border)',
-                    borderRadius: 12,
-                    background: 'var(--cal-input-bg)',
-                    padding: '0 10px 0 12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    cursor: 'pointer'
-                }}
-            >
-                <span
-                    style={{
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        color: value ? 'var(--cal-text)' : 'var(--cal-text-3)'
-                    }}
-                >
-                    {value ? fmtPickerValue(value) : placeholder}
-                </span>
-
-                <span style={{ color: 'var(--cal-text)', display: 'inline-flex', flexShrink: 0 }}>
-                    <CalendarIcon />
-                </span>
-            </button>
-
-            <FloatingLayer anchorRef={btnRef} open={open} width={330} offset={6}>
-                <div
-                    className="hide-scrollbar"
-                    style={{
-                        background: 'var(--cal-panel)',
-                        border: '1px solid var(--cal-border)',
-                        borderRadius: 22,
-                        padding: '14px 14px 12px',
-                        boxShadow: 'var(--cal-shadow)'
-                    }}
-                >
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: 10
-                        }}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => {}}
-                            style={{
-                                border: 'none',
-                                background: 'transparent',
-                                padding: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                fontSize: 11.5,
-                                fontWeight: 700,
-                                color: 'var(--cal-text)',
-                                cursor: 'default'
-                            }}
-                        >
-                            {fmtPickerMonth(viewMonth)}
-                            <span style={{ color: 'var(--cal-text-3)', display: 'inline-flex' }}>
-                                <ChevronDownIcon />
-                            </span>
-                        </button>
-
-                        <div style={{ display: 'flex', gap: 4 }}>
-                            <button
-                                type="button"
-                                onClick={prevMonth}
-                                style={{
-                                    width: 26,
-                                    height: 26,
-                                    border: 'none',
-                                    borderRadius: 999,
-                                    background: 'transparent',
-                                    color: 'var(--cal-text-2)',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <ChevronLeftIcon />
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={nextMonth}
-                                style={{
-                                    width: 26,
-                                    height: 26,
-                                    border: 'none',
-                                    borderRadius: 999,
-                                    background: 'transparent',
-                                    color: 'var(--cal-text-2)',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <ChevronRightIcon />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(7, 1fr)',
-                            marginBottom: 4
-                        }}
-                    >
-                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                            <div
-                                key={day}
-                                style={{
-                                    textAlign: 'center',
-                                    fontSize: 9.5,
-                                    fontWeight: 600,
-                                    color: 'var(--cal-text-3)',
-                                    padding: '6px 0 8px'
-                                }}
-                            >
-                                {day}
-                            </div>
-                        ))}
-                    </div>
-
-                    <div style={{ display: 'grid', gap: 0 }}>
-                        {weeks.map((week, wi) => (
-                            <div
-                                key={wi}
-                                style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(7, 1fr)'
-                                }}
-                            >
-                                {week.map(day => {
-                                    const isCurrentMonth = day.getMonth() === viewMonth.getMonth();
-                                    const isSelected =
-                                        selectedDate && isSameDay(day, selectedDate);
-                                    const isTodayCell = isSameDay(day, today);
-
-                                    return (
-                                        <button
-                                            key={day.toISOString()}
-                                            type="button"
-                                            onClick={() => {
-                                                onChange(toDateOnly(day));
-                                                setOpen(false);
-                                            }}
-                                            style={{
-                                                border: 'none',
-                                                background: 'transparent',
-                                                height: 32,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 2,
-                                                cursor: 'pointer',
-                                                borderRadius: 10,
-                                                color: isSelected
-                                                    ? '#E33B3B'
-                                                    : isCurrentMonth
-                                                    ? 'var(--cal-text)'
-                                                    : 'var(--cal-muted)',
-                                                fontSize: 10.5,
-                                                fontWeight: isSelected ? 700 : 600
-                                            }}
-                                        >
-                                            <span>{day.getDate()}</span>
-                                            <span
-                                                style={{
-                                                    width: 4,
-                                                    height: 4,
-                                                    borderRadius: '50%',
-                                                    background: isSelected
-                                                        ? '#E33B3B'
-                                                        : isTodayCell
-                                                        ? 'var(--cal-text-3)'
-                                                        : 'transparent'
-                                                }}
-                                            />
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </FloatingLayer>
-        </div>
-    );
+    return `${startDay}–${endDay}`;
 }
 
 function getInitials(name = '') {
@@ -563,18 +144,11 @@ function getAvatarColor(name = '') {
 
 function normalizeProfileImageUrl(src) {
     if (!src) return null;
-
     const raw = String(src).trim();
     if (!raw) return null;
-
-    if (
-        raw.startsWith('data:') ||
-        raw.startsWith('blob:') ||
-        /^https?:\/\//i.test(raw)
-    ) {
+    if (raw.startsWith('data:') || raw.startsWith('blob:') || /^https?:\/\//i.test(raw)) {
         return raw;
     }
-
     try {
         return new URL(raw, window.location.href).href;
     } catch {
@@ -582,11 +156,46 @@ function normalizeProfileImageUrl(src) {
     }
 }
 
+function isDarkMode() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
+function colorWithAlpha(hex, alpha = '22') {
+    if (!hex || typeof hex !== 'string') return hex;
+    let normalized = hex.trim();
+    if (!normalized.startsWith('#')) return normalized;
+    if (normalized.length === 4) {
+        normalized = '#'
+            + normalized[1] + normalized[1]
+            + normalized[2] + normalized[2]
+            + normalized[3] + normalized[3];
+    }
+    if (normalized.length !== 7) return normalized;
+    return normalized + alpha;
+}
+
+function combineDateTime(dateStr, timeStr = '00:00') {
+    if (!dateStr) return null;
+    const value = new Date(`${dateStr}T${timeStr || '00:00'}`);
+    return Number.isNaN(value.getTime()) ? null : value;
+}
+
+function getEventStatus(event) {
+    if (event?.status === 'Cancelled') return 'Cancelled';
+
+    const start = combineDateTime(event?.start_date, event?.start_time || '00:00');
+    const end = combineDateTime(event?.end_date, event?.end_time || '23:59');
+    const now = new Date();
+
+    if (!start || !end) return 'Upcoming';
+    if (now < start) return 'Upcoming';
+    if (now > end) return 'Completed';
+    return 'Ongoing';
+}
+
 function EmployeeAvatar({ employee, size = 24, fontSize = 10, style = {} }) {
     const [imgError, setImgError] = useState(false);
-    const src = normalizeProfileImageUrl(
-        employee?.profile_image_url || employee?.profile_image || null
-    );
+    const src = normalizeProfileImageUrl(employee?.profile_image_url || employee?.profile_image || null);
     const initials = employee?.initials || getInitials(employee?.name || '');
 
     return (
@@ -614,12 +223,7 @@ function EmployeeAvatar({ employee, size = 24, fontSize = 10, style = {} }) {
                     src={src}
                     alt={employee?.name || 'User'}
                     onError={() => setImgError(true)}
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        display: 'block'
-                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
             ) : (
                 initials
@@ -628,41 +232,13 @@ function EmployeeAvatar({ employee, size = 24, fontSize = 10, style = {} }) {
     );
 }
 
-function isDarkMode() {
-    return document.documentElement.getAttribute('data-theme') === 'dark';
-}
-
-function colorWithAlpha(hex, alpha = '22') {
-    if (!hex || typeof hex !== 'string') return hex;
-
-    let normalized = hex.trim();
-    if (!normalized.startsWith('#')) return normalized;
-
-    if (normalized.length === 4) {
-        normalized =
-            '#' +
-            normalized[1] + normalized[1] +
-            normalized[2] + normalized[2] +
-            normalized[3] + normalized[3];
-    }
-
-    if (normalized.length !== 7) return normalized;
-    return normalized + alpha;
-}
-
 function AvatarStack({ employees = [], size = 18, max = 3 }) {
     const shown = employees.filter(Boolean).slice(0, max);
     const extra = employees.length - shown.length;
     const darkMode = isDarkMode();
 
     return (
-        <div
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                minHeight: size
-            }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', minHeight: size }}>
             {shown.map((emp, idx) => (
                 <div
                     key={emp.id}
@@ -685,14 +261,9 @@ function AvatarStack({ employees = [], size = 18, max = 3 }) {
                         zIndex: shown.length - idx
                     }}
                 >
-                    <EmployeeAvatar
-                        employee={emp}
-                        size={size}
-                        fontSize={Math.max(8, size * 0.38)}
-                    />
+                    <EmployeeAvatar employee={emp} size={size} fontSize={Math.max(8, size * 0.38)} />
                 </div>
             ))}
-
             {extra > 0 && (
                 <div
                     style={{
@@ -723,6 +294,501 @@ function AvatarStack({ employees = [], size = 18, max = 3 }) {
     );
 }
 
+const PICKER_WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function pad2(n) {
+    return String(n).padStart(2, '0');
+}
+
+function startOfMonday(date) {
+    const copy = new Date(date);
+    const day = (copy.getDay() + 6) % 7;
+    copy.setDate(copy.getDate() - day);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+}
+
+function getMonthGrid(date) {
+    const first = new Date(date.getFullYear(), date.getMonth(), 1);
+    const start = startOfMonday(first);
+    return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+}
+
+function isSameDateValue(date, value) {
+    if (!value) return false;
+    return toDateOnly(date) === value;
+}
+
+const TIME_PICKER_ACTIVE_BG = '#242424';
+const TIME_PICKER_ACTIVE_SHADOW = '0 6px 14px rgba(20,20,20,.14)';
+const TIME_PICKER_TEXT = '#20242C';
+const TIME_PICKER_MUTED = '#6B7280';
+
+function parseTimeValue(value) {
+    if (!value) return { hour: '10', minute: '01', meridiem: 'PM' };
+
+    const [hRaw = '10', mRaw = '01'] = String(value).split(':');
+    const h24 = Number(hRaw);
+    const meridiem = h24 >= 12 ? 'PM' : 'AM';
+    const h12 = h24 % 12 || 12;
+
+    let minuteNum = Number(mRaw);
+    if (!Number.isFinite(minuteNum)) minuteNum = 1;
+    if (minuteNum < 1) minuteNum = 1;
+    if (minuteNum > 59) minuteNum = 59;
+
+    return {
+        hour: pad2(h12),
+        minute: pad2(minuteNum),
+        meridiem
+    };
+}
+
+function buildTimeValue(hour12, minute, meridiem) {
+    let h = Number(hour12) % 12;
+    if (meridiem === 'PM') h += 12;
+    return `${pad2(h)}:${minute}`;
+}
+
+function PickerField({ label, value, placeholder, icon, onClick }) {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div
+                style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--cal-text-3)',
+                    letterSpacing: '.02em'
+                }}
+            >
+                {label}
+            </div>
+
+            <button
+                type="button"
+                onClick={onClick}
+                style={{
+                    width: '100%',
+                    minHeight: 44,
+                    border: '1px solid var(--cal-border)',
+                    borderRadius: 14,
+                    background: 'var(--cal-input-bg)',
+                    padding: '0 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    cursor: 'pointer',
+                    color: 'var(--cal-text)',
+                    fontSize: 12.5,
+                    fontWeight: 600
+                }}
+            >
+                <span style={{ color: value ? 'var(--cal-text)' : 'var(--cal-text-3)' }}>
+                    {value || placeholder}
+                </span>
+                <span
+                    style={{
+                        width: 16,
+                        height: 16,
+                        color: 'var(--cal-text-3)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 13,
+                        flexShrink: 0
+                    }}
+                >
+                    <i className={icon} />
+                </span>
+            </button>
+        </div>
+    );
+}
+
+function CustomDatePicker({ label, value, onChange }) {
+    const [open, setOpen] = useState(false);
+    const [viewDate, setViewDate] = useState(value ? fromDateStr(value) : new Date());
+    const wrapRef = useRef(null);
+
+    useEffect(() => {
+        const onDocMouseDown = e => {
+            if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onDocMouseDown);
+        return () => document.removeEventListener('mousedown', onDocMouseDown);
+    }, []);
+
+    useEffect(() => {
+        if (value) setViewDate(fromDateStr(value));
+    }, [value]);
+
+    const cells = getMonthGrid(viewDate);
+    const selectedValue = value || '';
+    const todayValue = toDateOnly(new Date());
+
+    return (
+        <div ref={wrapRef} style={{ position: 'relative' }}>
+            <PickerField
+                label={label}
+                value={value ? fmtPickerDate(value) : ''}
+                placeholder="MM/DD/YYYY"
+                icon="bi bi-calendar3"
+                onClick={() => setOpen(v => !v)}
+            />
+
+            {open && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        left: 0,
+                        width: 272,
+                        maxWidth: '100%',
+                        background: '#FFFFFF',
+                        border: '1px solid #ECEFF4',
+                        borderRadius: 22,
+                        boxShadow: '0 18px 48px rgba(15,23,42,.12)',
+                        padding: 14,
+                        zIndex: 3000
+                    }}
+                >
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: 12
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
+                            style={{
+                                border: 'none',
+                                background: 'transparent',
+                                width: 28,
+                                height: 28,
+                                borderRadius: 10,
+                                cursor: 'pointer',
+                                color: '#111827',
+                                fontSize: 16
+                            }}
+                        >
+                            <i className="bi bi-chevron-left" />
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setOpen(false)}
+                            style={{
+                                border: 'none',
+                                background: 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                cursor: 'pointer',
+                                color: '#111827',
+                                fontSize: 12.5,
+                                fontWeight: 700
+                            }}
+                        >
+                            {MONTH_SHORT[viewDate.getMonth()]} {viewDate.getFullYear()}
+                            <i className="bi bi-chevron-down" style={{ fontSize: 11 }} />
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
+                            style={{
+                                border: 'none',
+                                background: 'transparent',
+                                width: 28,
+                                height: 28,
+                                borderRadius: 10,
+                                cursor: 'pointer',
+                                color: '#111827',
+                                fontSize: 16
+                            }}
+                        >
+                            <i className="bi bi-chevron-right" />
+                        </button>
+                    </div>
+
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(7, 1fr)',
+                            gap: 2,
+                            marginBottom: 6
+                        }}
+                    >
+                        {PICKER_WEEKDAYS.map(day => (
+                            <div
+                                key={day}
+                                style={{
+                                    textAlign: 'center',
+                                    fontSize: 10,
+                                    fontWeight: 600,
+                                    color: '#98A2B3',
+                                    padding: '5px 0'
+                                }}
+                            >
+                                {day}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(7, 1fr)',
+                            gap: 2
+                        }}
+                    >
+                        {cells.map(day => {
+                            const dateValue = toDateOnly(day);
+                            const inMonth = day.getMonth() === viewDate.getMonth();
+                            const isSelected = isSameDateValue(day, selectedValue);
+                            const isToday = dateValue === todayValue;
+
+                            return (
+                                <button
+                                    key={dateValue}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(dateValue);
+                                        setOpen(false);
+                                    }}
+                                    style={{
+                                        border: 'none',
+                                        background: 'transparent',
+                                        borderRadius: 12,
+                                        minHeight: 34,
+                                        cursor: 'pointer',
+                                        position: 'relative',
+                                        color: isSelected ? '#EF4444' : inMonth ? '#111827' : '#C5CAD3',
+                                        fontSize: 11.5,
+                                        fontWeight: isSelected || isToday ? 700 : 500
+                                    }}
+                                >
+                                    <span>{day.getDate()}</span>
+                                    {isSelected && (
+                                        <span
+                                            style={{
+                                                position: 'absolute',
+                                                left: '50%',
+                                                bottom: 4,
+                                                transform: 'translateX(-50%)',
+                                                width: 5,
+                                                height: 5,
+                                                borderRadius: '50%',
+                                                background: '#EF4444'
+                                            }}
+                                        />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function PickerScrollColumn({
+    items,
+    selected,
+    onSelect,
+    height = 188,
+    itemWidth = 46,
+    align = 'left',
+    scrollToSecondRow = true
+}) {
+    const listRef = useRef(null);
+
+    useEffect(() => {
+        if (!listRef.current) return;
+        const idx = items.indexOf(selected);
+        if (idx < 0) return;
+
+        const rowHeight = 38;
+        const targetTop = scrollToSecondRow
+            ? Math.max(0, (idx - 1) * rowHeight)
+            : idx * rowHeight;
+
+        listRef.current.scrollTop = targetTop;
+    }, [items, selected, scrollToSecondRow]);
+
+    return (
+        <div
+            ref={listRef}
+            className="hide-scrollbar"
+            style={{
+                maxHeight: height,
+                overflowY: 'auto',
+                paddingRight: 0
+            }}
+        >
+            {items.map(item => {
+                const active = item === selected;
+
+                return (
+                    <button
+                        key={item}
+                        type="button"
+                        onClick={() => onSelect(item)}
+                        style={{
+                            width: '100%',
+                            minHeight: 38,
+                            border: 'none',
+                            background: 'transparent',
+                            padding: '4px 0',
+                            display: 'flex',
+                            justifyContent: align === 'center' ? 'center' : 'flex-start',
+                            alignItems: 'center',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <span
+                            style={{
+                                minWidth: itemWidth,
+                                height: 30,
+                                borderRadius: 12,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: active ? '0 12px' : 0,
+                                background: active ? TIME_PICKER_ACTIVE_BG : 'transparent',
+                                color: active ? '#FFFFFF' : TIME_PICKER_MUTED,
+                                fontSize: 12,
+                                fontWeight: active ? 700 : 600,
+                                lineHeight: 1,
+                                boxShadow: active ? TIME_PICKER_ACTIVE_SHADOW : 'none',
+                                transition: 'background .15s, color .15s, box-shadow .15s'
+                            }}
+                        >
+                            {item}
+                        </span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function CustomTimePicker({ label, value, onChange }) {
+    const [open, setOpen] = useState(false);
+    const wrapRef = useRef(null);
+
+    useEffect(() => {
+        const onDocMouseDown = e => {
+            if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onDocMouseDown);
+        return () => document.removeEventListener('mousedown', onDocMouseDown);
+    }, []);
+
+    const parts = parseTimeValue(value);
+    const hours = Array.from({ length: 12 }, (_, i) => pad2(i + 1));
+    const minutes = Array.from({ length: 59 }, (_, i) => pad2(i + 1));
+    const meridiems = ['AM', 'PM'];
+
+    const setHour = hour => onChange(buildTimeValue(hour, parts.minute, parts.meridiem));
+    const setMinute = minute => onChange(buildTimeValue(parts.hour, minute, parts.meridiem));
+    const setMeridiem = meridiem => onChange(buildTimeValue(parts.hour, parts.minute, meridiem));
+
+    return (
+        <div ref={wrapRef} style={{ position: 'relative' }}>
+            <PickerField
+                label={label}
+                value={value ? fmtTime(value) : ''}
+                placeholder="Select time"
+                icon="bi bi-clock"
+                onClick={() => setOpen(v => !v)}
+            />
+
+            {open && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        left: 0,
+                        width: 224,
+                        maxWidth: '100%',
+                        background: '#FFFFFF',
+                        border: '1px solid #ECEFF4',
+                        borderRadius: 20,
+                        boxShadow: '0 18px 42px rgba(15,23,42,.10)',
+                        padding: '10px 12px',
+                        zIndex: 3000
+                    }}
+                >
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: '54px 12px 54px 62px',
+                            columnGap: 6,
+                            alignItems: 'start'
+                        }}
+                    >
+                        <PickerScrollColumn
+                            items={hours}
+                            selected={parts.hour}
+                            onSelect={setHour}
+                            height={190}
+                            itemWidth={42}
+                            align="left"
+                            scrollToSecondRow={true}
+                        />
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                justifyContent: 'center',
+                                paddingTop: 12,
+                                color: TIME_PICKER_TEXT,
+                                fontSize: 14,
+                                fontWeight: 700,
+                                lineHeight: 1
+                            }}
+                        >
+                            •
+                        </div>
+
+                        <PickerScrollColumn
+                            items={minutes}
+                            selected={parts.minute}
+                            onSelect={setMinute}
+                            height={190}
+                            itemWidth={42}
+                            align="left"
+                            scrollToSecondRow={true}
+                        />
+
+                        <PickerScrollColumn
+                            items={meridiems}
+                            selected={parts.meridiem}
+                            onSelect={setMeridiem}
+                            height={190}
+                            itemWidth={50}
+                            align="left"
+                            scrollToSecondRow={true}
+                        />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     const isEdit = !!event?.id;
 
@@ -732,7 +798,8 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
         location: '',
         start_date: '',
         end_date: '',
-        status: 'Upcoming',
+        start_time: '',
+        end_time: '',
         priority: 'Medium',
         tagged_employees: []
     };
@@ -748,6 +815,20 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     const [error, setError] = useState(null);
     const [empQ, setEmpQ] = useState('');
 
+    const [priorityOpen, setPriorityOpen] = useState(false);
+    const priorityRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = e => {
+            if (priorityRef.current && !priorityRef.current.contains(e.target)) {
+                setPriorityOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
     const toggleEmp = id => {
@@ -760,7 +841,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     };
 
     const filtered = employees.filter(e =>
-        `${e.name} ${e.department}`.toLowerCase().includes(empQ.toLowerCase())
+        `${e.name} ${e.department || ''}`.toLowerCase().includes(empQ.toLowerCase())
     );
 
     const allFilteredSelected =
@@ -799,18 +880,40 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             setError('End date is required.');
             return;
         }
-        if (form.end_date < form.start_date) {
-            setError('End must be on or after start.');
+        if (!form.start_time) {
+            setError('Start time is required.');
+            return;
+        }
+        if (!form.end_time) {
+            setError('End time is required.');
+            return;
+        }
+
+        const startDateTime = combineDateTime(form.start_date, form.start_time);
+        const endDateTime = combineDateTime(form.end_date, form.end_time);
+
+        if (!startDateTime || !endDateTime) {
+            setError('Please enter a valid date and time.');
+            return;
+        }
+
+        if (endDateTime < startDateTime) {
+            setError('End date/time must be on or after start date/time.');
             return;
         }
 
         setSaving(true);
         setError(null);
 
+        const payload = {
+            ...form,
+            status: form.status === 'Cancelled' ? 'Cancelled' : 'Upcoming'
+        };
+
         fetch('php/save_event.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form)
+            body: JSON.stringify(payload)
         })
             .then(r => r.json())
             .then(d => {
@@ -818,7 +921,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                 onSave(d.event);
             })
             .catch(e => {
-                setError(e.message);
+                setError(e.message || 'Failed to save event.');
                 setSaving(false);
             });
     };
@@ -839,13 +942,12 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                 onDelete(form.id);
             })
             .catch(e => {
-                setError(e.message);
+                setError(e.message || 'Failed to delete event.');
                 setDeling(false);
             });
     };
 
-    const cfg = STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming;
-
+    const cfg = STATUS_CFG[getEventStatus(form)] ?? STATUS_CFG.Upcoming;
     const darkMode = isDarkMode();
     const activeRowBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
     const selectedToggleBg = darkMode ? colorWithAlpha(cfg.badge, '14') : cfg.bg;
@@ -871,6 +973,10 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             overflowY: 'auto',
             flex: 1,
             background: 'var(--cal-panel)'
+        },
+        selectWrap: {
+            position: 'relative',
+            width: '100%'
         },
         footer: {
             padding: '12px 24px 16px',
@@ -905,6 +1011,34 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             padding: '0 12px',
             fontSize: 11.5,
             fontWeight: 500,
+            color: 'var(--cal-text)',
+            boxSizing: 'border-box',
+            outline: 'none',
+            fontFamily: 'inherit'
+        },
+        textarea: {
+            width: '100%',
+            border: '1px solid var(--cal-border)',
+            borderRadius: 12,
+            background: 'var(--cal-input-bg)',
+            padding: '10px 12px',
+            fontSize: 11.5,
+            fontWeight: 500,
+            color: 'var(--cal-text)',
+            boxSizing: 'border-box',
+            outline: 'none',
+            fontFamily: 'inherit',
+            resize: 'vertical'
+        },
+        select: {
+            width: '100%',
+            height: 40,
+            border: '1px solid var(--cal-border)',
+            borderRadius: 12,
+            background: 'var(--cal-input-bg)',
+            padding: '0 12px',
+            fontSize: 11.5,
+            fontWeight: 600,
             color: 'var(--cal-text)',
             boxSizing: 'border-box',
             outline: 'none',
@@ -975,6 +1109,111 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             fontWeight: 600,
             cursor: 'pointer'
         },
+        fieldBlock: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8
+        },
+        prettyField: {
+            position: 'relative',
+            minHeight: 42,
+            border: '1px solid var(--cal-border)',
+            borderRadius: 13,
+            background: 'var(--cal-input-bg)',
+            padding: '0 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            boxSizing: 'border-box',
+            transition: 'border-color .15s, box-shadow .15s, background .15s',
+            cursor: 'pointer'
+        },
+        prettyValue: {
+            fontSize: 12.5,
+            fontWeight: 600,
+            color: 'var(--cal-text)',
+            lineHeight: 1.2,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+        },
+        prettyPlaceholder: {
+            fontSize: 12.5,
+            fontWeight: 600,
+            color: 'var(--cal-text-3)',
+            lineHeight: 1.2
+        },
+        prettyIcon: {
+            width: 16,
+            height: 16,
+            color: 'var(--cal-text-3)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            fontSize: 13
+        },
+        hiddenPickerInput: {
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            opacity: 0,
+            pointerEvents: 'none',
+            border: 'none',
+            padding: 0,
+            margin: 0,
+            top: 0,
+            left: 0
+        },
+        selectTrigger: {
+            width: '100%',
+            minHeight: 40,
+            border: '1px solid var(--cal-border)',
+            borderRadius: 12,
+            background: 'var(--cal-input-bg)',
+            padding: '0 10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            boxSizing: 'border-box',
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--cal-text)'
+        },
+        selectMenu: {
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            left: 0,
+            right: 0,
+            background: 'var(--cal-panel)',
+            border: '1px solid var(--cal-border)',
+            borderRadius: 12,
+            padding: 4,
+            boxShadow: 'var(--cal-shadow)',
+            zIndex: 999
+        },
+        selectItem: {
+            width: '100%',
+            minHeight: 30,
+            border: 'none',
+            background: 'transparent',
+            borderRadius: 8,
+            padding: '0 10px',
+            textAlign: 'left',
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--cal-text)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center'
+        },
+        selectItemActive: {
+            background: '#DDE8FB',
+            color: '#1D67F2'
+        },
         primaryBtn: {
             height: 42,
             padding: '0 18px',
@@ -999,31 +1238,17 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
-                style={{
-                    ...S.backdrop,
-                    padding: '14px',
-                    alignItems: 'center',
-                    background: 'rgba(0,0,0,.18)'
-                }}
+                style={{ ...S.backdrop, padding: '14px', alignItems: 'center', background: 'rgba(0,0,0,.18)' }}
             >
                 <div style={L.shell}>
                     <button
                         className="btn-close"
                         onClick={onClose}
-                    style={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                        zIndex: 2,
-                        fontSize: 10,
-                        filter: modalCloseFilter
-                    }}
+                        style={{ position: 'absolute', top: 16, right: 16, zIndex: 2, fontSize: 10, filter: modalCloseFilter }}
                     />
 
                     <div className="hide-scrollbar" style={L.body}>
-                        <div style={L.title}>
-                            {isEdit ? 'Edit Event' : 'Add Event'}
-                        </div>
+                        <div style={L.title}>{isEdit ? 'Edit Event' : 'Add Event'}</div>
 
                         {error && <div style={{ ...S.errBox, marginBottom: 14 }}>{error}</div>}
 
@@ -1037,153 +1262,152 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                             />
                         </div>
 
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'minmax(0, 1.35fr) minmax(210px, .9fr)',
-                                gap: 14,
-                                marginBottom: 14
-                            }}
-                        >
+                        <div style={{ marginBottom: 14 }}>
+                            <div style={L.label}>Description</div>
+                            <textarea
+                                rows={3}
+                                style={L.textarea}
+                                value={form.description}
+                                onChange={e => set('description', e.target.value)}
+                                placeholder="Optional details"
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: 14 }}>
                             <div style={L.section}>
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 10,
-                                        marginBottom: 12
-                                    }}
-                                >
-                                    <span style={L.rowIcon}>
-                                        <i className="bi bi-calendar4-event" />
-                                    </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                    <span style={L.rowIcon}><i className="bi bi-calendar4-event" /></span>
                                     <div style={L.rowText}>
                                         {form.start_date ? fmtLong(form.start_date) : 'Select event date'}
                                     </div>
                                 </div>
 
-                                <div
-                                    style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr',
-                                        gap: 12
-                                    }}
-                                >
-                                    <div>
-                                        <div style={L.label}>Start date</div>
-                                        <CustomDatePicker
-                                            value={form.start_date}
-                                            onChange={v => set('start_date', v)}
-                                        />
-                                    </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                    <CustomDatePicker
+                                        label="Start date"
+                                        value={form.start_date}
+                                        onChange={v => set('start_date', v)}
+                                    />
 
-                                    <div>
-                                        <div style={L.label}>End date</div>
-                                        <CustomDatePicker
-                                            value={form.end_date}
-                                            onChange={v => set('end_date', v)}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gap: 14 }}>
-                                <div style={L.section}>
-                                    <div style={L.label}>Status</div>
-                                    <CustomSelect
-                                        value={form.status}
-                                        onChange={v => set('status', v)}
-                                        selectedColor={(STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming).text}
-                                        panelWidth={245}
-                                        options={Object.keys(STATUS_CFG).map(s => ({
-                                            value: s,
-                                            label: s
-                                        }))}
+                                    <CustomDatePicker
+                                        label="End date"
+                                        value={form.end_date}
+                                        onChange={v => set('end_date', v)}
                                     />
                                 </div>
-                                <div style={L.section}>
-                                    <div style={L.label}>Priority</div>
-                                    <CustomSelect
-                                        value={form.priority}
-                                        onChange={v => set('priority', v)}
-                                        selectedColor={PRIORITY_COLORS[form.priority] ?? '#666'}
-                                        panelWidth={245}
-                                        options={[
-                                            { value: 'High', label: 'High' },
-                                            { value: 'Medium', label: 'Medium' },
-                                            { value: 'Low', label: 'Low' }
-                                        ]}
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    <CustomTimePicker
+                                        label="Start time"
+                                        value={form.start_time}
+                                        onChange={v => set('start_time', v)}
+                                    />
+
+                                    <CustomTimePicker
+                                        label="End time"
+                                        value={form.end_time}
+                                        onChange={v => set('end_time', v)}
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div style={{ ...L.section, marginBottom: 14 }}>
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 10,
-                                    marginBottom: 10
-                                }}
-                            >
-                                <span style={L.rowIcon}>
-                                    <i className="bi bi-geo-alt" />
-                                </span>
-                                <div style={{ ...L.label, marginBottom: 0, fontSize: 12 }}>Location</div>
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'minmax(0, 1.35fr) minmax(220px, .9fr)',
+                                gap: 14,
+                                marginBottom: 14
+                            }}
+                        >
+                            <div style={L.section}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                                    <span style={L.rowIcon}><i className="bi bi-geo-alt" /></span>
+                                    <div style={{ ...L.label, marginBottom: 0, fontSize: 12 }}>Location</div>
+                                </div>
+
+                                <input
+                                    type="text"
+                                    style={{
+                                        ...L.input,
+                                        height: 42,
+                                        borderRadius: 13,
+                                        fontSize: 12.5,
+                                        fontWeight: 600
+                                    }}
+                                    value={form.location}
+                                    onChange={e => set('location', e.target.value)}
+                                    placeholder="Venue or link"
+                                />
                             </div>
 
-                            <input
-                                style={L.input}
-                                value={form.location}
-                                onChange={e => set('location', e.target.value)}
-                                placeholder="Venue or link"
-                            />
+                            <div
+                                style={{
+                                    ...L.section,
+                                    position: 'relative',
+                                    overflow: 'visible',
+                                    zIndex: priorityOpen ? 40 : 1
+                                }}
+                                ref={priorityRef}
+                            >
+                                <div style={{ ...L.label, marginBottom: 10 }}>Priority</div>
+
+                                <div style={L.selectWrap}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPriorityOpen(v => !v)}
+                                        style={L.selectTrigger}
+                                    >
+                                        <span>{form.priority}</span>
+                                        <span style={L.prettyIcon}>
+                                            <i className={`bi ${priorityOpen ? 'bi-chevron-up' : 'bi-chevron-down'}`} />
+                                        </span>
+                                    </button>
+
+                                    {priorityOpen && (
+                                        <div style={L.selectMenu}>
+                                            {['High', 'Medium', 'Low'].map(option => {
+                                                const active = form.priority === option;
+                                                return (
+                                                    <button
+                                                        key={option}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            set('priority', option);
+                                                            setPriorityOpen(false);
+                                                        }}
+                                                        style={{
+                                                            ...L.selectItem,
+                                                            ...(active ? L.selectItemActive : {})
+                                                        }}
+                                                    >
+                                                        {option}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         <div style={L.section}>
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: 10,
-                                    marginBottom: 10
-                                }}
-                            >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <span style={L.rowIcon}>
-                                        <i className="bi bi-people" />
-                                    </span>
-                                    <div style={{ ...L.label, marginBottom: 0, fontSize: 12 }}>
-                                        Tag employees
-                                    </div>
+                                    <span style={L.rowIcon}><i className="bi bi-people" /></span>
+                                    <div style={{ ...L.label, marginBottom: 0, fontSize: 12 }}>Tag employees</div>
                                 </div>
-
-                                {form.tagged_employees.length > 0 && (
-                                    <span style={L.chip}>{form.tagged_employees.length}</span>
-                                )}
+                                {form.tagged_employees.length > 0 && <span style={L.chip}>{form.tagged_employees.length}</span>}
                             </div>
 
-                            <div
-                                style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'minmax(0, 1fr) auto',
-                                    gap: 10,
-                                    marginBottom: 10
-                                }}
-                            >
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 10, marginBottom: 10 }}>
                                 <div style={{ position: 'relative' }}>
                                     <input
-                                        style={{
-                                            ...L.input,
-                                            paddingRight: empQ ? 34 : 12
-                                        }}
+                                        style={{ ...L.input, paddingRight: empQ ? 34 : 12 }}
                                         placeholder="Search employees"
                                         value={empQ}
                                         onChange={e => setEmpQ(e.target.value)}
                                     />
-
                                     {empQ && (
                                         <button
                                             type="button"
@@ -1231,20 +1455,12 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
 
                             <div className="hide-scrollbar" style={L.employeeList}>
                                 {filtered.length === 0 ? (
-                                    <div
-                                        style={{
-                                            color: 'var(--cal-text-3)',
-                                            fontSize: 12,
-                                            padding: '12px 0',
-                                            textAlign: 'center'
-                                        }}
-                                    >
+                                    <div style={{ color: 'var(--cal-text-3)', fontSize: 12, padding: '12px 0', textAlign: 'center' }}>
                                         No employees found.
                                     </div>
                                 ) : (
                                     filtered.map(emp => {
-                                        const chk = form.tagged_employees.includes(emp.id);
-
+                                        const checked = form.tagged_employees.includes(emp.id);
                                         return (
                                             <div
                                                 key={emp.id}
@@ -1256,27 +1472,18 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                                     padding: '9px 8px',
                                                     borderRadius: 10,
                                                     cursor: 'pointer',
-                                                    background: chk ? activeRowBg : 'transparent',
+                                                    background: checked ? activeRowBg : 'transparent',
                                                     marginBottom: 4
                                                 }}
                                             >
                                                 <input
                                                     type="checkbox"
                                                     readOnly
-                                                    checked={chk}
+                                                    checked={checked}
                                                     style={{ pointerEvents: 'none', accentColor: cfg.badge, margin: 0 }}
                                                 />
-
                                                 <EmployeeAvatar employee={emp} size={28} fontSize={10} />
-
-                                                <span
-                                                    style={{
-                                                        fontSize: 12,
-                                                        color: 'var(--cal-text)',
-                                                        fontWeight: 600,
-                                                        lineHeight: 1.2
-                                                    }}
-                                                >
+                                                <span style={{ fontSize: 12, color: 'var(--cal-text)', fontWeight: 600, lineHeight: 1.2 }}>
                                                     {emp.name}
                                                 </span>
                                             </div>
@@ -1285,60 +1492,51 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                 )}
                             </div>
 
-                    {form.tagged_employees.length > 0 && (
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                            {form.tagged_employees.map(id => {
-                                const emp = employees.find(e => e.id === id);
-                                return emp ? (
-                                    <div
-                                        key={id}
-                                        style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: 8,
-                                            background: 'var(--cal-panel-2)',
-                                            border: '1px solid var(--cal-border)',
-                                            borderRadius: 999,
-                                            padding: '4px 10px 4px 4px',
-                                            minHeight: 34
-                                        }}
-                                    >
-                                        <EmployeeAvatar employee={emp} size={24} fontSize={9} />
-                                        <span
-                                            style={{
-                                                fontSize: 11.5,
-                                                fontWeight: 500,
-                                                color: 'var(--cal-text-2)',
-                                                lineHeight: 1,
-                                                display: 'inline-flex',
-                                                alignItems: 'center'
-                                            }}
-                                        >
-                                            {emp.name}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleEmp(id)}
-                                            style={{
-                                                border: 'none',
-                                                background: 'transparent',
-                                                color: 'var(--cal-text-3)',
-                                                cursor: 'pointer',
-                                                padding: 0,
-                                                fontSize: 13,
-                                                lineHeight: 1,
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                ) : null;
-                            })}
-                        </div>
-                    )}
+                            {form.tagged_employees.length > 0 && (
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                                    {form.tagged_employees.map(id => {
+                                        const emp = employees.find(e => e.id === id);
+                                        return emp ? (
+                                            <div
+                                                key={id}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: 8,
+                                                    background: 'var(--cal-panel-2)',
+                                                    border: '1px solid var(--cal-border)',
+                                                    borderRadius: 999,
+                                                    padding: '4px 10px 4px 4px',
+                                                    minHeight: 34
+                                                }}
+                                            >
+                                                <EmployeeAvatar employee={emp} size={24} fontSize={9} />
+                                                <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--cal-text-2)', lineHeight: 1, display: 'inline-flex', alignItems: 'center' }}>
+                                                    {emp.name}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleEmp(id)}
+                                                    style={{
+                                                        border: 'none',
+                                                        background: 'transparent',
+                                                        color: 'var(--cal-text-3)',
+                                                        cursor: 'pointer',
+                                                        padding: 0,
+                                                        fontSize: 13,
+                                                        lineHeight: 1,
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ) : null;
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -1361,10 +1559,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                         </div>
 
                         <div style={{ display: 'flex', gap: 10 }}>
-                            <button onClick={onClose} style={L.softBtn}>
-                                Cancel
-                            </button>
-
+                            <button onClick={onClose} style={L.softBtn}>Cancel</button>
                             <button onClick={save} disabled={saving} style={L.primaryBtn}>
                                 <i className="bi bi-check2" style={{ fontSize: 16, lineHeight: 1 }} />
                                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Event'}
@@ -1377,31 +1572,9 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     );
 }
 
-function Fg({ label, children, style }) {
-    return (
-        <div style={{ marginBottom: 14, ...style }}>
-            <div
-                style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: '#999',
-                    textTransform: 'uppercase',
-                    letterSpacing: '.05em',
-                    marginBottom: 4
-                }}
-            >
-                {label}
-            </div>
-            {children}
-        </div>
-    );
-}
-
-// ====================================================================
-// EVENT DETAIL MODAL
-// ====================================================================
-function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
-    const cfg = STATUS_CFG[event.status] ?? STATUS_CFG.Upcoming;
+function EventDetailModal({ event, employees, onCancel, onClose }) {
+    const derivedStatus = getEventStatus(event);
+    const cfg = STATUS_CFG[derivedStatus] ?? STATUS_CFG.Upcoming;
     const pColor = PRIORITY_COLORS[event.priority] ?? '#888';
     const tagged = (event.tagged_employees ?? [])
         .map(id => employees.find(e => e.id === id))
@@ -1420,12 +1593,7 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
-                style={{
-                    ...S.backdrop,
-                    padding: '14px',
-                    alignItems: 'center',
-                    background: 'rgba(0,0,0,.32)'
-                }}
+                style={{ ...S.backdrop, padding: '14px', alignItems: 'center', background: 'rgba(0,0,0,.32)' }}
             >
                 <div style={{ ...S.modal, maxWidth: 560, overflow: 'hidden' }}>
                     <div
@@ -1439,58 +1607,34 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                         }}
                     >
                         <div>
-                            <div style={{ fontWeight: 700, fontSize: 18, color: cfg.text }}>
-                                {event.title}
-                            </div>
+                            <div style={{ fontWeight: 700, fontSize: 18, color: cfg.text }}>{event.title}</div>
+
                             <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginTop: 4 }}>
-                                {fmtShort(event.start_date)} – {fmtShort(event.end_date)}
+                                {fmtDayRange(event.start_date, event.end_date)} • {fmtShort(event.start_date)}
+                                {event.start_date !== event.end_date ? ` – ${fmtShort(event.end_date)}` : ''}
                             </div>
+
+                            {(event.start_time || event.end_time) && (
+                                <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginTop: 4 }}>
+                                    {fmtTimeRange(event.start_time, event.end_time)}
+                                </div>
+                            )}
                         </div>
-                        <button
-                            className="btn-close"
-                            onClick={onClose}
-                            style={{ fontSize: 11, filter: closeBtnFilter }}
-                        />
+                        <button className="btn-close" onClick={onClose} style={{ fontSize: 11, filter: closeBtnFilter }} />
                     </div>
 
                     <div style={{ padding: '1.25rem 1.5rem', background: 'var(--cal-panel)' }}>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-                            <span
-                                style={{
-                                    ...S.chip,
-                                    background: statusChipBg,
-                                    color: cfg.text,
-                                    border: `1px solid ${headerBorder}`,
-                                    fontWeight: 700
-                                }}
-                            >
-                                {cfg.icon} {event.status}
+                            <span style={{ ...S.chip, background: statusChipBg, color: cfg.text, border: `1px solid ${headerBorder}`, fontWeight: 700 }}>
+                                {cfg.icon} {derivedStatus}
                             </span>
-
-                            <span
-                                style={{
-                                    ...S.chip,
-                                    color: pColor,
-                                    border: `1px solid ${colorWithAlpha(pColor, '55')}`,
-                                    background: 'transparent',
-                                    fontWeight: 700
-                                }}
-                            >
+                            <span style={{ ...S.chip, color: pColor, border: `1px solid ${colorWithAlpha(pColor, '55')}`, background: 'transparent', fontWeight: 700 }}>
                                 ● {event.priority}
                             </span>
                         </div>
 
-                        {event.description && (
-                            <p style={{ fontSize: 13.5, color: 'var(--cal-text-2)', marginBottom: 12 }}>
-                                {event.description}
-                            </p>
-                        )}
-
-                        {event.location && (
-                            <div style={{ fontSize: 13.5, color: 'var(--cal-text-2)', marginBottom: 14 }}>
-                                📍 {event.location}
-                            </div>
-                        )}
+                        {event.description && <p style={{ fontSize: 13.5, color: 'var(--cal-text-2)', marginBottom: 12 }}>{event.description}</p>}
+                        {event.location && <div style={{ fontSize: 13.5, color: 'var(--cal-text-2)', marginBottom: 14 }}>📍 {event.location}</div>}
 
                         {tagged.length > 0 && (() => {
                             const isAll = tagged.length === employees.length && employees.length > 0;
@@ -1499,16 +1643,7 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
 
                             return (
                                 <div style={{ marginTop: 8 }}>
-                                    <div
-                                        style={{
-                                            fontSize: 11,
-                                            fontWeight: 700,
-                                            color: 'var(--cal-text-3)',
-                                            marginBottom: 8,
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '.05em'
-                                        }}
-                                    >
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--cal-text-3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.05em' }}>
                                         Tagged
                                     </div>
 
@@ -1528,16 +1663,7 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                             }}
                                         >
                                             👥 All Employees
-                                            <span
-                                                style={{
-                                                    fontSize: 11,
-                                                    background: cfg.badge,
-                                                    color: '#fff',
-                                                    borderRadius: 20,
-                                                    padding: '0 7px',
-                                                    fontWeight: 700
-                                                }}
-                                            >
+                                            <span style={{ fontSize: 11, background: cfg.badge, color: '#fff', borderRadius: 20, padding: '0 7px', fontWeight: 700 }}>
                                                 {tagged.length}
                                             </span>
                                         </span>
@@ -1558,22 +1684,10 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                                     }}
                                                 >
                                                     <EmployeeAvatar employee={emp} size={22} fontSize={9} />
-                                                    <span style={{ fontSize: 11.5, fontWeight: 500 }}>
-                                                        {emp.name}
-                                                    </span>
+                                                    <span style={{ fontSize: 11.5, fontWeight: 500 }}>{emp.name}</span>
                                                 </div>
                                             ))}
-                                            <span
-                                                style={{
-                                                    fontSize: 12,
-                                                    background: 'var(--cal-panel-2)',
-                                                    border: '1px solid var(--cal-border)',
-                                                    borderRadius: 20,
-                                                    padding: '3px 10px',
-                                                    color: 'var(--cal-text-2)',
-                                                    fontWeight: 600
-                                                }}
-                                            >
+                                            <span style={{ fontSize: 12, background: 'var(--cal-panel-2)', border: '1px solid var(--cal-border)', borderRadius: 20, padding: '3px 10px', color: 'var(--cal-text-2)', fontWeight: 600 }}>
                                                 +{tagged.length - SHOW_MAX} more
                                             </span>
                                         </div>
@@ -1594,9 +1708,7 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                                     }}
                                                 >
                                                     <EmployeeAvatar employee={emp} size={22} fontSize={9} />
-                                                    <span style={{ fontSize: 11.5, fontWeight: 500 }}>
-                                                        {emp.name}
-                                                    </span>
+                                                    <span style={{ fontSize: 11.5, fontWeight: 500 }}>{emp.name}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -1606,41 +1718,25 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                         })()}
                     </div>
 
-                    <div
-                        style={{
-                            ...S.mFoot,
-                            justifyContent: 'flex-end',
-                            gap: 10,
-                            background: 'var(--cal-panel)',
-                            borderTop: '1px solid var(--cal-border-soft)'
-                        }}
-                    >
-                        {canEdit && (
+                    <div style={{ ...S.mFoot, justifyContent: 'flex-end', gap: 10, background: 'var(--cal-panel)', borderTop: '1px solid var(--cal-border-soft)' }}>
+                        {derivedStatus !== 'Cancelled' && (
                             <button
-                                onClick={onEdit}
+                                onClick={() => onCancel(event)}
                                 style={{
                                     ...S.btnGhost,
                                     height: 40,
                                     borderRadius: 999,
                                     padding: '0 18px',
-                                    fontWeight: 700
+                                    fontWeight: 700,
+                                    border: '1px solid rgba(214,67,67,.35)',
+                                    color: '#D64343'
                                 }}
                             >
-                                Edit Event
+                                Cancel Event
                             </button>
                         )}
 
-                        <button
-                            onClick={onClose}
-                            style={{
-                                ...S.btnPrimary,
-                                background: cfg.badge,
-                                height: 40,
-                                borderRadius: 999,
-                                padding: '0 20px',
-                                fontWeight: 700
-                            }}
-                        >
+                        <button onClick={onClose} style={{ ...S.btnPrimary, background: cfg.badge, height: 40, borderRadius: 999, padding: '0 20px', fontWeight: 700 }}>
                             Close
                         </button>
                     </div>
@@ -1650,9 +1746,6 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
     );
 }
 
-// ====================================================================
-// DAY EVENTS MODAL
-// ====================================================================
 function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
     const darkMode = isDarkMode();
     const closeBtnFilter = darkMode ? 'invert(1) opacity(.72)' : 'opacity(.75)';
@@ -1664,36 +1757,18 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                 onClick={e => {
                     if (e.target === e.currentTarget) onClose();
                 }}
-                style={{
-                    ...S.backdrop,
-                    padding: '14px',
-                    alignItems: 'center',
-                    background: 'rgba(0,0,0,.22)'
-                }}
+                style={{ ...S.backdrop, padding: '14px', alignItems: 'center', background: 'rgba(0,0,0,.22)' }}
             >
                 <div style={{ ...S.modal, maxWidth: 360 }}>
                     <div style={S.mHead}>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--cal-text)' }}>
-                            {fmtLong(dateStr)}
-                        </span>
-                        <button
-                            className="btn-close"
-                            onClick={onClose}
-                            style={{ fontSize: 11, filter: closeBtnFilter }}
-                        />
+                        <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--cal-text)' }}>{fmtLong(dateStr)}</span>
+                        <button className="btn-close" onClick={onClose} style={{ fontSize: 11, filter: closeBtnFilter }} />
                     </div>
 
-                    <div
-                        className="hide-scrollbar"
-                        style={{
-                            padding: '0.75rem 1rem',
-                            maxHeight: '60vh',
-                            overflowY: 'auto',
-                            background: 'var(--cal-panel)'
-                        }}
-                    >
+                    <div className="hide-scrollbar" style={{ padding: '0.75rem 1rem', maxHeight: '60vh', overflowY: 'auto', background: 'var(--cal-panel)' }}>
                         {events.map(ev => {
-                            const cfg = STATUS_CFG[ev.status] ?? STATUS_CFG.Upcoming;
+                            const derivedStatus = getEventStatus(ev);
+                            const cfg = STATUS_CFG[derivedStatus] ?? STATUS_CFG.Upcoming;
                             const hoverBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
 
                             return (
@@ -1714,35 +1789,20 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                                     onMouseEnter={e => (e.currentTarget.style.background = hoverBg)}
                                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >
-                                    <div
-                                        style={{
-                                            width: 9,
-                                            height: 9,
-                                            borderRadius: '50%',
-                                            background: cfg.badge,
-                                            flexShrink: 0
-                                        }}
-                                    />
-
+                                    <div style={{ width: 9, height: 9, borderRadius: '50%', background: cfg.badge, flexShrink: 0 }} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--cal-text)' }}>
-                                            {ev.title}
-                                        </div>
+                                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--cal-text)' }}>{ev.title}</div>
                                         <div style={{ fontSize: 11, color: 'var(--cal-text-3)' }}>
                                             {fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}
                                         </div>
+                                        {(ev.start_time || ev.end_time) && (
+                                            <div style={{ fontSize: 11, color: 'var(--cal-text-3)' }}>
+                                                {fmtTimeRange(ev.start_time, ev.end_time)}
+                                            </div>
+                                        )}
                                     </div>
-
-                                    <span
-                                        style={{
-                                            ...S.chip,
-                                            background: darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg,
-                                            color: cfg.text,
-                                            fontSize: 10,
-                                            border: `1px solid ${colorWithAlpha(cfg.badge, '35')}`
-                                        }}
-                                    >
-                                        {ev.status}
+                                    <span style={{ ...S.chip, background: darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg, color: cfg.text, fontSize: 10, border: `1px solid ${colorWithAlpha(cfg.badge, '35')}` }}>
+                                        {derivedStatus}
                                     </span>
                                 </div>
                             );
@@ -1754,9 +1814,6 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
     );
 }
 
-// ====================================================================
-// FILTER SIDEBAR
-// ====================================================================
 function FilterSidebar({ activeFilters, onToggle }) {
     return (
         <div
@@ -1771,25 +1828,14 @@ function FilterSidebar({ activeFilters, onToggle }) {
                 boxShadow: 'var(--cal-shadow)'
             }}
         >
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--cal-text)', marginBottom: 16 }}>
-                Filters
-            </div>
-
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--cal-text)', marginBottom: 16 }}>Filters</div>
             {Object.entries(STATUS_CFG).map(([status, cfg]) => {
                 const active = activeFilters.includes(status);
-
                 return (
                     <div
                         key={status}
                         onClick={() => onToggle(status)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 9,
-                            marginBottom: 13,
-                            cursor: 'pointer',
-                            userSelect: 'none'
-                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 13, cursor: 'pointer', userSelect: 'none' }}
                     >
                         <div
                             style={{
@@ -1805,28 +1851,9 @@ function FilterSidebar({ activeFilters, onToggle }) {
                                 transition: 'all .15s'
                             }}
                         >
-                            {active && (
-                                <span
-                                    style={{
-                                        color: '#fff',
-                                        fontSize: 11,
-                                        fontWeight: 900,
-                                        lineHeight: 1
-                                    }}
-                                >
-                                    ✓
-                                </span>
-                            )}
+                            {active && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
                         </div>
-
-                        <span
-                            style={{
-                                fontSize: 13,
-                                color: active ? 'var(--cal-text)' : 'var(--cal-text-3)',
-                                fontWeight: active ? 600 : 500,
-                                transition: 'color .15s'
-                            }}
-                        >
+                        <span style={{ fontSize: 13, color: active ? 'var(--cal-text)' : 'var(--cal-text-3)', fontWeight: active ? 600 : 500, transition: 'color .15s' }}>
                             {status}
                         </span>
                     </div>
@@ -1836,11 +1863,9 @@ function FilterSidebar({ activeFilters, onToggle }) {
     );
 }
 
-// ====================================================================
-// EVENT CARD — inside a calendar cell
-// ====================================================================
 function EventCard({ event, employees, onClick }) {
-    const cfg = STATUS_CFG[event.status] ?? STATUS_CFG.Upcoming;
+    const derivedStatus = getEventStatus(event);
+    const cfg = STATUS_CFG[derivedStatus] ?? STATUS_CFG.Upcoming;
     const tagged = (event.tagged_employees ?? [])
         .map(id => employees.find(e => e.id === id))
         .filter(Boolean);
@@ -1866,49 +1891,23 @@ function EventCard({ event, employees, onClick }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flex: 1 }}>
                     <span style={{ fontSize: 10, flexShrink: 0 }}>{cfg.icon}</span>
-                    <span
-                        style={{
-                            fontSize: 10.5,
-                            fontWeight: 600,
-                            color: cfg.text,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                        }}
-                    >
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: cfg.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {event.title}
                     </span>
                 </div>
-
-        <span
-            style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                color: cfg.badge,
-                marginLeft: 4
-            }}
-        >
-            <i
-                className="bi bi-pin-fill"
-                style={{
-                    fontSize: 12,
-                    lineHeight: 1
-                }}
-            />
-        </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: cfg.badge, marginLeft: 4 }}>
+                    <i className="bi bi-pin-fill" style={{ fontSize: 12, lineHeight: 1 }} />
+                </span>
             </div>
 
+            {(event.start_time || event.end_time) && (
+                <div style={{ marginTop: 2, paddingLeft: 14, fontSize: 10, color: 'var(--cal-text-3)' }}>
+                    {fmtTimeRange(event.start_time, event.end_time)}
+                </div>
+            )}
+
             {tagged.length > 0 && (
-                <div
-                    style={{
-                        marginTop: 4,
-                        paddingLeft: 14,
-                        display: 'flex',
-                        alignItems: 'center'
-                    }}
-                >
+                <div style={{ marginTop: 4, paddingLeft: 14, display: 'flex', alignItems: 'center' }}>
                     <AvatarStack employees={tagged} size={17} max={3} />
                 </div>
             )}
@@ -1916,22 +1915,16 @@ function EventCard({ event, employees, onClick }) {
     );
 }
 
-// ====================================================================
-// MAIN CALENDAR
-// ====================================================================
 function Calendar() {
     const today = new Date();
 
-    const [currentDate, setCurrentDate] = useState(
-        new Date(today.getFullYear(), today.getMonth(), today.getDate())
-    );
+    const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
     const [view, setView] = useState('Month');
-    const [filters, setFilters] = useState(Object.keys(STATUS_CFG));
-
+    const [filters, setFilters] = useState([]);
+    const [hasTouchedFilters, setHasTouchedFilters] = useState(false);
     const [events, setEvents] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [currentUser, setUser] = useState(null);
-
     const [dayModal, setDayModal] = useState(null);
     const [detailEvent, setDetail] = useState(null);
     const [editEvent, setEdit] = useState(null);
@@ -1950,12 +1943,12 @@ function Calendar() {
             .then(d => {
                 if (!d.error) setUser(d);
             })
-            .catch(() => {});
+            .catch(() => null);
 
         fetch('php/get_employees.php')
             .then(r => r.json())
             .then(d => setEmployees(Array.isArray(d) ? d : []))
-            .catch(() => {});
+            .catch(() => setEmployees([]));
     }, []);
 
     useEffect(() => {
@@ -1970,31 +1963,33 @@ function Calendar() {
             });
     }, [currentUser]);
 
-    const toggleFilter = status =>
+    const toggleFilter = status => {
+        setHasTouchedFilters(true);
         setFilters(prev =>
             prev.includes(status)
                 ? prev.filter(x => x !== status)
                 : [...prev, status]
         );
+    };
 
     const getEventsInRange = (startStr, endStr) =>
-        events.filter(
-            ev =>
-                ev.start_date <= endStr &&
-                ev.end_date >= startStr &&
-                filters.includes(ev.status)
-        );
+        events.filter(ev => {
+            const derivedStatus = getEventStatus(ev);
+            const isInRange = ev.start_date <= endStr && ev.end_date >= startStr;
+
+            if (!isInRange) return false;
+            if (!hasTouchedFilters) return true;
+
+            return filters.includes(derivedStatus);
+        });
 
     const getDay = dateStr => getEventsInRange(dateStr, dateStr);
 
     const handleSave = saved => {
         setEvents(prev => {
             const index = prev.findIndex(e => e.id === saved.id);
-            return index >= 0
-                ? prev.map(e => (e.id === saved.id ? saved : e))
-                : [...prev, saved];
+            return index >= 0 ? prev.map(e => (e.id === saved.id ? saved : e)) : [...prev, saved];
         });
-
         setShowForm(false);
         setEdit(null);
     };
@@ -2003,6 +1998,31 @@ function Calendar() {
         setEvents(prev => prev.filter(e => e.id !== id));
         setShowForm(false);
         setEdit(null);
+    };
+
+    const handleCancel = eventToCancel => {
+        if (!window.confirm('Cancel this event?')) return;
+
+        fetch('php/save_event.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...eventToCancel,
+                status: 'Cancelled'
+            })
+        })
+            .then(r => r.json())
+            .then(d => {
+                if (d.error) throw new Error(d.error);
+
+                setEvents(prev =>
+                    prev.map(ev => (ev.id === d.event.id ? d.event : ev))
+                );
+                setDetail(d.event);
+            })
+            .catch(err => {
+                alert(err.message || 'Failed to cancel event.');
+            });
     };
 
     const prev = () => {
@@ -2029,19 +2049,10 @@ function Calendar() {
 
     const activeRange =
         view === 'Day'
-            ? {
-                  start: selectedDateStr,
-                  end: selectedDateStr
-              }
+            ? { start: selectedDateStr, end: selectedDateStr }
             : view === 'Week'
-            ? {
-                  start: toDateOnly(weekDates[0]),
-                  end: toDateOnly(weekDates[6])
-              }
-            : {
-                  start: toDateStr(year, month, 1),
-                  end: toDateStr(year, month, getDaysInMonth(year, month))
-              };
+            ? { start: toDateOnly(weekDates[0]), end: toDateOnly(weekDates[6]) }
+            : { start: toDateStr(year, month, 1), end: toDateStr(year, month, getDaysInMonth(year, month)) };
 
     const totalEvents = getEventsInRange(activeRange.start, activeRange.end).length;
 
@@ -2055,13 +2066,17 @@ function Calendar() {
     const openDate = dateStr => {
         setCurrentDate(fromDateStr(dateStr));
         const dayEvs = getDay(dateStr);
-
         if (view === 'Day') return;
 
         if (dayEvs.length > 0) {
             setDayModal({ dateStr, events: dayEvs });
         } else if (isEditor) {
-            setEdit({ start_date: dateStr, end_date: dateStr });
+            setEdit({
+                start_date: dateStr,
+                end_date: dateStr,
+                start_time: '09:00',
+                end_time: '10:00'
+            });
             setShowForm(true);
         }
     };
@@ -2080,12 +2095,8 @@ function Calendar() {
             const dateStr = toDateStr(year, month, d);
             const dayEvs = getDay(dateStr);
             const colIndex = (firstDay + d - 1) % 7;
-            const isTodayCell =
-                d === today.getDate() &&
-                month === today.getMonth() &&
-                year === today.getFullYear();
+            const isTodayCell = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
             const isSun = colIndex === 0;
-            const isFirstRow = d <= 7 - firstDay;
             const dayName = DAY_ABBR[colIndex];
 
             cellArr.push(
@@ -2100,7 +2111,7 @@ function Calendar() {
                         e.currentTarget.style.background = 'var(--cal-panel)';
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                         <span
                             style={{
                                 display: 'inline-flex',
@@ -2119,11 +2130,17 @@ function Calendar() {
                             {d}
                         </span>
 
-                        {isFirstRow && (
-                            <span style={{ fontSize: 10.5, color: 'var(--cal-muted)', fontWeight: 600 }}>
-                                {dayName}
-                            </span>
-                        )}
+                        <span
+                            style={{
+                                fontSize: 10.5,
+                                color: isSun ? '#E85B5B' : 'var(--cal-muted)',
+                                fontWeight: 600,
+                                textTransform: 'uppercase',
+                                letterSpacing: '.02em'
+                            }}
+                        >
+                            {dayName}
+                        </span>
                     </div>
 
                     {dayEvs.slice(0, 3).map(ev => (
@@ -2138,20 +2155,14 @@ function Calendar() {
                         />
                     ))}
 
-                    {dayEvs.length > 3 && (
-                        <div style={{ fontSize: 10, color: 'var(--cal-text-3)', marginTop: 4, paddingLeft: 2 }}>
-                            +{dayEvs.length - 3} more
-                        </div>
-                    )}
+                    {dayEvs.length > 3 && <div style={{ fontSize: 10, color: 'var(--cal-text-3)', marginTop: 4, paddingLeft: 2 }}>+{dayEvs.length - 3} more</div>}
                 </td>
             );
 
             if (cellArr.length % 7 === 0 || d === dim) {
                 if (d === dim && cellArr.length % 7 !== 0) {
                     const rem = 7 - (cellArr.length % 7);
-                    for (let p = 0; p < rem; p++) {
-                        cellArr.push(<td key={`p${p}`} style={G.empty} />);
-                    }
+                    for (let p = 0; p < rem; p++) cellArr.push(<td key={`p${p}`} style={G.empty} />);
                 }
                 rows.push(<tr key={`r${d}`}>{cellArr}</tr>);
                 cellArr = [];
@@ -2167,87 +2178,82 @@ function Calendar() {
         );
     };
 
-    const renderWeekView = () => {
-        return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minWidth: 980 }}>
-                {weekDates.map((date, idx) => {
-                    const dateStr = toDateOnly(date);
-                    const dayEvs = getDay(dateStr);
-                    const isTodayCell = isSameDay(date, today);
+    const renderWeekView = () => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minWidth: 980 }}>
+            {weekDates.map((date, idx) => {
+                const dateStr = toDateOnly(date);
+                const dayEvs = getDay(dateStr);
+                const isTodayCell = isSameDay(date, today);
 
-                    return (
-                        <div
-                            key={dateStr}
-                            onClick={() => openDate(dateStr)}
-                            style={{
-                                minHeight: 500,
-                                padding: '12px 10px',
-                                borderRight: idx === 6 ? 'none' : '1px solid var(--cal-border-soft)',
-                                cursor: dayEvs.length > 0 || isEditor ? 'pointer' : 'default',
-                                background: 'var(--cal-panel)'
-                            }}
-                        >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
-                                <span style={{ fontSize: 11, color: 'var(--cal-text-3)', fontWeight: 600 }}>
-                                    {DAY_ABBR[date.getDay()]}
-                                </span>
-
-                                <span
-                                    style={{
-                                        width: 30,
-                                        height: 30,
-                                        borderRadius: '50%',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        background: isTodayCell ? 'var(--cal-today)' : 'var(--cal-panel-2)',
-                                        color: isTodayCell ? 'var(--cal-today-text)' : 'var(--cal-text)',
-                                        fontSize: 13,
-                                        fontWeight: 700
-                                    }}
-                                >
-                                    {date.getDate()}
-                                </span>
-                            </div>
-
-                            {dayEvs.length === 0 ? (
-                                <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 10 }}>
-                                    No events
-                                </div>
-                            ) : (
-                                dayEvs.map(ev => (
-                                    <EventCard
-                                        key={ev.id}
-                                        event={ev}
-                                        employees={employees}
-                                        onClick={clickedEvent => {
-                                            setDetail(clickedEvent);
-                                            setDayModal(null);
-                                        }}
-                                    />
-                                ))
-                            )}
+                return (
+                    <div
+                        key={dateStr}
+                        onClick={() => openDate(dateStr)}
+                        style={{
+                            minHeight: 500,
+                            padding: '12px 10px',
+                            borderRight: idx === 6 ? 'none' : '1px solid var(--cal-border-soft)',
+                            cursor: dayEvs.length > 0 || isEditor ? 'pointer' : 'default',
+                            background: 'var(--cal-panel)'
+                        }}
+                    >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
+                            <span style={{ fontSize: 11, color: 'var(--cal-text-3)', fontWeight: 600 }}>{DAY_ABBR[date.getDay()]}</span>
+                            <span
+                                style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: '50%',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: isTodayCell ? 'var(--cal-today)' : 'var(--cal-panel-2)',
+                                    color: isTodayCell ? 'var(--cal-today-text)' : 'var(--cal-text)',
+                                    fontSize: 13,
+                                    fontWeight: 700
+                                }}
+                            >
+                                {date.getDate()}
+                            </span>
                         </div>
-                    );
-                })}
-            </div>
-        );
-    };
+
+                        {dayEvs.length === 0 ? (
+                            <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 10 }}>No events</div>
+                        ) : (
+                            dayEvs.map(ev => (
+                                <EventCard
+                                    key={ev.id}
+                                    event={ev}
+                                    employees={employees}
+                                    onClick={clickedEvent => {
+                                        setDetail(clickedEvent);
+                                        setDayModal(null);
+                                    }}
+                                />
+                            ))
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
 
     const renderDayView = () => {
         const dayEvs = getDay(selectedDateStr);
 
         return (
             <div style={{ padding: '20px 22px 22px' }}>
-                <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginBottom: 12 }}>
-                    {fmtLong(selectedDateStr)}
-                </div>
-
+                <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginBottom: 12 }}>{fmtLong(selectedDateStr)}</div>
                 {dayEvs.length === 0 ? (
                     <div
                         onClick={() => {
                             if (!isEditor) return;
-                            setEdit({ start_date: selectedDateStr, end_date: selectedDateStr });
+                            setEdit({
+                                start_date: selectedDateStr,
+                                end_date: selectedDateStr,
+                                start_time: '09:00',
+                                end_time: '10:00'
+                            });
                             setShowForm(true);
                         }}
                         style={{
@@ -2265,7 +2271,8 @@ function Calendar() {
                     </div>
                 ) : (
                     dayEvs.map(ev => {
-                        const cfg = STATUS_CFG[ev.status] ?? STATUS_CFG.Upcoming;
+                        const derivedStatus = getEventStatus(ev);
+                        const cfg = STATUS_CFG[derivedStatus] ?? STATUS_CFG.Upcoming;
 
                         return (
                             <div
@@ -2283,30 +2290,18 @@ function Calendar() {
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                                     <div>
-                                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cal-text)' }}>
-                                            {ev.title}
-                                        </div>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cal-text)' }}>{ev.title}</div>
                                         <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 3 }}>
                                             {fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}
                                         </div>
-
-                                        {ev.location && (
-                                            <div style={{ fontSize: 12, color: 'var(--cal-text-2)', marginTop: 6 }}>
-                                                📍 {ev.location}
+                                        {(ev.start_time || ev.end_time) && (
+                                            <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 4 }}>
+                                                {fmtTimeRange(ev.start_time, ev.end_time)}
                                             </div>
                                         )}
+                                        {ev.location && <div style={{ fontSize: 12, color: 'var(--cal-text-2)', marginTop: 6 }}>📍 {ev.location}</div>}
                                     </div>
-
-                                    <span
-                                        style={{
-                                            ...S.chip,
-                                            background: cfg.bg,
-                                            color: cfg.text,
-                                            height: 'fit-content'
-                                        }}
-                                    >
-                                        {ev.status}
-                                    </span>
+                                    <span style={{ ...S.chip, background: cfg.bg, color: cfg.text, height: 'fit-content' }}>{derivedStatus}</span>
                                 </div>
                             </div>
                         );
@@ -2317,35 +2312,28 @@ function Calendar() {
     };
 
     return (
-            <div
-                style={{
-                    padding: '8px 8px 0',
-                    background: 'transparent',
-                    minHeight: 'calc(100vh - 110px)',
-                    fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
-                    boxSizing: 'border-box'
-                }}
-            >
-            <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr auto 1fr',
-                    alignItems: 'center',
-                    marginBottom: 14
-                }}
-            >
+        <div
+            style={{
+                padding: '8px 8px 0',
+                background: 'transparent',
+                minHeight: 'calc(100vh - 110px)',
+                fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
+                boxSizing: 'border-box'
+            }}
+        >
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: 14 }}>
                 <div />
 
-                    <div
-                        style={{
-                            justifySelf: 'center',
-                            display: 'flex',
-                            background: 'var(--cal-switch-bg)',
-                            borderRadius: 12,
-                            padding: 3,
-                            gap: 2
-                        }}
-                    >
+                <div
+                    style={{
+                        justifySelf: 'center',
+                        display: 'flex',
+                        background: 'var(--cal-switch-bg)',
+                        borderRadius: 12,
+                        padding: 3,
+                        gap: 2
+                    }}
+                >
                     {['Day', 'Week', 'Month'].map(v => (
                         <button
                             key={v}
@@ -2374,7 +2362,9 @@ function Calendar() {
                             onClick={() => {
                                 setEdit({
                                     start_date: selectedDateStr,
-                                    end_date: selectedDateStr
+                                    end_date: selectedDateStr,
+                                    start_time: '09:00',
+                                    end_time: '10:00'
                                 });
                                 setShowForm(true);
                             }}
@@ -2413,19 +2403,6 @@ function Calendar() {
                                 fontWeight: 600
                             }}
                         >
-                            <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
-                                <circle cx="12" cy="12" r="3" />
-                            </svg>
                             View Only
                         </span>
                     )}
@@ -2459,11 +2436,8 @@ function Calendar() {
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <button onClick={prev} style={G.navBtn}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                    <path d="m15 18-6-6 6-6" />
-                                </svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6" /></svg>
                             </button>
-
                             <div
                                 style={{
                                     display: 'inline-flex',
@@ -2486,18 +2460,13 @@ function Calendar() {
                                 </svg>
                                 {fmtHeaderDate(currentDate, view)}
                             </div>
-
                             <button onClick={next} style={G.navBtn}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                    <path d="m9 18 6-6-6-6" />
-                                </svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m9 18 6-6-6-6" /></svg>
                             </button>
                         </div>
 
                         <div style={{ justifySelf: 'center', color: 'var(--cal-text-2)', fontSize: 15 }}>
-                            <strong style={{ fontSize: 19, color: 'var(--cal-text)', marginRight: 6 }}>
-                                {totalEvents}
-                            </strong>
+                            <strong style={{ fontSize: 19, color: 'var(--cal-text)', marginRight: 6 }}>{totalEvents}</strong>
                             {summaryLabel}
                         </div>
 
@@ -2528,12 +2497,7 @@ function Calendar() {
                 <EventDetailModal
                     event={detailEvent}
                     employees={employees}
-                    canEdit={isEditor}
-                    onEdit={() => {
-                        setEdit(detailEvent);
-                        setDetail(null);
-                        setShowForm(true);
-                    }}
+                    onCancel={handleCancel}
                     onClose={() => {
                         setDetail(null);
                         setDayModal(null);
@@ -2541,7 +2505,7 @@ function Calendar() {
                 />
             )}
 
-            {showForm && isEditor && (
+            {showForm && (
                 <EventFormModal
                     event={editEvent}
                     employees={employees}
@@ -2557,7 +2521,6 @@ function Calendar() {
     );
 }
 
-// ── Grid cell styles ──────────────────────────────────────────────────
 const G = {
     cell: {
         verticalAlign: 'top',
@@ -2569,7 +2532,6 @@ const G = {
         height: 118,
         transition: 'background .12s'
     },
-
     empty: {
         borderBottom: '1px solid var(--cal-border-soft)',
         borderRight: '1px solid var(--cal-border-soft)',
@@ -2577,7 +2539,6 @@ const G = {
         minHeight: 118,
         height: 118
     },
-
     navBtn: {
         background: 'var(--cal-nav)',
         border: '1px solid var(--cal-nav-border)',
@@ -2592,7 +2553,6 @@ const G = {
     }
 };
 
-// ── Shared style tokens ───────────────────────────────────────────────
 const S = {
     backdrop: {
         position: 'fixed',
@@ -2606,7 +2566,6 @@ const S = {
         padding: '88px 16px 24px',
         boxSizing: 'border-box'
     },
-
     modal: {
         background: 'var(--cal-panel)',
         borderRadius: 18,
@@ -2618,7 +2577,6 @@ const S = {
         margin: '0 auto',
         border: '1px solid var(--cal-border)'
     },
-
     mHead: {
         padding: '1rem 1.5rem',
         borderBottom: '1px solid var(--cal-border-soft)',
@@ -2628,14 +2586,12 @@ const S = {
         flexShrink: 0,
         background: 'var(--cal-panel)'
     },
-
     mBody: {
         overflowY: 'auto',
         padding: '1.125rem 1.5rem',
         flex: 1,
         background: 'var(--cal-panel)'
     },
-
     mFoot: {
         padding: '0.75rem 1.5rem',
         borderTop: '1px solid var(--cal-border-soft)',
@@ -2645,20 +2601,6 @@ const S = {
         flexShrink: 0,
         background: 'var(--cal-panel)'
     },
-
-    inp: {
-        width: '100%',
-        padding: '8px 11px',
-        border: '1px solid var(--cal-border)',
-        borderRadius: 8,
-        fontSize: 13,
-        color: 'var(--cal-text)',
-        outline: 'none',
-        boxSizing: 'border-box',
-        fontFamily: 'inherit',
-        background: 'var(--cal-input-bg)'
-    },
-
     chip: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -2667,7 +2609,6 @@ const S = {
         fontSize: 11,
         fontWeight: 500
     },
-
     btnPrimary: {
         background: '#2F6DF6',
         color: '#fff',
@@ -2678,7 +2619,6 @@ const S = {
         fontWeight: 600,
         cursor: 'pointer'
     },
-
     btnGhost: {
         background: 'var(--cal-panel)',
         color: 'var(--cal-text-2)',
@@ -2689,18 +2629,6 @@ const S = {
         fontWeight: 500,
         cursor: 'pointer'
     },
-
-    btnDanger: {
-        background: 'var(--cal-panel)',
-        color: '#E74C3C',
-        border: '1px solid #E74C3C44',
-        borderRadius: 20,
-        padding: '7px 18px',
-        fontSize: 13,
-        fontWeight: 500,
-        cursor: 'pointer'
-    },
-
     errBox: {
         background: 'rgba(231,76,60,.10)',
         border: '1px solid rgba(231,76,60,.24)',
@@ -2712,9 +2640,6 @@ const S = {
     }
 };
 
-// ====================================================================
-// MOUNT
-// ====================================================================
 const rootElement = document.getElementById('calendarRoot');
 if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);

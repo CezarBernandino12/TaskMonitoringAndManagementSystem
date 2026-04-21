@@ -765,44 +765,6 @@ chart.setOption({
                 </table>
             </div>
 
-            {/* ── Staff Performance — intentionally unscoped by period ───── */}
-            {/*   Always shows overall workload totals so the supervisor has   */}
-            {/*   a full picture of each staff member's entire assignment.     */}
-            <div className="card p-3 mb-4">
-                <div className="mb-2">
-                    <h5 className="mb-0">Staff Performance</h5>
-                    <small style={{ color: "#a67c52" }}>All time — overall workload</small>
-                </div>
-                <table className="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Staff Name</th>
-                            <th>Total Tasks</th>
-                            <th>Completed</th>
-                            <th>Ongoing</th>
-                            <th>Overdue</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr><td colSpan="5">Loading staff performance…</td></tr>
-                        ) : !Array.isArray(staffData) || staffData.length === 0 ? (
-                            <tr><td colSpan="5">No staff found</td></tr>
-                        ) : (
-                            staffData.map((s, idx) => (
-                                <tr key={idx}>
-                                    <td>{s?.name      || "–"}</td>
-                                    <td>{s?.total     ?? 0}</td>
-                                    <td>{s?.completed ?? 0}</td>
-                                    <td>{s?.ongoing   ?? 0}</td>
-                                    <td>{s?.overdue   ?? 0}</td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
         </div>
     );
 }

@@ -95,6 +95,39 @@ function fmtHeaderDate(date, view) {
     return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
+function fmtTime(timeStr) {
+    if (!timeStr) return '—';
+    const [rawHour = '0', rawMinute = '00'] = String(timeStr).split(':');
+    let hour = Number(rawHour);
+    const minute = String(rawMinute).padStart(2, '0');
+    const suffix = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return `${hour}:${minute} ${suffix}`;
+}
+
+function fmtTimeRange(startTime, endTime) {
+    if (!startTime && !endTime) return '';
+    if (!startTime) return fmtTime(endTime);
+    if (!endTime) return fmtTime(startTime);
+    return `${fmtTime(startTime)} – ${fmtTime(endTime)}`;
+}
+
+function fmtDayShort(dateStr) {
+    if (!dateStr) return '';
+    return DAY_ABBR[fromDateStr(dateStr).getDay()];
+}
+
+function fmtDayRange(startDate, endDate) {
+    if (!startDate || !endDate) return '';
+    const startDay = fmtDayShort(startDate);
+    const endDay = fmtDayShort(endDate);
+
+    if (startDate === endDate) return startDay;
+    if (startDay === endDay) return startDay;
+
+    return `${startDay}–${endDay}`;
+}
+
 function isDarkMode() {
     return document.documentElement.getAttribute('data-theme') === 'dark';
 }
@@ -151,6 +184,25 @@ function normalizeProfileImageUrl(src) {
     } catch {
         return raw;
     }
+}
+
+function combineDateTime(dateStr, timeStr = '00:00') {
+    if (!dateStr) return null;
+    const value = new Date(`${dateStr}T${timeStr || '00:00'}`);
+    return Number.isNaN(value.getTime()) ? null : value;
+}
+
+function getEventStatus(event) {
+    if (event?.status === 'Cancelled') return 'Cancelled';
+
+    const start = combineDateTime(event?.start_date, event?.start_time || '00:00');
+    const end = combineDateTime(event?.end_date, event?.end_time || '23:59');
+    const now = new Date();
+
+    if (!start || !end) return 'Upcoming';
+    if (now < start) return 'Upcoming';
+    if (now > end) return 'Completed';
+    return 'Ongoing';
 }
 
 function EmployeeAvatar({ employee, size = 24, fontSize = 10, style = {} }) {
@@ -301,6 +353,8 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
         location: '',
         start_date: '',
         end_date: '',
+        start_time: '',
+        end_time: '',
         status: 'Upcoming',
         priority: 'Medium',
         tagged_employees: []
@@ -329,7 +383,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
     };
 
     const filtered = employees.filter(e =>
-        `${e.name} ${e.department}`.toLowerCase().includes(empQ.toLowerCase())
+        `${e.name} ${e.department || ''}`.toLowerCase().includes(empQ.toLowerCase())
     );
 
     const allFilteredSelected =
@@ -368,18 +422,40 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
             setError('End date is required.');
             return;
         }
-        if (form.end_date < form.start_date) {
-            setError('End must be on or after start.');
+        if (!form.start_time) {
+            setError('Start time is required.');
+            return;
+        }
+        if (!form.end_time) {
+            setError('End time is required.');
+            return;
+        }
+
+        const startDateTime = combineDateTime(form.start_date, form.start_time);
+        const endDateTime = combineDateTime(form.end_date, form.end_time);
+
+        if (!startDateTime || !endDateTime) {
+            setError('Please enter a valid date and time.');
+            return;
+        }
+
+        if (endDateTime < startDateTime) {
+            setError('End date/time must be on or after start date/time.');
             return;
         }
 
         setSaving(true);
         setError(null);
 
+        const payload = {
+            ...form,
+            status: form.status === 'Cancelled' ? 'Cancelled' : 'Upcoming'
+        };
+
         fetch('php/save_event.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form)
+            body: JSON.stringify(payload)
         })
             .then(r => r.json())
             .then(d => {
@@ -387,7 +463,7 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                 onSave(d.event);
             })
             .catch(e => {
-                setError(e.message);
+                setError(e.message || 'Failed to save event.');
                 setSaving(false);
             });
     };
@@ -408,12 +484,13 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                 onDelete(form.id);
             })
             .catch(e => {
-                setError(e.message);
+                setError(e.message || 'Failed to delete event.');
                 setDeling(false);
             });
     };
 
-    const cfg = STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming;
+    const derivedStatus = getEventStatus(form);
+    const cfg = STATUS_CFG[derivedStatus] ?? STATUS_CFG.Upcoming;
     const darkMode = isDarkMode();
     const activeRowBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
     const selectedToggleBg = darkMode ? colorWithAlpha(cfg.badge, '14') : cfg.bg;
@@ -591,6 +668,33 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                         />
                                     </Fg>
                                 </div>
+
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: 12,
+                                        marginTop: 12
+                                    }}
+                                >
+                                    <Fg label="Start time" style={{ marginBottom: 0 }}>
+                                        <input
+                                            type="time"
+                                            style={{ ...S.inp, height: 40, borderRadius: 12 }}
+                                            value={form.start_time}
+                                            onChange={e => set('start_time', e.target.value)}
+                                        />
+                                    </Fg>
+
+                                    <Fg label="End time" style={{ marginBottom: 0 }}>
+                                        <input
+                                            type="time"
+                                            style={{ ...S.inp, height: 40, borderRadius: 12 }}
+                                            value={form.end_time}
+                                            onChange={e => set('end_time', e.target.value)}
+                                        />
+                                    </Fg>
+                                </div>
                             </div>
 
                             <div style={{ display: 'grid', gap: 14 }}>
@@ -603,21 +707,19 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
                                     }}
                                 >
                                     <Fg label="Status" style={{ marginBottom: 0 }}>
-                                        <select
-                                            style={{
-                                                ...S.inp,
-                                                height: 40,
-                                                borderRadius: 12,
-                                                fontWeight: 600,
-                                                color: (STATUS_CFG[form.status] ?? STATUS_CFG.Upcoming).text
-                                            }}
-                                            value={form.status}
-                                            onChange={e => set('status', e.target.value)}
-                                        >
-                                            {Object.keys(STATUS_CFG).map(s => (
-                                                <option key={s}>{s}</option>
-                                            ))}
-                                        </select>
+                                        <div style={{ minHeight: 40, display: 'flex', alignItems: 'center' }}>
+                                            <span
+                                                style={{
+                                                    ...S.chip,
+                                                    background: darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg,
+                                                    color: cfg.text,
+                                                    border: `1px solid ${colorWithAlpha(cfg.badge, '35')}`,
+                                                    fontWeight: 700
+                                                }}
+                                            >
+                                                {cfg.icon} {derivedStatus}
+                                            </span>
+                                        </div>
                                     </Fg>
                                 </div>
 
@@ -1029,8 +1131,9 @@ function EventFormModal({ event, employees, onSave, onDelete, onClose }) {
 // ====================================================================
 // EVENT DETAIL MODAL
 // ====================================================================
-function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
-    const cfg = STATUS_CFG[event.status] ?? STATUS_CFG.Upcoming;
+function EventDetailModal({ event, employees, canEdit, onEdit, onCancel, onClose }) {
+    const derivedStatus = getEventStatus(event);
+    const cfg = STATUS_CFG[derivedStatus] ?? STATUS_CFG.Upcoming;
     const pColor = PRIORITY_COLORS[event.priority] ?? '#888';
     const tagged = (event.tagged_employees ?? [])
         .map(id => employees.find(e => e.id === id))
@@ -1071,10 +1174,19 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                             <div style={{ fontWeight: 700, fontSize: 18, color: cfg.text }}>
                                 {event.title}
                             </div>
+
                             <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginTop: 4 }}>
-                                {fmtShort(event.start_date)} – {fmtShort(event.end_date)}
+                                {fmtDayRange(event.start_date, event.end_date)} • {fmtShort(event.start_date)}
+                                {event.start_date !== event.end_date ? ` – ${fmtShort(event.end_date)}` : ''}
                             </div>
+
+                            {(event.start_time || event.end_time) && (
+                                <div style={{ fontSize: 12.5, color: 'var(--cal-text-3)', marginTop: 4 }}>
+                                    {fmtTimeRange(event.start_time, event.end_time)}
+                                </div>
+                            )}
                         </div>
+
                         <button
                             className="btn-close"
                             onClick={onClose}
@@ -1093,7 +1205,7 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                                     fontWeight: 700
                                 }}
                             >
-                                {cfg.icon} {event.status}
+                                {cfg.icon} {derivedStatus}
                             </span>
 
                             <span
@@ -1238,40 +1350,61 @@ function EventDetailModal({ event, employees, canEdit, onEdit, onClose }) {
                     <div
                         style={{
                             ...S.mFoot,
-                            justifyContent: 'flex-end',
+                            justifyContent: 'space-between',
                             gap: 10,
                             background: 'var(--cal-panel)',
                             borderTop: '1px solid var(--cal-border-soft)'
                         }}
                     >
-                        {canEdit && (
+                        <div>
+                            {canEdit && derivedStatus !== 'Cancelled' && (
+                                <button
+                                    onClick={() => onCancel(event)}
+                                    style={{
+                                        ...S.btnGhost,
+                                        height: 40,
+                                        borderRadius: 999,
+                                        padding: '0 18px',
+                                        fontWeight: 700,
+                                        border: '1px solid rgba(214,67,67,.35)',
+                                        color: '#D64343'
+                                    }}
+                                >
+                                    Cancel Event
+                                </button>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            {canEdit && (
+                                <button
+                                    onClick={onEdit}
+                                    style={{
+                                        ...S.btnGhost,
+                                        height: 40,
+                                        borderRadius: 999,
+                                        padding: '0 18px',
+                                        fontWeight: 700
+                                    }}
+                                >
+                                    Edit Event
+                                </button>
+                            )}
+
                             <button
-                                onClick={onEdit}
+                                onClick={onClose}
                                 style={{
-                                    ...S.btnGhost,
+                                    ...S.btnPrimary,
+                                    background: cfg.badge,
                                     height: 40,
                                     borderRadius: 999,
-                                    padding: '0 18px',
+                                    padding: '0 20px',
                                     fontWeight: 700
                                 }}
                             >
-                                Edit Event
+                                Close
                             </button>
-                        )}
-
-                        <button
-                            onClick={onClose}
-                            style={{
-                                ...S.btnPrimary,
-                                background: cfg.badge,
-                                height: 40,
-                                borderRadius: 999,
-                                padding: '0 20px',
-                                fontWeight: 700
-                            }}
-                        >
-                            Close
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1322,7 +1455,8 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                         }}
                     >
                         {events.map(ev => {
-                            const cfg = STATUS_CFG[ev.status] ?? STATUS_CFG.Upcoming;
+                            const derivedStatus = getEventStatus(ev);
+                            const cfg = STATUS_CFG[derivedStatus] ?? STATUS_CFG.Upcoming;
                             const hoverBg = darkMode ? colorWithAlpha(cfg.badge, '16') : cfg.bg;
 
                             return (
@@ -1360,6 +1494,11 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                                         <div style={{ fontSize: 11, color: 'var(--cal-text-3)' }}>
                                             {fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}
                                         </div>
+                                        {(ev.start_time || ev.end_time) && (
+                                            <div style={{ fontSize: 11, color: 'var(--cal-text-3)' }}>
+                                                {fmtTimeRange(ev.start_time, ev.end_time)}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <span
@@ -1371,7 +1510,7 @@ function DayEventsModal({ dateStr, events, onSelectEvent, onClose }) {
                                             border: `1px solid ${colorWithAlpha(cfg.badge, '35')}`
                                         }}
                                     >
-                                        {ev.status}
+                                        {derivedStatus}
                                     </span>
                                 </div>
                             );
@@ -1468,7 +1607,8 @@ function FilterSidebar({ activeFilters, onToggle }) {
 // EVENT CARD — inside a calendar cell
 // ====================================================================
 function EventCard({ event, employees, onClick }) {
-    const cfg = STATUS_CFG[event.status] ?? STATUS_CFG.Upcoming;
+    const derivedStatus = getEventStatus(event);
+    const cfg = STATUS_CFG[derivedStatus] ?? STATUS_CFG.Upcoming;
     const tagged = (event.tagged_employees ?? [])
         .map(id => employees.find(e => e.id === id))
         .filter(Boolean);
@@ -1522,6 +1662,12 @@ function EventCard({ event, employees, onClick }) {
                 </span>
             </div>
 
+            {(event.start_time || event.end_time) && (
+                <div style={{ marginTop: 2, paddingLeft: 14, fontSize: 10, color: 'var(--cal-text-3)' }}>
+                    {fmtTimeRange(event.start_time, event.end_time)}
+                </div>
+            )}
+
             {tagged.length > 0 && (
                 <div
                     style={{
@@ -1548,7 +1694,8 @@ function Calendar() {
         new Date(today.getFullYear(), today.getMonth(), today.getDate())
     );
     const [view, setView] = useState('Month');
-    const [filters, setFilters] = useState(Object.keys(STATUS_CFG));
+    const [filters, setFilters] = useState([]);
+    const [hasTouchedFilters, setHasTouchedFilters] = useState(false);
 
     const [events, setEvents] = useState([]);
     const [employees, setEmployees] = useState([]);
@@ -1590,20 +1737,25 @@ function Calendar() {
             });
     }, [currentUser]);
 
-    const toggleFilter = status =>
+    const toggleFilter = status => {
+        setHasTouchedFilters(true);
         setFilters(prev =>
             prev.includes(status)
                 ? prev.filter(x => x !== status)
                 : [...prev, status]
         );
+    };
 
     const getEventsInRange = (startStr, endStr) =>
-        events.filter(
-            ev =>
-                ev.start_date <= endStr &&
-                ev.end_date >= startStr &&
-                filters.includes(ev.status)
-        );
+        events.filter(ev => {
+            const derivedStatus = getEventStatus(ev);
+            const isInRange = ev.start_date <= endStr && ev.end_date >= startStr;
+
+            if (!isInRange) return false;
+            if (!hasTouchedFilters) return true;
+
+            return filters.includes(derivedStatus);
+        });
 
     const getDay = dateStr => getEventsInRange(dateStr, dateStr);
 
@@ -1623,6 +1775,31 @@ function Calendar() {
         setEvents(prev => prev.filter(e => e.id !== id));
         setShowForm(false);
         setEdit(null);
+    };
+
+    const handleCancel = eventToCancel => {
+        if (!window.confirm('Cancel this event?')) return;
+
+        fetch('php/save_event.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...eventToCancel,
+                status: 'Cancelled'
+            })
+        })
+            .then(r => r.json())
+            .then(d => {
+                if (d.error) throw new Error(d.error);
+
+                setEvents(prev =>
+                    prev.map(ev => (ev.id === d.event.id ? d.event : ev))
+                );
+                setDetail(d.event);
+            })
+            .catch(err => {
+                alert(err.message || 'Failed to cancel event.');
+            });
     };
 
     const prev = () => {
@@ -1681,7 +1858,12 @@ function Calendar() {
         if (dayEvs.length > 0) {
             setDayModal({ dateStr, events: dayEvs });
         } else if (isEditor) {
-            setEdit({ start_date: dateStr, end_date: dateStr });
+            setEdit({
+                start_date: dateStr,
+                end_date: dateStr,
+                start_time: '09:00',
+                end_time: '10:00'
+            });
             setShowForm(true);
         }
     };
@@ -1787,72 +1969,70 @@ function Calendar() {
         );
     };
 
-    const renderWeekView = () => {
-        return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minWidth: 980 }}>
-                {weekDates.map((date, idx) => {
-                    const dateStr = toDateOnly(date);
-                    const dayEvs = getDay(dateStr);
-                    const isTodayCell = isSameDay(date, today);
+    const renderWeekView = () => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minWidth: 980 }}>
+            {weekDates.map((date, idx) => {
+                const dateStr = toDateOnly(date);
+                const dayEvs = getDay(dateStr);
+                const isTodayCell = isSameDay(date, today);
 
-                    return (
-                        <div
-                            key={dateStr}
-                            onClick={() => openDate(dateStr)}
-                            style={{
-                                minHeight: 500,
-                                padding: '12px 10px',
-                                borderRight: idx === 6 ? 'none' : '1px solid var(--cal-border-soft)',
-                                cursor: dayEvs.length > 0 || isEditor ? 'pointer' : 'default',
-                                background: 'var(--cal-panel)'
-                            }}
-                        >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
-                                <span style={{ fontSize: 11, color: 'var(--cal-text-3)', fontWeight: 600 }}>
-                                    {DAY_ABBR[date.getDay()]}
-                                </span>
+                return (
+                    <div
+                        key={dateStr}
+                        onClick={() => openDate(dateStr)}
+                        style={{
+                            minHeight: 500,
+                            padding: '12px 10px',
+                            borderRight: idx === 6 ? 'none' : '1px solid var(--cal-border-soft)',
+                            cursor: dayEvs.length > 0 || isEditor ? 'pointer' : 'default',
+                            background: 'var(--cal-panel)'
+                        }}
+                    >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
+                            <span style={{ fontSize: 11, color: 'var(--cal-text-3)', fontWeight: 600 }}>
+                                {DAY_ABBR[date.getDay()]}
+                            </span>
 
-                                <span
-                                    style={{
-                                        width: 30,
-                                        height: 30,
-                                        borderRadius: '50%',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        background: isTodayCell ? 'var(--cal-today)' : 'var(--cal-panel-2)',
-                                        color: isTodayCell ? 'var(--cal-today-text)' : 'var(--cal-text)',
-                                        fontSize: 13,
-                                        fontWeight: 700
-                                    }}
-                                >
-                                    {date.getDate()}
-                                </span>
-                            </div>
-
-                            {dayEvs.length === 0 ? (
-                                <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 10 }}>
-                                    No events
-                                </div>
-                            ) : (
-                                dayEvs.map(ev => (
-                                    <EventCard
-                                        key={ev.id}
-                                        event={ev}
-                                        employees={employees}
-                                        onClick={clickedEvent => {
-                                            setDetail(clickedEvent);
-                                            setDayModal(null);
-                                        }}
-                                    />
-                                ))
-                            )}
+                            <span
+                                style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: '50%',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: isTodayCell ? 'var(--cal-today)' : 'var(--cal-panel-2)',
+                                    color: isTodayCell ? 'var(--cal-today-text)' : 'var(--cal-text)',
+                                    fontSize: 13,
+                                    fontWeight: 700
+                                }}
+                            >
+                                {date.getDate()}
+                            </span>
                         </div>
-                    );
-                })}
-            </div>
-        );
-    };
+
+                        {dayEvs.length === 0 ? (
+                            <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 10 }}>
+                                No events
+                            </div>
+                        ) : (
+                            dayEvs.map(ev => (
+                                <EventCard
+                                    key={ev.id}
+                                    event={ev}
+                                    employees={employees}
+                                    onClick={clickedEvent => {
+                                        setDetail(clickedEvent);
+                                        setDayModal(null);
+                                    }}
+                                />
+                            ))
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
 
     const renderDayView = () => {
         const dayEvs = getDay(selectedDateStr);
@@ -1867,7 +2047,12 @@ function Calendar() {
                     <div
                         onClick={() => {
                             if (!isEditor) return;
-                            setEdit({ start_date: selectedDateStr, end_date: selectedDateStr });
+                            setEdit({
+                                start_date: selectedDateStr,
+                                end_date: selectedDateStr,
+                                start_time: '09:00',
+                                end_time: '10:00'
+                            });
                             setShowForm(true);
                         }}
                         style={{
@@ -1885,7 +2070,8 @@ function Calendar() {
                     </div>
                 ) : (
                     dayEvs.map(ev => {
-                        const cfg = STATUS_CFG[ev.status] ?? STATUS_CFG.Upcoming;
+                        const derivedStatus = getEventStatus(ev);
+                        const cfg = STATUS_CFG[derivedStatus] ?? STATUS_CFG.Upcoming;
 
                         return (
                             <div
@@ -1910,6 +2096,12 @@ function Calendar() {
                                             {fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}
                                         </div>
 
+                                        {(ev.start_time || ev.end_time) && (
+                                            <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 4 }}>
+                                                {fmtTimeRange(ev.start_time, ev.end_time)}
+                                            </div>
+                                        )}
+
                                         {ev.location && (
                                             <div style={{ fontSize: 12, color: 'var(--cal-text-2)', marginTop: 6 }}>
                                                 📍 {ev.location}
@@ -1925,7 +2117,7 @@ function Calendar() {
                                             height: 'fit-content'
                                         }}
                                     >
-                                        {ev.status}
+                                        {derivedStatus}
                                     </span>
                                 </div>
                             </div>
@@ -1994,7 +2186,9 @@ function Calendar() {
                             onClick={() => {
                                 setEdit({
                                     start_date: selectedDateStr,
-                                    end_date: selectedDateStr
+                                    end_date: selectedDateStr,
+                                    start_time: '09:00',
+                                    end_time: '10:00'
                                 });
                                 setShowForm(true);
                             }}
@@ -2141,6 +2335,7 @@ function Calendar() {
                         setDetail(null);
                         setShowForm(true);
                     }}
+                    onCancel={handleCancel}
                     onClose={() => {
                         setDetail(null);
                         setDayModal(null);
