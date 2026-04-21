@@ -433,7 +433,7 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
         setActiveTab("all");
 
         fetch(
-            `php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${quarterStart}&week_end=${quarterEnd}`
+            `php/get_employee_tasks_quarterly.php?employee_id=${emp.id}&week_start=${quarterStart}&week_end=${quarterEnd}`
         )
             .then((res) => {
                 if (!res.ok) throw new Error(`Server returned ${res.status}`);

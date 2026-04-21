@@ -51,7 +51,7 @@ function EmployeeTaskModal({ emp, weekStart, weekEnd, onClose }) {
         const end   = formatDate(weekEnd);
 
         // Pass week_start and week_end so the PHP filters to this week only
-        fetch(`php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${start}&week_end=${end}`)
+        fetch(`php/get_employee_tasks_weekly.php?employee_id=${emp.id}&week_start=${start}&week_end=${end}`)
             .then(res => {
                 if (!res.ok) throw new Error(`Server returned ${res.status}`);
                 return res.json();
