@@ -249,55 +249,60 @@ const fetchDashboardData = async () => {
             return () => chart.dispose();
         }
 
-        chart.setOption({
-            animation: true,
-            tooltip: {
-                trigger: "item",
-                formatter: params => `${params.name}: ${params.value} (${params.percent}%)`
-            },
-            series: [{
-                type: "pie",
-                radius: ["42%", "68%"],
-                center: ["50%", "44%"],
-                startAngle: 140,
-                clockwise: true,
-                avoidLabelOverlap: false,
-                minAngle: 8,
-                hoverAnimation: true,
-                selectedMode: false,
-                itemStyle: {
-                    borderColor: "#f7f7f7",
-                    borderWidth: 3,
-                    shadowBlur: 10,
-                    shadowOffsetY: 5,
-                    shadowColor: "rgba(0,0,0,0.12)"
-                },
-                label: {
-                    show: true,
-                    position: "outside",
-                    formatter: "{d}%",
-                    color: "#444",
-                    fontFamily: "Nunito, sans-serif",
-                    fontSize: 9,
-                    fontWeight: 800,
-                    backgroundColor: "#ffffff",
-                    borderRadius: 999,
-                    padding: [3, 5],
-                    shadowBlur: 4,
-                    shadowColor: "rgba(0,0,0,0.10)"
-                },
-                labelLine: {
-                    show: false
-                },
-                data: taskStatusData.map(item => ({
-                    value: item.value,
-                    name: item.name,
-                    itemStyle: {
-                        color: item.color
-                    }
-                }))
-            }]
-        });
+const graphic = window.echarts.graphic;
+
+const PREMIUM_DONUT_COLORS = {
+    Overdue: ["#ff7a73", "#ef5a5a"],
+    Ongoing: ["#95a4ff", "#7387ff"],
+    Completed: ["#6f90ff", "#4f73ff"],
+    Other: ["#ffc0bc", "#f5a0a0"],
+    Extra: ["#d4e0ff", "#b8c9ff"]
+};
+
+chart.setOption({
+    animation: true,
+    tooltip: {
+        trigger: "item",
+        formatter: params => `${params.name}: ${params.value} (${params.percent}%)`
+    },
+series: [{
+    type: "pie",
+    radius: ["62%", "85%"],
+    center: ["50%", "50%"],
+    startAngle: 92,
+    clockwise: true,
+    avoidLabelOverlap: true,
+    minAngle: 1,
+    selectedMode: false,
+    hoverAnimation: true,
+    emphasis: {
+        scale: true,
+        scaleSize: 10,
+        itemStyle: {
+            borderColor: "#ffffff",
+            borderWidth: 5,
+            borderRadius: 9
+        }
+    },
+    itemStyle: {
+        borderColor: "#ffffff",
+        borderWidth: 3.5,
+        borderRadius: 6,
+        shadowBlur: 0,
+        shadowOffsetY: 0,
+        shadowColor: "transparent"
+    },
+    label: { show: false },
+    labelLine: { show: false },
+    data: taskStatusData.map(item => ({
+        value: item.value,
+        name: item.name,
+        itemStyle: {
+            color: item.color
+        }
+    }))
+}]
+});
 
         const onResize = () => chart.resize();
         window.addEventListener("resize", onResize);
@@ -579,7 +584,7 @@ chart.setOption({
     /* ── Render ───────────────────────────────────────────────────────────── */
 
     return (
-        <div className="container-fluid py-4">
+        <div className="container-fluid py-4 db-dashboard-wrap">
 
             {error && (
                 <div className="alert alert-warning" role="alert">{error}</div>
@@ -665,8 +670,8 @@ chart.setOption({
             </div>
 
             {/* ── Charts ────────────────────────────────────────────────── */}
-            <div className="row g-4 mb-4 align-items-start">
-                <div className="col-lg-5 col-xl-4 d-flex">
+                <div className="row g-4 mb-4 align-items-stretch">
+                    <div className="col-lg-5 col-xl-4 d-flex">
                     <div className="db-donut-card db-chart-card w-100">
                         <div className="db-donut-card-head">
                             <h5 className="db-donut-title">Task Status Distribution</h5>
@@ -678,33 +683,46 @@ chart.setOption({
                         ) : taskStatusData.length === 0 ? (
                             <div className="db-donut-empty">No tasks for this period</div>
                         ) : (
-                            <>
-                                <div id="taskStatusDonutChart" className="db-donut-chart"></div>
+                            <div className="db-donut-body">
+                                <div className="db-donut-visual">
+                                    <div id="taskStatusDonutChart" className="db-donut-chart"></div>
 
-                                <div className="db-donut-legend">
+                                    <div className="db-donut-center">
+                                        <span className="db-donut-center-kicker">Total</span>
+
+                                        <div className="db-donut-center-count">
+                                            <strong className="db-donut-center-value">{totalTasks}</strong>
+                                            <span className="db-donut-center-unit">
+                                                task{totalTasks !== 1 ? "s" : ""}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="db-donut-legend db-donut-legend--stacked">
                                     {taskStatusData.map(item => (
                                         <div className="db-donut-legend-row" key={item.name}>
-                                            <div className="db-donut-legend-left">
-                                                <span
-                                                    className="db-donut-dot"
-                                                    style={{ backgroundColor: item.color }}
-                                                ></span>
-                                                <span className="db-donut-legend-label">{item.name}</span>
-                                            </div>
+                                            <span
+                                                className="db-donut-dot-ring"
+                                                style={{ borderColor: item.color }}
+                                            ></span>
 
-                                            <span className="db-donut-legend-value">
-                                                {item.value} ({item.percent}%)
-                                            </span>
+                                            <div className="db-donut-legend-copy">
+                                                <span className="db-donut-legend-label">{item.name}</span>
+                                                <span className="db-donut-legend-meta">
+                                                    {item.value} task{item.value !== 1 ? "s" : ""} · {item.percent}%
+                                                </span>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>
 
-                <div className="col-lg-7 col-xl-8 d-flex">
-                    <div className="db-gantt-report-card db-chart-card w-100">
+                    <div className="col-lg-8 col-xl-8 d-flex">
+                        <div className="db-gantt-report-card db-chart-card w-100">
                         <div className="db-gantt-report-head">
                             <h5 className="db-gantt-report-title">Task Timeline</h5>
                             <span className="db-gantt-report-range">{periodLabel}</span>
