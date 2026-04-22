@@ -2022,7 +2022,9 @@ function ChatButton() {
     );
 }
 
-const TASKS_API = "php/get_tasks.php";
+const TASKS_API         = "php/get_tasks.php";
+const NOTIFICATIONS_API = "php/get_notifications.php";
+const MARK_READ_API     = "php/mark_notification_read.php";
 const MANILA_TIMEZONE = "Asia/Manila";
 
 function getTodayYMDInManila() {
@@ -2166,7 +2168,9 @@ function NotificationBell() {
 
         load();
         intervalId = window.setInterval(load, 60000);
-        return () => { active = false; window.clearInterval(intervalId); };
+        const onRefresh = () => load();
+        window.addEventListener('refresh-notifications', onRefresh);
+        return () => { active = false; window.clearInterval(intervalId); window.removeEventListener('refresh-notifications', onRefresh); };
     }, []);
 
     // ----- mark as read when panel opens -----

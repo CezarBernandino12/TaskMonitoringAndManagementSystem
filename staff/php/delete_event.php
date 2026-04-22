@@ -20,6 +20,7 @@ set_exception_handler(function ($e) {
 });
 
 require '../../config/db.php';
+require_once '../../config/notifications.php';
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
@@ -65,15 +66,21 @@ if (!$input || empty($input['id'])) {
 $id = (int)$input['id'];
 
 // ----------------------------------------------------------------
-// Confirm the event exists
+// Confirm the event exists and pre-fetch data for notifications
 // ----------------------------------------------------------------
-$checkStmt = $conn->prepare("SELECT id FROM events WHERE id = ? LIMIT 1");
+$checkStmt = $conn->prepare("SELECT title, start_date, end_date, location FROM events WHERE id = ? LIMIT 1");
 $checkStmt->execute([$id]);
-if (!$checkStmt->fetch()) {
+$evtRow = $checkStmt->fetch(PDO::FETCH_ASSOC);
+if (!$evtRow) {
     http_response_code(404);
     echo json_encode(['error' => 'Event not found.']);
     exit;
 }
+
+// Fetch tagged employees before deletion for notifications
+$taggedStmt = $conn->prepare("SELECT user_id FROM event_employees WHERE event_id = ?");
+$taggedStmt->execute([$id]);
+$taggedUserIds = array_map('intval', $taggedStmt->fetchAll(PDO::FETCH_COLUMN, 0));
 
 // ----------------------------------------------------------------
 // Delete (transaction: tags first, then event)
@@ -87,6 +94,26 @@ try {
 } catch (Exception $e) {
     $conn->rollBack();
     throw $e;
+}
+
+// ----------------------------------------------------------------
+// Dispatch cancellation notifications to tagged employees
+// ----------------------------------------------------------------
+if (!empty($taggedUserIds)) {
+    $evtTitle  = $evtRow['title'];
+    $evtStart  = $evtRow['start_date'];
+    $evtEnd    = $evtRow['end_date'];
+    $evtLoc    = $evtRow['location'] ?? '';
+    $dateRange = ($evtStart === $evtEnd)
+        ? date('M j, Y', strtotime($evtStart))
+        : date('M j', strtotime($evtStart)) . ' \u2013 ' . date('M j, Y', strtotime($evtEnd));
+    $body = $evtLoc ? "{$evtLoc} \u2022 {$dateRange}" : $dateRange;
+
+    foreach ($taggedUserIds as $empId) {
+        if ($empId === $sessionUserId) continue;
+        dispatchNotification($conn, $empId, $sessionUserId, 'event_cancelled',
+            'Event Cancelled: ' . $evtTitle, $body, null, null);
+    }
 }
 
 echo json_encode(['success' => true, 'id' => $id]);

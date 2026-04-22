@@ -2288,7 +2288,9 @@ function NotificationBell() {
 
         load();
         intervalId = window.setInterval(load, 60000);
-        return () => { active = false; window.clearInterval(intervalId); };
+        const onRefresh = () => load();
+        window.addEventListener('refresh-notifications', onRefresh);
+        return () => { active = false; window.clearInterval(intervalId); window.removeEventListener('refresh-notifications', onRefresh); };
     }, []);
 
     // ----- mark as read when panel opens -----

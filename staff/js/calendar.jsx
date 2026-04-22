@@ -1992,12 +1992,14 @@ function Calendar() {
         });
         setShowForm(false);
         setEdit(null);
+        window.dispatchEvent(new Event('refresh-notifications'));
     };
 
     const handleDel = id => {
         setEvents(prev => prev.filter(e => e.id !== id));
         setShowForm(false);
         setEdit(null);
+        window.dispatchEvent(new Event('refresh-notifications'));
     };
 
     const handleCancel = eventToCancel => {

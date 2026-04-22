@@ -1,7 +1,9 @@
 <?php
 date_default_timezone_set('Asia/Manila');
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 require_once '../../config/db.php';
+require_once '../../config/notifications.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -14,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        $stmt = $conn->prepare("SELECT deadline FROM tasks WHERE id = :id");
+        $stmt = $conn->prepare("SELECT deadline, title, created_by FROM tasks WHERE id = :id");
         $stmt->bindParam(':id', $task_id, PDO::PARAM_INT);
         $stmt->execute();
         $task = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -55,6 +57,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bindParam(':status', $status);
         $stmt->bindParam(':id', $task_id, PDO::PARAM_INT);
         $stmt->execute();
+
+        // Dispatch notifications to the task creator when status changes.
+        $actorId    = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+        $createdBy  = (int) $task['created_by'];
+        $taskTitle  = htmlspecialchars($task['title'], ENT_QUOTES, 'UTF-8');
+        $taskIdInt  = (int) $task_id;
+
+        // Only notify if the actor is different from the creator.
+        if ($actorId !== null && $actorId !== $createdBy) {
+            if ($status === 'Completed') {
+                // Approval request: supervisor needs to review the completed task.
+                dispatchNotification(
+                    $conn,
+                    $createdBy,
+                    $actorId,
+                    'approval_request',
+                    'Task Completed — Needs Review',
+                    "\"{$taskTitle}\" has been marked as completed.",
+                    $taskIdInt,
+                    "task-{$taskIdInt}-approval"
+                );
+            } else {
+                // General status update.
+                dispatchNotification(
+                    $conn,
+                    $createdBy,
+                    $actorId,
+                    'status_changed',
+                    'Task Status Updated',
+                    "\"{$taskTitle}\" is now {$status}.",
+                    $taskIdInt,
+                    "task-{$taskIdInt}-status-" . strtolower($status)
+                );
+            }
+        }
 
         echo "Status updated successfully";
 

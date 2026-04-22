@@ -106,6 +106,22 @@ try {
     $stmt->execute();
 
     if ($stmt->rowCount() > 0) {
+        // Notify the assignee if the task was created for someone other than the creator.
+        $newTaskId = (int) $conn->lastInsertId();
+        if ($assigned_to !== $created_by) {
+            require_once '../../config/notifications.php';
+            dispatchNotification(
+                $conn,
+                $assigned_to,
+                $created_by,
+                'task_assigned',
+                'New Task Assigned',
+                htmlspecialchars($task_name, ENT_QUOTES, 'UTF-8')
+                    . ' • Due ' . formatDeadlineLabel($deadline),
+                $newTaskId,
+                "task-{$newTaskId}-assigned"
+            );
+        }
         echo 'Task created successfully.';
     } else {
         http_response_code(400);

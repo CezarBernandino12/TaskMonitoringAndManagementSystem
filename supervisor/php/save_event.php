@@ -9,6 +9,7 @@ set_exception_handler(function ($e) {
 });
 
 require '../../config/db.php';
+require_once '../../config/notifications.php';
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
@@ -100,6 +101,7 @@ if (!empty($taggedEmps)) {
 // ----------------------------------------------------------------
 // Persist
 // ----------------------------------------------------------------
+$isNew = ($id === null);
 $conn->beginTransaction();
 
 try {
@@ -151,6 +153,33 @@ try {
 } catch (Exception $e) {
     $conn->rollBack();
     throw $e;
+}
+
+// ----------------------------------------------------------------
+// Dispatch event notifications to tagged employees
+// ----------------------------------------------------------------
+if (!empty($taggedEmps)) {
+    if ($isNew) {
+        $notifType  = 'event_created';
+        $notifTitle = 'New Event: ' . $title;
+    } elseif ($status === 'Cancelled') {
+        $notifType  = 'event_cancelled';
+        $notifTitle = 'Event Cancelled: ' . $title;
+    } else {
+        $notifType  = 'event_updated';
+        $notifTitle = 'Event Updated: ' . $title;
+    }
+
+    $dateRange = ($startDate === $endDate)
+        ? date('M j, Y', strtotime($startDate))
+        : date('M j', strtotime($startDate)) . ' \u2013 ' . date('M j, Y', strtotime($endDate));
+    $body = $location ? "{$location} \u2022 {$dateRange}" : $dateRange;
+
+    foreach ($taggedEmps as $empId) {
+        if ($empId === $sessionUserId) continue;
+        $srcKey = $isNew ? "event-{$id}-event_created-{$empId}" : null;
+        dispatchNotification($conn, $empId, $sessionUserId, $notifType, $notifTitle, $body, null, $srcKey);
+    }
 }
 
 // ----------------------------------------------------------------

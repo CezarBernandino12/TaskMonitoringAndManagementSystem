@@ -66,6 +66,65 @@ try {
         );
     }
 
+    // -------------------------------------------------------------------------
+    // Event-proximity alerts: events tagged to this user starting today/tomorrow
+    // -------------------------------------------------------------------------
+    $evtProxStmt = $conn->prepare("
+        SELECT e.id, e.title, e.start_date, e.location
+        FROM   events e
+        INNER JOIN event_employees ee ON ee.event_id = e.id
+        WHERE  ee.user_id = :uid
+          AND  e.status NOT IN ('Cancelled', 'Completed')
+          AND  e.start_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+        ORDER BY e.start_date ASC
+        LIMIT 10
+    ");
+    $evtProxStmt->bindValue(':uid', $userId, PDO::PARAM_INT);
+    $evtProxStmt->execute();
+
+    foreach ($evtProxStmt->fetchAll(PDO::FETCH_ASSOC) as $evt) {
+        $diffDays = (int) round(
+            (strtotime($evt['start_date']) - strtotime($today)) / 86400
+        );
+        if ($diffDays === 0) {
+            $evtType  = 'event_today';
+            $evtLabel = 'Event Today';
+            $evtIcon  = 'bi-calendar-event';
+            $evtColor = 'notif-amber';
+            $evtTime  = 'Today';
+            $evtPrio  = 3;
+        } else {
+            $evtType  = 'event_tomorrow';
+            $evtLabel = 'Event Tomorrow';
+            $evtIcon  = 'bi-calendar2-event';
+            $evtColor = 'notif-blue';
+            $evtTime  = 'Tomorrow';
+            $evtPrio  = 4;
+        }
+        $key      = "event-prox-{$evt['id']}-{$evtType}";
+        $evtTitle = htmlspecialchars($evt['title'], ENT_QUOTES, 'UTF-8');
+        $evtLoc   = !empty($evt['location'])
+                  ? htmlspecialchars($evt['location'], ENT_QUOTES, 'UTF-8') . ' \u2022 '
+                  : '';
+        $evtMeta  = [
+            'type'      => $evtType,
+            'label'     => $evtLabel,
+            'icon'      => $evtIcon,
+            'iconColor' => $evtColor,
+            'timeLabel' => $evtTime,
+            'priority'  => $evtPrio,
+        ];
+        $items[] = makeNotif(
+            $key, $evtMeta, $evtLabel,
+            "{$evtTitle} \u2022 {$evtLoc}" . formatDeadlineLabel($evt['start_date']),
+            !isset($readKeys[$key])
+        );
+    }
+
+    // Merge in persistent (event-driven) notifications from the DB.
+    $storedItems = storedNotificationsToItems(getStoredNotifications($conn, $userId, 20));
+    $items       = array_merge($storedItems, $items);
+
     $items       = sortNotifications($items);
     $unreadCount = count(array_filter($items, static fn($n) => $n['unread']));
 

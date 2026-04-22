@@ -50,7 +50,30 @@ if (empty($keys)) {
 }
 
 try {
-    markKeysRead($conn, (int) $_SESSION['user_id'], $keys);
+    // Split keys: "notif-{id}" prefixed keys belong to the `notifications` table
+    // (stored events). All other keys belong to the `notification_reads` table
+    // (computed deadline keys).
+    $storedIds    = [];
+    $computedKeys = [];
+
+    foreach ($keys as $key) {
+        if (str_starts_with($key, 'notif-')) {
+            $id = (int) substr($key, 6);
+            if ($id > 0) {
+                $storedIds[] = $id;
+            }
+        } else {
+            $computedKeys[] = $key;
+        }
+    }
+
+    if (!empty($storedIds)) {
+        markStoredNotificationsRead($conn, (int) $_SESSION['user_id'], $storedIds);
+    }
+
+    if (!empty($computedKeys)) {
+        markKeysRead($conn, (int) $_SESSION['user_id'], $computedKeys);
+    }
 
     // Probabilistic cleanup: prune reads older than 30 days on ~5% of requests.
     // Keeps the table lean without needing a cron job.
