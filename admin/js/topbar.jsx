@@ -2090,11 +2090,12 @@ function buildTaskNotifications(tasks = []) {
 }
 
 function NotificationBell() {
-    const [open, setOpen] = React.useState(false);
+    const [open, setOpen]                   = React.useState(false);
     const [notifications, setNotifications] = React.useState([]);
+    const [unreadCount, setUnreadCount]     = React.useState(0);
     const panelRef = React.useRef(null);
-    const btnRef = React.useRef(null);
-    const panelId = React.useId();
+    const btnRef   = React.useRef(null);
+    const panelId  = React.useId();
 
     React.useEffect(() => {
         let active = true;
@@ -2107,15 +2108,15 @@ function NotificationBell() {
                 });
 
                 const data = await parseJsonResponse(response);
-                if (!response.ok) throw new Error("Failed to load task notifications.");
+                if (!response.ok) throw new Error("Failed to load notifications.");
                 if (!active) return;
 
                 const items = buildTaskNotifications(Array.isArray(data) ? data : []);
                 setNotifications(items);
             } catch (error) {
-                console.error("Unable to load task notifications:", error);
+                console.error("Unable to load notifications:", error);
                 if (!active) return;
-                setNotifications([]);
+                setNotifications([]); setUnreadCount(0);
             }
         }
 
@@ -2128,7 +2129,19 @@ function NotificationBell() {
         };
     }, []);
 
-    const unreadCount = notifications.length;
+    React.useEffect(() => {
+        if (!open || notifications.length === 0) return undefined;
+        const unreadKeys = notifications.filter((n) => n.unread).map((n) => n.key).filter(Boolean);
+        if (unreadKeys.length === 0) return undefined;
+        const timer = window.setTimeout(async () => {
+            try {
+                await fetch(MARK_READ_API, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ keys: unreadKeys }) });
+                setUnreadCount(0);
+                setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+            } catch (_) { /* ignore */ }
+        }, 2000);
+        return () => window.clearTimeout(timer);
+    }, [open, notifications]);
 
     React.useEffect(() => {
         if (!open) return undefined;
@@ -2195,7 +2208,7 @@ function NotificationBell() {
 
                     <div className="notif-list">
                         {notifications.length === 0 ? (
-                            <div className="notif-empty">No due-soon tasks</div>
+                            <div className="notif-empty">No system alerts</div>
                         ) : (
                             notifications.map((item) => (
                                 <div key={item.id} className={`notif-item ${item.unread ? "unread" : ""}`}>

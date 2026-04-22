@@ -754,3 +754,16 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+CREATE TABLE IF NOT EXISTS `notification_reads` (
+  `id`               int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id`          int(10) UNSIGNED NOT NULL,
+  `notification_key` varchar(100)     NOT NULL
+    COMMENT 'Deterministic key, e.g. task-42-task_overdue or admin-dept-overdue-3',
+  `read_at`          datetime         NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_user_notif`  (`user_id`, `notification_key`),
+  KEY        `idx_user_id`    (`user_id`),
+  CONSTRAINT `fk_notif_reads_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
