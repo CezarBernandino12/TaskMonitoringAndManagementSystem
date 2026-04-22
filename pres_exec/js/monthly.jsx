@@ -420,7 +420,7 @@ function EmployeeTaskModal({ emp, monthStart, monthEnd, onClose }) {
         setTasks([]);
         setActiveTab("all");
 
-        fetch(`php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${monthStart}&week_end=${monthEnd}`)
+        fetch(`php/get_employee_tasks_monthly.php?employee_id=${emp.id}&week_start=${monthStart}&week_end=${monthEnd}`)
             .then((res) => {
                 if (!res.ok) throw new Error(`Server returned ${res.status}`);
                 return res.json();
@@ -440,13 +440,28 @@ function EmployeeTaskModal({ emp, monthStart, monthEnd, onClose }) {
         if (e.target === e.currentTarget) onClose();
     };
 
-    const getTaskStatus = (task) => task.derived_status ?? task.status;
+    const periodStart = new Date(monthStart + "T00:00:00");
+    const periodEnd   = new Date(monthEnd   + "T23:59:59");
+
+    const getTaskStatus = (task) => {
+        if (task.completed_at) return "Completed";
+        return task.derived_status ?? task.status;
+    };
     const statusBadge = (s) =>
         ({ Completed: "success", Ongoing: "warning", Overdue: "danger" }[s] ?? "secondary");
     const priorityBadge = (p) =>
         ({ High: "danger", Medium: "warning", Low: "secondary" }[p] ?? "secondary");
 
-    const annotated = tasks.map((t) => ({ ...t, derivedStatus: getTaskStatus(t) }));
+    const annotated = tasks
+        .map((t) => ({ ...t, derivedStatus: getTaskStatus(t) }))
+        .filter((t) => {
+            if (t.derivedStatus === "Completed") {
+                if (!t.completed_at) return false;
+                const completedDate = new Date(t.completed_at);
+                return completedDate >= periodStart && completedDate <= periodEnd;
+            }
+            return true;
+        });
     const filtered =
         activeTab === "all" ? annotated : annotated.filter((t) => t.derivedStatus === activeTab);
     const countFor = (s) => annotated.filter((t) => t.derivedStatus === s).length;
@@ -716,13 +731,28 @@ function DepartmentTaskModal({ dept, monthStart, monthEnd, onClose }) {
         if (e.target === e.currentTarget) onClose();
     };
 
-    const getTaskStatus = (task) => task.derived_status ?? task.status;
+    const periodStart = new Date(monthStart + "T00:00:00");
+    const periodEnd   = new Date(monthEnd   + "T23:59:59");
+
+    const getTaskStatus = (task) => {
+        if (task.completed_at) return "Completed";
+        return task.derived_status ?? task.status;
+    };
     const statusBadge = (s) =>
         ({ Completed: "success", Ongoing: "warning", Overdue: "danger" }[s] ?? "secondary");
     const priorityBadge = (p) =>
         ({ High: "danger", Medium: "warning", Low: "secondary" }[p] ?? "secondary");
 
-    const annotated = tasks.map((t) => ({ ...t, derivedStatus: getTaskStatus(t) }));
+    const annotated = tasks
+        .map((t) => ({ ...t, derivedStatus: getTaskStatus(t) }))
+        .filter((t) => {
+            if (t.derivedStatus === "Completed") {
+                if (!t.completed_at) return false;
+                const completedDate = new Date(t.completed_at);
+                return completedDate >= periodStart && completedDate <= periodEnd;
+            }
+            return true;
+        });
     const filtered =
         activeTab === "all" ? annotated : annotated.filter((t) => t.derivedStatus === activeTab);
     const countFor = (s) => annotated.filter((t) => t.derivedStatus === s).length;
