@@ -2030,7 +2030,9 @@ function ChatButton() {
 }
 
 
-const TASKS_API = "php/get_tasks.php";
+const TASKS_API         = "php/get_tasks.php"; // kept for other uses
+const NOTIFICATIONS_API = "php/get_notifications.php";
+const MARK_READ_API     = "php/mark_notification_read.php";
 const MANILA_TIMEZONE = "Asia/Manila";
 
 function getTodayYMDInManila() {
@@ -2140,52 +2142,71 @@ function buildTaskNotifications(tasks = []) {
 }
 
 function NotificationBell() {
-    const [open, setOpen] = React.useState(false);
+    const [open, setOpen]                   = React.useState(false);
     const [notifications, setNotifications] = React.useState([]);
+    const [unreadCount, setUnreadCount]     = React.useState(0);
     const panelRef = React.useRef(null);
-    const btnRef = React.useRef(null);
-    const panelId = React.useId();
+    const btnRef   = React.useRef(null);
+    const panelId  = React.useId();
 
+    // ----- data loading -----
     React.useEffect(() => {
-        let active = true;
+        let active     = true;
+        let intervalId;
 
-        async function loadNotifications() {
+        async function load() {
+            if (!active) return;
             try {
-                const response = await fetch(TASKS_API, {
+                const response = await fetch(NOTIFICATIONS_API, {
                     credentials: "same-origin",
-                    headers: {
-                        Accept: "application/json"
-                    }
+                    headers: { Accept: "application/json" }
                 });
-
                 const data = await parseJsonResponse(response);
-
-                if (!response.ok) {
-                    throw new Error("Failed to load task notifications.");
-                }
-
+                if (!response.ok) throw new Error("Failed to load notifications.");
                 if (!active) return;
-
-                const items = buildTaskNotifications(Array.isArray(data) ? data : []);
-                setNotifications(items);
+                setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+                setUnreadCount(typeof data.unread_count === "number" ? data.unread_count : 0);
             } catch (error) {
-                console.error("Unable to load task notifications:", error);
+                console.error("Unable to load notifications:", error);
                 if (!active) return;
                 setNotifications([]);
+                setUnreadCount(0);
             }
         }
 
-        loadNotifications();
-        const intervalId = window.setInterval(loadNotifications, 60000);
-
-        return () => {
-            active = false;
-            window.clearInterval(intervalId);
-        };
+        load();
+        intervalId = window.setInterval(load, 60000);
+        return () => { active = false; window.clearInterval(intervalId); };
     }, []);
 
-    const unreadCount = notifications.length;
+    // ----- mark as read when panel opens -----
+    React.useEffect(() => {
+        if (!open || notifications.length === 0) return undefined;
 
+        const unreadKeys = notifications
+            .filter((n) => n.unread)
+            .map((n) => n.key)
+            .filter(Boolean);
+
+        if (unreadKeys.length === 0) return undefined;
+
+        const timer = window.setTimeout(async () => {
+            try {
+                await fetch(MARK_READ_API, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json", Accept: "application/json" },
+                    body: JSON.stringify({ keys: unreadKeys })
+                });
+                setUnreadCount(0);
+                setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+            } catch (_) { /* ignore */ }
+        }, 2000);
+
+        return () => window.clearTimeout(timer);
+    }, [open, notifications]);
+
+    // ----- close on outside click / Escape -----
     React.useEffect(() => {
         if (!open) return undefined;
 
@@ -2224,7 +2245,7 @@ function NotificationBell() {
                 ref={btnRef}
                 type="button"
                 className={`topbar-icon-btn notif-btn ${open ? "active" : ""}`}
-                onClick={() => setOpen((value) => !value)}
+                onClick={() => setOpen((v) => !v)}
                 aria-label="Notifications"
                 aria-expanded={open}
                 aria-haspopup="dialog"
@@ -2252,11 +2273,11 @@ function NotificationBell() {
 
                     <div className="notif-list">
                         {notifications.length === 0 ? (
-                            <div className="notif-empty">No due-soon tasks</div>
+                            <div className="notif-empty">No system alerts</div>
                         ) : (
                             notifications.map((item) => (
                                 <div
-                                    key={item.id}
+                                    key={item.key}
                                     className={`notif-item ${item.unread ? "unread" : ""}`}
                                 >
                                     <div className={`notif-item-icon ${item.iconColor}`}>
