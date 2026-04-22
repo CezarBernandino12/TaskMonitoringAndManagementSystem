@@ -42,15 +42,14 @@ async function parseJsonResponse(response) {
 
 function normalizeUserPayload(data = {}) {
     const name = (data.name || "President").trim();
-    const nickname = (data.nickname || "").trim();
 
     return {
         name,
-        nickname,
+        nickname: "",
         role: (data.role || "").trim(),
         role_label: (data.role_label || "").trim(),
         department_name: (data.department_name || "").trim(),
-        initials: (data.initials || getInitials(nickname || name)).trim(),
+        initials: (data.initials || getInitials(name)).trim(),
         profile_image_url: (data.profile_image_url || "").trim()
     };
 }
@@ -120,19 +119,7 @@ function PresidentSidebar() {
     const [imgFailed, setImgFailed] = React.useState(false);
 
     const currentPage = getCurrentPage();
-
-    const reportsPages = [
-        "daily-reports.html",
-        "weekly-reports.html",
-        "monthly-reports.html",
-        "quarterly-reports.html",
-        "annual-reports.html"
-    ];
-
     const isActivePage = (fileName) => currentPage === fileName.toLowerCase();
-    const isAnyReportActive = reportsPages.some(isActivePage);
-
-    const [reportsOpen, setReportsOpen] = React.useState(isAnyReportActive);
 
     React.useEffect(() => {
         const handleResize = () => {
@@ -159,12 +146,6 @@ function PresidentSidebar() {
     React.useEffect(() => {
         document.documentElement.classList.remove("sidebar-collapsed-init");
     }, []);
-
-    React.useEffect(() => {
-        if (isAnyReportActive) {
-            setReportsOpen(true);
-        }
-    }, [isAnyReportActive]);
 
     React.useEffect(() => {
         document.body.classList.toggle("sidebar-mobile-open", isMobile && mobileOpen);
@@ -240,10 +221,6 @@ function PresidentSidebar() {
         setMobileOpen(false);
     };
 
-    const toggleReports = () => {
-        setReportsOpen((prev) => !prev);
-    };
-
     const handleNavigate = () => {
         if (isMobile) {
             closeMobileSidebar();
@@ -259,9 +236,9 @@ function PresidentSidebar() {
         .filter(Boolean)
         .join(" ");
 
-    const displayName = user.nickname || user.name || "President";
+    const displayName = user.name || "President";
     const roleText = getSidebarRoleText(user);
-    const initials = user.initials || getInitials(displayName);
+    const initials = user.initials || getInitials(user.name || "President");
     const hasImage = Boolean(user.profile_image_url) && !imgFailed;
 
     return (
@@ -344,109 +321,81 @@ function PresidentSidebar() {
                         </div>
                     </div>
 
-                    <div className="sidebar-divider"></div>
-                    <div className="sidebar-section-label">MAIN</div>
+                    <div className="sidebar-menu-scroll">
+                        <div className="sidebar-divider"></div>
+                        <div className="sidebar-section-label">MAIN</div>
 
-                    <SidebarLink
-                        href="dashboard.html"
-                        icon="bi-house-door"
-                        label="Dashboard"
-                        isActive={isActivePage("dashboard.html")}
-                        onNavigate={handleNavigate}
-                    />
+                        <SidebarLink
+                            href="dashboard.html"
+                            icon="bi-house-door"
+                            label="Dashboard"
+                            isActive={isActivePage("dashboard.html")}
+                            onNavigate={handleNavigate}
+                        />
 
-                    <SidebarLink
-                        href="calendar.html"
-                        icon="bi-calendar"
-                        label="Calendar"
-                        isActive={isActivePage("calendar.html")}
-                        onNavigate={handleNavigate}
-                    />
+                        <SidebarLink
+                            href="calendar.html"
+                            icon="bi-calendar"
+                            label="Calendar"
+                            isActive={isActivePage("calendar.html")}
+                            onNavigate={handleNavigate}
+                        />
 
-                    <div className="sidebar-divider mt-3"></div>
+                        <div className="sidebar-divider sidebar-section-split"></div>
 
-                    <div className="sidebar-management-wrap">
-                        <button
-                            type="button"
-                            className={`sidebar-section-label-toggle reports-toggle ${reportsOpen ? "open" : ""} ${isAnyReportActive ? "active" : ""} ${!isMobile && collapsed ? "collapsed-trigger" : ""}`}
-                            onClick={toggleReports}
-                            aria-expanded={reportsOpen}
-                            aria-controls="reportsSubmenu"
-                        >
-                            {!isMobile && collapsed && (
-                                <span className="reports-toggle-icon">
-                                    <i className="bi bi-file-earmark-bar-graph"></i>
-                                </span>
-                            )}
+                        <div className="sidebar-management-wrap sidebar-management-static">
+                            <div className="sidebar-section-label sidebar-section-label-inline">
+                                REPORTS
+                            </div>
 
-                            <span className="sidebar-section-label-text">REPORTS</span>
+                            <div className="sidebar-submenu sidebar-submenu-static open">
+                                <SidebarLink
+                                    href="daily-reports.html"
+                                    icon="bi-calendar-day"
+                                    label="Daily"
+                                    isActive={isActivePage("daily-reports.html")}
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
+                                    onNavigate={handleNavigate}
+                                />
 
-                            <span className="sidebar-section-label-chevron">
-                                <i className="bi bi-chevron-down"></i>
-                            </span>
-                        </button>
+                                <SidebarLink
+                                    href="weekly-reports.html"
+                                    icon="bi-calendar-week"
+                                    label="Weekly"
+                                    isActive={isActivePage("weekly-reports.html")}
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
+                                    onNavigate={handleNavigate}
+                                />
 
-                        <div
-                            id="reportsSubmenu"
-                            className={`sidebar-submenu ${reportsOpen ? "open" : ""} ${!isMobile && collapsed ? "collapsed-popout" : ""}`}
-                        >
-                            <SidebarLink
-                                href="daily-reports.html"
-                                icon="bi-calendar-day"
-                                label="Daily"
-                                isActive={isActivePage("daily-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
+                                <SidebarLink
+                                    href="monthly-reports.html"
+                                    icon="bi-calendar-month"
+                                    label="Monthly"
+                                    isActive={isActivePage("monthly-reports.html")}
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
+                                    onNavigate={handleNavigate}
+                                />
 
-                            <SidebarLink
-                                href="weekly-reports.html"
-                                icon="bi-calendar-week"
-                                label="Weekly"
-                                isActive={isActivePage("weekly-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
+                                <SidebarLink
+                                    href="quarterly-reports.html"
+                                    icon="bi-calendar2-range"
+                                    label="Quarterly"
+                                    isActive={isActivePage("quarterly-reports.html")}
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
+                                    onNavigate={handleNavigate}
+                                />
 
-                            <SidebarLink
-                                href="monthly-reports.html"
-                                icon="bi-calendar-month"
-                                label="Monthly"
-                                isActive={isActivePage("monthly-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
-
-                            <SidebarLink
-                                href="quarterly-reports.html"
-                                icon="bi-calendar2-range"
-                                label="Quarterly"
-                                isActive={isActivePage("quarterly-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
-
-                            <SidebarLink
-                                href="annual-reports.html"
-                                icon="bi-calendar2-check"
-                                label="Annually"
-                                isActive={isActivePage("annual-reports.html")}
-                                extraClass="sidebar-sublink"
-                                onNavigate={handleNavigate}
-                            />
+                                <SidebarLink
+                                    href="annual-reports.html"
+                                    icon="bi-calendar2-check"
+                                    label="Annually"
+                                    isActive={isActivePage("annual-reports.html")}
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
+                                    onNavigate={handleNavigate}
+                                />
+                            </div>
                         </div>
                     </div>
-
-                    <div className="sidebar-divider mt-3"></div>
-                    <div className="sidebar-section-label">SETTINGS</div>
-
-                    <SidebarLink
-                        href="profile.html"
-                        icon="bi-gear"
-                        label="Profile"
-                        isActive={isActivePage("profile.html")}
-                        onNavigate={handleNavigate}
-                    />
                 </div>
             </nav>
         </>

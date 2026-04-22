@@ -99,17 +99,16 @@ function getInitials(name) {
 
 function normalizeUserPayload(data = {}) {
     const name = (data.name || "User").trim();
-    const nickname = (data.nickname || "").trim();
 
     return {
         name,
-        nickname,
+        nickname: "",
         gender: (data.gender || "").trim(),
         email: (data.email || "").trim(),
         role: (data.role || "").trim(),
         role_label: (data.role_label || "").trim(),
         department_name: (data.department_name || "").trim(),
-        initials: (data.initials || getInitials(nickname || name)).trim(),
+        initials: (data.initials || getInitials(name)).trim(),
         profile_image_url: (data.profile_image_url || "").trim()
     };
 }
@@ -237,9 +236,6 @@ function getHonorific(gender) {
 }
 
 function getDisplayName(user) {
-    const nickname = user?.nickname?.trim();
-    if (nickname) return nickname;
-
     const name = user?.name?.trim();
     return name || "User";
 }
@@ -2437,22 +2433,149 @@ function NotificationBell() {
     );
 }
 
+function TopbarLogoutModal({ open, onClose, onConfirm }) {
+    const modalRoot = document.getElementById("react-modal-root");
+
+    React.useEffect(() => {
+        if (!open) return;
+
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") onClose();
+        };
+
+        document.addEventListener("keydown", handleKeyDown);
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.removeEventListener("keydown", handleKeyDown);
+            document.body.style.overflow = "";
+        };
+    }, [open, onClose]);
+
+    if (!open || !modalRoot) return null;
+
+    return ReactDOM.createPortal(
+        <div className="logout-modal-overlay" onClick={onClose}>
+            <div
+                className="logout-modal-card"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="topbarLogoutModalTitle"
+                aria-describedby="topbarLogoutModalDesc"
+            >
+                <div className="logout-modal-top">
+                    <div className="logout-modal-icon-wrap">
+                        <i className="bi bi-box-arrow-right"></i>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="logout-modal-close"
+                        onClick={onClose}
+                        aria-label="Close logout modal"
+                    >
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div className="logout-modal-content">
+                    <div className="logout-modal-kicker">Session</div>
+                    <h3 id="topbarLogoutModalTitle" className="logout-modal-title">
+                        Log out of your account?
+                    </h3>
+                    <p id="topbarLogoutModalDesc" className="logout-modal-text">
+                        You’ll end your current session and return to the login page.
+                    </p>
+                </div>
+
+                <div className="logout-modal-actions">
+                    <button
+                        type="button"
+                        className="logout-btn logout-btn-secondary"
+                        onClick={onClose}
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        className="logout-btn logout-btn-danger"
+                        onClick={onConfirm}
+                    >
+                        Log out
+                    </button>
+                </div>
+            </div>
+        </div>,
+        modalRoot
+    );
+}
+
 function UserChip({ user, userLoaded }) {
     const [imgFailed, setImgFailed] = React.useState(false);
+    const [open, setOpen] = React.useState(false);
+    const [showLogoutModal, setShowLogoutModal] = React.useState(false);
+
+    const buttonRef = React.useRef(null);
+    const menuRef = React.useRef(null);
 
     React.useEffect(() => {
         setImgFailed(false);
     }, [user.profile_image_url]);
 
+    React.useEffect(() => {
+        if (!open) return undefined;
+
+        function handlePointerDown(event) {
+            const target = event.target;
+
+            if (
+                menuRef.current?.contains(target) ||
+                buttonRef.current?.contains(target)
+            ) {
+                return;
+            }
+
+            setOpen(false);
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === "Escape") {
+                setOpen(false);
+                buttonRef.current?.focus();
+            }
+        }
+
+        document.addEventListener("mousedown", handlePointerDown);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("mousedown", handlePointerDown);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [open]);
+
     const displayName = getDisplayName(user);
-    const initials = user.initials || getInitials(user.name || user.nickname || "U");
+    const initials = user.initials || getInitials(user.name || "U");
     const email = userLoaded ? user.email || "" : "";
+    const roleLabel = getRoleLabel(user);
     const hasImage = Boolean(user.profile_image_url) && !imgFailed;
+
+    function confirmLogout() {
+        window.location.href = "../auth/login.html";
+    }
 
     return (
         <div className="topbar-user-wrap" aria-label="Current user">
-            <div
-                className="topbar-user-chip"
+            <button
+                ref={buttonRef}
+                type="button"
+                className={`topbar-user-chip ${open ? "active" : ""}`}
+                onClick={() => setOpen((prev) => !prev)}
+                aria-label="Open account menu"
+                aria-expanded={open}
+                aria-haspopup="menu"
                 style={{
                     padding: "8px 12px",
                     borderRadius: "18px",
@@ -2476,19 +2599,6 @@ function UserChip({ user, userLoaded }) {
 
                 <div className="topbar-user-info" style={{ minWidth: 0 }}>
                     <div
-                        className="fw-bold text-body"
-                        style={{
-                            fontSize: "14px",
-                            lineHeight: 1.1,
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis"
-                        }}
-                    >
-                        {displayName}
-                    </div>
-
-                    <div
                         className="text-body-secondary"
                         style={{
                             fontSize: "12px",
@@ -2501,7 +2611,67 @@ function UserChip({ user, userLoaded }) {
                         {email}
                     </div>
                 </div>
-            </div>
+
+                <span className={`topbar-user-caret ${open ? "open" : ""}`}>
+                    <i className="bi bi-chevron-down"></i>
+                </span>
+            </button>
+
+            {open && (
+                <div
+                    ref={menuRef}
+                    className="topbar-user-menu"
+                    role="menu"
+                    aria-label="Account menu"
+                >
+                    <div className="tum-header">
+                        <div className="tum-avatar">
+                            {hasImage ? (
+                                <img src={user.profile_image_url} alt={displayName} />
+                            ) : (
+                                initials
+                            )}
+                        </div>
+
+                        <div className="tum-info">
+                            <div className="tum-name">{displayName}</div>
+                            <div className="tum-email">{email}</div>
+                            <div className="tum-role">{roleLabel}</div>
+                        </div>
+                    </div>
+
+                    <div className="tum-divider"></div>
+
+                    <a
+                        href="profile.html"
+                        className="tum-item"
+                        role="menuitem"
+                        onClick={() => setOpen(false)}
+                    >
+                        <i className="bi bi-gear"></i>
+                        <span>Account Settings</span>
+                    </a>
+
+                    <button
+                        type="button"
+                        className="tum-item tum-logout tum-button"
+                        role="menuitem"
+                        onClick={() => {
+                            setOpen(false);
+                            setShowLogoutModal(true);
+                        }}
+                    >
+                        <i className="bi bi-box-arrow-right"></i>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            )}
+
+            <TopbarLogoutModal
+                open={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onConfirm={confirmLogout}
+            />
         </div>
     );
 }

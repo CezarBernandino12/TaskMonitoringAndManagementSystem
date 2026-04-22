@@ -1,11 +1,3 @@
-/* =========================================================
-   MCXVERSE DASHBOARD UI
-   CLEANED + SECTIONED CSS
-========================================================= */
-
-/* =========================================================
-   01) DESIGN TOKENS
-========================================================= */
 :root {
     --bg-page: #ffffff;
     --bg-card: #f8f8ff;
@@ -2138,6 +2130,363 @@ body {
     animation: msgSpin 0.8s linear infinite;
 }
 
+.topbar-user-menu .tum-item[type="button"] {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+}
+
+.dashboard-sidebar.collapsed {
+    width: 108px;
+    min-width: 108px;
+    padding: 22px 12px 20px;
+}
+
+.sidebar-inner {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sidebar-profile {
+    flex: 0 0 auto;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.sidebar-menu-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+    margin-top: 8px;
+    scrollbar-width: thin;
+}
+
+/* make sidebar content slightly bigger again */
+.sidebar-section-label,
+.sidebar-section-label-text,
+.sidebar-section-label-inline {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    margin-bottom: 12px;
+}
+
+.sidebar-link {
+    padding: 11px 13px;
+    margin-bottom: 8px;
+    border-radius: 14px;
+    font-size: 14px;
+    gap: 12px;
+}
+
+.sidebar-icon {
+    width: 22px;
+    min-width: 22px;
+    font-size: 19px;
+}
+
+.sidebar-sublink,
+.sidebar-sublink-sm {
+    padding: 9px 11px;
+    margin-bottom: 6px;
+    border-radius: 12px;
+    font-size: 13px;
+}
+
+.sidebar-sublink .sidebar-icon,
+.sidebar-sublink-sm .sidebar-icon {
+    width: 18px;
+    min-width: 18px;
+    font-size: 16px;
+}
+
+.sidebar-sublink .sidebar-text,
+.sidebar-sublink-sm .sidebar-text {
+    font-size: 13px;
+}
+
+.sidebar-divider {
+    margin: 12px 0 16px;
+}
+
+.sidebar-section-split {
+    margin: 14px 0;
+}
+
+.sidebar-role {
+    font-size: 11px;
+}
+
+.sidebar-name {
+    font-size: 16px;
+}
+
+
+/* ===== COLLAPSED SIDEBAR FIXES ===== */
+@media (min-width: 768px) {
+    /* restore popout menus in collapsed mode */
+    .dashboard-sidebar.collapsed {
+        overflow: visible !important;
+        width: 96px;
+        min-width: 96px;
+        padding: 14px 8px 14px;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-inner {
+        overflow: visible !important;
+        max-height: none;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-menu-scroll {
+        overflow: visible !important;
+        padding-right: 0;
+        margin-top: 4px;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-management-wrap {
+        position: relative;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-submenu.collapsed-popout {
+        display: none;
+        position: absolute;
+        top: 0;
+        left: calc(100% + 12px);
+        min-width: 220px;
+        padding: 10px;
+        margin: 0;
+        background: #ffffff;
+        border: 1px solid #ececec;
+        border-radius: 18px;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.10);
+        z-index: 120;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-submenu.collapsed-popout.open {
+        display: block;
+    }
+
+    /* compress top/profile spacing */
+    .dashboard-sidebar.collapsed .sidebar-profile {
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-avatar {
+        width: 38px;
+        height: 38px;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-divider {
+        width: 30px;
+        margin: 8px auto 10px;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-section-label {
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        line-height: 1.15;
+        margin-bottom: 8px;
+        text-align: center;
+        white-space: normal;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-link {
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        margin: 0 auto 8px;
+        border-radius: 14px;
+        justify-content: center;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-icon {
+        width: auto;
+        min-width: auto;
+        font-size: 18px;
+    }
+
+    /* remove active tile background/border in collapsed mode */
+    .dashboard-sidebar.collapsed .sidebar-link.active,
+    .dashboard-sidebar.collapsed .sidebar-link.active:hover {
+        background: transparent !important;
+        box-shadow: none !important;
+        border: 0 !important;
+        color: #111 !important;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-link.active .sidebar-icon {
+        color: #111 !important;
+    }
+
+    /* keep only the left active indicator */
+    .dashboard-sidebar.collapsed .sidebar-link.active::before {
+        left: -6px;
+        width: 4px;
+        height: 20px;
+        background: #111;
+    }
+
+    /* tighter reports trigger in collapsed mode */
+    .dashboard-sidebar.collapsed .sidebar-section-label-toggle.reports-toggle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        margin: 0 auto 8px;
+        width: auto;
+        padding: 0;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-section-label-toggle.reports-toggle .sidebar-section-label-text {
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        line-height: 1.15;
+        text-align: center;
+        white-space: normal;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-section-label-toggle.reports-toggle .sidebar-section-label-chevron {
+        margin-left: 20px;   
+        transform: none;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-section-label-toggle.reports-toggle.open .sidebar-section-label-chevron {
+        transform: rotate(180deg);
+    }
+}
+
+/* ===== FINAL SIDEBAR FIXES ===== */
+@media (min-width: 768px) {
+    /* let the card grow/shrink naturally, but never exceed viewport */
+    .dashboard-sidebar {
+        position: relative;
+        height: auto;
+        height: auto;
+        max-height: calc(100vh - 32px);
+        overflow: visible;
+    }
+
+    .sidebar-inner {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        height: auto;
+        max-height: calc(100vh - 32px);
+        overflow: hidden;
+    }
+
+    .sidebar-profile {
+        flex: 0 0 auto;
+    }
+
+    /* scroll only the menu area, but hide the scrollbar */
+    .sidebar-menu-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 6px;
+        margin-top: 6px;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .sidebar-menu-scroll::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* restore original hover-only toggler */
+    .sidebar-toggle {
+        position: absolute;
+        top: 52px;
+        right: 0;
+        transform: translateX(50%);
+        width: 35px;
+        height: 35px;
+        border: 1px solid #e8e8e8;
+        border-radius: 8px;
+        background: #f8f8f8;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #222;
+        cursor: pointer;
+        z-index: 60;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition:
+            opacity 0.2s ease,
+            visibility 0.2s ease,
+            transform 0.25s ease,
+            background 0.25s ease;
+    }
+
+    .dashboard-sidebar:hover .sidebar-toggle {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translateX(50%) scale(1);
+    }
+
+    .sidebar-toggle:hover {
+        background: #f4f4f4;
+    }
+
+    .sidebar-toggle i {
+        font-size: 18px;
+        line-height: 1;
+        transition: transform 0.3s ease;
+    }
+
+    .dashboard-sidebar.collapsed .sidebar-toggle i {
+        transform: rotate(180deg);
+    }
+
+    /* reports label + chevron spacing */
+    .sidebar-section-label-toggle.reports-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 20px;
+        width: auto;
+        padding: 0;
+        margin: 0 0 10px;
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .sidebar-section-label-toggle.reports-toggle .sidebar-section-label-text {
+        display: inline-block;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .sidebar-section-label-toggle.reports-toggle .sidebar-section-label-chevron {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 20px;
+        line-height: 1;
+        transform: translateY(-1px);
+    }
+
+    .sidebar-section-label-toggle.reports-toggle.open .sidebar-section-label-chevron {
+        transform: translateY(-1px) rotate(180deg);
+    }
+}
 /* =========================================================
    18) MESSAGE DARK MODE
 ========================================================= */

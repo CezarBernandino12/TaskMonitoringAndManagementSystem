@@ -502,7 +502,7 @@ function SupervisorSidebar() {
                     </div>
 
                         {/* Reports Section - removed divider above */}
-                  
+                <div className="sidebar-menu-scroll">
                     <div className="sidebar-divider"></div>
                     <div className="sidebar-section-label">MAIN</div>
 
@@ -513,7 +513,6 @@ function SupervisorSidebar() {
                         isActive={isActivePage("dashboard.html")}
                         onNavigate={handleNavigate}
                     />
-
 
                     <SidebarLink
                         href="calendar.html"
@@ -539,40 +538,90 @@ function SupervisorSidebar() {
                         onNavigate={handleNavigate}
                     />
 
-
                     <div className="sidebar-divider mt-3"></div>
 
-                    <div className="sidebar-management-wrap" style={{border: 'none', boxShadow: 'none'}}> 
+                    {/* REPORTS FIRST */}
+                    <div className="sidebar-management-wrap">
                         <button
                             type="button"
-                            className={`sidebar-section-label-toggle management-toggle ${managementOpen ? "open" : ""} ${isManagementActive ? "active" : ""} ${!isMobile && collapsed ? "collapsed-trigger" : ""}`}
-                            onClick={toggleManagement}
-                            aria-expanded={managementOpen}
-                            aria-controls="managementSubmenu"
+                            className={`sidebar-section-label-toggle reports-toggle ${reportsOpen ? "open" : ""} ${isAnyReportActive ? "active" : ""} ${!isMobile && collapsed ? "collapsed-trigger" : ""}`}
+                            onClick={toggleReports}
+                            aria-expanded={reportsOpen}
+                            aria-controls="reportsSubmenu"
                         >
                             {!isMobile && collapsed && (
-                                <span className="management-toggle-icon">
-                                    <i className="bi bi-folder2-open"></i>
+                                <span className="reports-toggle-icon">
+                                    <i className="bi bi-file-earmark-bar-graph"></i>
                                 </span>
                             )}
-
-                            <span className="sidebar-section-label-text">STAFF MANAGEMENT</span>
-
+                            <span className="sidebar-section-label-text">REPORTS</span>
                             <span className="sidebar-section-label-chevron">
                                 <i className="bi bi-chevron-down"></i>
                             </span>
                         </button>
 
                         <div
-                            id="managementSubmenu"
-                            className={`sidebar-submenu ${managementOpen ? "open" : ""} ${!isMobile && collapsed ? "collapsed-popout" : ""}`}
+                            id="reportsSubmenu"
+                            className={`sidebar-submenu ${reportsOpen ? "open" : ""} ${!isMobile && collapsed ? "collapsed-popout" : ""}`}
                         >
+                            <SidebarLink
+                                href="daily-reports.html"
+                                icon="bi-calendar-day"
+                                label="Daily"
+                                isActive={isActivePage("daily-reports.html")}
+                                extraClass="sidebar-sublink"
+                                onNavigate={handleNavigate}
+                            />
+                            <SidebarLink
+                                href="weekly-reports.html"
+                                icon="bi-calendar-week"
+                                label="Weekly"
+                                isActive={isActivePage("weekly-reports.html")}
+                                extraClass="sidebar-sublink"
+                                onNavigate={handleNavigate}
+                            />
+                            <SidebarLink
+                                href="monthly-reports.html"
+                                icon="bi-calendar-month"
+                                label="Monthly"
+                                isActive={isActivePage("monthly-reports.html")}
+                                extraClass="sidebar-sublink"
+                                onNavigate={handleNavigate}
+                            />
+                            <SidebarLink
+                                href="quarterly-reports.html"
+                                icon="bi-calendar2-range"
+                                label="Quarterly"
+                                isActive={isActivePage("quarterly-reports.html")}
+                                extraClass="sidebar-sublink"
+                                onNavigate={handleNavigate}
+                            />
+                            <SidebarLink
+                                href="annual-reports.html"
+                                icon="bi-calendar2-check"
+                                label="Annually"
+                                isActive={isActivePage("annual-reports.html")}
+                                extraClass="sidebar-sublink"
+                                onNavigate={handleNavigate}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="sidebar-divider sidebar-section-split"></div>
+
+                    {/* STAFF MANAGEMENT SECOND */}
+                    <div className="sidebar-management-wrap sidebar-management-static">
+                        <div className="sidebar-section-label sidebar-section-label-inline">
+                            STAFF MANAGEMENT
+                        </div>
+
+                        <div className="sidebar-submenu sidebar-submenu-static open">
                             <SidebarLink
                                 href="staff-performance.html"
                                 icon="bi-graph-up-arrow"
                                 label="Staff Performance"
                                 isActive={isActivePage("staff-performance.html")}
-                                extraClass="sidebar-sublink"
+                                extraClass="sidebar-sublink sidebar-sublink-sm"
                                 onNavigate={handleNavigate}
                             />
 
@@ -581,102 +630,12 @@ function SupervisorSidebar() {
                                 icon="bi-people"
                                 label="Manage Staffs"
                                 isActive={isActivePage("manage-staffs.html")}
-                                extraClass="sidebar-sublink"
+                                extraClass="sidebar-sublink sidebar-sublink-sm"
                                 onNavigate={handleNavigate}
                             />
-
-                           
                         </div>
                     </div>
-
-                    {/* Reports Section placed here, no divider above */}
-                    <div className="sidebar-management-wrap">
-                            <button
-                                type="button"
-                                className={`sidebar-section-label-toggle reports-toggle ${reportsOpen ? "open" : ""} ${isAnyReportActive ? "active" : ""} ${!isMobile && collapsed ? "collapsed-trigger" : ""}`}
-                                onClick={toggleReports}
-                                aria-expanded={reportsOpen}
-                                aria-controls="reportsSubmenu"
-                            >
-                                {!isMobile && collapsed && (
-                                    <span className="reports-toggle-icon">
-                                        <i className="bi bi-file-earmark-bar-graph"></i>
-                                    </span>
-                                )}
-                                <span className="sidebar-section-label-text">REPORTS</span>
-                                <span className="sidebar-section-label-chevron">
-                                    <i className="bi bi-chevron-down"></i>
-                                </span>
-                            </button>
-                            <div
-                                id="reportsSubmenu"
-                                className={`sidebar-submenu ${reportsOpen ? "open" : ""} ${!isMobile && collapsed ? "collapsed-popout" : ""}`}
-                            >
-                                <SidebarLink
-                                    href="daily-reports.html"
-                                    icon="bi-calendar-day"
-                                    label="Daily"
-                                    isActive={isActivePage("daily-reports.html")}
-                                    extraClass="sidebar-sublink"
-                                    onNavigate={handleNavigate}
-                                />
-                                <SidebarLink
-                                    href="weekly-reports.html"
-                                    icon="bi-calendar-week"
-                                    label="Weekly"
-                                    isActive={isActivePage("weekly-reports.html")}
-                                    extraClass="sidebar-sublink"
-                                    onNavigate={handleNavigate}
-                                />
-                                <SidebarLink
-                                    href="monthly-reports.html"
-                                    icon="bi-calendar-month"
-                                    label="Monthly"
-                                    isActive={isActivePage("monthly-reports.html")}
-                                    extraClass="sidebar-sublink"
-                                    onNavigate={handleNavigate}
-                                />
-                                <SidebarLink
-                                    href="quarterly-reports.html"
-                                    icon="bi-calendar2-range"
-                                    label="Quarterly"
-                                    isActive={isActivePage("quarterly-reports.html")}
-                                    extraClass="sidebar-sublink"
-                                    onNavigate={handleNavigate}
-                                />
-                                <SidebarLink
-                                    href="annual-reports.html"
-                                    icon="bi-calendar2-check"
-                                    label="Annual"
-                                    isActive={isActivePage("annual-reports.html")}
-                                    extraClass="sidebar-sublink"
-                                    onNavigate={handleNavigate}
-                                />
-                            </div>
-                        </div>
-
-                    <div className="sidebar-divider mt-3"></div>
-                    <div className="sidebar-section-label">SETTINGS</div>
-
-                    <SidebarLink
-                        href="profile.html"
-                        icon="bi-gear"
-                        label="Profile"
-                        isActive={isActivePage("profile.html")}
-                        onNavigate={handleNavigate}
-                    />
-
-                    <div className="sidebar-bottom">
-                        <SidebarLink
-                            href="../auth/login.html"
-                            icon="bi-box-arrow-right"
-                            label="Logout Account"
-                            isActive={false}
-                            extraClass="logout-link"
-                            onClick={openLogoutModal}
-                        />
-                    </div>
-
+                </div>
                 </div>
             </nav>
 
