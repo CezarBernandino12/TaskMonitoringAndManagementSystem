@@ -1,372 +1,631 @@
-const { useEffect, useState, useRef } = React;
+const { useEffect, useMemo, useRef, useState } = React;
 
-// ====================================================================
-// EMPLOYEE TASK MODAL
-// Same as the admin version — fetches tasks for a single employee.
-// ====================================================================
-function EmployeeTaskModal({ emp, onClose }) {
-    const [tasks, setTasks]         = useState([]);
-    const [loading, setLoading]     = useState(true);
-    const [error, setError]         = useState(null);
-    const [activeTab, setActiveTab] = useState('all');
+const MANILA_TZ = "Asia/Manila";
+
+function getThemeMode() {
+    return document.documentElement.getAttribute("data-theme") === "dark"
+        ? "dark"
+        : "light";
+}
+
+function safeNum(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+}
+
+function pct(part, total) {
+    return total > 0 ? Math.round((part / total) * 100) : 0;
+}
+
+function buildAvatarFallbackUrl(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        name || "User"
+    )}&background=f7c4d4&color=222&size=80`;
+}
+
+function formatDatePH(dateStr, withYear = true) {
+    if (!dateStr) return "—";
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return "—";
+
+    return new Intl.DateTimeFormat("en-PH", {
+        timeZone: MANILA_TZ,
+        month: "short",
+        day: "numeric",
+        ...(withYear ? { year: "numeric" } : {})
+    }).format(date);
+}
+
+function getDerivedStatus(task) {
+    return task?.derived_status ?? task?.status ?? "Other";
+}
+
+function getStatusClass(status) {
+    const s = String(status || "").trim().toLowerCase();
+    if (s === "completed") return "completed";
+    if (s === "ongoing" || s === "in progress") return "ongoing";
+    if (s === "overdue") return "overdue";
+    return "other";
+}
+
+function getPriorityClass(priority) {
+    const p = String(priority || "").trim().toLowerCase();
+    if (["high", "urgent", "critical"].includes(p)) return "high";
+    if (["medium", "normal", "moderate"].includes(p)) return "medium";
+    if (["low", "minor"].includes(p)) return "low";
+    return "other";
+}
+
+function EmployeeTaskModal({ emp, onClose, themeMode }) {
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [activeTab, setActiveTab] = useState("all");
+    const [query, setQuery] = useState("");
 
     useEffect(() => {
         setLoading(true);
-        setError(null);
+        setError("");
         setTasks([]);
-        setActiveTab('all');
+        setActiveTab("all");
+        setQuery("");
 
         fetch(`php/get_employee_tasks_report.php?employee_id=${emp.id}`)
-            .then(res => {
+            .then((res) => {
                 if (!res.ok) throw new Error(`Server returned ${res.status}`);
                 return res.json();
             })
-            .then(data => {
+            .then((data) => {
                 if (data.error) throw new Error(data.error);
                 setTasks(Array.isArray(data.tasks) ? data.tasks : []);
                 setLoading(false);
             })
-            .catch(err => {
+            .catch((err) => {
                 setError(`Could not load tasks: ${err.message}`);
                 setLoading(false);
             });
     }, [emp.id]);
 
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) onClose();
-    };
+    useEffect(() => {
+        const onEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
 
-    const getTaskStatus  = (task) => task.derived_status ?? task.status;
-    const statusBadge    = (s)    => ({ Completed: 'success', Ongoing: 'warning', Overdue: 'danger' }[s] ?? 'secondary');
-    const priorityBadge  = (p)    => ({ High: 'danger', Medium: 'warning', Low: 'secondary' }[p] ?? 'secondary');
+    const annotatedTasks = useMemo(
+        () =>
+            tasks.map((task) => ({
+                ...task,
+                derivedStatus: getDerivedStatus(task)
+            })),
+        [tasks]
+    );
 
-    const annotated = tasks.map(t => ({ ...t, derivedStatus: getTaskStatus(t) }));
-    const filtered  = activeTab === 'all' ? annotated : annotated.filter(t => t.derivedStatus === activeTab);
-    const countFor  = (s) => annotated.filter(t => t.derivedStatus === s).length;
+    const filteredTasks = useMemo(() => {
+        let base =
+            activeTab === "all"
+                ? annotatedTasks
+                : annotatedTasks.filter((task) => task.derivedStatus === activeTab);
+
+        const term = query.trim().toLowerCase();
+        if (!term) return base;
+
+        return base.filter((task) => {
+            const title = String(task?.title || "").toLowerCase();
+            const description = String(task?.description || "").toLowerCase();
+            const priority = String(task?.priority || "").toLowerCase();
+            const status = String(task?.derivedStatus || "").toLowerCase();
+            return (
+                title.includes(term) ||
+                description.includes(term) ||
+                priority.includes(term) ||
+                status.includes(term)
+            );
+        });
+    }, [annotatedTasks, activeTab, query]);
+
+    const countFor = (status) =>
+        annotatedTasks.filter((task) => task.derivedStatus === status).length;
+
+    const totalTasks = annotatedTasks.length;
 
     return (
-        <div
-            onClick={handleBackdropClick}
-            style={{
-                position: 'fixed', inset: 0,
-                background: 'rgba(0,0,0,0.45)',
-                zIndex: 1050,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '1rem',
-            }}
-        >
-            <div style={{
-                background: '#fff', borderRadius: 12,
-                width: '100%', maxWidth: 720, maxHeight: '85vh',
-                display: 'flex', flexDirection: 'column',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-            }}>
-                {/* Header */}
-                <div style={{
-                    padding: '1rem 1.25rem', borderBottom: '1px solid #dee2e6',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0,
-                }}>
-                    <div>
-                        <h5 style={{ margin: 0, fontWeight: 600 }}>{emp.name}</h5>
-                        <small className="text-muted">{emp.department}</small>
+        <div className="dr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div className="dr-modal-card" role="dialog" aria-modal="true" aria-label={`${emp.name} tasks`}>
+                <div className="dr-modal-head">
+                    <div className="dr-modal-person">
+                        <img
+                            src={buildAvatarFallbackUrl(emp.name)}
+                            alt={`${emp.name} Profile`}
+                            className="dr-modal-avatar"
+                        />
+                        <div>
+                            <h5 className="dr-modal-title">{emp.name}</h5>
+                            <div className="dr-modal-subtitle">{emp.department}</div>
+                        </div>
                     </div>
-                    <button className="btn-close" aria-label="Close" onClick={onClose} style={{ marginTop: 2 }} />
+
+                    <button className="dr-icon-btn" onClick={onClose} aria-label="Close">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
                 </div>
 
-                {/* Tab pills */}
-                <div style={{
-                    padding: '0.75rem 1.25rem', borderBottom: '1px solid #dee2e6',
-                    display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap',
-                }}>
-                    {[
-                        { label: 'All',       key: 'all',       count: tasks.length,         color: '#6c757d' },
-                        { label: 'Completed', key: 'Completed', count: countFor('Completed'), color: '#28a745' },
-                        { label: 'Ongoing',   key: 'Ongoing',   count: countFor('Ongoing'),   color: '#ffc107' },
-                        { label: 'Overdue',   key: 'Overdue',   count: countFor('Overdue'),   color: '#dc3545' },
-                    ].map(tab => (
-                        <button
-                            key={tab.key}
-                            onClick={() => setActiveTab(tab.key)}
-                            style={{
-                                border: `2px solid ${activeTab === tab.key ? tab.color : '#dee2e6'}`,
-                                borderRadius: 20, padding: '3px 14px',
-                                background: activeTab === tab.key ? tab.color : '#fff',
-                                color: activeTab === tab.key ? '#fff' : '#555',
-                                fontWeight: 500, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
-                            }}
-                        >
-                            {tab.label}{' '}
-                            <span style={{
-                                background: activeTab === tab.key ? 'rgba(255,255,255,0.3)' : '#eee',
-                                borderRadius: 10, padding: '1px 7px', marginLeft: 4, fontSize: 12,
-                            }}>{tab.count}</span>
-                        </button>
-                    ))}
+                <div className="dr-modal-toolbar">
+                    <div className="dr-pill-row">
+                        {[
+                            { key: "all", label: "All", count: totalTasks, tone: "neutral" },
+                            { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
+                            { key: "Ongoing", label: "Ongoing", count: countFor("Ongoing"), tone: "warning" },
+                            { key: "Overdue", label: "Overdue", count: countFor("Overdue"), tone: "danger" }
+                        ].map((tab) => {
+                            const active = activeTab === tab.key;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
+                                    onClick={() => setActiveTab(tab.key)}
+                                >
+                                    {tab.label}
+                                    <span className="dr-pill-tab-count">{tab.count}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="dr-search-box dr-search-box--modal">
+                        <i className="bi bi-search"></i>
+                        <input
+                            type="text"
+                            placeholder="Search tasks..."
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
 
-                {/* Body */}
-                <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
+                <div className="dr-modal-body">
                     {loading ? (
-                        <div className="text-center text-muted py-4">
+                        <div className="dr-empty-state">
                             <div className="spinner-border spinner-border-sm me-2" role="status"></div>
                             Loading tasks...
                         </div>
                     ) : error ? (
-                        <div className="alert alert-danger">{error}</div>
-                    ) : filtered.length === 0 ? (
-                        <div className="text-center text-muted py-4">
-                            No {activeTab === 'all' ? '' : activeTab.toLowerCase() + ' '}tasks found.
-                        </div>
+                        <div className="alert alert-danger mb-0">{error}</div>
+                    ) : filteredTasks.length === 0 ? (
+                        <div className="dr-empty-state">No matching tasks found.</div>
                     ) : (
-                        <table className="table table-bordered table-hover align-middle mb-0">
-                            <thead className="table-light" style={{ position: 'sticky', top: 0 }}>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Status</th>
-                                    <th>Priority</th>
-                                    <th>Deadline</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map((task, idx) => {
-                                    const days = task.days_until_deadline;
-                                    let deadlineLabel = '—';
-                                    let deadlineSub   = null;
+                        <div className="dr-task-list">
+                            {filteredTasks.map((task, idx) => {
+                                const status = task.derivedStatus;
+                                const statusClass = getStatusClass(status);
+                                const priorityText = task.priority || "Other";
+                                const priorityClass = getPriorityClass(priorityText);
 
-                                    if (task.deadline) {
-                                        deadlineLabel = new Date(task.deadline).toLocaleDateString('en-PH', {
-                                            month: 'short', day: 'numeric', year: 'numeric'
-                                        });
-                                        if (task.derivedStatus === 'Overdue' && days !== null) {
-                                            deadlineSub = (
-                                                <div style={{ fontSize: 11, color: '#dc3545', fontWeight: 600 }}>
-                                                    {Math.abs(days)} day{Math.abs(days) !== 1 ? 's' : ''} overdue
-                                                </div>
-                                            );
-                                        } else if (task.derivedStatus === 'Ongoing' && days !== null) {
-                                            deadlineSub = (
-                                                <div style={{ fontSize: 11, color: days <= 2 ? '#dc3545' : '#6c757d' }}>
-                                                    {days === 0 ? 'Due today' : `${days} day${days !== 1 ? 's' : ''} left`}
-                                                </div>
-                                            );
-                                        } else if (task.derivedStatus === 'Completed' && task.completed_at) {
-                                            deadlineSub = (
-                                                <div style={{ fontSize: 11, color: '#28a745' }}>
-                                                    Done {new Date(task.completed_at).toLocaleDateString('en-PH', {
-                                                        month: 'short', day: 'numeric'
-                                                    })}
-                                                </div>
-                                            );
+                                let deadlineMeta = "No deadline";
+                                if (task.deadline) {
+                                    deadlineMeta = formatDatePH(task.deadline, true);
+                                    if (task.days_until_deadline !== null && task.days_until_deadline !== undefined) {
+                                        if (status === "Overdue") {
+                                            deadlineMeta += ` · ${Math.abs(task.days_until_deadline)} day${Math.abs(task.days_until_deadline) !== 1 ? "s" : ""} overdue`;
+                                        } else if (status === "Ongoing") {
+                                            deadlineMeta += task.days_until_deadline === 0
+                                                ? " · Due today"
+                                                : ` · ${task.days_until_deadline} day${task.days_until_deadline !== 1 ? "s" : ""} left`;
                                         }
                                     }
+                                }
 
-                                    return (
-                                        <tr key={task.id ?? idx}>
-                                            <td>
-                                                <div style={{ fontWeight: 500 }}>{task.title}</div>
-                                                {task.description && (
-                                                    <small className="text-muted">{task.description}</small>
-                                                )}
-                                            </td>
-                                            <td>
-                                                <span className={`badge bg-${statusBadge(task.derivedStatus)}`}>
-                                                    {task.derivedStatus}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span className={`badge bg-${priorityBadge(task.priority)}`}>
-                                                    {task.priority ?? '—'}
-                                                </span>
-                                            </td>
-                                            <td style={{ whiteSpace: 'nowrap' }}>
-                                                {deadlineLabel}
-                                                {deadlineSub}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                return (
+                                    <div className="dr-task-item" key={task.id ?? idx}>
+                                        <div className="dr-task-item-main">
+                                            <div className="dr-task-item-title">{task.title || "Untitled Task"}</div>
+                                            {task.description && (
+                                                <div className="dr-task-item-desc">{task.description}</div>
+                                            )}
+                                            <div className="dr-task-item-meta">{deadlineMeta}</div>
+                                        </div>
+
+                                        <div className="dr-task-item-side">
+                                            <span className={`dr-status-inline ${statusClass}`}>{status}</span>
+                                            <span className={`dr-priority-inline ${priorityClass}`}>
+                                                <i className="bi bi-flag-fill"></i>
+                                                <span>{priorityText}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
 
-                {/* Footer */}
-                <div style={{
-                    padding: '0.75rem 1.25rem', borderTop: '1px solid #dee2e6',
-                    display: 'flex', justifyContent: 'flex-end', flexShrink: 0,
-                }}>
-                    <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+                <div className="dr-modal-foot">
+                    <button className="dr-ghost-btn" onClick={onClose}>
+                        Close
+                    </button>
                 </div>
             </div>
         </div>
     );
 }
 
-// ====================================================================
-// MAIN PAGE — Supervisor Daily Report
-// Scoped to the logged-in supervisor's own department only.
-// No department filter dropdown — scope is fixed by the server.
-// ====================================================================
+function SummaryCard({ icon, label, value, subtext, tone, meta }) {
+    return (
+        <div className="dr-summary-card">
+            <div className="dr-summary-head">
+                <div className={`dr-summary-icon ${tone}`}>
+                    <i className={`bi ${icon}`}></i>
+                </div>
+                <span className={`dr-summary-chip ${tone}`}>{meta}</span>
+            </div>
+
+            <div className="dr-summary-label">{label}</div>
+
+            <div className="dr-summary-value-line">
+                <span className="dr-summary-value">{value}</span>
+            </div>
+
+            <div className="dr-summary-subtext">{subtext}</div>
+        </div>
+    );
+}
+
 function SupervisorDailyReportPage() {
-    const [supervisor,   setSupervisor]   = useState(null);   // { id, name, department, department_id }
-    const [summary,      setSummary]      = useState({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
-    const [employees,    setEmployees]    = useState([]);
-    const [selectedEmp,  setSelectedEmp] = useState(null);
-    const [modalEmp,     setModalEmp]    = useState(null);
-    const [loading,      setLoading]     = useState(true);
-    const [error,        setError]       = useState(null);
+    const [supervisor, setSupervisor] = useState(null);
+    const [summary, setSummary] = useState({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
+    const [employees, setEmployees] = useState([]);
+    const [selectedEmp, setSelectedEmp] = useState(null);
+    const [modalEmp, setModalEmp] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [themeMode, setThemeMode] = useState(getThemeMode());
 
-    const donutRef   = useRef(null);
-    const barRef     = useRef(null);
+    const trendChartRef = useRef(null);
+    const donutChartRef = useRef(null);
+    const trendChart = useRef(null);
     const donutChart = useRef(null);
-    const barChart   = useRef(null);
 
-    // ----------------------------------------------------------------
-    // 1. Fetch the currently logged-in supervisor's profile first.
-    //    The server enforces the department scope — we just pass the
-    //    supervisor's department_id to get_daily_report.php so only
-    //    staff under that department are returned.
-    // ----------------------------------------------------------------
     useEffect(() => {
-        fetch('php/get_current_user.php')
-            .then(res => res.json())
-            .then(data => {
+        fetch("php/get_current_user.php")
+            .then((res) => res.json())
+            .then((data) => {
                 if (data.error) {
-                    setError('Could not load your profile. Please log in again.');
+                    setError("Could not load your profile. Please log in again.");
                     setLoading(false);
                     return;
                 }
-                // Guard: redirect non-supervisors away
-                if (data.role !== 'supervisor') {
-                    setError('Access denied. This page is for supervisors only.');
+
+                if (data.role !== "supervisor") {
+                    setError("Access denied. This page is for supervisors only.");
                     setLoading(false);
                     return;
                 }
+
                 setSupervisor(data);
             })
             .catch(() => {
-                setError('Failed to connect to the server.');
+                setError("Failed to connect to the server.");
                 setLoading(false);
             });
     }, []);
 
-    // ----------------------------------------------------------------
-    // 2. Once the supervisor's department_id is known, fetch the
-    //    daily report scoped to that department only.
-    // ----------------------------------------------------------------
     useEffect(() => {
         if (!supervisor) return;
 
         setLoading(true);
         setSelectedEmp(null);
 
-        fetch('php/get_supervisor_daily_report.php')
-            .then(res => res.json())
-            .then(data => {
+        fetch("php/get_supervisor_daily_report.php")
+            .then((res) => res.json())
+            .then((data) => {
                 if (data.error) throw new Error(data.error);
-                setSummary(data.summary   ?? { total: 0, completed: 0, ongoing: 0, overdue: 0 });
-                setEmployees(data.employees ?? []);
+                setSummary(data.summary ?? { total: 0, completed: 0, ongoing: 0, overdue: 0 });
+                setEmployees(Array.isArray(data.employees) ? data.employees : []);
                 setLoading(false);
             })
-            .catch(err => {
+            .catch((err) => {
                 setError(`Failed to load report: ${err.message}`);
                 setLoading(false);
             });
     }, [supervisor]);
 
-    // ----------------------------------------------------------------
-    // Chart data — scoped to selectedEmp or all dept employees
-    // ----------------------------------------------------------------
-    const chartDonutData = selectedEmp
-        ? [selectedEmp.completed, selectedEmp.ongoing, selectedEmp.overdue]
-        : [summary.completed, summary.ongoing, summary.overdue];
-
-    const chartBarLabels = selectedEmp ? [selectedEmp.name]      : employees.map(e => e.name);
-    const chartCompleted = selectedEmp ? [selectedEmp.completed]  : employees.map(e => e.completed);
-    const chartOngoing   = selectedEmp ? [selectedEmp.ongoing]    : employees.map(e => e.ongoing);
-    const chartOverdue   = selectedEmp ? [selectedEmp.overdue]    : employees.map(e => e.overdue);
-
-    // ----------------------------------------------------------------
-    // Rebuild charts whenever selection or data changes
-    // ----------------------------------------------------------------
     useEffect(() => {
-        if (!donutRef.current || !barRef.current) return;
-
-        if (donutChart.current) donutChart.current.destroy();
-        donutChart.current = new Chart(donutRef.current, {
-            type: 'doughnut',
-            data: {
-                labels: ['Completed', 'Ongoing', 'Overdue'],
-                datasets: [{
-                    data: chartDonutData,
-                    backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' },
-                    title: {
-                        display: !!selectedEmp,
-                        text: selectedEmp ? `${selectedEmp.name} — Task Distribution` : '',
-                    }
-                }
-            }
+        const root = document.documentElement;
+        const observer = new MutationObserver(() => {
+            setThemeMode(getThemeMode());
         });
 
-        if (barChart.current) barChart.current.destroy();
-        const maxTasks = Math.max(10, ...employees.map(e => e.completed + e.ongoing + e.overdue));
-        barChart.current = new Chart(barRef.current, {
-            type: 'bar',
-            data: {
-                labels: chartBarLabels,
-                datasets: [
-                    { label: 'Completed', data: chartCompleted, backgroundColor: '#28a745' },
-                    { label: 'Ongoing',   data: chartOngoing,   backgroundColor: '#ffc107' },
-                    { label: 'Overdue',   data: chartOverdue,   backgroundColor: '#dc3545' },
-                ]
+        observer.observe(root, {
+            attributes: true,
+            attributeFilter: ["data-theme"]
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
+    const scopedSummary = useMemo(() => {
+        if (!selectedEmp) return summary;
+
+        const completed = safeNum(selectedEmp.completed);
+        const ongoing = safeNum(selectedEmp.ongoing);
+        const overdue = safeNum(selectedEmp.overdue);
+
+        return {
+            total: completed + ongoing + overdue,
+            completed,
+            ongoing,
+            overdue
+        };
+    }, [selectedEmp, summary]);
+
+    const employeeRows = useMemo(
+        () =>
+            employees.map((emp) => {
+                const completed = safeNum(emp.completed);
+                const ongoing = safeNum(emp.ongoing);
+                const overdue = safeNum(emp.overdue);
+                const total = completed + ongoing + overdue;
+
+                return {
+                    ...emp,
+                    completed,
+                    ongoing,
+                    overdue,
+                    total,
+                    completionRate: pct(completed, total)
+                };
+            }),
+        [employees]
+    );
+
+    const chartLabels = useMemo(() => {
+        if (selectedEmp) return [selectedEmp.name];
+        return employeeRows.map((emp) => emp.name);
+    }, [employeeRows, selectedEmp]);
+
+    const completedSeries = useMemo(() => {
+        if (selectedEmp) return [safeNum(selectedEmp.completed)];
+        return employeeRows.map((emp) => emp.completed);
+    }, [employeeRows, selectedEmp]);
+
+    const ongoingSeries = useMemo(() => {
+        if (selectedEmp) return [safeNum(selectedEmp.ongoing)];
+        return employeeRows.map((emp) => emp.ongoing);
+    }, [employeeRows, selectedEmp]);
+
+    const overdueSeries = useMemo(() => {
+        if (selectedEmp) return [safeNum(selectedEmp.overdue)];
+        return employeeRows.map((emp) => emp.overdue);
+    }, [employeeRows, selectedEmp]);
+
+    const donutLegendData = useMemo(() => {
+        const total = scopedSummary.total || 0;
+        return [
+            {
+                label: "Completed",
+                value: scopedSummary.completed,
+                color: "#16a34a"
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: {
-                    legend: { position: 'top' },
-                    title: {
-                        display: !!selectedEmp,
-                        text: selectedEmp ? `${selectedEmp.name} — Task Breakdown` : '',
+            {
+                label: "Ongoing",
+                value: scopedSummary.ongoing,
+                color: "#f59e0b"
+            },
+            {
+                label: "Overdue",
+                value: scopedSummary.overdue,
+                color: "#ec4899"
+            }
+        ].map((item) => ({
+            ...item,
+            percent: pct(item.value, total)
+        }));
+    }, [scopedSummary]);
+
+    React.useEffect(() => {
+        if (!window.echarts || !trendChartRef.current) return;
+
+        const chart =
+            window.echarts.getInstanceByDom(trendChartRef.current) ||
+            window.echarts.init(trendChartRef.current);
+
+        trendChart.current = chart;
+
+        const isDark = themeMode === "dark";
+        const axisColor = isDark ? "#98a2b3" : "#7b8794";
+        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
+        const textColor = isDark ? "#f8fafc" : "#18263f";
+        const tooltipBg = isDark ? "#182133" : "#ffffff";
+        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+
+        chart.setOption(
+            {
+                animationDuration: 650,
+                animationEasing: "cubicOut",
+                color: ["#5b57d9", "#9c82df", "#c8b8ee"],
+                grid: {
+                    top: 26,
+                    left: 22,
+                    right: 18,
+                    bottom: 42,
+                    containLabel: true
+                },
+                tooltip: {
+                    trigger: "axis",
+                    axisPointer: {
+                        type: "shadow"
+                    },
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    textStyle: {
+                        color: textColor,
+                        fontFamily: "Nunito, sans-serif"
+                    },
+                    extraCssText:
+                        "box-shadow:0 18px 40px rgba(15,23,42,0.12); border-radius:16px;"
+                },
+                legend: {
+                    show: false
+                },
+                xAxis: {
+                    type: "category",
+                    data: chartLabels,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        margin: 10
                     }
                 },
-                scales: {
-                    x: { stacked: true, beginAtZero: true, max: maxTasks },
-                    y: { stacked: true }
-                }
-            }
-        });
+                yAxis: {
+                    type: "value",
+                    minInterval: 1,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: splitLine,
+                            type: "dashed"
+                        }
+                    }
+                },
+                series: [
+                    {
+                        name: "Task Completed",
+                        type: "bar",
+                        stack: "tasks",
+                        barWidth: 28,
+                        itemStyle: {
+                            borderRadius: [0, 0, 8, 8]
+                        },
+                        data: completedSeries
+                    },
+                    {
+                        name: "Task Ongoing",
+                        type: "bar",
+                        stack: "tasks",
+                        barWidth: 28,
+                        itemStyle: {
+                            borderRadius: [0, 0, 0, 0]
+                        },
+                        data: ongoingSeries
+                    },
+                    {
+                        name: "Task Overdue",
+                        type: "bar",
+                        stack: "tasks",
+                        barWidth: 28,
+                        itemStyle: {
+                            borderRadius: [8, 8, 0, 0]
+                        },
+                        data: overdueSeries
+                    }
+                ]
+            },
+            true
+        );
+
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
 
         return () => {
-            if (donutChart.current) donutChart.current.destroy();
-            if (barChart.current)   barChart.current.destroy();
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
         };
-    }, [selectedEmp, summary, employees]);
+    }, [chartLabels, completedSeries, ongoingSeries, overdueSeries, themeMode]);
 
-    const handleRowClick = (emp) => {
-        setSelectedEmp(prev => prev?.id === emp.id ? null : emp);
-    };
+    useEffect(() => {
+        if (!window.echarts || !donutChartRef.current) return;
 
-    // ----------------------------------------------------------------
-    // Loading / error states
-    // ----------------------------------------------------------------
+        const chart =
+            window.echarts.getInstanceByDom(donutChartRef.current) ||
+            window.echarts.init(donutChartRef.current);
+
+        donutChart.current = chart;
+
+        const isDark = themeMode === "dark";
+        const separatorColor = isDark ? "#12192b" : "#ffffff";
+
+        const seriesData = [
+            { value: scopedSummary.completed, name: "Completed", itemStyle: { color: "#16a34a" } },
+            { value: scopedSummary.ongoing, name: "Ongoing", itemStyle: { color: "#f59e0b" } },
+            { value: scopedSummary.overdue, name: "Overdue", itemStyle: { color: "#ec4899" } }
+        ];
+
+        chart.setOption(
+            {
+                animation: true,
+                tooltip: {
+                    trigger: "item",
+                    formatter: (params) => `${params.name}: ${params.value} (${params.percent}%)`,
+                    backgroundColor: isDark ? "#182133" : "#ffffff",
+                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4",
+                    borderWidth: 1,
+                    textStyle: {
+                        color: isDark ? "#f8fafc" : "#18263f",
+                        fontFamily: "Nunito, sans-serif"
+                    }
+                },
+                series: [
+                    {
+                        type: "pie",
+                        radius: ["63%", "84%"],
+                        center: ["50%", "50%"],
+                        startAngle: 90,
+                        clockwise: true,
+                        minAngle: 1,
+                        avoidLabelOverlap: true,
+                        label: { show: false },
+                        labelLine: { show: false },
+                        emphasis: {
+                            scale: true,
+                            scaleSize: 8,
+                            itemStyle: {
+                                borderColor: separatorColor,
+                                borderWidth: 5,
+                                borderRadius: 10
+                            }
+                        },
+                        itemStyle: {
+                            borderColor: separatorColor,
+                            borderWidth: 4,
+                            borderRadius: 10
+                        },
+                        data: seriesData
+                    }
+                ]
+            },
+            true
+        );
+
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
+        };
+    }, [scopedSummary, themeMode]);
+
     if (error) {
         return (
-            <div className="container-fluid p-4">
-                <div className="row">
-                    <main className="col-md-10 ms-sm-auto px-4 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
-                        <div className="alert alert-danger text-center" style={{ maxWidth: 480 }}>
-                            <h5 className="mb-2">⚠ Access Error</h5>
-                            <p className="mb-0">{error}</p>
-                        </div>
-                    </main>
+            <div className="dr-page">
+                <div className="dr-error-card">
+                    <h5>Access Error</h5>
+                    <p>{error}</p>
                 </div>
             </div>
         );
@@ -374,242 +633,220 @@ function SupervisorDailyReportPage() {
 
     if (loading || !supervisor) {
         return (
-            <div className="container-fluid p-4">
-                <div className="row">
-                    <main className="col-md-10 ms-sm-auto px-4 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
-                        <div className="text-center text-muted">
-                            <div className="spinner-border me-2" role="status"></div>
-                            <span>Loading report…</span>
-                        </div>
-                    </main>
+            <div className="dr-page">
+                <div className="dr-loading-card">
+                    <div className="spinner-border me-2" role="status"></div>
+                    <span>Loading report…</span>
                 </div>
             </div>
         );
     }
 
-    // ----------------------------------------------------------------
-    // RENDER
-    // ----------------------------------------------------------------
     return (
-        <div className="container-fluid p-4">
-            <div className="row">
+        <div className="dr-page">
 
-
-                <main>
-
-                    {/* Page header */}
-                    <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                        <div>
-                            <h2 className="mb-0">Daily Task Report</h2>
-                            <p className="text-muted mb-0" style={{ fontSize: 13 }}>
-                                Viewing staff under your supervision
-                            </p>
-                        </div>
-                        {/* Department badge — always fixed to the supervisor's dept */}
-                        <div className="d-flex align-items-center gap-2">
-                            <span style={{ fontSize: 13, color: '#888' }}>Department:</span>
-                            <span className="dept-badge">{supervisor.department}</span>
-                        </div>
-                    </div>
-
-              
-
-                    {/* Summary cards */}
-                    <div className="row mb-4">
-                        <div className="col-md-3">
-                            <div className="card shadow-sm border-0 p-3 text-center">
-                                <h6 className="text-muted mb-1">Total Tasks</h6>
-                                <h2 className="mb-0">{summary.total}</h2>
-                            </div>
-                        </div>
-                        <div className="col-md-3">
-                            <div className="card shadow-sm border-0 p-3 text-center">
-                                <h6 className="text-muted mb-1">Completed</h6>
-                                <h2 className="text-success mb-0">{summary.completed}</h2>
-                            </div>
-                        </div>
-                        <div className="col-md-3">
-                            <div className="card shadow-sm border-0 p-3 text-center">
-                                <h6 className="text-muted mb-1">Ongoing</h6>
-                                <h2 className="text-warning mb-0">{summary.ongoing}</h2>
-                            </div>
-                        </div>
-                        <div className="col-md-3">
-                            <div className="card shadow-sm border-0 p-3 text-center">
-                                <h6 className="text-muted mb-1">Overdue</h6>
-                                <h2 className="text-danger mb-0">{summary.overdue}</h2>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* No staff guard */}
-                    {employees.length === 0 ? (
-                        <div className="alert alert-warning text-center">
-                            No staff members found in the <strong>{supervisor.department}</strong> department.
-                        </div>
-                    ) : (
-                        <>
-                            {/* Charts */}
-                            <div className="row mb-4">
-                                <div className="col-md-4">
-                                    <div className="card shadow-sm border-0 p-3 h-100">
-                                        <div className="d-flex justify-content-between align-items-center mb-3">
-                                            <h5 className="mb-0">Task Distribution</h5>
-                                            {selectedEmp && (
-                                                <span className="badge bg-primary">{selectedEmp.name}</span>
-                                            )}
-                                        </div>
-                                        <canvas ref={donutRef} height="250"></canvas>
-                                    </div>
-                                </div>
-
-                                <div className="col-md-8">
-                                    <div className="card shadow-sm border-0 p-3">
-                                        <div className="d-flex justify-content-between align-items-center mb-3">
-                                            <h5 className="mb-0">Staff Task Performance</h5>
-                                            {selectedEmp ? (
-                                                <div className="d-flex align-items-center gap-2">
-                                                    <span className="badge bg-primary">{selectedEmp.name}</span>
-                                                    <button
-                                                        className="btn btn-sm btn-outline-secondary"
-                                                        onClick={() => setSelectedEmp(null)}
-                                                    >
-                                                        ✕ Clear
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <small className="text-muted">Click a row to filter</small>
-                                            )}
-                                        </div>
-                                        <div style={{ width: '100%' }}>
-                                            <canvas ref={barRef} style={{ width: '100%', minHeight: 300 }}></canvas>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Staff details table */}
-                            <div className="card shadow-sm border-0 p-3 mt-2">
-                                <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <h5 className="mb-0">
-                                        Staff Details
-                                        <span className="ms-2 text-muted" style={{ fontSize: 13, fontWeight: 400 }}>
-                                            ({employees.length} member{employees.length !== 1 ? 's' : ''})
-                                        </span>
-                                    </h5>
-                                    {selectedEmp && (
-                                        <small className="text-muted">
-                                            Showing charts for <strong>{selectedEmp.name}</strong> —{' '}
-                                            <span
-                                                style={{ cursor: 'pointer', color: '#0d6efd' }}
-                                                onClick={() => setSelectedEmp(null)}
-                                            >
-                                                show all
-                                            </span>
-                                        </small>
-                                    )}
-                                </div>
-
-                                <div className="table-responsive">
-                                    <table className="table table-bordered table-hover align-middle">
-                                        <thead className="table-light">
-                                            <tr>
-                                                <th>Staff Member</th>
-                                                <th>Completed</th>
-                                                <th>Ongoing</th>
-                                                <th>Overdue</th>
-                                                <th>Completion Rate</th>
-                                                <th style={{ textAlign: 'center' }}>Tasks</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {employees.map(emp => {
-                                                const total      = emp.completed + emp.ongoing + emp.overdue;
-                                                const rate       = total > 0 ? Math.round((emp.completed / total) * 100) : 0;
-                                                const isSelected = selectedEmp?.id === emp.id;
-
-                                                return (
-                                                    <tr
-                                                        key={emp.id}
-                                                        onClick={() => handleRowClick(emp)}
-                                                        style={{
-                                                            cursor: 'pointer',
-                                                            backgroundColor: isSelected ? '#cfe2ff' : '',
-                                                            fontWeight: isSelected ? '600' : 'normal',
-                                                            opacity: selectedEmp && !isSelected ? 0.5 : 1,
-                                                            transition: 'opacity 0.2s, background-color 0.2s',
-                                                        }}
-                                                    >
-                                                        <td>
-                                                            {isSelected && (
-                                                                <span className="me-1" style={{ color: '#0d6efd' }}>▶</span>
-                                                            )}
-                                                            {emp.name}
-                                                        </td>
-                                                        <td>{emp.completed}</td>
-                                                        <td>{emp.ongoing}</td>
-                                                        <td className="text-danger fw-bold">{emp.overdue}</td>
-                                                        <td>
-                                                            {total === 0 ? (
-                                                                <span className="text-muted" style={{ fontSize: '0.9em' }}>
-                                                                    No tasks yet
-                                                                </span>
-                                                            ) : rate === 0 ? (
-                                                                <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>
-                                                                    0% — None completed
-                                                                </span>
-                                                            ) : (
-                                                                <div className="progress" style={{ height: 20 }}>
-                                                                    <div
-                                                                        className="progress-bar bg-success"
-                                                                        style={{ width: `${rate}%` }}
-                                                                        aria-valuenow={rate}
-                                                                        aria-valuemin="0"
-                                                                        aria-valuemax="100"
-                                                                    >
-                                                                        {rate}%
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                        <td
-                                                            style={{ textAlign: 'center' }}
-                                                            onClick={e => { e.stopPropagation(); setModalEmp(emp); }}
-                                                        >
-                                                            <button
-                                                                className="btn btn-link p-0"
-                                                                title={`View ${emp.name}'s tasks`}
-                                                                style={{ color: '#0d6efd' }}
-                                                            >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                                                                    <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.12 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.133 13.133 0 0 1 1.172 8z"/>
-                                                                    <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z"/>
-                                                                </svg>
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                </main>
+            <div className="dr-summary-grid">
+                <SummaryCard
+                    icon="bi-check2-circle"
+                    label="Completed Tasks"
+                    value={scopedSummary.completed}
+                    subtext="Finished tasks in scope"
+                    tone="success"
+                    meta={`${pct(scopedSummary.completed, scopedSummary.total)}% of total`}
+                />
+                <SummaryCard
+                    icon="bi-arrow-repeat"
+                    label="In Progress Tasks"
+                    value={scopedSummary.ongoing}
+                    subtext="Active tasks being worked on"
+                    tone="warning"
+                    meta={`${pct(scopedSummary.ongoing, scopedSummary.total)}% of total`}
+                />
+                <SummaryCard
+                    icon="bi-exclamation-circle"
+                    label="Overdue Tasks"
+                    value={scopedSummary.overdue}
+                    subtext="Tasks past the deadline"
+                    tone="danger"
+                    meta={`${pct(scopedSummary.overdue, scopedSummary.total)}% of total`}
+                />
+                <SummaryCard
+                    icon="bi-list-task"
+                    label="Total Tasks"
+                    value={scopedSummary.total}
+                    subtext="All tasks in current view"
+                    tone="primary"
+                    meta={`${employeeRows.length} staff member${employeeRows.length !== 1 ? "s" : ""}`}
+                />
             </div>
 
-            {/* Modal — rendered outside the table */}
+            <div className="dr-top-grid">
+                <div className="dr-card dr-card--trend">
+                    <div className="dr-card-head">
+                        <div>
+                            <h5 className="dr-card-title">Task Status Trend</h5>
+                            <div className="dr-card-subtitle">
+                                {selectedEmp ? `${selectedEmp.name} task counts` : "Department-wide staff task distribution"}
+                            </div>
+                        </div>
+
+                        {selectedEmp ? (
+                            <button className="dr-filter-pill dr-filter-pill--button" onClick={() => setSelectedEmp(null)}>
+                                Clear Selection
+                            </button>
+                        ) : (
+                            <div className="dr-filter-pill">This Week</div>
+                        )}
+                    </div>
+
+                    <div ref={trendChartRef} className="dr-trend-chart"></div>
+                </div>
+
+                <div className="dr-card dr-card--donut">
+                    <div className="dr-card-head">
+                        <div>
+                            <h5 className="dr-card-title">Task Status Distribution</h5>
+                            <div className="dr-card-subtitle">
+                                {selectedEmp ? `${selectedEmp.name} summary` : "Department task summary"}
+                            </div>
+                        </div>
+
+                        <div className="dr-filter-pill">
+                            {selectedEmp ? "Selected Staff" : "All Staff"}
+                        </div>
+                    </div>
+
+                    <div className="dr-donut-stack">
+                        <div className="dr-donut-shell">
+                            <div ref={donutChartRef} className="dr-donut-chart"></div>
+
+                            <div className="dr-donut-center">
+                                <span className="dr-donut-center-kicker">Total</span>
+                                <div className="dr-donut-center-line">
+                                    <strong className="dr-donut-center-value">{scopedSummary.total}</strong>
+                                    <span className="dr-donut-center-unit">task{scopedSummary.total !== 1 ? "s" : ""}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="dr-donut-legend">
+                            {donutLegendData.map((item) => (
+                                <div className="dr-donut-legend-item" key={item.label}>
+                                    <span
+                                        className="dr-donut-dot"
+                                        style={{ borderColor: item.color }}
+                                    ></span>
+
+                                    <div className="dr-donut-legend-copy">
+                                        <div className="dr-donut-legend-label">{item.label}</div>
+                                        <div className="dr-donut-legend-meta">
+                                            {item.value} task{item.value !== 1 ? "s" : ""} · {item.percent}%
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="dr-card dr-card--table dr-card--table-full">
+                <div className="dr-card-head">
+                    <div>
+                        <h5 className="dr-card-title">Task Assignee Overview</h5>
+                        <div className="dr-card-subtitle">
+                            Click a row to focus the charts · click the eye icon to inspect tasks
+                        </div>
+                    </div>
+
+                    <div className="dr-filter-pill">{employeeRows.length} assignee{employeeRows.length !== 1 ? "s" : ""}</div>
+                </div>
+
+                <div className="dr-table-shell">
+                    <table className="dr-table">
+                        <thead>
+                            <tr>
+                                <th style={{ width: "52px" }}>#</th>
+                                <th>Assignee</th>
+                                <th style={{ width: "110px" }}>Completed</th>
+                                <th style={{ width: "110px" }}>On Progress</th>
+                                <th style={{ width: "98px" }}>Overdue</th>
+                                <th style={{ width: "140px" }}>Completion Rate</th>
+                                <th style={{ width: "70px", textAlign: "center" }}>View</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {employeeRows.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="dr-table-empty">
+                                        No staff members found in this department.
+                                    </td>
+                                </tr>
+                            ) : (
+                                employeeRows.map((emp, index) => {
+                                    const active = selectedEmp?.id === emp.id;
+
+                                    return (
+                                        <tr
+                                            key={emp.id}
+                                            className={active ? "is-active" : ""}
+                                            onClick={() =>
+                                                setSelectedEmp((prev) =>
+                                                    prev?.id === emp.id ? null : emp
+                                                )
+                                            }
+                                        >
+                                            <td>{index + 1}</td>
+
+                                            <td>
+                                                <div className="dr-assignee">
+                                                    <img
+                                                        src={buildAvatarFallbackUrl(emp.name)}
+                                                        alt={`${emp.name} Profile`}
+                                                        className="dr-assignee-avatar"
+                                                    />
+                                                    <div className="dr-assignee-copy">
+                                                        <span className="dr-assignee-name">{emp.name}</span>
+                                                        <span className="dr-assignee-sub">{emp.department}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td>{emp.completed}</td>
+                                            <td>{emp.ongoing}</td>
+                                            <td className="dr-overdue-cell">{emp.overdue}</td>
+                                            <td>{emp.completionRate}%</td>
+
+                                            <td
+                                                style={{ textAlign: "center" }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setModalEmp(emp);
+                                                }}
+                                            >
+                                                <button className="dr-eye-btn" title={`View ${emp.name}'s tasks`}>
+                                                    <i className="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             {modalEmp && (
                 <EmployeeTaskModal
                     emp={modalEmp}
                     onClose={() => setModalEmp(null)}
+                    themeMode={themeMode}
                 />
             )}
         </div>
     );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('supervisorDailyReportRoot'));
+const root = ReactDOM.createRoot(document.getElementById("supervisorDailyReportRoot"));
 root.render(<SupervisorDailyReportPage />);

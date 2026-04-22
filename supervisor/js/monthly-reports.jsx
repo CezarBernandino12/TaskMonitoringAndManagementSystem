@@ -1,505 +1,997 @@
-const { useEffect, useState, useRef } = React;
+const { useEffect, useMemo, useRef, useState } = React;
 
-// ====================================================================
-// HELPERS
-// ====================================================================
 const MONTH_NAMES = [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December'
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
 ];
+
+function getThemeMode() {
+    return document.documentElement.getAttribute("data-theme") === "dark"
+        ? "dark"
+        : "light";
+}
+
+function buildAvatarFallbackUrl(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        name || "User"
+    )}&background=f7c4d4&color=222&size=80`;
+}
 
 function formatMonthDisplay(year, month) {
     return `${MONTH_NAMES[month - 1]} ${year}`;
 }
 
-// ====================================================================
-// EMPLOYEE TASK MODAL
-// ====================================================================
+function statusTone(status) {
+    return (
+        {
+            Completed: "completed",
+            Ongoing: "ongoing",
+            Overdue: "overdue"
+        }[status] || "other"
+    );
+}
+
+function priorityTone(priority) {
+    return (
+        {
+            High: "high",
+            Medium: "medium",
+            Low: "low"
+        }[priority] || "other"
+    );
+}
+
+function renderCleanProgress(rate, total) {
+    if (total === 0) {
+        return <span className="mr-empty-inline">No tasks yet</span>;
+    }
+
+    if (rate === 0) {
+        return <span className="mr-rate-danger">0% — None completed</span>;
+    }
+
+    return (
+        <div className="mr-progress-clean">
+            <div className="mr-progress-clean-track">
+                <div
+                    className="mr-progress-clean-fill"
+                    style={{ width: `${rate}%` }}
+                ></div>
+            </div>
+            <span className="mr-progress-clean-value">{rate}%</span>
+        </div>
+    );
+}
+
+function SummaryCard({ icon, title, value, tone, sub }) {
+    return (
+        <div className="mr-summary-card">
+            <div className="mr-summary-top">
+                <div className={`mr-summary-icon ${tone}`}>
+                    <i className={`bi ${icon}`}></i>
+                </div>
+                <span className={`mr-summary-chip ${tone}`}>{sub}</span>
+            </div>
+
+            <div className="mr-summary-title">{title}</div>
+            <div className={`mr-summary-value ${tone}`}>{value}</div>
+        </div>
+    );
+}
+
 function EmployeeTaskModal({ emp, monthStart, monthEnd, onClose }) {
-    const [tasks, setTasks]         = useState([]);
-    const [loading, setLoading]     = useState(true);
-    const [error, setError]         = useState(null);
-    const [activeTab, setActiveTab] = useState('all');
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [activeTab, setActiveTab] = useState("all");
+    const [query, setQuery] = useState("");
 
     useEffect(() => {
         setLoading(true);
-        setError(null);
+        setError("");
         setTasks([]);
-        setActiveTab('all');
+        setActiveTab("all");
+        setQuery("");
 
         fetch(`php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${monthStart}&week_end=${monthEnd}`)
-            .then(res => {
+            .then((res) => {
                 if (!res.ok) throw new Error(`Server returned ${res.status}`);
                 return res.json();
             })
-            .then(data => {
+            .then((data) => {
                 if (data.error) throw new Error(data.error);
                 setTasks(Array.isArray(data.tasks) ? data.tasks : []);
                 setLoading(false);
             })
-            .catch(err => {
+            .catch((err) => {
                 setError(`Could not load tasks: ${err.message}`);
                 setLoading(false);
             });
     }, [emp.id, monthStart, monthEnd]);
 
-    const handleBackdropClick = (e) => { if (e.target === e.currentTarget) onClose(); };
+    useEffect(() => {
+        const onEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
 
-    const getTaskStatus  = (task) => task.derived_status ?? task.status;
-    const statusBadge    = (s)    => ({ Completed: 'success', Ongoing: 'warning', Overdue: 'danger' }[s] ?? 'secondary');
-    const priorityBadge  = (p)    => ({ High: 'danger', Medium: 'warning', Low: 'secondary' }[p] ?? 'secondary');
+    const annotated = useMemo(
+        () =>
+            tasks.map((t) => ({
+                ...t,
+                derivedStatus: t.derived_status ?? t.status
+            })),
+        [tasks]
+    );
 
-    const annotated = tasks.map(t => ({ ...t, derivedStatus: getTaskStatus(t) }));
-    const filtered  = activeTab === 'all' ? annotated : annotated.filter(t => t.derivedStatus === activeTab);
-    const countFor  = (s) => annotated.filter(t => t.derivedStatus === s).length;
+    const counts = useMemo(
+        () => ({
+            all: annotated.length,
+            Completed: annotated.filter((t) => t.derivedStatus === "Completed").length,
+            Ongoing: annotated.filter((t) => t.derivedStatus === "Ongoing").length,
+            Overdue: annotated.filter((t) => t.derivedStatus === "Overdue").length
+        }),
+        [annotated]
+    );
 
-    const monthLabel = new Date(monthStart + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+    const filtered = useMemo(() => {
+        let base =
+            activeTab === "all"
+                ? annotated
+                : annotated.filter((t) => t.derivedStatus === activeTab);
+
+        const term = query.trim().toLowerCase();
+        if (!term) return base;
+
+        return base.filter((task) => {
+            const title = String(task.title || "").toLowerCase();
+            const desc = String(task.description || "").toLowerCase();
+            const status = String(task.derivedStatus || "").toLowerCase();
+            const priority = String(task.priority || "").toLowerCase();
+            return (
+                title.includes(term) ||
+                desc.includes(term) ||
+                status.includes(term) ||
+                priority.includes(term)
+            );
+        });
+    }, [annotated, activeTab, query]);
+
+    const monthLabel = new Date(`${monthStart}T00:00:00`).toLocaleDateString("en-PH", {
+        month: "long",
+        year: "numeric"
+    });
 
     return (
-        <div onClick={handleBackdropClick} style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-            zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
-        }}>
-            <div style={{
-                background: '#fff', borderRadius: 12, width: '100%', maxWidth: 720,
-                maxHeight: '85vh', display: 'flex', flexDirection: 'column',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-            }}>
-                <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #dee2e6', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
-                    <div>
-                        <h5 style={{ margin: 0, fontWeight: 600 }}>{emp.name}</h5>
-                        <small className="text-muted">{emp.department} &nbsp;·&nbsp; {monthLabel}</small>
+        <div className="mr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div className="mr-modal-card">
+                <div className="mr-modal-head">
+                    <div className="mr-modal-person">
+                        <img
+                            src={buildAvatarFallbackUrl(emp.name)}
+                            alt={`${emp.name} Profile`}
+                            className="mr-modal-avatar"
+                        />
+                        <div>
+                            <h5 className="mr-modal-title">{emp.name}</h5>
+                            <div className="mr-modal-subtitle">
+                                {emp.department} · {monthLabel}
+                            </div>
+                        </div>
                     </div>
-                    <button className="btn-close" aria-label="Close" onClick={onClose} style={{ marginTop: 2 }} />
+
+                    <button className="mr-icon-btn" onClick={onClose} aria-label="Close">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
                 </div>
 
-                <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid #dee2e6', display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                    {[
-                        { label: 'All',       key: 'all',       count: tasks.length,         color: '#6c757d' },
-                        { label: 'Completed', key: 'Completed', count: countFor('Completed'), color: '#28a745' },
-                        { label: 'Ongoing',   key: 'Ongoing',   count: countFor('Ongoing'),   color: '#ffc107' },
-                        { label: 'Overdue',   key: 'Overdue',   count: countFor('Overdue'),   color: '#dc3545' },
-                    ].map(tab => (
-                        <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-                            border: `2px solid ${activeTab === tab.key ? tab.color : '#dee2e6'}`,
-                            borderRadius: 20, padding: '3px 14px',
-                            background: activeTab === tab.key ? tab.color : '#fff',
-                            color: activeTab === tab.key ? '#fff' : '#555',
-                            fontWeight: 500, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
-                        }}>
-                            {tab.label}{' '}
-                            <span style={{ background: activeTab === tab.key ? 'rgba(255,255,255,0.3)' : '#eee', borderRadius: 10, padding: '1px 7px', marginLeft: 4, fontSize: 12 }}>
-                                {tab.count}
-                            </span>
-                        </button>
-                    ))}
+                <div className="mr-modal-toolbar">
+                    <div className="mr-pill-row">
+                        {[
+                            { key: "all", label: "All", count: counts.all, tone: "neutral" },
+                            { key: "Completed", label: "Completed", count: counts.Completed, tone: "success" },
+                            { key: "Ongoing", label: "Ongoing", count: counts.Ongoing, tone: "warning" },
+                            { key: "Overdue", label: "Overdue", count: counts.Overdue, tone: "danger" }
+                        ].map((tab) => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                className={`mr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`}
+                                onClick={() => setActiveTab(tab.key)}
+                            >
+                                {tab.label}
+                                <span className="mr-pill-count">{tab.count}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="mr-search-box">
+                        <i className="bi bi-search"></i>
+                        <input
+                            type="text"
+                            placeholder="Search tasks..."
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
 
-                <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
+                <div className="mr-modal-body">
                     {loading ? (
-                        <div className="text-center text-muted py-4">
+                        <div className="mr-empty-state">
                             <div className="spinner-border spinner-border-sm me-2" role="status"></div>
                             Loading tasks...
                         </div>
                     ) : error ? (
-                        <div className="alert alert-danger">{error}</div>
+                        <div className="alert alert-danger mb-0">{error}</div>
                     ) : filtered.length === 0 ? (
-                        <div className="text-center text-muted py-4">
-                            No {activeTab === 'all' ? '' : activeTab.toLowerCase() + ' '}tasks found for this month.
-                        </div>
+                        <div className="mr-empty-state">No matching tasks found for this month.</div>
                     ) : (
-                        <table className="table table-bordered table-hover align-middle mb-0">
-                            <thead className="table-light" style={{ position: 'sticky', top: 0 }}>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Status</th>
-                                    <th>Priority</th>
-                                    <th>Deadline</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map((task, idx) => {
-                                    const days = task.days_until_deadline;
-                                    let deadlineLabel = '—';
-                                    let deadlineSub   = null;
-                                    if (task.deadline) {
-                                        deadlineLabel = new Date(task.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-                                        if (task.derivedStatus === 'Overdue' && days !== null)
-                                            deadlineSub = <div style={{ fontSize: 11, color: '#dc3545', fontWeight: 600 }}>{Math.abs(days)} day{Math.abs(days) !== 1 ? 's' : ''} overdue</div>;
-                                        else if (task.derivedStatus === 'Ongoing' && days !== null)
-                                            deadlineSub = <div style={{ fontSize: 11, color: days <= 2 ? '#dc3545' : '#6c757d' }}>{days === 0 ? 'Due today' : `${days} day${days !== 1 ? 's' : ''} left`}</div>;
-                                        else if (task.derivedStatus === 'Completed' && task.completed_at)
-                                            deadlineSub = <div style={{ fontSize: 11, color: '#28a745' }}>Done {new Date(task.completed_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</div>;
-                                    }
-                                    return (
-                                        <tr key={task.id ?? idx}>
-                                            <td>
-                                                <div style={{ fontWeight: 500 }}>{task.title}</div>
-                                                {task.description && <small className="text-muted">{task.description}</small>}
-                                            </td>
-                                            <td><span className={`badge bg-${statusBadge(task.derivedStatus)}`}>{task.derivedStatus}</span></td>
-                                            <td><span className={`badge bg-${priorityBadge(task.priority)}`}>{task.priority ?? '—'}</span></td>
-                                            <td style={{ whiteSpace: 'nowrap' }}>{deadlineLabel}{deadlineSub}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                        <div className="mr-task-list">
+                            {filtered.map((task, idx) => {
+                                const status = task.derivedStatus || "Other";
+                                const priority = task.priority || "Other";
+                                const days = task.days_until_deadline;
+
+                                let deadlineText = task.deadline
+                                    ? new Date(task.deadline).toLocaleDateString("en-PH", {
+                                          month: "short",
+                                          day: "numeric",
+                                          year: "numeric"
+                                      })
+                                    : "No deadline";
+
+                                if (status === "Overdue" && days !== null && days !== undefined) {
+                                    deadlineText += ` · ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} overdue`;
+                                } else if (status === "Ongoing" && days !== null && days !== undefined) {
+                                    deadlineText += days === 0
+                                        ? " · Due today"
+                                        : ` · ${days} day${days !== 1 ? "s" : ""} left`;
+                                } else if (status === "Completed" && task.completed_at) {
+                                    deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", {
+                                        month: "short",
+                                        day: "numeric"
+                                    })}`;
+                                }
+
+                                return (
+                                    <div className="mr-task-item" key={task.id ?? idx}>
+                                        <div className="mr-task-main">
+                                            <div className="mr-task-title">{task.title}</div>
+                                            {task.description && (
+                                                <div className="mr-task-desc">{task.description}</div>
+                                            )}
+                                            <div className="mr-task-meta">{deadlineText}</div>
+                                        </div>
+
+                                        <div className="mr-task-side">
+                                            <span className={`mr-status-inline ${statusTone(status)}`}>{status}</span>
+                                            <span className={`mr-priority-inline ${priorityTone(priority)}`}>
+                                                <i className="bi bi-flag-fill"></i>
+                                                <span>{priority}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
 
-                <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid #dee2e6', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-                    <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+                <div className="mr-modal-foot">
+                    <button className="mr-ghost-btn" onClick={onClose}>Close</button>
                 </div>
             </div>
         </div>
     );
 }
 
-// ====================================================================
-// DEPARTMENT TASK MODAL
-// ====================================================================
 function DepartmentTaskModal({ dept, monthStart, monthEnd, onClose }) {
-    const [tasks, setTasks]         = useState([]);
-    const [loading, setLoading]     = useState(true);
-    const [error, setError]         = useState(null);
-    const [activeTab, setActiveTab] = useState('all');
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [activeTab, setActiveTab] = useState("all");
+    const [query, setQuery] = useState("");
 
     useEffect(() => {
         setLoading(true);
-        setError(null);
+        setError("");
         setTasks([]);
-        setActiveTab('all');
+        setActiveTab("all");
+        setQuery("");
 
         fetch(`php/get_department_tasks_report.php?department_id=${dept.department_id}&week_start=${monthStart}&week_end=${monthEnd}`)
-            .then(res => {
+            .then((res) => {
                 if (!res.ok) throw new Error(`Server returned ${res.status}`);
                 return res.json();
             })
-            .then(data => {
+            .then((data) => {
                 if (data.error) throw new Error(data.error);
                 setTasks(Array.isArray(data.tasks) ? data.tasks : []);
                 setLoading(false);
             })
-            .catch(err => {
+            .catch((err) => {
                 setError(`Could not load tasks: ${err.message}`);
                 setLoading(false);
             });
     }, [dept.department_id, monthStart, monthEnd]);
 
-    const handleBackdropClick = (e) => { if (e.target === e.currentTarget) onClose(); };
+    useEffect(() => {
+        const onEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
 
-    const getTaskStatus  = (task) => task.derived_status ?? task.status;
-    const statusBadge    = (s) => ({ Completed: 'success', Ongoing: 'warning', Overdue: 'danger' }[s] ?? 'secondary');
-    const priorityBadge  = (p) => ({ High: 'danger', Medium: 'warning', Low: 'secondary' }[p] ?? 'secondary');
+    const annotated = useMemo(
+        () =>
+            tasks.map((t) => ({
+                ...t,
+                derivedStatus: t.derived_status ?? t.status
+            })),
+        [tasks]
+    );
 
-    const annotated  = tasks.map(t => ({ ...t, derivedStatus: getTaskStatus(t) }));
-    const filtered   = activeTab === 'all' ? annotated : annotated.filter(t => t.derivedStatus === activeTab);
-    const countFor   = (s) => annotated.filter(t => t.derivedStatus === s).length;
+    const counts = useMemo(
+        () => ({
+            all: annotated.length,
+            Completed: annotated.filter((t) => t.derivedStatus === "Completed").length,
+            Ongoing: annotated.filter((t) => t.derivedStatus === "Ongoing").length,
+            Overdue: annotated.filter((t) => t.derivedStatus === "Overdue").length
+        }),
+        [annotated]
+    );
 
-    const monthLabel = new Date(monthStart + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+    const filtered = useMemo(() => {
+        let base =
+            activeTab === "all"
+                ? annotated
+                : annotated.filter((t) => t.derivedStatus === activeTab);
+
+        const term = query.trim().toLowerCase();
+        if (!term) return base;
+
+        return base.filter((task) => {
+            const title = String(task.title || "").toLowerCase();
+            const desc = String(task.description || "").toLowerCase();
+            const assigned = String(task.assigned_to_name || "").toLowerCase();
+            const status = String(task.derivedStatus || "").toLowerCase();
+            return (
+                title.includes(term) ||
+                desc.includes(term) ||
+                assigned.includes(term) ||
+                status.includes(term)
+            );
+        });
+    }, [annotated, activeTab, query]);
+
+    const monthLabel = new Date(`${monthStart}T00:00:00`).toLocaleDateString("en-PH", {
+        month: "long",
+        year: "numeric"
+    });
 
     return (
-        <div onClick={handleBackdropClick} style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-            zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
-        }}>
-            <div style={{
-                background: '#fff', borderRadius: 12, width: '100%', maxWidth: 780,
-                maxHeight: '85vh', display: 'flex', flexDirection: 'column',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-            }}>
-                <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #dee2e6', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
-                    <div>
-                        <h5 style={{ margin: 0, fontWeight: 600 }}>{dept.department}</h5>
-                        <small className="text-muted">Department tasks · {monthLabel}</small>
+        <div className="mr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div className="mr-modal-card mr-modal-card--wide">
+                <div className="mr-modal-head">
+                    <div className="mr-modal-person">
+                        <div className="mr-modal-avatar mr-modal-avatar--dept">
+                            <i className="bi bi-buildings"></i>
+                        </div>
+                        <div>
+                            <h5 className="mr-modal-title">{dept.department}</h5>
+                            <div className="mr-modal-subtitle">Department tasks · {monthLabel}</div>
+                        </div>
                     </div>
-                    <button className="btn-close" aria-label="Close" onClick={onClose} style={{ marginTop: 2 }} />
+
+                    <button className="mr-icon-btn" onClick={onClose} aria-label="Close">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
                 </div>
 
-                <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid #dee2e6', display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                    {[
-                        { label: 'All',       key: 'all',       count: tasks.length,         color: '#6c757d' },
-                        { label: 'Completed', key: 'Completed', count: countFor('Completed'), color: '#28a745' },
-                        { label: 'Ongoing',   key: 'Ongoing',   count: countFor('Ongoing'),   color: '#ffc107' },
-                        { label: 'Overdue',   key: 'Overdue',   count: countFor('Overdue'),   color: '#dc3545' },
-                    ].map(tab => (
-                        <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-                            border: `2px solid ${activeTab === tab.key ? tab.color : '#dee2e6'}`,
-                            borderRadius: 20, padding: '3px 14px',
-                            background: activeTab === tab.key ? tab.color : '#fff',
-                            color: activeTab === tab.key ? '#fff' : '#555',
-                            fontWeight: 500, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
-                        }}>
-                            {tab.label}{' '}
-                            <span style={{ background: activeTab === tab.key ? 'rgba(255,255,255,0.3)' : '#eee', borderRadius: 10, padding: '1px 7px', marginLeft: 4, fontSize: 12 }}>
-                                {tab.count}
-                            </span>
-                        </button>
-                    ))}
+                <div className="mr-modal-toolbar">
+                    <div className="mr-pill-row">
+                        {[
+                            { key: "all", label: "All", count: counts.all, tone: "neutral" },
+                            { key: "Completed", label: "Completed", count: counts.Completed, tone: "success" },
+                            { key: "Ongoing", label: "Ongoing", count: counts.Ongoing, tone: "warning" },
+                            { key: "Overdue", label: "Overdue", count: counts.Overdue, tone: "danger" }
+                        ].map((tab) => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                className={`mr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`}
+                                onClick={() => setActiveTab(tab.key)}
+                            >
+                                {tab.label}
+                                <span className="mr-pill-count">{tab.count}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="mr-search-box">
+                        <i className="bi bi-search"></i>
+                        <input
+                            type="text"
+                            placeholder="Search tasks..."
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
 
-                <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
+                <div className="mr-modal-body">
                     {loading ? (
-                        <div className="text-center text-muted py-4">
+                        <div className="mr-empty-state">
                             <div className="spinner-border spinner-border-sm me-2" role="status"></div>
                             Loading tasks...
                         </div>
                     ) : error ? (
-                        <div className="alert alert-danger">{error}</div>
+                        <div className="alert alert-danger mb-0">{error}</div>
                     ) : filtered.length === 0 ? (
-                        <div className="text-center text-muted py-4">
-                            No {activeTab === 'all' ? '' : activeTab.toLowerCase() + ' '}tasks found for this department this month.
-                        </div>
+                        <div className="mr-empty-state">No matching department tasks found for this month.</div>
                     ) : (
-                        <table className="table table-bordered table-hover align-middle mb-0">
-                            <thead className="table-light" style={{ position: 'sticky', top: 0 }}>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Assigned To</th>
-                                    <th>Status</th>
-                                    <th>Priority</th>
-                                    <th>Deadline</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map((task, idx) => {
-                                    const days = task.days_until_deadline;
-                                    let deadlineLabel = '—';
-                                    let deadlineSub   = null;
-                                    if (task.deadline) {
-                                        deadlineLabel = new Date(task.deadline).toLocaleDateString('en-PH', {
-                                            month: 'short', day: 'numeric', year: 'numeric'
-                                        });
-                                        if (task.derivedStatus === 'Overdue' && days !== null)
-                                            deadlineSub = <div style={{ fontSize: 11, color: '#dc3545', fontWeight: 600 }}>{Math.abs(days)} day{Math.abs(days) !== 1 ? 's' : ''} overdue</div>;
-                                        else if (task.derivedStatus === 'Ongoing' && days !== null)
-                                            deadlineSub = <div style={{ fontSize: 11, color: days <= 2 ? '#dc3545' : '#6c757d' }}>{days === 0 ? 'Due today' : `${days} day${days !== 1 ? 's' : ''} left`}</div>;
-                                        else if (task.derivedStatus === 'Completed' && task.completed_at)
-                                            deadlineSub = <div style={{ fontSize: 11, color: '#28a745' }}>Done {new Date(task.completed_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</div>;
-                                    }
-                                    return (
-                                        <tr key={task.id ?? idx}>
-                                            <td>
-                                                <div style={{ fontWeight: 500 }}>{task.title}</div>
-                                                {task.description && <small className="text-muted">{task.description}</small>}
-                                            </td>
-                                            <td style={{ whiteSpace: 'nowrap', fontWeight: 500, color: '#0d6efd' }}>
-                                                {task.assigned_to_name}
-                                            </td>
-                                            <td><span className={`badge bg-${statusBadge(task.derivedStatus)}`}>{task.derivedStatus}</span></td>
-                                            <td><span className={`badge bg-${priorityBadge(task.priority)}`}>{task.priority ?? '—'}</span></td>
-                                            <td style={{ whiteSpace: 'nowrap' }}>{deadlineLabel}{deadlineSub}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                        <div className="mr-task-list">
+                            {filtered.map((task, idx) => {
+                                const status = task.derivedStatus || "Other";
+                                const priority = task.priority || "Other";
+                                const days = task.days_until_deadline;
+
+                                let deadlineText = task.deadline
+                                    ? new Date(task.deadline).toLocaleDateString("en-PH", {
+                                          month: "short",
+                                          day: "numeric",
+                                          year: "numeric"
+                                      })
+                                    : "No deadline";
+
+                                if (status === "Overdue" && days !== null && days !== undefined) {
+                                    deadlineText += ` · ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} overdue`;
+                                } else if (status === "Ongoing" && days !== null && days !== undefined) {
+                                    deadlineText += days === 0
+                                        ? " · Due today"
+                                        : ` · ${days} day${days !== 1 ? "s" : ""} left`;
+                                } else if (status === "Completed" && task.completed_at) {
+                                    deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", {
+                                        month: "short",
+                                        day: "numeric"
+                                    })}`;
+                                }
+
+                                return (
+                                    <div className="mr-task-item" key={task.id ?? idx}>
+                                        <div className="mr-task-main">
+                                            <div className="mr-task-title">{task.title}</div>
+                                            {task.description && (
+                                                <div className="mr-task-desc">{task.description}</div>
+                                            )}
+                                            <div className="mr-task-meta">
+                                                {task.assigned_to_name ? `Assigned to ${task.assigned_to_name} · ` : ""}
+                                                {deadlineText}
+                                            </div>
+                                        </div>
+
+                                        <div className="mr-task-side">
+                                            <span className={`mr-status-inline ${statusTone(status)}`}>{status}</span>
+                                            <span className={`mr-priority-inline ${priorityTone(priority)}`}>
+                                                <i className="bi bi-flag-fill"></i>
+                                                <span>{priority}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
 
-                <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid #dee2e6', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-                    <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+                <div className="mr-modal-foot">
+                    <button className="mr-ghost-btn" onClick={onClose}>Close</button>
                 </div>
             </div>
         </div>
     );
 }
 
-// ====================================================================
-// MAIN PAGE — SUPERVISOR VERSION
-// Key differences from admin version:
-//   • No department filter dropdown (supervisor only sees their own dept)
-//   • Department name badge shown in header, sourced from API response
-//   • PHP endpoint changed to get_monthly_report_supervisor.php
-// ====================================================================
 function MonthlyReportPage() {
     const now = new Date();
 
-    const [summary, setSummary]         = useState({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
+    const [summary, setSummary] = useState({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
     const [departments, setDepartments] = useState([]);
-    const [dailyTrend, setDailyTrend]   = useState([]);
-    const [employees, setEmployees]     = useState([]);
-    const [deptName, setDeptName]       = useState('');   // supervisor's department name
-    const [year, setYear]               = useState(now.getFullYear());
-    const [month, setMonth]             = useState(now.getMonth() + 1);
-    const [selectedDept, setSelectedDept] = useState(null);
-    const [modalEmp, setModalEmp]       = useState(null);
-    const [modalDept, setModalDept]     = useState(null);
-    const [authError, setAuthError]     = useState(null);
+    const [dailyTrend, setDailyTrend] = useState([]);
+    const [employees, setEmployees] = useState([]);
+    const [deptName, setDeptName] = useState("");
+    const [year, setYear] = useState(now.getFullYear());
+    const [month, setMonth] = useState(now.getMonth() + 1);
+    const [modalEmp, setModalEmp] = useState(null);
+    const [modalDept, setModalDept] = useState(null);
+    const [authError, setAuthError] = useState(null);
+    const [themeMode, setThemeMode] = useState(getThemeMode());
 
     const groupedBarRef = useRef(null);
-    const lineRef       = useRef(null);
-    const hBarRef       = useRef(null);
-
-    const groupedBarChart = useRef(null);
-    const lineChart       = useRef(null);
-    const hBarChart       = useRef(null);
+    const lineRef = useRef(null);
+    const hBarRef = useRef(null);
 
     const daysInMonth = new Date(year, month, 0).getDate();
-    const monthStart  = `${year}-${String(month).padStart(2,'0')}-01`;
-    const monthEnd    = `${year}-${String(month).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
+    const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+    const monthEnd = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
 
-    // Fetch report — no department param needed, PHP reads it from session
     useEffect(() => {
-        setSelectedDept(null);
+        const root = document.documentElement;
+        const observer = new MutationObserver(() => {
+            setThemeMode(getThemeMode());
+        });
+
+        observer.observe(root, {
+            attributes: true,
+            attributeFilter: ["data-theme"]
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
         setModalEmp(null);
         setModalDept(null);
 
         fetch(`php/get_monthly_report_supervisor.php?year=${year}&month=${month}`)
-            .then(res => {
+            .then((res) => {
                 if (res.status === 401 || res.status === 403) {
-                    return res.json().then(d => { throw new Error(d.error ?? 'Access denied'); });
+                    return res.json().then((d) => {
+                        throw new Error(d.error ?? "Access denied");
+                    });
                 }
                 return res.json();
             })
-            .then(data => {
+            .then((data) => {
                 if (data.error) throw new Error(data.error);
-                setSummary(data.summary);
+                setSummary(data.summary ?? { total: 0, completed: 0, ongoing: 0, overdue: 0 });
                 setDepartments(data.departments ?? []);
-                setDailyTrend(data.daily_trend  ?? []);
-                setEmployees(data.employees     ?? []);
-                setDeptName(data.supervisor_department_name ?? '');
+                setDailyTrend(data.daily_trend ?? []);
+                setEmployees(data.employees ?? []);
+                setDeptName(data.supervisor_department_name ?? "");
+                setAuthError(null);
             })
-            .catch(err => {
+            .catch((err) => {
                 console.error(err);
                 setAuthError(err.message);
             });
     }, [year, month]);
 
-    // ----------------------------------------------------------------
-    // Chart data
-    // ----------------------------------------------------------------
-    const chartDepts    = selectedDept
-        ? departments.filter(d => d.department_id === selectedDept.department_id)
-        : departments;
-    const deptLabels    = chartDepts.map(d => d.department);
-    const deptCompleted = chartDepts.map(d => d.completed);
-    const deptOngoing   = chartDepts.map(d => d.ongoing);
-    const deptOverdue   = chartDepts.map(d => d.overdue);
+    const deptLabels = useMemo(() => departments.map((d) => d.department), [departments]);
+    const deptCompleted = useMemo(() => departments.map((d) => d.completed), [departments]);
+    const deptOngoing = useMemo(() => departments.map((d) => d.ongoing), [departments]);
+    const deptOverdue = useMemo(() => departments.map((d) => d.overdue), [departments]);
 
-    const dayLabels     = dailyTrend.map(d => new Date(d.date + 'T00:00:00').getDate());
-    const lineCompleted = dailyTrend.map(d => d.completed);
-    const lineOngoing   = dailyTrend.map(d => d.ongoing);
-    const lineOverdue   = dailyTrend.map(d => d.overdue);
+    const dayLabels = useMemo(
+        () => dailyTrend.map((d) => new Date(`${d.date}T00:00:00`).getDate()),
+        [dailyTrend]
+    );
+    const lineCompleted = useMemo(() => dailyTrend.map((d) => d.completed), [dailyTrend]);
+    const lineOngoing = useMemo(() => dailyTrend.map((d) => d.ongoing), [dailyTrend]);
+    const lineOverdue = useMemo(() => dailyTrend.map((d) => d.overdue), [dailyTrend]);
 
-    const empSorted     = [...employees].sort((a, b) => b.completion_rate - a.completion_rate);
-    const empNames      = empSorted.map(e => e.name);
-    const empCompleted  = empSorted.map(e => e.completed);
-    const empOverdue    = empSorted.map(e => e.overdue);
+    const empSorted = useMemo(
+        () => [...employees].sort((a, b) => b.completion_rate - a.completion_rate),
+        [employees]
+    );
+    const empNames = useMemo(() => empSorted.map((e) => e.name), [empSorted]);
+    const empCompleted = useMemo(() => empSorted.map((e) => e.completed), [empSorted]);
+    const empOverdue = useMemo(() => empSorted.map((e) => e.overdue), [empSorted]);
 
-    // ----------------------------------------------------------------
-    // Build charts
-    // ----------------------------------------------------------------
     useEffect(() => {
-        if (groupedBarChart.current) groupedBarChart.current.destroy();
-        groupedBarChart.current = new Chart(groupedBarRef.current, {
-            type: 'bar',
-            data: {
-                labels: deptLabels,
-                datasets: [
-                    { label: 'Completed', data: deptCompleted, backgroundColor: '#28a745', borderRadius: 4 },
-                    { label: 'Ongoing',   data: deptOngoing,   backgroundColor: '#ffc107', borderRadius: 4 },
-                    { label: 'Overdue',   data: deptOverdue,   backgroundColor: '#dc3545', borderRadius: 4 },
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: {
-                        callbacks: {
-                            afterLabel: (ctx) => {
-                                const dept = chartDepts[ctx.dataIndex];
-                                return dept ? `Completion rate: ${dept.completion_rate}%` : '';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                }
-            }
-        });
+        if (!window.echarts || !groupedBarRef.current) return;
 
-        if (lineChart.current) lineChart.current.destroy();
-        lineChart.current = new Chart(lineRef.current, {
-            type: 'line',
-            data: {
-                labels: dayLabels,
-                datasets: [
-                    { label: 'Completed', data: lineCompleted, borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.08)', pointBackgroundColor: '#28a745', pointRadius: 3, tension: 0.4, fill: true },
-                    { label: 'Ongoing',   data: lineOngoing,   borderColor: '#ffc107', backgroundColor: 'rgba(255,193,7,0.06)',  pointBackgroundColor: '#ffc107', pointRadius: 3, tension: 0.4, fill: true },
-                    { label: 'Overdue',   data: lineOverdue,   borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.06)',  pointBackgroundColor: '#dc3545', pointRadius: 3, tension: 0.4, fill: true },
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'top' } },
-                scales: {
-                    x: { title: { display: true, text: `Day of ${MONTH_NAMES[month - 1]}` }, ticks: { maxTicksLimit: 15 } },
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                }
-            }
-        });
+        const chart =
+            window.echarts.getInstanceByDom(groupedBarRef.current) ||
+            window.echarts.init(groupedBarRef.current);
 
-        if (hBarChart.current) hBarChart.current.destroy();
-        if (empSorted.length > 0) {
-            hBarChart.current = new Chart(hBarRef.current, {
-                type: 'bar',
-                data: {
-                    labels: empNames,
-                    datasets: [
-                        { label: 'Completed', data: empCompleted, backgroundColor: '#28a745', borderRadius: 4 },
-                        { label: 'Overdue',   data: empOverdue,   backgroundColor: '#dc3545', borderRadius: 4 },
-                    ]
+        const isDark = themeMode === "dark";
+        const axisColor = isDark ? "#9aa5b8" : "#7b8794";
+        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
+        const tooltipBg = isDark ? "#182133" : "#ffffff";
+        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+        const tooltipText = isDark ? "#f8fafc" : "#18263f";
+
+        chart.setOption(
+            {
+                animationDuration: 650,
+                animationEasing: "cubicOut",
+                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                grid: {
+                    top: 26,
+                    left: 20,
+                    right: 18,
+                    bottom: 32,
+                    containLabel: true
                 },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: {
-                            callbacks: {
-                                afterLabel: (ctx) => {
-                                    const emp = empSorted[ctx.dataIndex];
-                                    return emp ? `Completion rate: ${emp.completion_rate}%` : '';
-                                }
-                            }
-                        }
+                tooltip: {
+                    trigger: "axis",
+                    axisPointer: { type: "shadow" },
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    textStyle: {
+                        color: tooltipText,
+                        fontFamily: "Nunito, sans-serif"
                     },
-                    scales: {
-                        x: { beginAtZero: true, ticks: { stepSize: 1 } },
-                        y: { grid: { display: false } }
+                    extraCssText:
+                        "box-shadow:0 18px 40px rgba(15,23,42,0.12); border-radius:16px;",
+                    formatter: (params) => {
+                        if (!params.length) return "";
+                        const idx = params[0].dataIndex;
+                        const dept = departments[idx];
+                        const lines = params.map((p) => `${p.marker} ${p.seriesName}: ${p.value}`);
+                        if (dept) {
+                            lines.push(`Completion rate: ${dept.completion_rate}%`);
+                        }
+                        return [`<strong>${params[0].axisValue}</strong>`, ...lines].join("<br/>");
                     }
-                }
-            });
-        }
+                },
+                legend: {
+                    top: 0,
+                    icon: "roundRect",
+                    itemWidth: 12,
+                    itemHeight: 12,
+                    textStyle: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800
+                    },
+                    data: ["Completed", "Ongoing", "Overdue"]
+                },
+                xAxis: {
+                    type: "category",
+                    data: deptLabels,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800
+                    }
+                },
+                yAxis: {
+                    type: "value",
+                    min: 0,
+                    minInterval: 1,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700
+                    },
+                    splitLine: {
+                        lineStyle: { color: splitLine }
+                    }
+                },
+                series: [
+                    {
+                        name: "Completed",
+                        type: "bar",
+                        barMaxWidth: 28,
+                        itemStyle: { borderRadius: [8, 8, 0, 0] },
+                        data: deptCompleted
+                    },
+                    {
+                        name: "Ongoing",
+                        type: "bar",
+                        barMaxWidth: 28,
+                        itemStyle: { borderRadius: [8, 8, 0, 0] },
+                        data: deptOngoing
+                    },
+                    {
+                        name: "Overdue",
+                        type: "bar",
+                        barMaxWidth: 28,
+                        itemStyle: { borderRadius: [8, 8, 0, 0] },
+                        data: deptOverdue
+                    }
+                ]
+            },
+            true
+        );
 
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
         return () => {
-            if (groupedBarChart.current) groupedBarChart.current.destroy();
-            if (lineChart.current)       lineChart.current.destroy();
-            if (hBarChart.current)       hBarChart.current.destroy();
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
         };
-    }, [selectedDept, summary, departments, employees, dailyTrend, year, month]);
+    }, [deptLabels, deptCompleted, deptOngoing, deptOverdue, departments, themeMode]);
 
-    // ----------------------------------------------------------------
-    // Month navigation
-    // ----------------------------------------------------------------
-    const isCurrentMonth = (year === now.getFullYear() && month === (now.getMonth() + 1));
+    useEffect(() => {
+        if (!window.echarts || !lineRef.current) return;
+
+        const chart =
+            window.echarts.getInstanceByDom(lineRef.current) ||
+            window.echarts.init(lineRef.current);
+
+        const isDark = themeMode === "dark";
+        const axisColor = isDark ? "#9aa5b8" : "#7b8794";
+        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
+        const tooltipBg = isDark ? "#182133" : "#ffffff";
+        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+        const tooltipText = isDark ? "#f8fafc" : "#18263f";
+
+        chart.setOption(
+            {
+                animationDuration: 650,
+                animationEasing: "cubicOut",
+                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                grid: {
+                    top: 26,
+                    left: 20,
+                    right: 18,
+                    bottom: 48,
+                    containLabel: true
+                },
+                tooltip: {
+                    trigger: "axis",
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    textStyle: {
+                        color: tooltipText,
+                        fontFamily: "Nunito, sans-serif"
+                    },
+                    extraCssText:
+                        "box-shadow:0 18px 40px rgba(15,23,42,0.12); border-radius:16px;"
+                },
+                legend: {
+                    bottom: 0,
+                    icon: "circle",
+                    itemWidth: 10,
+                    itemHeight: 10,
+                    textStyle: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800
+                    },
+                    data: ["Completed", "Ongoing", "Overdue"]
+                },
+                xAxis: {
+                    type: "category",
+                    boundaryGap: false,
+                    data: dayLabels,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        margin: 12
+                    },
+                    name: `Day of ${MONTH_NAMES[month - 1]}`,
+                    nameTextStyle: {
+                        color: axisColor,
+                        fontWeight: 800,
+                        fontFamily: "Nunito, sans-serif"
+                    }
+                },
+                yAxis: {
+                    type: "value",
+                    min: 0,
+                    minInterval: 1,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700
+                    },
+                    splitLine: {
+                        lineStyle: { color: splitLine }
+                    }
+                },
+                series: [
+                    {
+                        name: "Completed",
+                        type: "line",
+                        smooth: true,
+                        symbol: "circle",
+                        symbolSize: 6,
+                        lineStyle: { width: 2 },
+                        itemStyle: { borderWidth: 2, borderColor: isDark ? "#141b2d" : "#ffffff" },
+                        areaStyle: {
+                            color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: "rgba(22,163,74,0.18)" },
+                                { offset: 1, color: "rgba(22,163,74,0.02)" }
+                            ])
+                        },
+                        data: lineCompleted
+                    },
+                    {
+                        name: "Ongoing",
+                        type: "line",
+                        smooth: true,
+                        symbol: "circle",
+                        symbolSize: 5,
+                        lineStyle: { width: 1.8 },
+                        itemStyle: { borderWidth: 2, borderColor: isDark ? "#141b2d" : "#ffffff" },
+                        areaStyle: {
+                            color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: "rgba(245,158,11,0.12)" },
+                                { offset: 1, color: "rgba(245,158,11,0.01)" }
+                            ])
+                        },
+                        data: lineOngoing
+                    },
+                    {
+                        name: "Overdue",
+                        type: "line",
+                        smooth: true,
+                        symbol: "circle",
+                        symbolSize: 5,
+                        lineStyle: { width: 1.8 },
+                        itemStyle: { borderWidth: 2, borderColor: isDark ? "#141b2d" : "#ffffff" },
+                        areaStyle: {
+                            color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: "rgba(236,72,153,0.12)" },
+                                { offset: 1, color: "rgba(236,72,153,0.01)" }
+                            ])
+                        },
+                        data: lineOverdue
+                    }
+                ]
+            },
+            true
+        );
+
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
+        return () => {
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
+        };
+    }, [dayLabels, lineCompleted, lineOngoing, lineOverdue, month, themeMode]);
+
+    useEffect(() => {
+        if (!window.echarts || !hBarRef.current) return;
+
+        const chart =
+            window.echarts.getInstanceByDom(hBarRef.current) ||
+            window.echarts.init(hBarRef.current);
+
+        const isDark = themeMode === "dark";
+        const axisColor = isDark ? "#9aa5b8" : "#7b8794";
+        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
+        const tooltipBg = isDark ? "#182133" : "#ffffff";
+        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+        const tooltipText = isDark ? "#f8fafc" : "#18263f";
+
+        chart.setOption(
+            {
+                animationDuration: 650,
+                animationEasing: "cubicOut",
+                color: ["#16a34a", "#ec4899"],
+                grid: {
+                    top: 26,
+                    left: 92,
+                    right: 20,
+                    bottom: 26,
+                    containLabel: true
+                },
+                tooltip: {
+                    trigger: "axis",
+                    axisPointer: { type: "shadow" },
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    textStyle: {
+                        color: tooltipText,
+                        fontFamily: "Nunito, sans-serif"
+                    },
+                    extraCssText:
+                        "box-shadow:0 18px 40px rgba(15,23,42,0.12); border-radius:16px;",
+                    formatter: (params) => {
+                        if (!params.length) return "";
+                        const idx = params[0].dataIndex;
+                        const emp = empSorted[idx];
+                        const lines = params.map((p) => `${p.marker} ${p.seriesName}: ${p.value}`);
+                        if (emp) {
+                            lines.push(`Completion rate: ${emp.completion_rate}%`);
+                        }
+                        return [`<strong>${params[0].axisValue}</strong>`, ...lines].join("<br/>");
+                    }
+                },
+                legend: {
+                    top: 0,
+                    icon: "roundRect",
+                    itemWidth: 12,
+                    itemHeight: 12,
+                    textStyle: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800
+                    },
+                    data: ["Completed", "Overdue"]
+                },
+                xAxis: {
+                    type: "value",
+                    min: 0,
+                    minInterval: 1,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700
+                    },
+                    splitLine: {
+                        lineStyle: { color: splitLine }
+                    }
+                },
+                yAxis: {
+                    type: "category",
+                    data: empNames,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800
+                    }
+                },
+                series: [
+                    {
+                        name: "Completed",
+                        type: "bar",
+                        barMaxWidth: 18,
+                        itemStyle: { borderRadius: [0, 8, 8, 0] },
+                        data: empCompleted
+                    },
+                    {
+                        name: "Overdue",
+                        type: "bar",
+                        barMaxWidth: 18,
+                        itemStyle: { borderRadius: [0, 8, 8, 0] },
+                        data: empOverdue
+                    }
+                ]
+            },
+            true
+        );
+
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
+        return () => {
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
+        };
+    }, [empNames, empCompleted, empOverdue, empSorted, themeMode]);
+
+    const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
     const goToPrevMonth = () => {
-        if (month === 1) { setYear(y => y - 1); setMonth(12); }
-        else             { setMonth(m => m - 1); }
+        if (month === 1) {
+            setYear((y) => y - 1);
+            setMonth(12);
+        } else {
+            setMonth((m) => m - 1);
+        }
     };
 
     const goToNextMonth = () => {
-        if (month === 12) { setYear(y => y + 1); setMonth(1); }
-        else              { setMonth(m => m + 1); }
+        if (month === 12) {
+            setYear((y) => y + 1);
+            setMonth(1);
+        } else {
+            setMonth((m) => m + 1);
+        }
     };
 
     const goToCurrentMonth = () => {
@@ -507,264 +999,185 @@ function MonthlyReportPage() {
         setMonth(now.getMonth() + 1);
     };
 
-    // ----------------------------------------------------------------
-    // RENDER
-    // ----------------------------------------------------------------
     if (authError) {
         return (
-            <div className="container-fluid p-4">
-                <div className="row">
-                    <main className="col-md-10 ms-sm-auto px-4 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
-                        <div className="text-center">
-                            <div className="alert alert-danger d-inline-block px-5 py-4">
-                                <h5 className="mb-1">Access Denied</h5>
-                                <p className="mb-0">{authError}</p>
-                            </div>
-                        </div>
-                    </main>
+            <div className="mr-page">
+                <div className="mr-error-card">
+                    <h5>Access Denied</h5>
+                    <p>{authError}</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="container-fluid p-4">
-            <div className="row">
-                <main>
+        <div className="mr-page">
+            <div className="mr-page-head">
+                <div>
+                    <h2 className="mr-page-title">Monthly Task Report</h2>
+                    <div className="mr-page-meta">
+                        {deptName && <span className="mr-filter-pill">{deptName}</span>}
+                        <span className="mr-page-sub">{formatMonthDisplay(year, month)}</span>
+                    </div>
+                </div>
 
-                    {/* Page header */}
-                    <div className="d-flex justify-content-between align-items-center mb-4">
+                <div className="mr-month-nav">
+                    <button className="mr-ghost-btn" onClick={goToPrevMonth}>
+                        <i className="bi bi-chevron-left"></i>
+                        Prev
+                    </button>
+
+                    <div className="mr-month-range">{formatMonthDisplay(year, month)}</div>
+
+                    <button
+                        className="mr-ghost-btn"
+                        onClick={goToNextMonth}
+                        disabled={isCurrentMonth}
+                    >
+                        Next
+                        <i className="bi bi-chevron-right"></i>
+                    </button>
+
+                    {!isCurrentMonth && (
+                        <button className="mr-ghost-btn mr-ghost-btn--primary" onClick={goToCurrentMonth}>
+                            This Month
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="mr-summary-grid">
+                <SummaryCard
+                    icon="bi-list-task"
+                    title="Total Tasks"
+                    value={summary.total}
+                    tone="primary"
+                    sub="Monthly scope"
+                />
+                <SummaryCard
+                    icon="bi-check2-circle"
+                    title="Completed"
+                    value={summary.completed}
+                    tone="success"
+                    sub="Finished"
+                />
+                <SummaryCard
+                    icon="bi-arrow-repeat"
+                    title="Ongoing"
+                    value={summary.ongoing}
+                    tone="warning"
+                    sub="Still active"
+                />
+                <SummaryCard
+                    icon="bi-exclamation-circle"
+                    title="Overdue"
+                    value={summary.overdue}
+                    tone="danger"
+                    sub="Past deadline"
+                />
+            </div>
+
+            <div className="mr-card mr-card--trend">
+                <div className="mr-card-head">
+                    <div>
+                        <h5 className="mr-card-title">Daily Task Activity</h5>
+                        <div className="mr-card-subtitle">{formatMonthDisplay(year, month)}</div>
+                    </div>
+                </div>
+                <div ref={lineRef} className="mr-line-chart"></div>
+            </div>
+
+            <div className="mr-two-grid">
+                <div className="mr-card mr-card--dept">
+                    <div className="mr-card-head">
                         <div>
-                            <h2 className="mb-0">Monthly Task Report</h2>
-                            {/* Department badge — shows which dept this supervisor manages */}
-                            {deptName && (
-                                <span className="badge bg-primary mt-1" style={{ fontSize: '0.85rem' }}>
-                                    {deptName}
-                                </span>
-                            )}
-                        </div>
-                        <div className="d-flex align-items-center gap-2">
-                            <button className="btn btn-sm btn-outline-secondary" onClick={goToPrevMonth}>‹ Prev</button>
-                            <span className="fw-semibold" style={{ minWidth: 160, textAlign: 'center' }}>
-                                {`${MONTH_NAMES[month - 1]} ${year}`}
-                            </span>
-                            <button
-                                className="btn btn-sm btn-outline-secondary"
-                                onClick={goToNextMonth}
-                                disabled={isCurrentMonth}
-                            >
-                                Next ›
-                            </button>
-                            {!isCurrentMonth && (
-                                <button className="btn btn-sm btn-outline-primary" onClick={goToCurrentMonth}>
-                                    This Month
-                                </button>
-                            )}
+                            <h5 className="mr-card-title">Department Task Overview</h5>
+                            <div className="mr-card-subtitle">Completed, Ongoing, and Overdue</div>
                         </div>
                     </div>
+                    <div ref={groupedBarRef} className="mr-bar-chart"></div>
+                </div>
 
-                    {/* Summary cards */}
-                    <div className="row mb-4">
-                        <div className="col-md-3">
-                            <div className="card shadow-sm border-0 p-3 text-center">
-                                <h6 className="text-muted mb-1">Total Tasks</h6>
-                                <h2 className="mb-0">{summary.total}</h2>
-                            </div>
-                        </div>
-                        <div className="col-md-3">
-                            <div className="card shadow-sm border-0 p-3 text-center">
-                                <h6 className="text-muted mb-1">Completed</h6>
-                                <h2 className="text-success mb-0">{summary.completed}</h2>
-                            </div>
-                        </div>
-                        <div className="col-md-3">
-                            <div className="card shadow-sm border-0 p-3 text-center">
-                                <h6 className="text-muted mb-1">Ongoing</h6>
-                                <h2 className="text-warning mb-0">{summary.ongoing}</h2>
-                            </div>
-                        </div>
-                        <div className="col-md-3">
-                            <div className="card shadow-sm border-0 p-3 text-center">
-                                <h6 className="text-muted mb-1">Overdue</h6>
-                                <h2 className="text-danger mb-0">{summary.overdue}</h2>
+                <div className="mr-card mr-card--employee-chart">
+                    <div className="mr-card-head">
+                        <div>
+                            <h5 className="mr-card-title">Employee Performance</h5>
+                            <div className="mr-card-subtitle">
+                                Sorted by most tasks completed
                             </div>
                         </div>
                     </div>
+                    <div
+                        ref={hBarRef}
+                        className="mr-hbar-chart"
+                        style={{ height: `${Math.max(260, empSorted.length * 42)}px` }}
+                    ></div>
+                </div>
+            </div>
 
-                    {/* Grouped bar chart */}
-                    <div className="row mb-4">
-                        <div className="col-12">
-                            <div className="card shadow-sm border-0 p-3">
-                                <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <div>
-                                        <h5 className="mb-0">Department Task Overview</h5>
-                                        <small className="text-muted">Completed, Ongoing, and Overdue</small>
-                                    </div>
-                                </div>
-                                <div style={{ height: 300 }}>
-                                    <canvas ref={groupedBarRef}></canvas>
-                                </div>
-                            </div>
-                        </div>
+            <div className="mr-card mr-card--table">
+                <div className="mr-card-head">
+                    <div>
+                        <h5 className="mr-card-title">Employee Details</h5>
+                        <div className="mr-card-subtitle">Employee-level monthly activity</div>
                     </div>
+                </div>
 
-                    {/* Line chart */}
-                    <div className="row mb-4">
-                        <div className="col-12">
-                            <div className="card shadow-sm border-0 p-3">
-                                <h5 className="mb-3">Daily Task Activity — {`${MONTH_NAMES[month - 1]} ${year}`}</h5>
-                                <div style={{ height: 260 }}>
-                                    <canvas ref={lineRef}></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div className="mr-table-shell">
+                    <table className="mr-table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Department</th>
+                                <th style={{ width: "110px" }}>Completed</th>
+                                <th style={{ width: "100px" }}>Ongoing</th>
+                                <th style={{ width: "100px" }}>Overdue</th>
+                                <th style={{ width: "180px" }}>Completion Rate</th>
+                                <th style={{ width: "72px", textAlign: "center" }}>Tasks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {employees.map((emp) => {
+                                const rate = emp.completion_rate;
+                                const total = emp.total;
 
-                    {/* Horizontal bar */}
-                    <div className="row mb-4">
-                        <div className="col-12">
-                            <div className="card shadow-sm border-0 p-3">
-                                <h5 className="mb-1">Employee Performance</h5>
-                                <small className="text-muted d-block mb-3">
-                                    Sorted by most tasks completed. Hover a bar for completion rate.
-                                </small>
-                                <div style={{ height: Math.max(200, empSorted.length * 36) }}>
-                                    <canvas ref={hBarRef}></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Department details table */}
-                    <div className="card shadow-sm border-0 p-3 mb-4">
-                        <h5 className="mb-3">Department Details</h5>
-                        <div className="table-responsive">
-                            <table className="table table-bordered table-hover align-middle">
-                                <thead className="table-light">
-                                    <tr>
-                                        <th>Department</th>
-                                        <th>Total</th>
-                                        <th>Completed</th>
-                                        <th>Ongoing</th>
-                                        <th>Overdue</th>
-                                        <th>Completion Rate</th>
-                                        <th style={{ textAlign: 'center' }}>Tasks</th>
+                                return (
+                                    <tr key={emp.id}>
+                                        <td>
+                                            <div className="mr-assignee">
+                                                <img
+                                                    src={buildAvatarFallbackUrl(emp.name)}
+                                                    alt={`${emp.name} Profile`}
+                                                    className="mr-assignee-avatar"
+                                                />
+                                                <div className="mr-assignee-copy">
+                                                    <span className="mr-assignee-name">{emp.name}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{emp.department}</td>
+                                        <td>{emp.completed}</td>
+                                        <td>{emp.ongoing}</td>
+                                        <td className="mr-overdue-cell">{emp.overdue}</td>
+                                        <td>{renderCleanProgress(rate, total)}</td>
+                                        <td style={{ textAlign: "center" }}>
+                                            <button
+                                                className="mr-eye-btn"
+                                                title={`View ${emp.name}'s tasks this month`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setModalEmp(emp);
+                                                }}
+                                            >
+                                                <i className="bi bi-eye"></i>
+                                            </button>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {departments.map(dept => (
-                                        <tr key={dept.department_id}>
-                                            <td>{dept.department}</td>
-                                            <td>{dept.total}</td>
-                                            <td>{dept.completed}</td>
-                                            <td>{dept.ongoing}</td>
-                                            <td className="text-danger fw-bold">{dept.overdue}</td>
-                                            <td>
-                                                {dept.total === 0 ? (
-                                                    <span className="text-muted" style={{ fontSize: '0.9em' }}>No tasks yet</span>
-                                                ) : dept.completion_rate === 0 ? (
-                                                    <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>0% — None completed</span>
-                                                ) : (
-                                                    <div className="progress" style={{ height: 20 }}>
-                                                        <div
-                                                            className="progress-bar bg-success"
-                                                            style={{ width: `${dept.completion_rate}%` }}
-                                                            aria-valuenow={dept.completion_rate}
-                                                            aria-valuemin="0"
-                                                            aria-valuemax="100"
-                                                        >
-                                                            {dept.completion_rate}%
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <button
-                                                    className="btn btn-link p-0"
-                                                    title={`View ${dept.department} tasks this month`}
-                                                    style={{ color: '#0d6efd' }}
-                                                    onClick={e => { e.stopPropagation(); setModalDept(dept); }}
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.12 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.133 13.133 0 0 1 1.172 8z"/>
-                                                        <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z"/>
-                                                    </svg>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Employee details table */}
-                    <div className="card shadow-sm border-0 p-3">
-                        <h5 className="mb-3">Employee Details</h5>
-                        <div className="table-responsive">
-                            <table className="table table-bordered table-hover align-middle">
-                                <thead className="table-light">
-                                    <tr>
-                                        <th>Employee</th>
-                                        <th>Department</th>
-                                        <th>Completed</th>
-                                        <th>Ongoing</th>
-                                        <th>Overdue</th>
-                                        <th>Completion Rate</th>
-                                        <th style={{ textAlign: 'center' }}>Tasks</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {employees.map(emp => {
-                                        const rate  = emp.completion_rate;
-                                        const total = emp.total;
-                                        return (
-                                            <tr key={emp.id}>
-                                                <td>{emp.name}</td>
-                                                <td>{emp.department}</td>
-                                                <td>{emp.completed}</td>
-                                                <td>{emp.ongoing}</td>
-                                                <td className="text-danger fw-bold">{emp.overdue}</td>
-                                                <td>
-                                                    {total === 0 ? (
-                                                        <span className="text-muted" style={{ fontSize: '0.9em' }}>No tasks yet</span>
-                                                    ) : rate === 0 ? (
-                                                        <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>0% — None completed</span>
-                                                    ) : (
-                                                        <div className="progress" style={{ height: 20 }}>
-                                                            <div
-                                                                className="progress-bar bg-success"
-                                                                style={{ width: `${rate}%` }}
-                                                                aria-valuenow={rate}
-                                                                aria-valuemin="0"
-                                                                aria-valuemax="100"
-                                                            >
-                                                                {rate}%
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td style={{ textAlign: 'center' }} onClick={e => { e.stopPropagation(); setModalEmp(emp); }}>
-                                                    <button
-                                                        className="btn btn-link p-0"
-                                                        title={`View ${emp.name}'s tasks this month`}
-                                                        style={{ color: '#0d6efd' }}
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                                                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.12 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.133 13.133 0 0 1 1.172 8z"/>
-                                                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z"/>
-                                                        </svg>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                </main>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {modalDept && (
@@ -775,6 +1188,7 @@ function MonthlyReportPage() {
                     onClose={() => setModalDept(null)}
                 />
             )}
+
             {modalEmp && (
                 <EmployeeTaskModal
                     emp={modalEmp}
@@ -787,6 +1201,5 @@ function MonthlyReportPage() {
     );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('monthlyReportRoot'));
+const root = ReactDOM.createRoot(document.getElementById("monthlyReportRoot"));
 root.render(<MonthlyReportPage />);
-
