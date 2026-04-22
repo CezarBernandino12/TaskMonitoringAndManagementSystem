@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 13, 2026 at 09:38 AM
+-- Generation Time: Apr 22, 2026 at 03:42 AM
 -- Server version: 10.4.32-MariaDB
--- PHP Version: 8.0.30
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -20,6 +20,34 @@ SET time_zone = "+00:00";
 --
 -- Database: `erdpms`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `activity_logs`
+--
+
+CREATE TABLE `activity_logs` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `user_name` varchar(255) NOT NULL DEFAULT '',
+  `role` varchar(50) NOT NULL DEFAULT '',
+  `action` varchar(100) NOT NULL,
+  `target_type` varchar(50) DEFAULT NULL,
+  `target_id` int(10) UNSIGNED DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `activity_logs`
+--
+
+INSERT INTO `activity_logs` (`id`, `user_id`, `user_name`, `role`, `action`, `target_type`, `target_id`, `description`, `ip_address`, `created_at`) VALUES
+(1, 9, 'Joseph Rizal', 'supervisor', 'auth.login', 'user', 9, 'Login successful: Joseph Rizal (joseph.rizal3@example.com)', '::1', '2026-04-14 11:36:51'),
+(2, 6, 'Samantha Velasquez', 'staff', 'auth.login', 'user', 6, 'Login successful: Samantha Velasquez (velasquezsamantha@gmail.com)', '::1', '2026-04-14 11:37:15'),
+(3, 6, 'Samantha Velasquez', 'staff', 'auth.login', 'user', 6, 'Login successful: Samantha Velasquez (velasquezsamantha@gmail.com)', NULL, '2026-04-14 11:43:01');
 
 -- --------------------------------------------------------
 
@@ -386,7 +414,6 @@ INSERT INTO `tasks` (`id`, `title`, `description`, `created_by`, `assigned_to`, 
 (44, 'Task 33', 'This is the description for task 33', 20, 20, 4, '2026-03-15', '2026-04-03', 'Ongoing', 0, 'Medium', 0, NULL, '2026-03-26 09:36:06', '2026-04-01 15:20:56', NULL),
 (45, 'Task 34', 'This is the description for task 34', 7, 7, 1, '2026-03-15', '2026-03-20', 'Overdue', 0, 'High', 0, NULL, '2026-03-26 09:36:06', '2026-03-28 09:43:07', NULL),
 (46, 'Task 35', 'This is the description for task 35', 7, 7, 1, '2026-03-15', '2026-03-26', 'Completed', 0, 'High', 0, NULL, '2026-03-26 09:36:06', '2026-03-26 11:17:02', NULL),
-(47, 'Task 36', 'This is the description for task 36', 6, 6, 1, '2026-03-15', '2026-03-24', 'Overdue', 0, 'Medium', 0, NULL, '2026-03-26 09:36:06', '2026-03-28 09:48:07', NULL),
 (48, 'Task 37', 'This is the description for task 37', 2, 2, 2, '2026-03-15', '2026-03-23', 'Overdue', 0, 'Low', 0, NULL, '2026-03-26 09:36:06', '2026-03-28 09:43:07', NULL),
 (49, 'Task 38', 'This is the description for task 38', 21, 21, 5, '2026-03-15', '2026-03-29', 'Completed', 0, 'Low', 0, NULL, '2026-03-26 09:36:06', '2026-03-26 11:17:02', NULL),
 (50, 'Task 39', 'This is the description for task 39', 13, 13, 2, '2026-03-15', '2026-03-19', 'Overdue', 0, 'High', 0, NULL, '2026-03-26 09:36:06', '2026-03-26 11:17:02', NULL),
@@ -407,7 +434,9 @@ INSERT INTO `tasks` (`id`, `title`, `description`, `created_by`, `assigned_to`, 
 (79, 'Testing 3', '', 4, 4, 1, '2026-03-28', '2026-03-31', 'Completed', 0, 'Low', 0, NULL, '2026-03-27 08:19:19', '2026-04-01 14:59:00', '2026-04-01'),
 (80, 'Today task', '', 4, 4, 1, '2026-03-30', '2026-03-30', 'Ongoing', 0, 'High', 0, NULL, '2026-03-30 10:42:50', '2026-03-30 11:22:29', '2026-03-30'),
 (81, 'My task', '', 4, 4, 1, '2026-03-16', '2026-03-23', 'Completed', 0, 'High', 0, NULL, '2026-03-30 10:52:05', '2026-03-30 10:52:52', '2026-03-30'),
-(82, 'Generate Report', 'Generate report for SPED Clients', 13, 13, 2, '2026-04-06', '2026-04-11', 'Ongoing', 0, 'Low', 0, NULL, '2026-04-06 15:42:05', '2026-04-06 15:42:05', NULL);
+(82, 'Generate Report', 'Generate report for SPED Clients', 13, 13, 2, '2026-04-06', '2026-04-11', 'Ongoing', 0, 'Low', 0, NULL, '2026-04-06 15:42:05', '2026-04-06 15:42:05', NULL),
+(85, 'Testing', 'Testing', 9, 9, 3, '2026-04-15', '2026-04-18', 'Ongoing', 0, 'Medium', 0, NULL, '2026-04-14 10:30:47', '2026-04-14 10:30:47', NULL),
+(86, 'Test', 'Testing', 9, 9, 3, '2026-04-15', '2026-04-17', 'Ongoing', 0, 'Low', 0, NULL, '2026-04-14 13:18:48', '2026-04-14 13:18:48', NULL);
 
 -- --------------------------------------------------------
 
@@ -448,12 +477,12 @@ INSERT INTO `users` (`id`, `name`, `nickname`, `first_name`, `last_name`, `middl
 (3, 'Cezar Bernandino', NULL, '', '', NULL, 'bernandinocezar@gmail.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'admin', NULL, NULL, NULL, NULL, 1, '1', 1, NULL, NULL, '2026-03-20 09:25:02', '2026-04-04 10:35:45', NULL),
 (4, 'Zar Bernardo', NULL, '', '', NULL, 'bernardozar@gmail.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'staff', 987654321, 'P3 Lugui', NULL, NULL, 1, NULL, 1, NULL, NULL, '2026-03-25 13:18:00', '2026-03-27 15:47:27', NULL),
 (5, 'Justin Marigal', NULL, '', '', NULL, 'madrigaljustin@gmail.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'staff', NULL, NULL, NULL, NULL, 1, NULL, 1, NULL, NULL, '2026-03-25 13:20:52', '2026-03-25 13:20:52', NULL),
-(6, 'Samantha Velasquez', NULL, '', '', NULL, 'velasquezsamantha@gmail.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'staff', NULL, NULL, NULL, NULL, 1, NULL, 1, NULL, NULL, '2026-03-25 13:22:29', '2026-03-25 13:22:29', NULL),
+(6, 'Samantha Velasquez', NULL, '', '', NULL, 'velasquezsamantha@gmail.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'staff', NULL, NULL, NULL, NULL, 1, NULL, 1, NULL, NULL, '2026-03-25 13:22:29', '2026-04-14 13:19:24', '2026-04-14 13:19:24'),
 (7, 'Juan Dela Cruz', NULL, '', '', NULL, 'juan.delacruz1@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'staff', NULL, NULL, NULL, NULL, 1, NULL, 1, NULL, NULL, '2026-03-25 19:35:43', '2026-03-25 19:35:43', NULL),
-(8, 'Maria Santos', NULL, '', '', NULL, 'maria.santos2@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'supervisor', NULL, NULL, NULL, NULL, 1, NULL, 2, NULL, NULL, '2026-03-25 19:35:43', '2026-04-13 15:38:00', '2026-04-13 15:38:00'),
-(9, 'Joseph Rizal', NULL, '', '', NULL, 'joseph.rizal3@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'supervisor', NULL, NULL, NULL, NULL, 1, NULL, 3, NULL, NULL, '2026-03-25 19:35:43', '2026-03-26 09:10:12', NULL),
+(8, 'Maria Santos', NULL, '', '', NULL, 'maria.santos2@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'supervisor', NULL, NULL, NULL, NULL, 1, NULL, 2, NULL, NULL, '2026-03-25 19:35:43', '2026-04-14 10:02:09', '2026-04-14 10:02:09'),
+(9, 'Joseph Rizal', NULL, '', '', NULL, 'joseph.rizal3@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'supervisor', NULL, NULL, NULL, NULL, 1, NULL, 3, NULL, NULL, '2026-03-25 19:35:43', '2026-04-14 13:19:27', '2026-04-14 13:19:27'),
 (10, 'Ana Lim', NULL, '', '', NULL, 'ana.lim4@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'supervisor', NULL, NULL, NULL, NULL, 1, NULL, 4, NULL, NULL, '2026-03-25 19:35:43', '2026-04-04 10:41:02', NULL),
-(11, 'Pedro Gonzalez', NULL, '', '', NULL, 'pedro.gonzalez5@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'admin', NULL, NULL, NULL, NULL, 1, NULL, 5, NULL, NULL, '2026-03-25 19:35:43', '2026-04-07 13:44:33', NULL),
+(11, 'Pedro Gonzalez', NULL, '', '', NULL, 'pedro.gonzalez5@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'admin', NULL, NULL, NULL, NULL, 1, NULL, 5, NULL, NULL, '2026-03-25 19:35:43', '2026-04-14 13:19:22', '2026-04-14 13:19:22'),
 (12, 'Catherine Reyes', NULL, '', '', NULL, 'catherine.reyes6@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'staff', NULL, NULL, NULL, NULL, 1, NULL, 1, NULL, NULL, '2026-03-25 19:35:43', '2026-03-25 19:35:43', NULL),
 (13, 'Mark Villanueva', NULL, '', '', NULL, 'mark.villanueva7@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'staff', NULL, NULL, NULL, NULL, 1, NULL, 2, NULL, NULL, '2026-03-25 19:35:43', '2026-03-25 19:35:43', NULL),
 (14, 'Kristine Cruz', NULL, '', '', NULL, 'kristine.cruz8@example.com', '$2y$10$J0LBGNn/sKSF4y5lLobtJ.DKCdSxDu9I5dDqoK08CwxfAD1dDW5x2', 'staff', NULL, NULL, NULL, NULL, 1, NULL, 3, NULL, NULL, '2026-03-25 19:35:43', '2026-03-25 19:35:43', NULL),
@@ -484,6 +513,16 @@ INSERT INTO `users` (`id`, `name`, `nickname`, `first_name`, `last_name`, `middl
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `activity_logs`
+--
+ALTER TABLE `activity_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_action` (`action`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_target` (`target_type`,`target_id`);
 
 --
 -- Indexes for table `audit_log`
@@ -577,6 +616,12 @@ ALTER TABLE `users`
 --
 
 --
+-- AUTO_INCREMENT for table `activity_logs`
+--
+ALTER TABLE `activity_logs`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT for table `audit_log`
 --
 ALTER TABLE `audit_log`
@@ -622,7 +667,7 @@ ALTER TABLE `strategic_plan_goals`
 -- AUTO_INCREMENT for table `tasks`
 --
 ALTER TABLE `tasks`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=83;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=87;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -694,23 +739,6 @@ ALTER TABLE `tasks`
 ALTER TABLE `users`
   ADD CONSTRAINT `fk_users_department` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
-CREATE TABLE IF NOT EXISTS activity_logs (
-    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id     INT UNSIGNED        NOT NULL,
-    user_name   VARCHAR(255)        NOT NULL DEFAULT '',
-    role        VARCHAR(50)         NOT NULL DEFAULT '',
-    action      VARCHAR(100)        NOT NULL,
-    target_type VARCHAR(50)         DEFAULT NULL,
-    target_id   INT UNSIGNED        DEFAULT NULL,
-    description TEXT                DEFAULT NULL,
-    created_at  DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_action      (action),
-    INDEX idx_user_id     (user_id),
-    INDEX idx_created_at  (created_at),
-    INDEX idx_target      (target_type, target_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
 DELIMITER $$
 --
 -- Events
@@ -726,4 +754,3 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-
