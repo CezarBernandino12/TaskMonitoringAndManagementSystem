@@ -119,19 +119,7 @@ function PresidentSidebar() {
     const [imgFailed, setImgFailed] = React.useState(false);
 
     const currentPage = getCurrentPage();
-
-    const reportsPages = [
-        "daily-reports.html",
-        "weekly-reports.html",
-        "monthly-reports.html",
-        "quarterly-reports.html",
-        "annual-reports.html"
-    ];
-
     const isActivePage = (fileName) => currentPage === fileName.toLowerCase();
-    const isAnyReportActive = reportsPages.some(isActivePage);
-
-    const [reportsOpen, setReportsOpen] = React.useState(isAnyReportActive);
 
     React.useEffect(() => {
         const handleResize = () => {
@@ -158,12 +146,6 @@ function PresidentSidebar() {
     React.useEffect(() => {
         document.documentElement.classList.remove("sidebar-collapsed-init");
     }, []);
-
-    React.useEffect(() => {
-        if (isAnyReportActive) {
-            setReportsOpen(true);
-        }
-    }, [isAnyReportActive]);
 
     React.useEffect(() => {
         document.body.classList.toggle("sidebar-mobile-open", isMobile && mobileOpen);
@@ -237,10 +219,6 @@ function PresidentSidebar() {
 
     const closeMobileSidebar = () => {
         setMobileOpen(false);
-    };
-
-    const toggleReports = () => {
-        setReportsOpen((prev) => !prev);
     };
 
     const handleNavigate = () => {
@@ -363,39 +341,20 @@ function PresidentSidebar() {
                             onNavigate={handleNavigate}
                         />
 
-                        <div className="sidebar-divider mt-3"></div>
+                        <div className="sidebar-divider sidebar-section-split"></div>
 
-                        <div className="sidebar-management-wrap">
-                            <button
-                                type="button"
-                                className={`sidebar-section-label-toggle reports-toggle ${reportsOpen ? "open" : ""} ${isAnyReportActive ? "active" : ""} ${!isMobile && collapsed ? "collapsed-trigger" : ""}`}
-                                onClick={toggleReports}
-                                aria-expanded={reportsOpen}
-                                aria-controls="reportsSubmenu"
-                            >
-                                {!isMobile && collapsed && (
-                                    <span className="reports-toggle-icon">
-                                        <i className="bi bi-file-earmark-bar-graph"></i>
-                                    </span>
-                                )}
+                        <div className="sidebar-management-wrap sidebar-management-static">
+                            <div className="sidebar-section-label sidebar-section-label-inline">
+                                REPORTS
+                            </div>
 
-                                <span className="sidebar-section-label-text">REPORTS</span>
-
-                                <span className="sidebar-section-label-chevron">
-                                    <i className="bi bi-chevron-down"></i>
-                                </span>
-                            </button>
-
-                            <div
-                                id="reportsSubmenu"
-                                className={`sidebar-submenu ${reportsOpen ? "open" : ""} ${!isMobile && collapsed ? "collapsed-popout" : ""}`}
-                            >
+                            <div className="sidebar-submenu sidebar-submenu-static open">
                                 <SidebarLink
                                     href="daily-reports.html"
                                     icon="bi-calendar-day"
                                     label="Daily"
                                     isActive={isActivePage("daily-reports.html")}
-                                    extraClass="sidebar-sublink"
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
                                     onNavigate={handleNavigate}
                                 />
 
@@ -404,7 +363,7 @@ function PresidentSidebar() {
                                     icon="bi-calendar-week"
                                     label="Weekly"
                                     isActive={isActivePage("weekly-reports.html")}
-                                    extraClass="sidebar-sublink"
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
                                     onNavigate={handleNavigate}
                                 />
 
@@ -413,7 +372,7 @@ function PresidentSidebar() {
                                     icon="bi-calendar-month"
                                     label="Monthly"
                                     isActive={isActivePage("monthly-reports.html")}
-                                    extraClass="sidebar-sublink"
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
                                     onNavigate={handleNavigate}
                                 />
 
@@ -422,7 +381,7 @@ function PresidentSidebar() {
                                     icon="bi-calendar2-range"
                                     label="Quarterly"
                                     isActive={isActivePage("quarterly-reports.html")}
-                                    extraClass="sidebar-sublink"
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
                                     onNavigate={handleNavigate}
                                 />
 
@@ -431,7 +390,7 @@ function PresidentSidebar() {
                                     icon="bi-calendar2-check"
                                     label="Annually"
                                     isActive={isActivePage("annual-reports.html")}
-                                    extraClass="sidebar-sublink"
+                                    extraClass="sidebar-sublink sidebar-sublink-sm"
                                     onNavigate={handleNavigate}
                                 />
                             </div>
