@@ -65,6 +65,15 @@ if (!in_array($status, $allowed_statuses, true)) {
 }
 
 try {
+    // Fetch current status before updating so we can detect changes.
+    $prevStmt = $conn->prepare(
+        "SELECT status, created_by FROM tasks WHERE id = :id AND assigned_to = :user_id"
+    );
+    $prevStmt->bindValue(':id',      $task_id, PDO::PARAM_INT);
+    $prevStmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+    $prevStmt->execute();
+    $prevTask = $prevStmt->fetch(PDO::FETCH_ASSOC);
+
     $stmt = $conn->prepare("
         UPDATE tasks
         SET
@@ -90,6 +99,41 @@ try {
     $stmt->execute();
 
     if ($stmt->rowCount() > 0) {
+        // Notify the task creator when the assignee changes the status.
+        if (
+            $prevTask &&
+            $prevTask['status'] !== $status &&
+            (int) $prevTask['created_by'] !== $user_id
+        ) {
+            require_once '../../config/notifications.php';
+            $createdBy = (int) $prevTask['created_by'];
+            $safeTitle = htmlspecialchars($task_name, ENT_QUOTES, 'UTF-8');
+
+            if ($status === 'Completed') {
+                dispatchNotification(
+                    $conn,
+                    $createdBy,
+                    $user_id,
+                    'approval_request',
+                    'Task Completed — Needs Review',
+                    "\"{$safeTitle}\" has been marked as completed.",
+                    $task_id,
+                    "task-{$task_id}-approval"
+                );
+            } else {
+                dispatchNotification(
+                    $conn,
+                    $createdBy,
+                    $user_id,
+                    'status_changed',
+                    'Task Status Updated',
+                    "\"{$safeTitle}\" is now {$status}.",
+                    $task_id,
+                    "task-{$task_id}-status-" . strtolower($status)
+                );
+            }
+        }
+
         echo "Task updated successfully";
     } else {
         echo "Task not found or no changes made";

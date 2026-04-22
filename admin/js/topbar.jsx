@@ -1982,7 +1982,9 @@ function ChatButton() {
    Notifications
 ========================= */
 
-const TASKS_API = "php/get_tasks.php";
+const TASKS_API          = "php/get_tasks.php";
+const NOTIFICATIONS_API  = "php/get_notifications.php";
+const MARK_READ_API      = "php/mark_notification_read.php";
 const MANILA_TIMEZONE = "Asia/Manila";
 
 function getTodayYMDInManila() {
@@ -2102,7 +2104,7 @@ function NotificationBell() {
 
         async function loadNotifications() {
             try {
-                const response = await fetch(TASKS_API, {
+                const response = await fetch(NOTIFICATIONS_API, {
                     credentials: "same-origin",
                     headers: { Accept: "application/json" }
                 });
@@ -2111,21 +2113,26 @@ function NotificationBell() {
                 if (!response.ok) throw new Error("Failed to load notifications.");
                 if (!active) return;
 
-                const items = buildTaskNotifications(Array.isArray(data) ? data : []);
+                const items = Array.isArray(data.notifications) ? data.notifications : [];
                 setNotifications(items);
+                setUnreadCount(Number(data.unread_count || 0));
             } catch (error) {
                 console.error("Unable to load notifications:", error);
                 if (!active) return;
-                setNotifications([]); setUnreadCount(0);
+                setNotifications([]);
+                setUnreadCount(0);
             }
         }
 
         loadNotifications();
         const intervalId = window.setInterval(loadNotifications, 60000);
+        const onRefresh = () => loadNotifications();
+        window.addEventListener('refresh-notifications', onRefresh);
 
         return () => {
             active = false;
             window.clearInterval(intervalId);
+            window.removeEventListener('refresh-notifications', onRefresh);
         };
     }, []);
 
@@ -2135,7 +2142,12 @@ function NotificationBell() {
         if (unreadKeys.length === 0) return undefined;
         const timer = window.setTimeout(async () => {
             try {
-                await fetch(MARK_READ_API, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ keys: unreadKeys }) });
+                await fetch(MARK_READ_API, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json", Accept: "application/json" },
+                    body: JSON.stringify({ keys: unreadKeys })
+                });
                 setUnreadCount(0);
                 setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
             } catch (_) { /* ignore */ }
@@ -2211,7 +2223,7 @@ function NotificationBell() {
                             <div className="notif-empty">No system alerts</div>
                         ) : (
                             notifications.map((item) => (
-                                <div key={item.id} className={`notif-item ${item.unread ? "unread" : ""}`}>
+                                <div key={item.key} className={`notif-item ${item.unread ? "unread" : ""}`}>
                                     <div className={`notif-item-icon ${item.iconColor}`}>
                                         <i className={`bi ${item.icon}`}></i>
                                     </div>

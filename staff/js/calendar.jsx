@@ -1992,12 +1992,14 @@ function Calendar() {
         });
         setShowForm(false);
         setEdit(null);
+        window.dispatchEvent(new Event('refresh-notifications'));
     };
 
     const handleDel = id => {
         setEvents(prev => prev.filter(e => e.id !== id));
         setShowForm(false);
         setEdit(null);
+        window.dispatchEvent(new Event('refresh-notifications'));
     };
 
     const handleCancel = eventToCancel => {
@@ -2289,7 +2291,7 @@ function Calendar() {
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                                    <div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cal-text)' }}>{ev.title}</div>
                                         <div style={{ fontSize: 12, color: 'var(--cal-text-3)', marginTop: 3 }}>
                                             {fmtShort(ev.start_date)} – {fmtShort(ev.end_date)}
@@ -2299,9 +2301,9 @@ function Calendar() {
                                                 {fmtTimeRange(ev.start_time, ev.end_time)}
                                             </div>
                                         )}
-                                        {ev.location && <div style={{ fontSize: 12, color: 'var(--cal-text-2)', marginTop: 6 }}>📍 {ev.location}</div>}
+                                        {ev.location && <div style={{ fontSize: 12, color: 'var(--cal-text-2)', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {ev.location}</div>}
                                     </div>
-                                    <span style={{ ...S.chip, background: cfg.bg, color: cfg.text, height: 'fit-content' }}>{derivedStatus}</span>
+                                    <span style={{ ...S.chip, background: cfg.bg, color: cfg.text, height: 'fit-content', flexShrink: 0 }}>{derivedStatus}</span>
                                 </div>
                             </div>
                         );

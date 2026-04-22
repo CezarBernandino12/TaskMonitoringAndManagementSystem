@@ -1769,12 +1769,14 @@ function Calendar() {
 
         setShowForm(false);
         setEdit(null);
+        window.dispatchEvent(new Event('refresh-notifications'));
     };
 
     const handleDel = id => {
         setEvents(prev => prev.filter(e => e.id !== id));
         setShowForm(false);
         setEdit(null);
+        window.dispatchEvent(new Event('refresh-notifications'));
     };
 
     const handleCancel = eventToCancel => {
@@ -2088,7 +2090,7 @@ function Calendar() {
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                                    <div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cal-text)' }}>
                                             {ev.title}
                                         </div>
@@ -2103,7 +2105,7 @@ function Calendar() {
                                         )}
 
                                         {ev.location && (
-                                            <div style={{ fontSize: 12, color: 'var(--cal-text-2)', marginTop: 6 }}>
+                                            <div style={{ fontSize: 12, color: 'var(--cal-text-2)', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 📍 {ev.location}
                                             </div>
                                         )}
@@ -2114,7 +2116,8 @@ function Calendar() {
                                             ...S.chip,
                                             background: cfg.bg,
                                             color: cfg.text,
-                                            height: 'fit-content'
+                                            height: 'fit-content',
+                                            flexShrink: 0
                                         }}
                                     >
                                         {derivedStatus}
