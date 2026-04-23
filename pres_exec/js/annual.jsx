@@ -1,241 +1,365 @@
-const { useEffect, useState, useRef } = React;
+const { useEffect, useMemo, useRef, useState } = React;
 
+const MANILA_TZ = "Asia/Manila";
 
+const PREMIUM = {
+    green: "#18B26B",
+    blue: "#3B82F6",
+    red: "#E5484D",
 
+    greenSoft: "rgba(24,178,107,0.16)",
+    blueSoft: "rgba(59,130,246,0.16)",
+    redSoft: "rgba(229,72,77,0.14)",
+
+    grid: "rgba(15,23,42,0.08)",
+    text: "#8A94A6",
+    title: "#202939",
+    white: "#FFFFFF"
+};
+
+function getThemeMode() {
+    return document.documentElement.getAttribute("data-theme") === "dark"
+        ? "dark"
+        : "light";
+}
+
+function safeNum(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+}
+
+function pct(part, total) {
+    return total > 0 ? Math.round((part / total) * 100) : 0;
+}
+
+function buildAvatarFallbackUrl(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        name || "User"
+    )}&background=f7c4d4&color=222&size=80`;
+}
+
+function formatDatePH(dateStr, withYear = true) {
+    if (!dateStr) return "—";
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return "—";
+
+    return new Intl.DateTimeFormat("en-PH", {
+        timeZone: MANILA_TZ,
+        month: "short",
+        day: "numeric",
+        ...(withYear ? { year: "numeric" } : {})
+    }).format(date);
+}
+
+function getDerivedStatus(task) {
+    return task?.derived_status ?? task?.status ?? "Other";
+}
+
+function getStatusClass(status) {
+    const s = String(status || "").trim().toLowerCase();
+    if (s === "completed") return "completed";
+    if (s === "ongoing" || s === "in progress") return "ongoing";
+    if (s === "overdue") return "overdue";
+    return "other";
+}
+
+function getPriorityClass(priority) {
+    const p = String(priority || "").trim().toLowerCase();
+    if (["high", "urgent", "critical"].includes(p)) return "high";
+    if (["medium", "normal", "moderate"].includes(p)) return "medium";
+    if (["low", "minor"].includes(p)) return "low";
+    return "other";
+}
+
+function portalWrap(children) {
+    const target = document.getElementById("react-modal-root");
+    return target ? ReactDOM.createPortal(children, target) : children;
+}
+
+function SummaryCard({ icon, label, value, subtext, tone, meta }) {
+    return (
+        <div className="dr-summary-card">
+            <div className="dr-summary-head">
+                <div className={`dr-summary-icon ${tone}`}>
+                    <i className={`bi ${icon}`}></i>
+                </div>
+                <span className={`dr-summary-chip ${tone}`}>{meta}</span>
+            </div>
+
+            <div className="dr-summary-label">{label}</div>
+
+            <div className="dr-summary-value-line">
+                <span className="dr-summary-value">{value}</span>
+            </div>
+
+            <div className="dr-summary-subtext">{subtext}</div>
+        </div>
+    );
+}
 
 function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
-    const [messages,  setMessages]  = useState([]);
-    const [loading,   setLoading]   = useState(true);
-    const [error,     setError]     = useState(null);
-    const [text,      setText]      = useState('');
-    const [files,     setFiles]     = useState([]);   // File[] staged for upload
-    const [sending,   setSending]   = useState(false);
-    const [sendError, setSendError] = useState(null);
-    const bottomRef  = useRef(null);
-    const fileRef    = useRef(null);  // hidden <input type="file">
+    const [messages, setMessages] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [text, setText] = useState("");
+    const [files, setFiles] = useState([]);
+    const [sending, setSending] = useState(false);
+    const [sendError, setSendError] = useState("");
+    const bottomRef = useRef(null);
+    const fileRef = useRef(null);
 
-    // Fetch messages when the modal opens
     useEffect(() => {
         setLoading(true);
-        setError(null);
+        setError("");
+
         fetch(`php/get_task_messages.php?task_id=${task.id}`)
-            .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
-            .then(data => {
+            .then((r) => {
+                if (!r.ok) throw new Error(`Server returned ${r.status}`);
+                return r.json();
+            })
+            .then((data) => {
                 if (data.error) throw new Error(data.error);
                 setMessages(Array.isArray(data.messages) ? data.messages : []);
                 setLoading(false);
             })
-            .catch(err => { setError(`Could not load comments: ${err.message}`); setLoading(false); });
+            .catch((err) => {
+                setError(`Could not load comments: ${err.message}`);
+                setLoading(false);
+            });
     }, [task.id]);
 
-    // Scroll to bottom whenever messages change
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // ── Send handler ────────────────────────────────────────────────
-    // Uses FormData so that file attachments can be included alongside
-    // the text fields. recipient_id is always the employee whose task
-    // list was opened (recipientId prop), never derived from task fields.
+    useEffect(() => {
+        const onEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
+
     const handleSend = () => {
         const trimmed = text.trim();
         if (!trimmed && files.length === 0) return;
 
         setSending(true);
-        setSendError(null);
+        setSendError("");
 
         const fd = new FormData();
-        fd.append('task_id',      task.id);
-        fd.append('recipient_id', recipientId);   // ← always emp.id, never task.assigned_to
-        fd.append('message',      trimmed);
+        fd.append("task_id", task.id);
+        fd.append("recipient_id", recipientId);
+        fd.append("message", trimmed);
 
-        // Attach each staged file under the key "attachments[]"
-        files.forEach(f => fd.append('attachments[]', f));
+        files.forEach((f) => fd.append("attachments[]", f));
 
-        fetch('php/send_task_message.php', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(data => {
+        fetch("php/send_task_message.php", { method: "POST", body: fd })
+            .then((r) => r.json())
+            .then((data) => {
                 if (data.error) throw new Error(data.error);
-                setMessages(prev => [...prev, data.message]);
-                setText('');
+                setMessages((prev) => [...prev, data.message]);
+                setText("");
                 setFiles([]);
                 setSending(false);
             })
-            .catch(err => { setSendError(err.message); setSending(false); });
+            .catch((err) => {
+                setSendError(err.message || "Failed to send message.");
+                setSending(false);
+            });
     };
 
-    // Add files from the file picker (merge, avoid exact duplicates by name+size)
     const handleFileChange = (e) => {
-        const picked = Array.from(e.target.files);
-        setFiles(prev => {
-            const existing = new Set(prev.map(f => `${f.name}|${f.size}`));
-            const fresh = picked.filter(f => !existing.has(`${f.name}|${f.size}`));
+        const picked = Array.from(e.target.files || []);
+        setFiles((prev) => {
+            const existing = new Set(prev.map((f) => `${f.name}|${f.size}`));
+            const fresh = picked.filter((f) => !existing.has(`${f.name}|${f.size}`));
             return [...prev, ...fresh];
         });
-        // Reset input so the same file can be re-selected after removal
-        e.target.value = '';
+        e.target.value = "";
     };
 
-    const removeFile = (index) => setFiles(prev => prev.filter((_, i) => i !== index));
+    const removeFile = (index) => {
+        setFiles((prev) => prev.filter((_, i) => i !== index));
+    };
 
-    // ── Helpers ─────────────────────────────────────────────────────
-
-    // Format timestamp to "Mar 15, 10:32 AM"
     const fmtTime = (ts) => {
-        if (!ts) return '';
+        if (!ts) return "";
         const d = new Date(ts);
-        return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
-             + ', '
-             + d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+        return (
+            d.toLocaleDateString("en-PH", { month: "short", day: "numeric" }) +
+            ", " +
+            d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" })
+        );
     };
 
-    // Human-readable file size
     const fmtSize = (bytes) => {
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        const size = safeNum(bytes);
+        if (size < 1024) return `${size} B`;
+        if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+        return `${(size / (1024 * 1024)).toFixed(1)} MB`;
     };
 
-    // Avatar initials from name
-    const initials = (name) => name
-        ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-        : '?';
+    const initials = (name) =>
+        name
+            ? name
+                  .split(" ")
+                  .map((w) => w[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase()
+            : "?";
 
-    // Consistent color per sender based on name hash
     const avatarColor = (name) => {
-        const hue = name ? [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360 : 200;
+        const hue = name
+            ? [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
+            : 200;
         return `hsl(${hue},50%,85%)`;
     };
+
     const avatarTextColor = (name) => {
-        const hue = name ? [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360 : 200;
+        const hue = name
+            ? [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
+            : 200;
         return `hsl(${hue},50%,30%)`;
     };
 
     const canSend = !sending && (text.trim().length > 0 || files.length > 0);
 
-    const handleBackdropClick = (e) => { if (e.target === e.currentTarget) onClose(); };
-
-    return (
+    return portalWrap(
         <div
-            onClick={handleBackdropClick}
-            style={{
-                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-                zIndex: 1060, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', padding: '1rem',
-            }}
+            className="dr-modal-backdrop"
+            onClick={(e) => e.target === e.currentTarget && onClose()}
         >
-            <div style={{
-                background: '#fff', borderRadius: 14, width: '100%',
-                maxWidth: 540, maxHeight: '80vh',
-                display: 'flex', flexDirection: 'column',
-                boxShadow: '0 12px 40px rgba(0,0,0,0.22)',
-            }}>
-                {/* Header */}
-                <div style={{
-                    padding: '0.9rem 1.25rem',
-                    borderBottom: '1px solid #eee',
-                    display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'flex-start', flexShrink: 0,
-                }}>
-                    <div style={{ minWidth: 0, flex: 1, paddingRight: 8 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: '#111',
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            💬 {task.title}
+            <div className="dr-modal-card" style={{ maxWidth: "840px" }}>
+                <div className="dr-modal-head">
+                    <div>
+                        <h5 className="dr-modal-title">
+                            <i className="bi bi-chat-dots me-2"></i>
+                            {task.title || "Task Comments"}
+                        </h5>
+                        <div className="dr-modal-subtitle">
+                            {messages.length} comment{messages.length !== 1 ? "s" : ""}
                         </div>
-                        <small style={{ color: '#888' }}>
-                            {messages.length} comment{messages.length !== 1 ? 's' : ''}
-                        </small>
                     </div>
-                    <button className="btn-close" onClick={onClose} style={{ marginTop: 2, flexShrink: 0 }} />
+
+                    <button className="dr-icon-btn" onClick={onClose} aria-label="Close">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
                 </div>
 
-                {/* Message thread */}
-                <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
+                <div className="dr-modal-body">
                     {loading ? (
-                        <div className="text-center text-muted py-4">
-                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                            Loading comments…
-                        </div>
+                        <div className="dr-empty-state">Loading comments...</div>
                     ) : error ? (
-                        <div className="alert alert-danger py-2">{error}</div>
+                        <div className="alert alert-danger mb-0">{error}</div>
                     ) : messages.length === 0 ? (
-                        <div className="text-center text-muted py-4" style={{ fontSize: 14 }}>
-                            <div style={{ fontSize: 32, marginBottom: 8 }}>💬</div>
+                        <div className="dr-empty-state">
                             No comments yet. Be the first to comment.
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                            {messages.map(msg => {
+                        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                            {messages.map((msg) => {
                                 const isOwn = msg.sender_id === currentUserId;
+
                                 return (
-                                    <div key={msg.id} style={{
-                                        display: 'flex', gap: 10,
-                                        flexDirection: isOwn ? 'row-reverse' : 'row',
-                                        alignItems: 'flex-start',
-                                    }}>
-                                        {/* Avatar */}
-                                        <div style={{
-                                            width: 34, height: 34, borderRadius: '50%',
-                                            background: avatarColor(msg.sender_name),
-                                            color: avatarTextColor(msg.sender_name),
-                                            display: 'flex', alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontWeight: 700, fontSize: 12, flexShrink: 0,
-                                            border: '2px solid #fff',
-                                            boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
-                                        }}>
+                                    <div
+                                        key={msg.id}
+                                        style={{
+                                            display: "flex",
+                                            gap: "10px",
+                                            flexDirection: isOwn ? "row-reverse" : "row",
+                                            alignItems: "flex-start"
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: "38px",
+                                                height: "38px",
+                                                borderRadius: "999px",
+                                                background: avatarColor(msg.sender_name),
+                                                color: avatarTextColor(msg.sender_name),
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                fontWeight: 900,
+                                                fontSize: "12px",
+                                                flexShrink: 0,
+                                                border: "1px solid var(--dr-border)"
+                                            }}
+                                        >
                                             {initials(msg.sender_name)}
                                         </div>
 
-                                        {/* Bubble */}
-                                        <div style={{ maxWidth: '72%' }}>
-                                            <div style={{
-                                                display: 'flex', alignItems: 'baseline', gap: 6,
-                                                flexDirection: isOwn ? 'row-reverse' : 'row',
-                                                marginBottom: 3,
-                                            }}>
-                                                <span style={{ fontSize: 12, fontWeight: 600, color: '#333' }}>
-                                                    {isOwn ? 'You' : msg.sender_name}
+                                        <div style={{ maxWidth: "78%" }}>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "baseline",
+                                                    gap: "6px",
+                                                    flexDirection: isOwn ? "row-reverse" : "row",
+                                                    marginBottom: "4px"
+                                                }}
+                                            >
+                                                <span style={{ fontSize: "12px", fontWeight: 800 }}>
+                                                    {isOwn ? "You" : msg.sender_name}
                                                 </span>
-                                                <span style={{ fontSize: 11, color: '#aaa' }}>
+                                                <span style={{ fontSize: "11px", color: "var(--dr-subtle)" }}>
                                                     {fmtTime(msg.time_sent)}
                                                 </span>
                                             </div>
 
-                                            {/* Text bubble — only rendered if there's a message body */}
                                             {msg.message && (
-                                                <div style={{
-                                                    background: isOwn ? '#0d6efd' : '#f3f4f6',
-                                                    color: isOwn ? '#fff' : '#222',
-                                                    borderRadius: isOwn ? '14px 4px 14px 14px' : '4px 14px 14px 14px',
-                                                    padding: '8px 12px',
-                                                    fontSize: 13, lineHeight: 1.5,
-                                                    wordBreak: 'break-word',
-                                                }}>
+                                                <div
+                                                    style={{
+                                                        background: isOwn ? PREMIUM.blue : "var(--dr-card-soft)",
+                                                        color: isOwn ? "#fff" : "var(--dr-text)",
+                                                        borderRadius: isOwn
+                                                            ? "16px 6px 16px 16px"
+                                                            : "6px 16px 16px 16px",
+                                                        padding: "10px 12px",
+                                                        fontSize: "13px",
+                                                        lineHeight: 1.55,
+                                                        wordBreak: "break-word",
+                                                        border: isOwn ? "none" : "1px solid var(--dr-border)"
+                                                    }}
+                                                >
                                                     {msg.message}
                                                 </div>
                                             )}
 
-                                            {/* Attachments from server */}
-                                            {msg.attachments && msg.attachments.length > 0 && (
-                                                <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                                    {msg.attachments.map(att => (
+                                            {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
+                                                <div
+                                                    style={{
+                                                        marginTop: "6px",
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        gap: "5px"
+                                                    }}
+                                                >
+                                                    {msg.attachments.map((att) => (
                                                         <a
                                                             key={att.id}
                                                             href={att.file_path}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             style={{
-                                                                display: 'inline-flex', alignItems: 'center', gap: 5,
-                                                                fontSize: 12,
-                                                                color: isOwn ? '#cfe2ff' : '#0d6efd',
-                                                                textDecoration: 'none',
-                                                                background: isOwn ? 'rgba(255,255,255,0.15)' : '#f0f4ff',
-                                                                borderRadius: 6,
-                                                                padding: '3px 8px',
+                                                                display: "inline-flex",
+                                                                alignItems: "center",
+                                                                gap: "6px",
+                                                                fontSize: "12px",
+                                                                color: isOwn ? "#DBEAFE" : PREMIUM.blue,
+                                                                textDecoration: "none",
+                                                                background: isOwn
+                                                                    ? "rgba(255,255,255,0.14)"
+                                                                    : "rgba(59,130,246,0.08)",
+                                                                borderRadius: "8px",
+                                                                padding: "5px 8px",
+                                                                width: "fit-content"
                                                             }}
                                                         >
-                                                            📎 {att.file_name}
+                                                            <i className="bi bi-paperclip"></i>
+                                                            {att.file_name}
                                                         </a>
                                                     ))}
                                                 </div>
@@ -244,140 +368,120 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                     </div>
                                 );
                             })}
-                            <div ref={bottomRef} />
+                            <div ref={bottomRef}></div>
                         </div>
                     )}
                 </div>
 
-                {/* Compose box */}
-                <div style={{
-                    padding: '0.75rem 1.25rem',
-                    borderTop: '1px solid #eee', flexShrink: 0,
-                }}>
+                <div className="dr-modal-foot" style={{ display: "block" }}>
                     {sendError && (
-                        <div style={{ fontSize: 12, color: '#dc3545', marginBottom: 6 }}>{sendError}</div>
+                        <div style={{ fontSize: "12px", color: "#dc3545", marginBottom: "8px" }}>
+                            {sendError}
+                        </div>
                     )}
 
-                    {/* Staged file previews */}
                     {files.length > 0 && (
-                        <div style={{
-                            display: 'flex', flexWrap: 'wrap', gap: 6,
-                            marginBottom: 8,
-                        }}>
+                        <div
+                            style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: "8px",
+                                marginBottom: "10px"
+                            }}
+                        >
                             {files.map((f, i) => (
-                                <div key={i} style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                                    background: '#f0f4ff',
-                                    border: '1px solid #c9d8fb',
-                                    borderRadius: 6,
-                                    padding: '3px 8px',
-                                    fontSize: 12, color: '#2a52a8',
-                                    maxWidth: 220,
-                                }}>
-                                    <span>📎</span>
-                                    <span style={{
-                                        overflow: 'hidden', textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap', flex: 1,
-                                    }}>
-                                        {f.name}
-                                    </span>
-                                    <span style={{ color: '#888', flexShrink: 0 }}>
-                                        {fmtSize(f.size)}
-                                    </span>
+                                <div
+                                    key={`${f.name}-${f.size}-${i}`}
+                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                        padding: "6px 10px",
+                                        borderRadius: "10px",
+                                        background: "rgba(59,130,246,0.08)",
+                                        border: "1px solid rgba(59,130,246,0.16)",
+                                        fontSize: "12px",
+                                        color: "var(--dr-text)"
+                                    }}
+                                >
+                                    <i className="bi bi-paperclip"></i>
+                                    <span>{f.name}</span>
+                                    <span style={{ color: "var(--dr-subtle)" }}>{fmtSize(f.size)}</span>
                                     <button
+                                        type="button"
                                         onClick={() => removeFile(i)}
                                         style={{
-                                            background: 'none', border: 'none',
-                                            cursor: 'pointer', padding: 0,
-                                            color: '#888', fontSize: 13, lineHeight: 1,
-                                            flexShrink: 0,
+                                            border: "none",
+                                            background: "transparent",
+                                            cursor: "pointer",
+                                            color: "var(--dr-subtle)"
                                         }}
-                                        title="Remove file"
                                     >
-                                        ✕
+                                        <i className="bi bi-x"></i>
                                     </button>
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                        {/* Hidden file input — triggered by the attach button */}
+                    <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
                         <input
                             ref={fileRef}
                             type="file"
                             multiple
-                            style={{ display: 'none' }}
+                            style={{ display: "none" }}
                             onChange={handleFileChange}
                         />
 
-                        {/* Attach button */}
                         <button
                             type="button"
+                            className="dr-icon-btn"
                             onClick={() => fileRef.current?.click()}
                             disabled={sending}
+                            aria-label="Attach files"
                             title="Attach files"
-                            style={{
-                                background: files.length > 0 ? '#e8f0fe' : '#f5f6f7',
-                                border: `1px solid ${files.length > 0 ? '#c9d8fb' : '#dee2e6'}`,
-                                borderRadius: 8,
-                                width: 38, height: 40,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: sending ? 'not-allowed' : 'pointer',
-                                flexShrink: 0,
-                                fontSize: 17,
-                                opacity: sending ? 0.5 : 1,
-                                transition: 'background 0.15s, border-color 0.15s',
-                                position: 'relative',
-                            }}
                         >
-                            📎
-                            {/* Badge showing count of staged files */}
-                            {files.length > 0 && (
-                                <span style={{
-                                    position: 'absolute', top: -5, right: -5,
-                                    background: '#0d6efd', color: '#fff',
-                                    borderRadius: '50%', width: 16, height: 16,
-                                    fontSize: 9, fontWeight: 700,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    border: '2px solid #fff',
-                                }}>
-                                    {files.length}
-                                </span>
-                            )}
+                            <i className="bi bi-paperclip"></i>
                         </button>
 
                         <textarea
                             rows={2}
                             value={text}
-                            onChange={e => setText(e.target.value)}
-                            onKeyDown={e => {
-                                // Ctrl+Enter or Cmd+Enter to send
-                                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                            onChange={(e) => setText(e.target.value)}
+                            onKeyDown={(e) => {
+                                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                                     e.preventDefault();
                                     handleSend();
                                 }
                             }}
-                            placeholder="Write a comment…  (Ctrl+Enter to send)"
+                            placeholder="Write a comment... (Ctrl+Enter to send)"
                             style={{
-                                flex: 1, resize: 'none', border: '1px solid #dee2e6',
-                                borderRadius: 8, padding: '8px 10px', fontSize: 13,
-                                outline: 'none', fontFamily: 'inherit',
+                                flex: 1,
+                                resize: "none",
+                                border: "1px solid var(--dr-border)",
+                                borderRadius: "12px",
+                                padding: "10px 12px",
+                                fontSize: "13px",
+                                outline: "none",
+                                fontFamily: "Nunito, sans-serif",
+                                color: "var(--dr-text)",
+                                background: "var(--dr-card)"
                             }}
                         />
+
                         <button
+                            className="dr-ghost-btn"
                             onClick={handleSend}
                             disabled={!canSend}
                             style={{
-                                background: '#0d6efd', color: '#fff',
-                                border: 'none', borderRadius: 8,
-                                padding: '8px 16px', fontWeight: 600,
-                                fontSize: 13, cursor: canSend ? 'pointer' : 'not-allowed',
-                                opacity: canSend ? 1 : 0.6,
-                                whiteSpace: 'nowrap', height: 40, flexShrink: 0,
+                                background: PREMIUM.blue,
+                                color: "#fff",
+                                borderColor: PREMIUM.blue,
+                                minWidth: "92px",
+                                justifyContent: "center"
                             }}
                         >
-                            {sending ? '…' : 'Send'}
+                            {sending ? "Sending..." : "Send"}
                         </button>
                     </div>
                 </div>
@@ -386,30 +490,26 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
     );
 }
 
-
-
-
 function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
-    const [commentTask, setCommentTask] = useState(null); // task whose comments are open
+    const [commentTask, setCommentTask] = useState(null);
     const [currentUserId, setCurrentUserId] = useState(null);
 
     useEffect(() => {
-        fetch('php/get_current_user.php')
-            .then(r => r.json())
-            .then(data => { if (data.id) setCurrentUserId(data.id); })
+        fetch("php/get_current_user.php")
+            .then((r) => r.json())
+            .then((data) => {
+                if (data?.id) setCurrentUserId(data.id);
+            })
             .catch(() => {});
     }, []);
 
-
-
-
     useEffect(() => {
         setLoading(true);
-        setError(null);
+        setError("");
         setTasks([]);
         setActiveTab("all");
 
@@ -431,329 +531,175 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
             });
     }, [emp.id, yearStart, yearEnd]);
 
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) onClose();
-    };
+    useEffect(() => {
+        const onEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
 
-    const getTaskStatus = (task) => task.derived_status ?? task.status;
-    const statusBadge = (s) =>
-        ({ Completed: "success", Ongoing: "warning", Overdue: "danger" }[s] ??
-            "secondary");
-    const priorityBadge = (p) =>
-        ({ High: "danger", Medium: "warning", Low: "secondary" }[p] ??
-            "secondary");
+    const annotatedTasks = useMemo(
+        () =>
+            tasks.map((task) => ({
+                ...task,
+                derivedStatus: getDerivedStatus(task)
+            })),
+        [tasks]
+    );
 
-    const annotated = tasks.map((t) => ({ ...t, derivedStatus: getTaskStatus(t) }));
-    const filtered =
-        activeTab === "all"
-            ? annotated
-            : annotated.filter((t) => t.derivedStatus === activeTab);
-    const countFor = (s) =>
-        annotated.filter((t) => t.derivedStatus === s).length;
+    const filteredTasks = useMemo(() => {
+        return activeTab === "all"
+            ? annotatedTasks
+            : annotatedTasks.filter((task) => task.derivedStatus === activeTab);
+    }, [annotatedTasks, activeTab]);
 
-    return (
-        <div
-            onClick={handleBackdropClick}
-            style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(0,0,0,0.45)",
-                zIndex: 1050,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "1rem",
-            }}
-        >
+    const countFor = (status) =>
+        annotatedTasks.filter((task) => task.derivedStatus === status).length;
+
+    return portalWrap(
+        <>
             <div
-                style={{
-                    background: "#fff",
-                    borderRadius: 12,
-                    width: "100%",
-                    maxWidth: 720,
-                    maxHeight: "85vh",
-                    display: "flex",
-                    flexDirection: "column",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-                }}
+                className="dr-modal-backdrop"
+                onClick={(e) => e.target === e.currentTarget && onClose()}
             >
-                <div
-                    style={{
-                        padding: "1rem 1.25rem",
-                        borderBottom: "1px solid #dee2e6",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        flexShrink: 0,
-                    }}
-                >
-                    <div>
-                        <h5 style={{ margin: 0, fontWeight: 600 }}>{emp.name}</h5>
-                        <small className="text-muted">
-                            {emp.department} &nbsp;·&nbsp; {yearStart} – {yearEnd}
-                        </small>
-                    </div>
-                    <button
-                        className="btn-close"
-                        aria-label="Close"
-                        onClick={onClose}
-                        style={{ marginTop: 2 }}
-                    />
-                </div>
-
-                <div
-                    style={{
-                        padding: "0.75rem 1.25rem",
-                        borderBottom: "1px solid #dee2e6",
-                        display: "flex",
-                        gap: 8,
-                        flexShrink: 0,
-                        flexWrap: "wrap",
-                    }}
-                >
-                    {[
-                        {
-                            label: "All",
-                            key: "all",
-                            count: tasks.length,
-                            color: "#6c757d",
-                        },
-                        {
-                            label: "Completed",
-                            key: "Completed",
-                            count: countFor("Completed"),
-                            color: "#28a745",
-                        },
-                        {
-                            label: "Ongoing",
-                            key: "Ongoing",
-                            count: countFor("Ongoing"),
-                            color: "#ffc107",
-                        },
-                        {
-                            label: "Overdue",
-                            key: "Overdue",
-                            count: countFor("Overdue"),
-                            color: "#dc3545",
-                        },
-                    ].map((tab) => (
-                        <button
-                            key={tab.key}
-                            onClick={() => setActiveTab(tab.key)}
-                            style={{
-                                border: `2px solid ${
-                                    activeTab === tab.key ? tab.color : "#dee2e6"
-                                }`,
-                                borderRadius: 20,
-                                padding: "3px 14px",
-                                background: activeTab === tab.key ? tab.color : "#fff",
-                                color: activeTab === tab.key ? "#fff" : "#555",
-                                fontWeight: 500,
-                                fontSize: 13,
-                                cursor: "pointer",
-                                transition: "all 0.15s",
-                            }}
-                        >
-                            {tab.label}{" "}
-                            <span
+                <div className="dr-modal-card">
+                    <div className="dr-modal-head">
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <img
+                                src={buildAvatarFallbackUrl(emp.name)}
+                                alt={`${emp.name} Profile`}
                                 style={{
-                                    background:
-                                        activeTab === tab.key
-                                            ? "rgba(255,255,255,0.3)"
-                                            : "#eee",
-                                    borderRadius: 10,
-                                    padding: "1px 7px",
-                                    marginLeft: 4,
-                                    fontSize: 12,
+                                    width: "48px",
+                                    height: "48px",
+                                    borderRadius: "999px",
+                                    border: "1px solid var(--dr-border)"
                                 }}
-                            >
-                                {tab.count}
-                            </span>
+                            />
+                            <div>
+                                <h5 className="dr-modal-title">{emp.name}</h5>
+                                <div className="dr-modal-subtitle">
+                                    {emp.department} · {yearStart} to {yearEnd}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button className="dr-icon-btn" onClick={onClose} aria-label="Close">
+                            <i className="bi bi-x-lg"></i>
                         </button>
-                    ))}
-                </div>
+                    </div>
 
-                <div
-                    style={{
-                        overflowY: "auto",
-                        padding: "1rem 1.25rem",
-                        flex: 1,
-                    }}
-                >
-                    {loading ? (
-                        <div className="text-center text-muted py-4">
-                            <div
-                                className="spinner-border spinner-border-sm me-2"
-                                role="status"
-                            ></div>
-                            Loading tasks...
+                    <div className="dr-modal-toolbar">
+                        <div className="dr-pill-row">
+                            {[
+                                { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
+                                { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
+                                { key: "Ongoing", label: "Ongoing", count: countFor("Ongoing"), tone: "warning" },
+                                { key: "Overdue", label: "Overdue", count: countFor("Overdue"), tone: "danger" }
+                            ].map((tab) => {
+                                const active = activeTab === tab.key;
+                                return (
+                                    <button
+                                        key={tab.key}
+                                        type="button"
+                                        className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
+                                        onClick={() => setActiveTab(tab.key)}
+                                    >
+                                        {tab.label}
+                                        <span className="dr-pill-tab-count">{tab.count}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
-                    ) : error ? (
-                        <div className="alert alert-danger">{error}</div>
-                    ) : filtered.length === 0 ? (
-                        <div className="text-center text-muted py-4">
-                            No{" "}
-                            {activeTab === "all"
-                                ? ""
-                                : activeTab.toLowerCase() + " "}
-                            tasks found for this year.
-                        </div>
-                    ) : (
-                        <table className="table table-bordered table-hover align-middle mb-0">
-                            <thead
-                                className="table-light"
-                                style={{ position: "sticky", top: 0 }}
-                            >
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Status</th>
-                                    <th>Priority</th>
-                                    <th>Deadline</th>
-                                    <th style={{ textAlign: "center", width: 80 }}>Comments</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map((task, idx) => {
-                                    const days = task.days_until_deadline;
-                                    let deadlineLabel = "—";
-                                    let deadlineSub = null;
+                    </div>
 
+                    <div className="dr-modal-body">
+                        {loading ? (
+                            <div className="dr-empty-state">Loading tasks...</div>
+                        ) : error ? (
+                            <div className="alert alert-danger mb-0">{error}</div>
+                        ) : filteredTasks.length === 0 ? (
+                            <div className="dr-empty-state">No matching tasks found.</div>
+                        ) : (
+                            <div className="dr-task-list">
+                                {filteredTasks.map((task, idx) => {
+                                    const status = task.derivedStatus;
+                                    const statusClass = getStatusClass(status);
+                                    const priorityText = task.priority || "Other";
+                                    const priorityClass = getPriorityClass(priorityText);
+
+                                    let deadlineMeta = "No deadline";
                                     if (task.deadline) {
-                                        deadlineLabel = new Date(
-                                            task.deadline
-                                        ).toLocaleDateString("en-PH", {
-                                            month: "short",
-                                            day: "numeric",
-                                            year: "numeric",
-                                        });
+                                        deadlineMeta = formatDatePH(task.deadline, true);
 
                                         if (
-                                            task.derivedStatus === "Overdue" &&
-                                            days !== null
+                                            task.days_until_deadline !== null &&
+                                            task.days_until_deadline !== undefined
                                         ) {
-                                            deadlineSub = (
-                                                <div
-                                                    style={{
-                                                        fontSize: 11,
-                                                        color: "#dc3545",
-                                                        fontWeight: 600,
-                                                    }}
-                                                >
-                                                    {Math.abs(days)} day
-                                                    {Math.abs(days) !== 1 ? "s" : ""} overdue
-                                                </div>
-                                            );
-                                        } else if (
-                                            task.derivedStatus === "Ongoing" &&
-                                            days !== null
-                                        ) {
-                                            deadlineSub = (
-                                                <div
-                                                    style={{
-                                                        fontSize: 11,
-                                                        color:
-                                                            days <= 2 ? "#dc3545" : "#6c757d",
-                                                    }}
-                                                >
-                                                    {days === 0
-                                                        ? "Due today"
-                                                        : `${days} day${
-                                                              days !== 1 ? "s" : ""
-                                                          } left`}
-                                                </div>
-                                            );
-                                        } else if (
-                                            task.derivedStatus === "Completed" &&
-                                            task.completed_at
-                                        ) {
-                                            deadlineSub = (
-                                                <div
-                                                    style={{
-                                                        fontSize: 11,
-                                                        color: "#28a745",
-                                                    }}
-                                                >
-                                                    Done{" "}
-                                                    {new Date(
-                                                        task.completed_at
-                                                    ).toLocaleDateString("en-PH", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                    })}
-                                                </div>
-                                            );
+                                            if (status === "Overdue") {
+                                                deadlineMeta += ` · ${Math.abs(task.days_until_deadline)} day${
+                                                    Math.abs(task.days_until_deadline) !== 1 ? "s" : ""
+                                                } overdue`;
+                                            } else if (status === "Ongoing") {
+                                                deadlineMeta +=
+                                                    task.days_until_deadline === 0
+                                                        ? " · Due today"
+                                                        : ` · ${task.days_until_deadline} day${
+                                                              task.days_until_deadline !== 1 ? "s" : ""
+                                                          } left`;
+                                            } else if (status === "Completed" && task.completed_at) {
+                                                deadlineMeta += ` · Done ${formatDatePH(task.completed_at, false)}`;
+                                            }
                                         }
                                     }
 
                                     return (
-                                        <tr key={task.id ?? idx}>
-                                            <td>
-                                                <div style={{ fontWeight: 500 }}>
-                                                    {task.title}
+                                        <div className="dr-task-item" key={task.id ?? idx}>
+                                            <div className="dr-task-item-main">
+                                                <div className="dr-task-item-title">
+                                                    {task.title || "Untitled Task"}
                                                 </div>
                                                 {task.description && (
-                                                    <small className="text-muted">
+                                                    <div className="dr-task-item-desc">
                                                         {task.description}
-                                                    </small>
+                                                    </div>
                                                 )}
-                                            </td>
-                                            <td>
-                                                <span
-                                                    className={`badge bg-${statusBadge(
-                                                        task.derivedStatus
-                                                    )}`}
-                                                >
-                                                    {task.derivedStatus}
+                                                <div className="dr-task-item-meta">{deadlineMeta}</div>
+                                            </div>
+
+                                            <div className="dr-task-item-side">
+                                                <span className={`dr-status-inline ${statusClass}`}>
+                                                    {status}
                                                 </span>
-                                            </td>
-                                            <td>
-                                                <span
-                                                    className={`badge bg-${priorityBadge(
-                                                        task.priority
-                                                    )}`}
-                                                >
-                                                    {task.priority ?? "—"}
+
+                                                <span className={`dr-priority-inline ${priorityClass}`}>
+                                                    <i className="bi bi-flag-fill"></i>
+                                                    <span>{priorityText}</span>
                                                 </span>
-                                            </td>
-                                            <td style={{ whiteSpace: "nowrap" }}>
-                                                {deadlineLabel}
-                                                {deadlineSub}
-                                            </td>
-     
-                                            <td style={{ textAlign: "center" }}>
+
                                                 <button
-                                                    className="btn btn-link p-0"
-                                                    title="View comments"
-                                                    style={{ color: "#6c757d", fontSize: 18, lineHeight: 1 }}
-                                                    onClick={e => { e.stopPropagation(); setCommentTask(task); }}
+                                                    className="dr-eye-btn"
+                                                    title="Open comments"
+                                                    onClick={() => setCommentTask(task)}
                                                 >
-                                                    💬
+                                                    <i className="bi bi-chat-dots"></i>
                                                 </button>
-                                            </td>
-                                        </tr>
+                                            </div>
+                                        </div>
                                     );
                                 })}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
+                            </div>
+                        )}
+                    </div>
 
-                <div
-                    style={{
-                        padding: "0.75rem 1.25rem",
-                        borderTop: "1px solid #dee2e6",
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        flexShrink: 0,
-                    }}
-                >
-                    <button className="btn btn-secondary btn-sm" onClick={onClose}>
-                        Close
-                    </button>
+                    <div className="dr-modal-foot">
+                        <button className="dr-ghost-btn" onClick={onClose}>
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
-            
-     
+
             {commentTask && (
                 <TaskCommentModal
                     task={commentTask}
@@ -762,131 +708,586 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                     onClose={() => setCommentTask(null)}
                 />
             )}
-        </div>
+        </>
     );
 }
 
-// ====================================================================
-// DEPARTMENT TASK MODAL — shows all tasks for a specific department
-// within the selected year. Uses get_department_tasks_report.php with
-// week_start / week_end mapped to the full year range.
-// ====================================================================
 function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
-    const [tasks, setTasks]         = useState([]);
-    const [loading, setLoading]     = useState(true);
-    const [error, setError]         = useState(null);
-    const [activeTab, setActiveTab] = useState('all');
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [activeTab, setActiveTab] = useState("all");
 
     useEffect(() => {
         setLoading(true);
-        setError(null);
+        setError("");
         setTasks([]);
-        setActiveTab('all');
-        fetch(`php/get_department_tasks_report.php?department_id=${dept.department_id}&week_start=${yearStart}&week_end=${yearEnd}`)
-            .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
-            .then(data => { if (data.error) throw new Error(data.error); setTasks(Array.isArray(data.tasks) ? data.tasks : []); setLoading(false); })
-            .catch(err => { setError(`Could not load tasks: ${err.message}`); setLoading(false); });
+        setActiveTab("all");
+
+        fetch(
+            `php/get_department_tasks_report.php?department_id=${dept.department_id}&week_start=${yearStart}&week_end=${yearEnd}`
+        )
+            .then((r) => {
+                if (!r.ok) throw new Error(`Server returned ${r.status}`);
+                return r.json();
+            })
+            .then((data) => {
+                if (data.error) throw new Error(data.error);
+                setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+                setLoading(false);
+            })
+            .catch((err) => {
+                setError(`Could not load tasks: ${err.message}`);
+                setLoading(false);
+            });
     }, [dept.department_id, yearStart, yearEnd]);
 
-    const handleBackdropClick = (e) => { if (e.target === e.currentTarget) onClose(); };
-    const getStatus     = (t) => t.derived_status ?? t.status;
-    const statusBadge   = (s) => ({ Completed: 'success', Ongoing: 'warning', Overdue: 'danger' }[s] ?? 'secondary');
-    const priorityBadge = (p) => ({ High: 'danger', Medium: 'warning', Low: 'secondary' }[p] ?? 'secondary');
-    const annotated = tasks.map(t => ({ ...t, derivedStatus: getStatus(t) }));
-    const filtered  = activeTab === 'all' ? annotated : annotated.filter(t => t.derivedStatus === activeTab);
-    const countFor  = (s) => annotated.filter(t => t.derivedStatus === s).length;
+    useEffect(() => {
+        const onEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
 
-    return (
-        <div onClick={handleBackdropClick} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-            <div style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 760, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
-                {/* Header */}
-                <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #dee2e6', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+    const annotatedTasks = useMemo(
+        () =>
+            tasks.map((task) => ({
+                ...task,
+                derivedStatus: getDerivedStatus(task)
+            })),
+        [tasks]
+    );
+
+    const filteredTasks =
+        activeTab === "all"
+            ? annotatedTasks
+            : annotatedTasks.filter((task) => task.derivedStatus === activeTab);
+
+    const countFor = (status) =>
+        annotatedTasks.filter((task) => task.derivedStatus === status).length;
+
+    return portalWrap(
+        <div
+            className="dr-modal-backdrop"
+            onClick={(e) => e.target === e.currentTarget && onClose()}
+        >
+            <div className="dr-modal-card">
+                <div className="dr-modal-head">
                     <div>
-                        <h5 style={{ margin: 0, fontWeight: 600 }}>{dept.department}</h5>
-                        <small className="text-muted">Department tasks · {yearStart.slice(0,4)}</small>
+                        <h5 className="dr-modal-title">{dept.department}</h5>
+                        <div className="dr-modal-subtitle">
+                            Department tasks · {yearStart.slice(0, 4)}
+                        </div>
                     </div>
-                    <button className="btn-close" aria-label="Close" onClick={onClose} style={{ marginTop: 2 }} />
+
+                    <button className="dr-icon-btn" onClick={onClose} aria-label="Close">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
                 </div>
-                {/* Tab pills */}
-                <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid #dee2e6', display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                    {[
-                        { label: 'All',       key: 'all',       count: tasks.length,         color: '#6c757d' },
-                        { label: 'Completed', key: 'Completed', count: countFor('Completed'), color: '#28a745' },
-                        { label: 'Ongoing',   key: 'Ongoing',   count: countFor('Ongoing'),   color: '#ffc107' },
-                        { label: 'Overdue',   key: 'Overdue',   count: countFor('Overdue'),   color: '#dc3545' },
-                    ].map(tab => (
-                        <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-                            border: `2px solid ${activeTab === tab.key ? tab.color : '#dee2e6'}`,
-                            borderRadius: 20, padding: '3px 14px',
-                            background: activeTab === tab.key ? tab.color : '#fff',
-                            color: activeTab === tab.key ? '#fff' : '#555',
-                            fontWeight: 500, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
-                        }}>
-                            {tab.label}{' '}
-                            <span style={{ background: activeTab === tab.key ? 'rgba(255,255,255,0.3)' : '#eee', borderRadius: 10, padding: '1px 7px', marginLeft: 4, fontSize: 12 }}>
-                                {tab.count}
-                            </span>
-                        </button>
-                    ))}
+
+                <div className="dr-modal-toolbar">
+                    <div className="dr-pill-row">
+                        {[
+                            { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
+                            { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
+                            { key: "Ongoing", label: "Ongoing", count: countFor("Ongoing"), tone: "warning" },
+                            { key: "Overdue", label: "Overdue", count: countFor("Overdue"), tone: "danger" }
+                        ].map((tab) => {
+                            const active = activeTab === tab.key;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
+                                    onClick={() => setActiveTab(tab.key)}
+                                >
+                                    {tab.label}
+                                    <span className="dr-pill-tab-count">{tab.count}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
-                {/* Body */}
-                <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
+
+                <div className="dr-modal-body">
                     {loading ? (
-                        <div className="text-center text-muted py-4"><div className="spinner-border spinner-border-sm me-2" role="status"></div>Loading tasks...</div>
+                        <div className="dr-empty-state">Loading tasks...</div>
                     ) : error ? (
-                        <div className="alert alert-danger">{error}</div>
-                    ) : filtered.length === 0 ? (
-                        <div className="text-center text-muted py-4">No {activeTab === 'all' ? '' : activeTab.toLowerCase() + ' '}tasks found for this department.</div>
+                        <div className="alert alert-danger mb-0">{error}</div>
+                    ) : filteredTasks.length === 0 ? (
+                        <div className="dr-empty-state">No matching tasks found.</div>
                     ) : (
-                        <table className="table table-bordered table-hover align-middle mb-0">
-                            <thead className="table-light" style={{ position: 'sticky', top: 0 }}>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Assigned To</th>
-                                    <th>Status</th>
-                                    <th>Priority</th>
-                                    <th>Deadline</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map((task, idx) => {
-                                    const days = task.days_until_deadline;
-                                    let deadlineLabel = '—', deadlineSub = null;
-                                    if (task.deadline) {
-                                        deadlineLabel = new Date(task.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-                                        if (task.derivedStatus === 'Overdue' && days !== null)
-                                            deadlineSub = <div style={{ fontSize: 11, color: '#dc3545', fontWeight: 600 }}>{Math.abs(days)} day{Math.abs(days) !== 1 ? 's' : ''} overdue</div>;
-                                        else if (task.derivedStatus === 'Ongoing' && days !== null)
-                                            deadlineSub = <div style={{ fontSize: 11, color: days <= 2 ? '#dc3545' : '#6c757d' }}>{days === 0 ? 'Due today' : `${days} day${days !== 1 ? 's' : ''} left`}</div>;
-                                        else if (task.derivedStatus === 'Completed' && task.completed_at)
-                                            deadlineSub = <div style={{ fontSize: 11, color: '#28a745' }}>Done {new Date(task.completed_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</div>;
+                        <div className="dr-task-list">
+                            {filteredTasks.map((task, idx) => {
+                                const status = task.derivedStatus;
+                                const statusClass = getStatusClass(status);
+                                const priorityText = task.priority || "Other";
+                                const priorityClass = getPriorityClass(priorityText);
+
+                                let deadlineMeta = "No deadline";
+                                if (task.deadline) {
+                                    deadlineMeta = formatDatePH(task.deadline, true);
+
+                                    if (
+                                        task.days_until_deadline !== null &&
+                                        task.days_until_deadline !== undefined
+                                    ) {
+                                        if (status === "Overdue") {
+                                            deadlineMeta += ` · ${Math.abs(task.days_until_deadline)} day${
+                                                Math.abs(task.days_until_deadline) !== 1 ? "s" : ""
+                                            } overdue`;
+                                        } else if (status === "Ongoing") {
+                                            deadlineMeta +=
+                                                task.days_until_deadline === 0
+                                                    ? " · Due today"
+                                                    : ` · ${task.days_until_deadline} day${
+                                                          task.days_until_deadline !== 1 ? "s" : ""
+                                                      } left`;
+                                        } else if (status === "Completed" && task.completed_at) {
+                                            deadlineMeta += ` · Done ${formatDatePH(task.completed_at, false)}`;
+                                        }
                                     }
-                                    return (
-                                        <tr key={task.id ?? idx}>
-                                            <td><div style={{ fontWeight: 500 }}>{task.title}</div>{task.description && <small className="text-muted">{task.description}</small>}</td>
-                                            <td style={{ whiteSpace: 'nowrap', fontWeight: 500, color: '#0d6efd' }}>{task.assigned_to_name ?? '—'}</td>
-                                            <td><span className={`badge bg-${statusBadge(task.derivedStatus)}`}>{task.derivedStatus}</span></td>
-                                            <td><span className={`badge bg-${priorityBadge(task.priority)}`}>{task.priority ?? '—'}</span></td>
-                                            <td style={{ whiteSpace: 'nowrap' }}>{deadlineLabel}{deadlineSub}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                }
+
+                                return (
+                                    <div className="dr-task-item" key={task.id ?? idx}>
+                                        <div className="dr-task-item-main">
+                                            <div className="dr-task-item-title">
+                                                {task.title || "Untitled Task"}
+                                            </div>
+                                            {task.description && (
+                                                <div className="dr-task-item-desc">
+                                                    {task.description}
+                                                </div>
+                                            )}
+                                            <div className="dr-task-item-meta">
+                                                {task.assigned_to_name
+                                                    ? `${task.assigned_to_name} · ${deadlineMeta}`
+                                                    : deadlineMeta}
+                                            </div>
+                                        </div>
+
+                                        <div className="dr-task-item-side">
+                                            <span className={`dr-status-inline ${statusClass}`}>
+                                                {status}
+                                            </span>
+
+                                            <span className={`dr-priority-inline ${priorityClass}`}>
+                                                <i className="bi bi-flag-fill"></i>
+                                                <span>{priorityText}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
-                {/* Footer */}
-                <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid #dee2e6', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-                    <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+
+                <div className="dr-modal-foot">
+                    <button className="dr-ghost-btn" onClick={onClose}>
+                        Close
+                    </button>
                 </div>
             </div>
         </div>
     );
 }
 
-// ====================================================================
-// MAIN PAGE
-// ====================================================================
+function buildPremiumLineOption(labels, completed, ongoing, overdue, isDark) {
+    return {
+        backgroundColor: "transparent",
+        animationDuration: 700,
+        animationEasing: "cubicOut",
+        color: [PREMIUM.green, PREMIUM.blue, PREMIUM.red],
+
+        grid: {
+            top: 28,
+            left: 18,
+            right: 18,
+            bottom: 52,
+            containLabel: true
+        },
+
+        tooltip: {
+            trigger: "axis",
+            backgroundColor: isDark ? "#182133" : "#fff",
+            borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)",
+            borderWidth: 1,
+            textStyle: {
+                color: isDark ? "#f8fafc" : "#202939",
+                fontFamily: "Nunito, sans-serif"
+            },
+            extraCssText: "border-radius:14px; box-shadow:0 12px 30px rgba(15,23,42,0.10);"
+        },
+
+        legend: {
+            bottom: 2,
+            right: 8,
+            itemWidth: 10,
+            itemHeight: 10,
+            icon: "circle",
+            textStyle: {
+                color: isDark ? "#a8b3c7" : PREMIUM.text,
+                fontSize: 12,
+                fontFamily: "Nunito, sans-serif",
+                fontWeight: 700
+            }
+        },
+
+        xAxis: {
+            type: "category",
+            boundaryGap: false,
+            data: labels,
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: {
+                color: isDark ? "#a8b3c7" : PREMIUM.text,
+                fontSize: 12,
+                fontFamily: "Nunito, sans-serif",
+                fontWeight: 700,
+                margin: 14
+            }
+        },
+
+        yAxis: {
+            type: "value",
+            min: 0,
+            minInterval: 1,
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: {
+                color: isDark ? "#a8b3c7" : PREMIUM.text,
+                fontSize: 12,
+                fontFamily: "Nunito, sans-serif",
+                fontWeight: 700,
+                margin: 12
+            },
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    color: isDark ? "rgba(255,255,255,0.08)" : PREMIUM.grid,
+                    width: 1,
+                    type: "solid"
+                }
+            }
+        },
+
+        series: [
+            {
+                name: "Task Completed",
+                type: "line",
+                smooth: true,
+                symbol: "circle",
+                symbolSize: 5,
+                data: completed,
+                lineStyle: {
+                    width: 2,
+                    color: PREMIUM.green
+                },
+                itemStyle: {
+                    color: PREMIUM.green
+                },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: "rgba(24,178,107,0.18)" },
+                        { offset: 1, color: "rgba(24,178,107,0.02)" }
+                    ])
+                },
+                markLine: {
+                    symbol: "none",
+                    silent: true,
+                    lineStyle: {
+                        color: "rgba(24,178,107,0.35)",
+                        type: "dotted",
+                        width: 1
+                    },
+                    data: [{ yAxis: 2 }]
+                }
+            },
+            {
+                name: "Task Ongoing",
+                type: "line",
+                smooth: true,
+                symbol: "circle",
+                symbolSize: 4,
+                data: ongoing,
+                lineStyle: {
+                    width: 1.8,
+                    color: PREMIUM.blue
+                },
+                itemStyle: {
+                    color: PREMIUM.blue
+                },
+                areaStyle: { opacity: 0 },
+                markLine: {
+                    symbol: "none",
+                    silent: true,
+                    lineStyle: {
+                        color: "rgba(59,130,246,0.28)",
+                        type: "dotted",
+                        width: 1
+                    },
+                    data: [{ yAxis: 1 }]
+                }
+            },
+            {
+                name: "Task Overdue",
+                type: "line",
+                smooth: true,
+                symbol: "circle",
+                symbolSize: 4,
+                data: overdue,
+                lineStyle: {
+                    width: 1.8,
+                    color: PREMIUM.red
+                },
+                itemStyle: {
+                    color: PREMIUM.red
+                },
+                areaStyle: { opacity: 0 },
+                markLine: {
+                    symbol: "none",
+                    silent: true,
+                    lineStyle: {
+                        color: "rgba(229,72,77,0.24)",
+                        type: "dotted",
+                        width: 1
+                    },
+                    data: [{ yAxis: 0 }]
+                }
+            }
+        ]
+    };
+}
+
+function buildPremiumGroupedBarOption(
+    labels,
+    aLabel,
+    aSeries,
+    bLabel,
+    bSeries,
+    cLabel,
+    cSeries,
+    isDark,
+    opts = {}
+) {
+    const rotateLabels = opts.rotateLabels ?? false;
+    const bottomSpace = opts.bottomSpace ?? 52;
+    const barWidth = opts.barWidth ?? 16;
+    const labelInterval = opts.labelInterval ?? 0;
+
+    return {
+        backgroundColor: "transparent",
+        animationDuration: 700,
+        animationEasing: "cubicOut",
+        color: [PREMIUM.green, PREMIUM.blue, PREMIUM.red],
+
+        grid: {
+            top: 24,
+            left: 18,
+            right: 16,
+            bottom: bottomSpace,
+            containLabel: true
+        },
+
+        tooltip: {
+            trigger: "axis",
+            axisPointer: {
+                type: "shadow",
+                shadowStyle: {
+                    color: isDark ? "rgba(255,255,255,0.03)" : "rgba(15,23,42,0.03)"
+                }
+            },
+            backgroundColor: isDark ? "#182133" : "#fff",
+            borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)",
+            borderWidth: 1,
+            textStyle: {
+                color: isDark ? "#f8fafc" : "#202939",
+                fontFamily: "Nunito, sans-serif"
+            },
+            extraCssText: "border-radius:14px; box-shadow:0 12px 30px rgba(15,23,42,0.10);"
+        },
+
+        legend: {
+            bottom: 2,
+            right: 8,
+            itemWidth: 10,
+            itemHeight: 10,
+            icon: "circle",
+            textStyle: {
+                color: isDark ? "#a8b3c7" : PREMIUM.text,
+                fontSize: 12,
+                fontFamily: "Nunito, sans-serif",
+                fontWeight: 700
+            }
+        },
+
+        xAxis: {
+            type: "category",
+            data: labels,
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: {
+                color: isDark ? "#a8b3c7" : PREMIUM.text,
+                fontSize: 11,
+                fontFamily: "Nunito, sans-serif",
+                fontWeight: 700,
+                margin: 12,
+                interval: labelInterval,
+                rotate: rotateLabels ? 22 : 0,
+                hideOverlap: false
+            }
+        },
+
+        yAxis: {
+            type: "value",
+            min: 0,
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: {
+                color: isDark ? "#a8b3c7" : PREMIUM.text,
+                fontSize: 12,
+                fontFamily: "Nunito, sans-serif",
+                fontWeight: 700
+            },
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    color: isDark ? "rgba(255,255,255,0.08)" : PREMIUM.grid,
+                    width: 1
+                }
+            }
+        },
+
+        series: [
+            {
+                name: aLabel,
+                type: "bar",
+                data: aSeries,
+                barWidth,
+                barGap: "24%",
+                itemStyle: {
+                    color: "rgba(24,178,107,0.74)",
+                    borderRadius: [4, 4, 0, 0]
+                },
+                emphasis: {
+                    itemStyle: {
+                        color: PREMIUM.green
+                    }
+                }
+            },
+            {
+                name: bLabel,
+                type: "bar",
+                data: bSeries,
+                barWidth,
+                itemStyle: {
+                    color: "rgba(59,130,246,0.74)",
+                    borderRadius: [4, 4, 0, 0]
+                },
+                emphasis: {
+                    itemStyle: {
+                        color: PREMIUM.blue
+                    }
+                }
+            },
+            ...(cSeries
+                ? [
+                      {
+                          name: cLabel,
+                          type: "bar",
+                          data: cSeries,
+                          barWidth,
+                          itemStyle: {
+                              color: "rgba(229,72,77,0.74)",
+                              borderRadius: [4, 4, 0, 0]
+                          },
+                          emphasis: {
+                              itemStyle: {
+                                  color: PREMIUM.red
+                              }
+                          }
+                      }
+                  ]
+                : [])
+        ]
+    };
+}
+
+function buildPremiumDonutOption(summary, isDark) {
+    const separatorColor = isDark ? "#12192b" : "#ffffff";
+
+    return {
+        animation: true,
+        tooltip: {
+            trigger: "item",
+            formatter: (params) => `${params.name}: ${params.value} (${params.percent}%)`,
+            backgroundColor: isDark ? "#182133" : "#ffffff",
+            borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4",
+            borderWidth: 1,
+            textStyle: {
+                color: isDark ? "#f8fafc" : "#18263f",
+                fontFamily: "Nunito, sans-serif"
+            }
+        },
+        legend: {
+            bottom: 0,
+            icon: "circle",
+            textStyle: {
+                color: isDark ? "#a8b3c7" : PREMIUM.text,
+                fontFamily: "Nunito, sans-serif",
+                fontSize: 12,
+                fontWeight: 700
+            }
+        },
+        series: [
+            {
+                type: "pie",
+                radius: ["60%", "82%"],
+                center: ["50%", "42%"],
+                startAngle: 90,
+                clockwise: true,
+                minAngle: 1,
+                label: { show: false },
+                labelLine: { show: false },
+                emphasis: {
+                    scale: true,
+                    scaleSize: 8,
+                    itemStyle: {
+                        borderColor: separatorColor,
+                        borderWidth: 5,
+                        borderRadius: 10
+                    }
+                },
+                itemStyle: {
+                    borderColor: separatorColor,
+                    borderWidth: 4,
+                    borderRadius: 10
+                },
+                data: [
+                    {
+                        value: safeNum(summary.completed),
+                        name: "Completed",
+                        itemStyle: { color: PREMIUM.green }
+                    },
+                    {
+                        value: safeNum(summary.ongoing),
+                        name: "Ongoing",
+                        itemStyle: { color: PREMIUM.blue }
+                    },
+                    {
+                        value: safeNum(summary.overdue),
+                        name: "Overdue",
+                        itemStyle: { color: PREMIUM.red }
+                    }
+                ]
+            }
+        ]
+    };
+}
+
 function AnnualReportPage() {
     const now = new Date();
 
@@ -894,7 +1295,7 @@ function AnnualReportPage() {
         total: 0,
         completed: 0,
         ongoing: 0,
-        overdue: 0,
+        overdue: 0
     });
     const [departments, setDepartments] = useState([]);
     const [allDepartments, setAllDepartments] = useState([]);
@@ -904,28 +1305,26 @@ function AnnualReportPage() {
     const [departmentFilter, setDepartmentFilter] = useState("all");
     const [year, setYear] = useState(now.getFullYear());
     const [selectedDept, setSelectedDept] = useState(null);
-    const [modalEmp, setModalEmp]   = useState(null);
+    const [modalEmp, setModalEmp] = useState(null);
     const [modalDept, setModalDept] = useState(null);
+    const [themeMode, setThemeMode] = useState(getThemeMode());
 
-    const groupedBarRef = useRef(null);
-    const lineRef = useRef(null);
-    const quarterBarRef = useRef(null);
-    const donutRef = useRef(null);
-    const hBarRef = useRef(null);
-
-    const groupedBarChart = useRef(null);
-    const lineChart = useRef(null);
-    const quarterBarChart = useRef(null);
-    const donutChart = useRef(null);
-    const hBarChart = useRef(null);
+    const deptChartRef = useRef(null);
+    const lineChartRef = useRef(null);
+    const quarterChartRef = useRef(null);
+    const donutChartRef = useRef(null);
+    const employeeChartRef = useRef(null);
 
     const yearStart = `${year}-01-01`;
     const yearEnd = `${year}-12-31`;
 
     useEffect(() => {
         fetch("php/get_departments.php")
-            .then((res) => res.json())
-            .then((data) => setAllDepartments(data))
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
+            })
+            .then((data) => setAllDepartments(Array.isArray(data) ? data : []))
             .catch(() => setAllDepartments([]));
     }, []);
 
@@ -935,625 +1334,448 @@ function AnnualReportPage() {
         setModalDept(null);
 
         fetch(`php/get_annual_report.php?year=${year}&department=${departmentFilter}`)
-            .then((res) => res.json())
-            .then((data) => {
-                if (data.error) {
-                    console.error("PHP error:", data.error);
-                    return;
-                }
-
-                setSummary(data.summary);
-                setDepartments(data.departments ?? []);
-                setQuarterlyTrend(data.quarterly_trend ?? []);
-                setMonthlyTrend(data.monthly_trend ?? []);
-                setEmployees(data.employees ?? []);
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
             })
-            .catch((err) => console.error(err));
+            .then((data) => {
+                if (data.error) throw new Error(data.error);
+                setSummary(data.summary ?? { total: 0, completed: 0, ongoing: 0, overdue: 0 });
+                setDepartments(Array.isArray(data.departments) ? data.departments : []);
+                setQuarterlyTrend(Array.isArray(data.quarterly_trend) ? data.quarterly_trend : []);
+                setMonthlyTrend(Array.isArray(data.monthly_trend) ? data.monthly_trend : []);
+                setEmployees(Array.isArray(data.employees) ? data.employees : []);
+            })
+            .catch((err) => {
+                console.error("Failed to load annual report:", err);
+                setSummary({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
+                setDepartments([]);
+                setQuarterlyTrend([]);
+                setMonthlyTrend([]);
+                setEmployees([]);
+            });
     }, [year, departmentFilter]);
 
-    const chartDepts = selectedDept
-        ? departments.filter((d) => d.department_id === selectedDept.department_id)
-        : departments;
-
-    const deptLabels = chartDepts.map((d) => d.department);
-    const deptCompleted = chartDepts.map((d) => d.completed);
-    const deptOngoing = chartDepts.map((d) => d.ongoing);
-    const deptOverdue = chartDepts.map((d) => d.overdue);
-
-    const monthNames = monthlyTrend.map((m) => m.month_name);
-    const lineCompleted = monthlyTrend.map((m) => m.completed);
-    const lineOngoing = monthlyTrend.map((m) => m.ongoing);
-    const lineOverdue = monthlyTrend.map((m) => m.overdue);
-
-    const quarterLabels = quarterlyTrend.map((q) => q.quarter_label);
-    const qCompleted = quarterlyTrend.map((q) => q.completed);
-    const qOngoing = quarterlyTrend.map((q) => q.ongoing);
-    const qOverdue = quarterlyTrend.map((q) => q.overdue);
-
-    const donutData = [summary.completed, summary.ongoing, summary.overdue];
-
-    const empSorted = [...employees].sort(
-        (a, b) => b.completion_rate - a.completion_rate
-    );
-    const empNames = empSorted.map((e) => e.name);
-    const empCompleted = empSorted.map((e) => e.completed);
-    const empOverdue = empSorted.map((e) => e.overdue);
-
     useEffect(() => {
-        if (groupedBarChart.current) groupedBarChart.current.destroy();
-        groupedBarChart.current = new Chart(groupedBarRef.current, {
-            type: "bar",
-            data: {
-                labels: deptLabels,
-                datasets: [
-                    {
-                        label: "Completed",
-                        data: deptCompleted,
-                        backgroundColor: "#28a745",
-                        borderRadius: 4,
-                    },
-                    {
-                        label: "Ongoing",
-                        data: deptOngoing,
-                        backgroundColor: "#ffc107",
-                        borderRadius: 4,
-                    },
-                    {
-                        label: "Overdue",
-                        data: deptOverdue,
-                        backgroundColor: "#dc3545",
-                        borderRadius: 4,
-                    },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: "top" },
-                    title: {
-                        display: !!selectedDept,
-                        text: selectedDept ? `Focused: ${selectedDept.department}` : "",
-                    },
-                    tooltip: {
-                        callbacks: {
-                            afterLabel: (ctx) => {
-                                const dept = chartDepts[ctx.dataIndex];
-                                return dept
-                                    ? `Completion rate: ${dept.completion_rate}%`
-                                    : "";
-                            },
-                        },
-                    },
-                },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                },
-            },
+        const root = document.documentElement;
+        const observer = new MutationObserver(() => {
+            setThemeMode(getThemeMode());
         });
 
-        if (lineChart.current) lineChart.current.destroy();
-        lineChart.current = new Chart(lineRef.current, {
-            type: "line",
-            data: {
-                labels: monthNames,
-                datasets: [
-                    {
-                        label: "Completed",
-                        data: lineCompleted,
-                        borderColor: "#28a745",
-                        backgroundColor: "rgba(40,167,69,0.08)",
-                        pointBackgroundColor: "#28a745",
-                        pointRadius: 4,
-                        tension: 0.4,
-                        fill: true,
-                    },
-                    {
-                        label: "Ongoing",
-                        data: lineOngoing,
-                        borderColor: "#ffc107",
-                        backgroundColor: "rgba(255,193,7,0.06)",
-                        pointBackgroundColor: "#ffc107",
-                        pointRadius: 4,
-                        tension: 0.4,
-                        fill: true,
-                    },
-                    {
-                        label: "Overdue",
-                        data: lineOverdue,
-                        borderColor: "#dc3545",
-                        backgroundColor: "rgba(220,53,69,0.06)",
-                        pointBackgroundColor: "#dc3545",
-                        pointRadius: 4,
-                        tension: 0.4,
-                        fill: true,
-                    },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: "top" },
-                    tooltip: {
-                        callbacks: {
-                            footer: (items) => {
-                                const idx = items[0].dataIndex;
-                                const comp = lineCompleted[idx];
-                                const total =
-                                    comp + lineOngoing[idx] + lineOverdue[idx];
-                                const rate =
-                                    total > 0 ? Math.round((comp / total) * 100) : 0;
-                                return `Completion rate: ${rate}%`;
-                            },
-                        },
-                    },
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: `${year} — Monthly Activity`,
-                        },
-                        grid: { display: false },
-                    },
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                },
-            },
+        observer.observe(root, {
+            attributes: true,
+            attributeFilter: ["data-theme"]
         });
 
-        if (quarterBarChart.current) quarterBarChart.current.destroy();
-        quarterBarChart.current = new Chart(quarterBarRef.current, {
-            type: "bar",
-            data: {
-                labels: quarterLabels,
-                datasets: [
-                    {
-                        label: "Completed",
-                        data: qCompleted,
-                        backgroundColor: "#28a745",
-                        borderRadius: 4,
-                    },
-                    {
-                        label: "Ongoing",
-                        data: qOngoing,
-                        backgroundColor: "#ffc107",
-                        borderRadius: 4,
-                    },
-                    {
-                        label: "Overdue",
-                        data: qOverdue,
-                        backgroundColor: "#dc3545",
-                        borderRadius: 4,
-                    },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: "top" },
-                    tooltip: {
-                        callbacks: {
-                            footer: (items) => {
-                                const idx = items[0].dataIndex;
-                                const q = quarterlyTrend[idx];
-                                return q ? `Completion rate: ${q.completion_rate}%` : "";
-                            },
-                        },
-                    },
-                },
-                scales: {
-                    x: { stacked: true, grid: { display: false } },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 },
-                    },
-                },
-            },
-        });
+        return () => observer.disconnect();
+    }, []);
 
-        if (donutChart.current) donutChart.current.destroy();
-        donutChart.current = new Chart(donutRef.current, {
-            type: "doughnut",
-            data: {
-                labels: ["Completed", "Ongoing", "Overdue"],
-                datasets: [
-                    {
-                        data: donutData,
-                        backgroundColor: ["#28a745", "#ffc107", "#dc3545"],
-                        borderWidth: 2,
-                        borderColor: "#fff",
-                        hoverOffset: 8,
-                    },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: "65%",
-                plugins: {
-                    legend: { position: "bottom" },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => {
-                                const val = ctx.raw;
-                                const total = donutData.reduce((a, b) => a + b, 0);
-                                const pct =
-                                    total > 0 ? Math.round((val / total) * 100) : 0;
-                                return ` ${ctx.label}: ${val} (${pct}%)`;
-                            },
-                        },
-                    },
-                },
-            },
-        });
+    const isDark = themeMode === "dark";
 
-        if (hBarChart.current) hBarChart.current.destroy();
-        if (empSorted.length > 0) {
-            hBarChart.current = new Chart(hBarRef.current, {
-                type: "bar",
-                data: {
-                    labels: empNames,
-                    datasets: [
-                        {
-                            label: "Completed",
-                            data: empCompleted,
-                            backgroundColor: "#28a745",
-                            borderRadius: 4,
-                        },
-                        {
-                            label: "Overdue",
-                            data: empOverdue,
-                            backgroundColor: "#dc3545",
-                            borderRadius: 4,
-                        },
-                    ],
-                },
-                options: {
-                    indexAxis: "y",
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: "top" },
-                        tooltip: {
-                            callbacks: {
-                                afterLabel: (ctx) => {
-                                    const emp = empSorted[ctx.dataIndex];
-                                    return emp
-                                        ? `Completion rate: ${emp.completion_rate}%`
-                                        : "";
-                                },
-                            },
-                        },
-                    },
-                    scales: {
-                        x: { beginAtZero: true, ticks: { stepSize: 1 } },
-                        y: { grid: { display: false } },
-                    },
-                },
-            });
-        }
+    const summaryTotal = useMemo(() => {
+        return safeNum(summary.total) ||
+            safeNum(summary.completed) + safeNum(summary.ongoing) + safeNum(summary.overdue);
+    }, [summary]);
 
-        return () => {
-            if (groupedBarChart.current) groupedBarChart.current.destroy();
-            if (lineChart.current) lineChart.current.destroy();
-            if (quarterBarChart.current) quarterBarChart.current.destroy();
-            if (donutChart.current) donutChart.current.destroy();
-            if (hBarChart.current) hBarChart.current.destroy();
-        };
-    }, [selectedDept, summary, departments, employees, quarterlyTrend, monthlyTrend, year]);
-
+    const summaryRate = pct(summary.completed, summaryTotal);
     const isCurrentYear = year === now.getFullYear();
 
-    const goToPrevYear = () => setYear((y) => y - 1);
-    const goToNextYear = () => setYear((y) => y + 1);
-    const goToCurrentYear = () => setYear(now.getFullYear());
+    const chartDepts = useMemo(() => {
+        return selectedDept
+            ? departments.filter((d) => d.department_id === selectedDept.department_id)
+            : departments;
+    }, [departments, selectedDept]);
 
-    const summaryTotal = summary.completed + summary.ongoing + summary.overdue;
-    const summaryRate =
-        summaryTotal > 0
-            ? Math.round((summary.completed / summaryTotal) * 100)
-            : 0;
+    const deptLabels = useMemo(() => chartDepts.map((d) => d.department), [chartDepts]);
+    const deptCompleted = useMemo(() => chartDepts.map((d) => safeNum(d.completed)), [chartDepts]);
+    const deptOngoing = useMemo(() => chartDepts.map((d) => safeNum(d.ongoing)), [chartDepts]);
+    const deptOverdue = useMemo(() => chartDepts.map((d) => safeNum(d.overdue)), [chartDepts]);
+
+    const monthNames = useMemo(() => monthlyTrend.map((m) => m.month_name), [monthlyTrend]);
+    const lineCompleted = useMemo(() => monthlyTrend.map((m) => safeNum(m.completed)), [monthlyTrend]);
+    const lineOngoing = useMemo(() => monthlyTrend.map((m) => safeNum(m.ongoing)), [monthlyTrend]);
+    const lineOverdue = useMemo(() => monthlyTrend.map((m) => safeNum(m.overdue)), [monthlyTrend]);
+
+    const quarterLabels = useMemo(() => quarterlyTrend.map((q) => q.quarter_label), [quarterlyTrend]);
+    const qCompleted = useMemo(() => quarterlyTrend.map((q) => safeNum(q.completed)), [quarterlyTrend]);
+    const qOngoing = useMemo(() => quarterlyTrend.map((q) => safeNum(q.ongoing)), [quarterlyTrend]);
+    const qOverdue = useMemo(() => quarterlyTrend.map((q) => safeNum(q.overdue)), [quarterlyTrend]);
+
+    const employeeSorted = useMemo(() => {
+        return [...employees].sort((a, b) => safeNum(b.completion_rate) - safeNum(a.completion_rate));
+    }, [employees]);
+
+    const empNames = useMemo(() => employeeSorted.map((e) => e.name), [employeeSorted]);
+    const empCompleted = useMemo(() => employeeSorted.map((e) => safeNum(e.completed)), [employeeSorted]);
+    const empOngoing = useMemo(() => employeeSorted.map((e) => safeNum(e.ongoing)), [employeeSorted]);
+    const empOverdue = useMemo(() => employeeSorted.map((e) => safeNum(e.overdue)), [employeeSorted]);
+
+    useEffect(() => {
+        if (!window.echarts || !deptChartRef.current) return;
+
+        const chart =
+            window.echarts.getInstanceByDom(deptChartRef.current) ||
+            window.echarts.init(deptChartRef.current);
+
+        chart.setOption(
+            buildPremiumGroupedBarOption(
+                deptLabels,
+                "Completed",
+                deptCompleted,
+                "Ongoing",
+                deptOngoing,
+                "Overdue",
+                deptOverdue,
+                isDark
+            ),
+            true
+        );
+
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
+        };
+    }, [deptLabels, deptCompleted, deptOngoing, deptOverdue, isDark]);
+
+    useEffect(() => {
+        if (!window.echarts || !lineChartRef.current) return;
+
+        const chart =
+            window.echarts.getInstanceByDom(lineChartRef.current) ||
+            window.echarts.init(lineChartRef.current);
+
+        chart.setOption(
+            buildPremiumLineOption(
+                monthNames,
+                lineCompleted,
+                lineOngoing,
+                lineOverdue,
+                isDark
+            ),
+            true
+        );
+
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
+        };
+    }, [monthNames, lineCompleted, lineOngoing, lineOverdue, isDark]);
+
+    useEffect(() => {
+        if (!window.echarts || !quarterChartRef.current) return;
+
+        const chart =
+            window.echarts.getInstanceByDom(quarterChartRef.current) ||
+            window.echarts.init(quarterChartRef.current);
+
+        chart.setOption(
+            buildPremiumGroupedBarOption(
+                quarterLabels,
+                "Completed",
+                qCompleted,
+                "Ongoing",
+                qOngoing,
+                "Overdue",
+                qOverdue,
+                isDark
+            ),
+            true
+        );
+
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
+        };
+    }, [quarterLabels, qCompleted, qOngoing, qOverdue, isDark]);
+
+    useEffect(() => {
+        if (!window.echarts || !donutChartRef.current) return;
+
+        const chart =
+            window.echarts.getInstanceByDom(donutChartRef.current) ||
+            window.echarts.init(donutChartRef.current);
+
+        chart.setOption(buildPremiumDonutOption(summary, isDark), true);
+
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
+        };
+    }, [summary, isDark]);
+
+    useEffect(() => {
+        if (!window.echarts || !employeeChartRef.current) return;
+
+        const chart =
+            window.echarts.getInstanceByDom(employeeChartRef.current) ||
+            window.echarts.init(employeeChartRef.current);
+
+        const shouldRotate = empNames.length > 8;
+
+        chart.setOption(
+            buildPremiumGroupedBarOption(
+                empNames,
+                "Completed",
+                empCompleted,
+                "Ongoing",
+                empOngoing,
+                "Overdue",
+                empOverdue,
+                isDark,
+                {
+                    rotateLabels: shouldRotate,
+                    bottomSpace: shouldRotate ? 86 : 58,
+                    barWidth: shouldRotate ? 14 : 16,
+                    labelInterval: 0
+                }
+            ),
+            true
+        );
+
+        const onResize = () => chart.resize();
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            window.removeEventListener("resize", onResize);
+            chart.dispose();
+        };
+    }, [empNames, empCompleted, empOngoing, empOverdue, isDark]);
 
     return (
-        <div className="annual-report-page p-4">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2 className="mb-0">Annual Task Report</h2>
-                <div className="d-flex align-items-center gap-2">
+        <div className="dr-page">
+            <div className="dr-toolbar">
+                <div>
+                    <h2 className="dr-toolbar-title">Annual Task Report</h2>
+                    <div className="dr-toolbar-subtitle">
+                        Department-wide yearly analytics, trends, and assignee performance
+                    </div>
+                </div>
+
+                <div className="dr-toolbar-group">
                     <button
-                        className="btn btn-sm btn-outline-secondary"
-                        onClick={goToPrevYear}
+                        className="dr-icon-btn"
+                        onClick={() => setYear((y) => y - 1)}
+                        aria-label="Previous year"
                     >
-                        ‹ Prev
+                        <i className="bi bi-chevron-left"></i>
                     </button>
-                    <span
-                        className="fw-semibold"
-                        style={{
-                            minWidth: 80,
-                            textAlign: "center",
-                            fontSize: "1.1rem",
-                        }}
-                    >
-                        {year}
-                    </span>
+
+                    <div className="dr-filter-pill">{year}</div>
+
                     <button
-                        className="btn btn-sm btn-outline-secondary"
-                        onClick={goToNextYear}
+                        className="dr-icon-btn"
+                        onClick={() => setYear((y) => y + 1)}
                         disabled={isCurrentYear}
+                        aria-label="Next year"
                     >
-                        Next ›
+                        <i className="bi bi-chevron-right"></i>
                     </button>
+
                     {!isCurrentYear && (
                         <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={goToCurrentYear}
+                            className="dr-ghost-btn"
+                            onClick={() => setYear(now.getFullYear())}
                         >
                             This Year
                         </button>
                     )}
+
+                    <select
+                        className="dr-select"
+                        value={departmentFilter}
+                        onChange={(e) => {
+                            setDepartmentFilter(e.target.value);
+                            setSelectedDept(null);
+                        }}
+                    >
+                        <option value="all">All Departments</option>
+                        {allDepartments.map((dep) => (
+                            <option key={dep.id} value={dep.id}>
+                                {dep.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
-            <div className="mb-4">
-                <select
-                    className="form-select w-auto"
-                    value={departmentFilter}
-                    onChange={(e) => {
-                        setDepartmentFilter(e.target.value);
-                        setSelectedDept(null);
-                    }}
-                >
-                    <option value="all">All Departments</option>
-                    {allDepartments.map((dep) => (
-                        <option key={dep.id} value={dep.id}>
-                            {dep.name}
-                        </option>
-                    ))}
-                </select>
+            <div className="dr-summary-grid">
+                <SummaryCard
+                    icon="bi-list-task"
+                    label="Total Tasks"
+                    value={summaryTotal}
+                    subtext="All tasks recorded this year"
+                    tone="primary"
+                    meta={`${year}`}
+                />
+                <SummaryCard
+                    icon="bi-check2-circle"
+                    label="Completed"
+                    value={safeNum(summary.completed)}
+                    subtext="Finished tasks in selected scope"
+                    tone="success"
+                    meta={`${pct(summary.completed, summaryTotal)}% of total`}
+                />
+                <SummaryCard
+                    icon="bi-arrow-repeat"
+                    label="Ongoing"
+                    value={safeNum(summary.ongoing)}
+                    subtext="Active tasks being worked on"
+                    tone="warning"
+                    meta={`${pct(summary.ongoing, summaryTotal)}% of total`}
+                />
+                <SummaryCard
+                    icon="bi-exclamation-circle"
+                    label="Overdue"
+                    value={safeNum(summary.overdue)}
+                    subtext="Tasks past the deadline"
+                    tone="danger"
+                    meta={`${pct(summary.overdue, summaryTotal)}% of total`}
+                />
+                <SummaryCard
+                    icon="bi-graph-up-arrow"
+                    label="Completion Rate"
+                    value={`${summaryRate}%`}
+                    subtext="Share of completed tasks"
+                    tone="primary"
+                    meta={`${employees.length} staff member${employees.length !== 1 ? "s" : ""}`}
+                />
             </div>
 
-            <div className="row mb-4">
-                <div className="col-md-3">
-                    <div className="card shadow-sm border-0 p-3 text-center">
-                        <h6 className="text-muted mb-1">Total Tasks</h6>
-                        <h2 className="mb-0">{summary.total}</h2>
-                    </div>
-                </div>
-                <div className="col-md-3">
-                    <div className="card shadow-sm border-0 p-3 text-center">
-                        <h6 className="text-muted mb-1">Completed</h6>
-                        <h2 className="text-success mb-0">{summary.completed}</h2>
-                    </div>
-                </div>
-                <div className="col-md-2">
-                    <div className="card shadow-sm border-0 p-3 text-center">
-                        <h6 className="text-muted mb-1">Ongoing</h6>
-                        <h2 className="text-warning mb-0">{summary.ongoing}</h2>
-                    </div>
-                </div>
-                <div className="col-md-2">
-                    <div className="card shadow-sm border-0 p-3 text-center">
-                        <h6 className="text-muted mb-1">Overdue</h6>
-                        <h2 className="text-danger mb-0">{summary.overdue}</h2>
-                    </div>
-                </div>
-                <div className="col-md-2">
-                    <div className="card shadow-sm border-0 p-3 text-center">
-                        <h6 className="text-muted mb-1">Completion Rate</h6>
-                        <h2
-                            className={`mb-0 ${
-                                summaryRate >= 70
-                                    ? "text-success"
-                                    : summaryRate >= 40
-                                    ? "text-warning"
-                                    : "text-danger"
-                            }`}
-                        >
-                            {summaryRate}%
-                        </h2>
-                    </div>
-                </div>
-            </div>
-
-            <div className="row mb-4">
-                <div className="col-12">
-                    <div className="card shadow-sm border-0 p-3">
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <h5 className="mb-0">Department Task Comparison</h5>
-                                <small className="text-muted">
-                                    Completed, Ongoing, and Overdue per department for {year}
-                                </small>
+            <div
+                className="dr-top-grid"
+                style={{
+                    gridTemplateColumns: "minmax(300px, 0.72fr) minmax(0, 1.58fr)"
+                }}
+            >
+                <div className="dr-card">
+                    <div className="dr-card-head">
+                        <div>
+                            <h5 className="dr-card-title">Annual Status Mix</h5>
+                            <div className="dr-card-subtitle">
+                                Overall status distribution for {year}
                             </div>
-                            {selectedDept && (
-                                <div className="d-flex align-items-center gap-2">
-                                    <span className="badge bg-primary">
-                                        {selectedDept.department}
-                                    </span>
-                                    <button
-                                        className="btn btn-sm btn-outline-secondary"
-                                        onClick={() => setSelectedDept(null)}
-                                    >
-                                        ✕ Show all
-                                    </button>
-                                </div>
-                            )}
                         </div>
-                        <div style={{ height: 300 }}>
-                            <canvas ref={groupedBarRef}></canvas>
+
+                        <div className="dr-filter-pill">{summaryTotal} tasks</div>
+                    </div>
+
+                    <div ref={donutChartRef} className="dr-chart-box dr-chart-box--sm"></div>
+                </div>
+
+                <div className="dr-card">
+                    <div className="dr-card-head">
+                        <div>
+                            <h5 className="dr-card-title">Employee Performance</h5>
+                            <div className="dr-card-subtitle">
+                                Sorted by completion rate and task volume
+                            </div>
+                        </div>
+
+                        <div className="dr-filter-pill">
+                            {employeeSorted.length} employee{employeeSorted.length !== 1 ? "s" : ""}
                         </div>
                     </div>
+
+                    <div
+                        ref={employeeChartRef}
+                        className="dr-chart-box"
+                        style={{ height: "360px" }}
+                    ></div>
                 </div>
             </div>
 
-            <div className="row mb-4">
-                <div className="col-12">
-                    <div className="card shadow-sm border-0 p-3">
-                        <h5 className="mb-1">Monthly Activity Trend</h5>
-                        <small className="text-muted d-block mb-3">
-                            Task completion, ongoing, and overdue counts across all 12
-                            months of {year}
-                        </small>
-                        <div style={{ height: 280 }}>
-                            <canvas ref={lineRef}></canvas>
+            <div className="dr-card" style={{ marginBottom: "18px" }}>
+                <div className="dr-card-head">
+                    <div>
+                        <h5 className="dr-card-title">Task Status Trend</h5>
+                        <div className="dr-card-subtitle">
+                            Monthly completed, ongoing, and overdue task movement
                         </div>
                     </div>
+
+                    <div className="dr-filter-pill">This Year</div>
                 </div>
+
+                <div ref={lineChartRef} className="dr-chart-box"></div>
             </div>
 
-            <div className="row mb-4">
-                <div className="col-md-8">
-                    <div className="card shadow-sm border-0 p-3 h-100">
-                        <h5 className="mb-1">Quarterly Breakdown</h5>
-                        <small className="text-muted d-block mb-3">
-                            Volume and status composition per quarter — Q1 through Q4 {year}
-                        </small>
-                        <div className="d-flex gap-3 mb-3 flex-wrap">
-                            {quarterlyTrend.map((q) => (
-                                <div key={q.quarter} style={{ fontSize: 13 }}>
-                                    <span className="fw-semibold">{q.quarter_label}</span>
-                                    <span
-                                        className="ms-1 badge"
-                                        style={{
-                                            background:
-                                                q.completion_rate >= 70
-                                                    ? "#28a745"
-                                                    : q.completion_rate >= 40
-                                                    ? "#ffc107"
-                                                    : "#dc3545",
-                                            color:
-                                                q.completion_rate >= 40 &&
-                                                q.completion_rate < 70
-                                                    ? "#333"
-                                                    : "#fff",
-                                        }}
-                                    >
-                                        {q.completion_rate}%
-                                    </span>
-                                </div>
-                            ))}
+            <div
+                className="dr-bottom-grid"
+                style={{
+                    gridTemplateColumns: "minmax(0, 0.92fr) minmax(0, 1.28fr)"
+                }}
+            >
+                <div className="dr-card">
+                    <div className="dr-card-head">
+                        <div>
+                            <h5 className="dr-card-title">Quarterly Breakdown</h5>
+                            <div className="dr-card-subtitle">
+                                Status composition across Q1–Q4
+                            </div>
                         </div>
-                        <div style={{ height: 220 }}>
-                            <canvas ref={quarterBarRef}></canvas>
-                        </div>
+
+                        <div className="dr-filter-pill">Quarterly</div>
                     </div>
+
+                    <div ref={quarterChartRef} className="dr-chart-box"></div>
                 </div>
 
-                <div className="col-md-4">
-                    <div className="card shadow-sm border-0 p-3 h-100">
-                        <h5 className="mb-1">Annual Status Mix</h5>
-                        <small className="text-muted d-block mb-3">
-                            Overall share of completed, ongoing, and overdue for {year}
-                        </small>
-                        <div style={{ height: 260 }}>
-                            <canvas ref={donutRef}></canvas>
+                <div className="dr-card">
+                    <div className="dr-card-head">
+                        <div>
+                            <h5 className="dr-card-title">Department Task Comparison</h5>
+                            <div className="dr-card-subtitle">
+                                {selectedDept
+                                    ? `Focused: ${selectedDept.department}`
+                                    : `Completed, ongoing, and overdue totals by department for ${year}`}
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            <div className="row mb-4">
-                <div className="col-12">
-                    <div className="card shadow-sm border-0 p-3">
-                        <h5 className="mb-1">Employee Performance</h5>
-                        <small className="text-muted d-block mb-3">
-                            Sorted by most tasks completed in {year}. Hover for completion
-                            rate.
-                        </small>
-                        <div style={{ height: Math.max(200, empSorted.length * 36) }}>
-                            <canvas ref={hBarRef}></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="card shadow-sm border-0 p-3 mb-4">
-                <h5 className="mb-3">Quarterly Summary</h5>
-                <div className="table-responsive">
-                    <table className="table table-bordered table-hover align-middle">
-                        <thead className="table-light">
-                            <tr>
-                                <th>Quarter</th>
-                                <th>Period</th>
-                                <th>Total</th>
-                                <th>Completed</th>
-                                <th>Ongoing</th>
-                                <th>Overdue</th>
-                                <th>Completion Rate</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {quarterlyTrend.map((q) => (
-                                <tr key={q.quarter}>
-                                    <td className="fw-semibold">{q.quarter_label}</td>
-                                    <td className="text-muted">{q.quarter_range}</td>
-                                    <td>{q.total}</td>
-                                    <td>{q.completed}</td>
-                                    <td>{q.ongoing}</td>
-                                    <td className="text-danger fw-bold">{q.overdue}</td>
-                                    <td>
-                                        {q.total === 0 ? (
-                                            <span
-                                                className="text-muted"
-                                                style={{ fontSize: "0.9em" }}
-                                            >
-                                                No tasks yet
-                                            </span>
-                                        ) : q.completion_rate === 0 ? (
-                                            <span
-                                                className="text-danger"
-                                                style={{
-                                                    fontSize: "0.9em",
-                                                    fontWeight: 500,
-                                                }}
-                                            >
-                                                0% — None completed
-                                            </span>
-                                        ) : (
-                                            <div className="progress" style={{ height: 20 }}>
-                                                <div
-                                                    className="progress-bar bg-success"
-                                                    style={{
-                                                        width: `${q.completion_rate}%`,
-                                                    }}
-                                                    aria-valuenow={q.completion_rate}
-                                                    aria-valuemin="0"
-                                                    aria-valuemax="100"
-                                                >
-                                                    {q.completion_rate}%
-                                                </div>
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div className="card shadow-sm border-0 p-3 mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h5 className="mb-0">Department Details</h5>
-                    {selectedDept && (
-                        <small className="text-muted">
-                            Focused on <strong>{selectedDept.department}</strong> —{" "}
-                            <span
-                                style={{ cursor: "pointer", color: "#0d6efd" }}
+                        {selectedDept ? (
+                            <button
+                                className="dr-filter-pill dr-filter-pill--button"
                                 onClick={() => setSelectedDept(null)}
                             >
-                                show all
-                            </span>
-                        </small>
-                    )}
+                                Clear Focus
+                            </button>
+                        ) : (
+                            <div className="dr-filter-pill">This Year</div>
+                        )}
+                    </div>
+
+                    <div ref={deptChartRef} className="dr-chart-box"></div>
+                </div>
+            </div>
+
+            <div className="dr-card" style={{ marginBottom: "18px" }}>
+                <div className="dr-card-head">
+                    <div>
+                        <h5 className="dr-card-title">Department Details</h5>
+                        <div className="dr-card-subtitle">
+                            Click a row to focus charts · click the eye icon to inspect tasks
+                        </div>
+                    </div>
+
+                    <div className="dr-filter-pill">
+                        {departments.length} department{departments.length !== 1 ? "s" : ""}
+                    </div>
                 </div>
 
-                <div className="table-responsive">
-                    <table className="table table-bordered table-hover align-middle">
-                        <thead className="table-light">
+                <div className="dr-table-shell">
+                    <table className="dr-table">
+                        <thead>
                             <tr>
                                 <th>Department</th>
                                 <th>Total</th>
@@ -1561,117 +1783,91 @@ function AnnualReportPage() {
                                 <th>Ongoing</th>
                                 <th>Overdue</th>
                                 <th>Completion Rate</th>
-                                <th style={{ textAlign: "center", width: 60 }}>Tasks</th>
+                                <th style={{ width: "70px", textAlign: "center" }}>View</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {departments.map((dept) => {
-                                const isSelected =
-                                    selectedDept?.department_id === dept.department_id;
+                            {departments.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="dr-table-empty">
+                                        No departments found for this year.
+                                    </td>
+                                </tr>
+                            ) : (
+                                departments.map((dept) => {
+                                    const active =
+                                        selectedDept?.department_id === dept.department_id;
 
-                                return (
-                                    <tr
-                                        key={dept.department_id}
-                                        onClick={() =>
-                                            setSelectedDept((prev) =>
-                                                prev?.department_id === dept.department_id
-                                                    ? null
-                                                    : dept
-                                            )
-                                        }
-                                        style={{
-                                            cursor: "pointer",
-                                            backgroundColor: isSelected ? "#cfe2ff" : "",
-                                            fontWeight: isSelected ? "600" : "normal",
-                                            opacity:
-                                                selectedDept && !isSelected ? 0.5 : 1,
-                                            transition:
-                                                "opacity 0.2s, background-color 0.2s",
-                                        }}
-                                    >
-                                        <td>
-                                            {isSelected && (
-                                                <span
-                                                    className="me-1"
-                                                    style={{ color: "#0d6efd" }}
-                                                >
-                                                    ▶
-                                                </span>
-                                            )}
-                                            {dept.department}
-                                        </td>
-                                        <td>{dept.total}</td>
-                                        <td>{dept.completed}</td>
-                                        <td>{dept.ongoing}</td>
-                                        <td className="text-danger fw-bold">
-                                            {dept.overdue}
-                                        </td>
-                                        <td>
-                                            {dept.total === 0 ? (
-                                                <span
-                                                    className="text-muted"
-                                                    style={{ fontSize: "0.9em" }}
-                                                >
-                                                    No tasks yet
-                                                </span>
-                                            ) : dept.completion_rate === 0 ? (
-                                                <span
-                                                    className="text-danger"
-                                                    style={{
-                                                        fontSize: "0.9em",
-                                                        fontWeight: 500,
-                                                    }}
-                                                >
-                                                    0% — None completed
-                                                </span>
-                                            ) : (
-                                                <div className="progress" style={{ height: 20 }}>
-                                                    <div
-                                                        className="progress-bar bg-success"
-                                                        style={{
-                                                            width: `${dept.completion_rate}%`,
-                                                        }}
-                                                        aria-valuenow={dept.completion_rate}
-                                                        aria-valuemin="0"
-                                                        aria-valuemax="100"
-                                                    >
-                                                        {dept.completion_rate}%
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </td>
-                                        {/* Eye icon — opens DepartmentTaskModal for this dept */}
-                                        <td
-                                            style={{ textAlign: "center" }}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setModalDept(dept);
-                                            }}
+                                    return (
+                                        <tr
+                                            key={dept.department_id}
+                                            className={active ? "is-active" : ""}
+                                            onClick={() =>
+                                                setSelectedDept((prev) =>
+                                                    prev?.department_id === dept.department_id
+                                                        ? null
+                                                        : dept
+                                                )
+                                            }
                                         >
-                                            <button
-                                                className="btn btn-link p-0"
-                                                title={`View ${dept.department} tasks for ${year}`}
-                                                style={{ color: "#0d6efd" }}
+                                            <td>{dept.department}</td>
+                                            <td>{safeNum(dept.total)}</td>
+                                            <td>{safeNum(dept.completed)}</td>
+                                            <td>{safeNum(dept.ongoing)}</td>
+                                            <td className="dr-overdue-cell">{safeNum(dept.overdue)}</td>
+                                            <td>
+                                                <div className="dr-rate-bar">
+                                                    <div
+                                                        className="dr-rate-fill"
+                                                        style={{
+                                                            width: `${safeNum(dept.completion_rate)}%`
+                                                        }}
+                                                    ></div>
+                                                </div>
+                                                <div className="dr-rate-text">
+                                                    {safeNum(dept.completion_rate)}%
+                                                </div>
+                                            </td>
+                                            <td
+                                                style={{ textAlign: "center" }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setModalDept(dept);
+                                                }}
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                                                    <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.12 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.133 13.133 0 0 1 1.172 8z" />
-                                                    <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z" />
-                                                </svg>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                                <button
+                                                    className="dr-eye-btn"
+                                                    title={`View ${dept.department} tasks`}
+                                                >
+                                                    <i className="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div className="card shadow-sm border-0 p-3">
-                <h5 className="mb-3">Employee Details</h5>
-                <div className="table-responsive">
-                    <table className="table table-bordered table-hover align-middle">
-                        <thead className="table-light">
+            <div className="dr-card">
+                <div className="dr-card-head">
+                    <div>
+                        <h5 className="dr-card-title">Employee Details</h5>
+                        <div className="dr-card-subtitle">
+                            Review annual assignee performance and inspect task lists
+                        </div>
+                    </div>
+
+                    <div className="dr-filter-pill">
+                        {employees.length} employee{employees.length !== 1 ? "s" : ""}
+                    </div>
+                </div>
+
+                <div className="dr-table-shell">
+                    <table className="dr-table">
+                        <thead>
                             <tr>
                                 <th>Employee</th>
                                 <th>Department</th>
@@ -1679,54 +1875,36 @@ function AnnualReportPage() {
                                 <th>Ongoing</th>
                                 <th>Overdue</th>
                                 <th>Completion Rate</th>
-                                <th style={{ textAlign: "center" }}>Tasks</th>
+                                <th style={{ width: "70px", textAlign: "center" }}>View</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {employees.map((emp) => {
-                                const rate = emp.completion_rate;
-                                const total = emp.total;
-
-                                return (
+                            {employees.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="dr-table-empty">
+                                        No employees found for this year.
+                                    </td>
+                                </tr>
+                            ) : (
+                                employees.map((emp) => (
                                     <tr key={emp.id}>
                                         <td>{emp.name}</td>
                                         <td>{emp.department}</td>
-                                        <td>{emp.completed}</td>
-                                        <td>{emp.ongoing}</td>
-                                        <td className="text-danger fw-bold">
-                                            {emp.overdue}
-                                        </td>
+                                        <td>{safeNum(emp.completed)}</td>
+                                        <td>{safeNum(emp.ongoing)}</td>
+                                        <td className="dr-overdue-cell">{safeNum(emp.overdue)}</td>
                                         <td>
-                                            {total === 0 ? (
-                                                <span
-                                                    className="text-muted"
-                                                    style={{ fontSize: "0.9em" }}
-                                                >
-                                                    No tasks yet
-                                                </span>
-                                            ) : rate === 0 ? (
-                                                <span
-                                                    className="text-danger"
+                                            <div className="dr-rate-bar">
+                                                <div
+                                                    className="dr-rate-fill"
                                                     style={{
-                                                        fontSize: "0.9em",
-                                                        fontWeight: 500,
+                                                        width: `${safeNum(emp.completion_rate)}%`
                                                     }}
-                                                >
-                                                    0% — None completed
-                                                </span>
-                                            ) : (
-                                                <div className="progress" style={{ height: 20 }}>
-                                                    <div
-                                                        className="progress-bar bg-success"
-                                                        style={{ width: `${rate}%` }}
-                                                        aria-valuenow={rate}
-                                                        aria-valuemin="0"
-                                                        aria-valuemax="100"
-                                                    >
-                                                        {rate}%
-                                                    </div>
-                                                </div>
-                                            )}
+                                                ></div>
+                                            </div>
+                                            <div className="dr-rate-text">
+                                                {safeNum(emp.completion_rate)}%
+                                            </div>
                                         </td>
                                         <td
                                             style={{ textAlign: "center" }}
@@ -1736,25 +1914,15 @@ function AnnualReportPage() {
                                             }}
                                         >
                                             <button
-                                                className="btn btn-link p-0"
-                                                title={`View ${emp.name}'s tasks for ${year}`}
-                                                style={{ color: "#0d6efd" }}
+                                                className="dr-eye-btn"
+                                                title={`View ${emp.name} tasks`}
                                             >
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    width="20"
-                                                    height="20"
-                                                    fill="currentColor"
-                                                    viewBox="0 0 16 16"
-                                                >
-                                                    <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.12 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.133 13.133 0 0 1 1.172 8z" />
-                                                    <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z" />
-                                                </svg>
+                                                <i className="bi bi-eye"></i>
                                             </button>
                                         </td>
                                     </tr>
-                                );
-                            })}
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -1769,7 +1937,6 @@ function AnnualReportPage() {
                 />
             )}
 
-            {/* DepartmentTaskModal — rendered at page root, outside the table */}
             {modalDept && (
                 <DepartmentTaskModal
                     dept={modalDept}
