@@ -2,21 +2,6 @@ const { useEffect, useMemo, useRef, useState } = React;
 
 const MANILA_TZ = "Asia/Manila";
 
-const PREMIUM = {
-    green: "#18B26B",
-    blue: "#3B82F6",
-    red: "#E5484D",
-
-    greenSoft: "rgba(24,178,107,0.16)",
-    blueSoft: "rgba(59,130,246,0.16)",
-    redSoft: "rgba(229,72,77,0.14)",
-
-    grid: "rgba(15,23,42,0.08)",
-    text: "#8A94A6",
-    title: "#202939",
-    white: "#FFFFFF"
-};
-
 function getThemeMode() {
     return document.documentElement.getAttribute("data-theme") === "dark"
         ? "dark"
@@ -51,6 +36,26 @@ function formatDatePH(dateStr, withYear = true) {
     }).format(date);
 }
 
+function formatDateTimePH(dateStr) {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return "";
+
+    return (
+        new Intl.DateTimeFormat("en-PH", {
+            timeZone: MANILA_TZ,
+            month: "short",
+            day: "numeric"
+        }).format(date) +
+        ", " +
+        new Intl.DateTimeFormat("en-PH", {
+            timeZone: MANILA_TZ,
+            hour: "numeric",
+            minute: "2-digit"
+        }).format(date)
+    );
+}
+
 function getDerivedStatus(task) {
     return task?.derived_status ?? task?.status ?? "Other";
 }
@@ -71,9 +76,24 @@ function getPriorityClass(priority) {
     return "other";
 }
 
-function portalWrap(children) {
-    const target = document.getElementById("react-modal-root");
-    return target ? ReactDOM.createPortal(children, target) : children;
+function initials(name) {
+    return name
+        ? name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+        : "?";
+}
+
+function avatarColor(name) {
+    const hue = name
+        ? [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360
+        : 220;
+    return `hsl(${hue}, 55%, 86%)`;
+}
+
+function avatarTextColor(name) {
+    const hue = name
+        ? [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360
+        : 220;
+    return `hsl(${hue}, 45%, 30%)`;
 }
 
 function SummaryCard({ icon, label, value, subtext, tone, meta }) {
@@ -105,17 +125,17 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
     const [files, setFiles] = useState([]);
     const [sending, setSending] = useState(false);
     const [sendError, setSendError] = useState("");
-    const bottomRef = useRef(null);
     const fileRef = useRef(null);
+    const bottomRef = useRef(null);
 
     useEffect(() => {
         setLoading(true);
         setError("");
 
         fetch(`php/get_task_messages.php?task_id=${task.id}`)
-            .then((r) => {
-                if (!r.ok) throw new Error(`Server returned ${r.status}`);
-                return r.json();
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
             })
             .then((data) => {
                 if (data.error) throw new Error(data.error);
@@ -140,7 +160,7 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
         return () => window.removeEventListener("keydown", onEsc);
     }, [onClose]);
 
-    const handleSend = () => {
+    function handleSend() {
         const trimmed = text.trim();
         if (!trimmed && files.length === 0) return;
 
@@ -152,10 +172,13 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
         fd.append("recipient_id", recipientId);
         fd.append("message", trimmed);
 
-        files.forEach((f) => fd.append("attachments[]", f));
+        files.forEach((file) => fd.append("attachments[]", file));
 
-        fetch("php/send_task_message.php", { method: "POST", body: fd })
-            .then((r) => r.json())
+        fetch("php/send_task_message.php", {
+            method: "POST",
+            body: fd
+        })
+            .then((res) => res.json())
             .then((data) => {
                 if (data.error) throw new Error(data.error);
                 setMessages((prev) => [...prev, data.message]);
@@ -164,12 +187,12 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                 setSending(false);
             })
             .catch((err) => {
-                setSendError(err.message || "Failed to send message.");
+                setSendError(err.message || "Failed to send comment.");
                 setSending(false);
             });
-    };
+    }
 
-    const handleFileChange = (e) => {
+    function handleFileChange(e) {
         const picked = Array.from(e.target.files || []);
         setFiles((prev) => {
             const existing = new Set(prev.map((f) => `${f.name}|${f.size}`));
@@ -177,61 +200,31 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
             return [...prev, ...fresh];
         });
         e.target.value = "";
-    };
+    }
 
-    const removeFile = (index) => {
+    function removeFile(index) {
         setFiles((prev) => prev.filter((_, i) => i !== index));
-    };
+    }
 
-    const fmtTime = (ts) => {
-        if (!ts) return "";
-        const d = new Date(ts);
-        return (
-            d.toLocaleDateString("en-PH", { month: "short", day: "numeric" }) +
-            ", " +
-            d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" })
-        );
-    };
-
-    const fmtSize = (bytes) => {
-        const size = safeNum(bytes);
-        if (size < 1024) return `${size} B`;
-        if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-        return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-    };
-
-    const initials = (name) =>
-        name
-            ? name
-                  .split(" ")
-                  .map((w) => w[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase()
-            : "?";
-
-    const avatarColor = (name) => {
-        const hue = name
-            ? [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
-            : 200;
-        return `hsl(${hue},50%,85%)`;
-    };
-
-    const avatarTextColor = (name) => {
-        const hue = name
-            ? [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
-            : 200;
-        return `hsl(${hue},50%,30%)`;
-    };
+    function fmtSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
 
     const canSend = !sending && (text.trim().length > 0 || files.length > 0);
 
-    return portalWrap(
+    return (
         <div
             className="dr-modal-backdrop"
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
-            <div className="dr-modal-card" style={{ maxWidth: "840px" }}>
+            <div
+                className="dr-modal-card dr-comment-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Comments for ${task.title}`}
+            >
                 <div className="dr-modal-head">
                     <div>
                         <h5 className="dr-modal-title">
@@ -250,120 +243,66 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
 
                 <div className="dr-modal-body">
                     {loading ? (
-                        <div className="dr-empty-state">Loading comments...</div>
+                        <div className="dr-empty-state">
+                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading comments...
+                        </div>
                     ) : error ? (
                         <div className="alert alert-danger mb-0">{error}</div>
                     ) : messages.length === 0 ? (
-                        <div className="dr-empty-state">
-                            No comments yet. Be the first to comment.
-                        </div>
+                        <div className="dr-empty-state">No comments yet.</div>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                        <div className="dr-comment-stream">
                             {messages.map((msg) => {
-                                const isOwn = msg.sender_id === currentUserId;
+                                const isOwn = safeNum(msg.sender_id) === safeNum(currentUserId);
 
                                 return (
                                     <div
                                         key={msg.id}
-                                        style={{
-                                            display: "flex",
-                                            gap: "10px",
-                                            flexDirection: isOwn ? "row-reverse" : "row",
-                                            alignItems: "flex-start"
-                                        }}
+                                        className={`dr-comment-row ${isOwn ? "is-own" : ""}`}
                                     >
                                         <div
+                                            className="dr-comment-avatar"
                                             style={{
-                                                width: "38px",
-                                                height: "38px",
-                                                borderRadius: "999px",
                                                 background: avatarColor(msg.sender_name),
-                                                color: avatarTextColor(msg.sender_name),
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                fontWeight: 900,
-                                                fontSize: "12px",
-                                                flexShrink: 0,
-                                                border: "1px solid var(--dr-border)"
+                                                color: avatarTextColor(msg.sender_name)
                                             }}
                                         >
                                             {initials(msg.sender_name)}
                                         </div>
 
-                                        <div style={{ maxWidth: "78%" }}>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "baseline",
-                                                    gap: "6px",
-                                                    flexDirection: isOwn ? "row-reverse" : "row",
-                                                    marginBottom: "4px"
-                                                }}
-                                            >
-                                                <span style={{ fontSize: "12px", fontWeight: 800 }}>
+                                        <div className="dr-comment-bubble-wrap">
+                                            <div className="dr-comment-meta">
+                                                <span className="dr-comment-author">
                                                     {isOwn ? "You" : msg.sender_name}
                                                 </span>
-                                                <span style={{ fontSize: "11px", color: "var(--dr-subtle)" }}>
-                                                    {fmtTime(msg.time_sent)}
+                                                <span className="dr-comment-time">
+                                                    {formatDateTimePH(msg.time_sent)}
                                                 </span>
                                             </div>
 
-                                            {msg.message && (
-                                                <div
-                                                    style={{
-                                                        background: isOwn ? PREMIUM.blue : "var(--dr-card-soft)",
-                                                        color: isOwn ? "#fff" : "var(--dr-text)",
-                                                        borderRadius: isOwn
-                                                            ? "16px 6px 16px 16px"
-                                                            : "6px 16px 16px 16px",
-                                                        padding: "10px 12px",
-                                                        fontSize: "13px",
-                                                        lineHeight: 1.55,
-                                                        wordBreak: "break-word",
-                                                        border: isOwn ? "none" : "1px solid var(--dr-border)"
-                                                    }}
-                                                >
+                                            {msg.message ? (
+                                                <div className="dr-comment-bubble">
                                                     {msg.message}
                                                 </div>
-                                            )}
+                                            ) : null}
 
-                                            {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
-                                                <div
-                                                    style={{
-                                                        marginTop: "6px",
-                                                        display: "flex",
-                                                        flexDirection: "column",
-                                                        gap: "5px"
-                                                    }}
-                                                >
+                                            {Array.isArray(msg.attachments) && msg.attachments.length > 0 ? (
+                                                <div className="dr-comment-attachments">
                                                     {msg.attachments.map((att) => (
                                                         <a
                                                             key={att.id}
                                                             href={att.file_path}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            style={{
-                                                                display: "inline-flex",
-                                                                alignItems: "center",
-                                                                gap: "6px",
-                                                                fontSize: "12px",
-                                                                color: isOwn ? "#DBEAFE" : PREMIUM.blue,
-                                                                textDecoration: "none",
-                                                                background: isOwn
-                                                                    ? "rgba(255,255,255,0.14)"
-                                                                    : "rgba(59,130,246,0.08)",
-                                                                borderRadius: "8px",
-                                                                padding: "5px 8px",
-                                                                width: "fit-content"
-                                                            }}
+                                                            className="dr-file-chip"
                                                         >
                                                             <i className="bi bi-paperclip"></i>
-                                                            {att.file_name}
+                                                            <span>{att.file_name}</span>
                                                         </a>
                                                     ))}
                                                 </div>
-                                            )}
+                                            ) : null}
                                         </div>
                                     </div>
                                 );
@@ -373,116 +312,72 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                     )}
                 </div>
 
-                <div className="dr-modal-foot" style={{ display: "block" }}>
-                    {sendError && (
-                        <div style={{ fontSize: "12px", color: "#dc3545", marginBottom: "8px" }}>
-                            {sendError}
+                <div className="dr-modal-foot dr-comment-foot">
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        multiple
+                        style={{ display: "none" }}
+                        onChange={handleFileChange}
+                    />
+
+                    <div className="dr-comment-compose">
+                        {sendError ? <div className="dr-comment-error">{sendError}</div> : null}
+
+                        {files.length > 0 ? (
+                            <div className="dr-file-chip-row">
+                                {files.map((file, index) => (
+                                    <div className="dr-file-chip is-staged" key={`${file.name}-${index}`}>
+                                        <i className="bi bi-paperclip"></i>
+                                        <span className="dr-file-chip-name">{file.name}</span>
+                                        <span className="dr-file-chip-size">{fmtSize(file.size)}</span>
+                                        <button
+                                            type="button"
+                                            className="dr-file-chip-remove"
+                                            onClick={() => removeFile(index)}
+                                            aria-label={`Remove ${file.name}`}
+                                        >
+                                            <i className="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+
+                        <div className="dr-comment-compose-row">
+                            <button
+                                type="button"
+                                className="dr-icon-btn"
+                                onClick={() => fileRef.current?.click()}
+                                disabled={sending}
+                                title="Attach files"
+                            >
+                                <i className="bi bi-paperclip"></i>
+                            </button>
+
+                            <textarea
+                                className="dr-compose-textarea"
+                                rows="2"
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
+                                placeholder="Write a comment... (Ctrl+Enter to send)"
+                            />
+
+                            <button
+                                type="button"
+                                className="dr-ghost-btn dr-send-btn"
+                                onClick={handleSend}
+                                disabled={!canSend}
+                            >
+                                {sending ? "Sending..." : "Send"}
+                            </button>
                         </div>
-                    )}
-
-                    {files.length > 0 && (
-                        <div
-                            style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: "8px",
-                                marginBottom: "10px"
-                            }}
-                        >
-                            {files.map((f, i) => (
-                                <div
-                                    key={`${f.name}-${f.size}-${i}`}
-                                    style={{
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                        padding: "6px 10px",
-                                        borderRadius: "10px",
-                                        background: "rgba(59,130,246,0.08)",
-                                        border: "1px solid rgba(59,130,246,0.16)",
-                                        fontSize: "12px",
-                                        color: "var(--dr-text)"
-                                    }}
-                                >
-                                    <i className="bi bi-paperclip"></i>
-                                    <span>{f.name}</span>
-                                    <span style={{ color: "var(--dr-subtle)" }}>{fmtSize(f.size)}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeFile(i)}
-                                        style={{
-                                            border: "none",
-                                            background: "transparent",
-                                            cursor: "pointer",
-                                            color: "var(--dr-subtle)"
-                                        }}
-                                    >
-                                        <i className="bi bi-x"></i>
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            multiple
-                            style={{ display: "none" }}
-                            onChange={handleFileChange}
-                        />
-
-                        <button
-                            type="button"
-                            className="dr-icon-btn"
-                            onClick={() => fileRef.current?.click()}
-                            disabled={sending}
-                            aria-label="Attach files"
-                            title="Attach files"
-                        >
-                            <i className="bi bi-paperclip"></i>
-                        </button>
-
-                        <textarea
-                            rows={2}
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                            onKeyDown={(e) => {
-                                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                                    e.preventDefault();
-                                    handleSend();
-                                }
-                            }}
-                            placeholder="Write a comment... (Ctrl+Enter to send)"
-                            style={{
-                                flex: 1,
-                                resize: "none",
-                                border: "1px solid var(--dr-border)",
-                                borderRadius: "12px",
-                                padding: "10px 12px",
-                                fontSize: "13px",
-                                outline: "none",
-                                fontFamily: "Nunito, sans-serif",
-                                color: "var(--dr-text)",
-                                background: "var(--dr-card)"
-                            }}
-                        />
-
-                        <button
-                            className="dr-ghost-btn"
-                            onClick={handleSend}
-                            disabled={!canSend}
-                            style={{
-                                background: PREMIUM.blue,
-                                color: "#fff",
-                                borderColor: PREMIUM.blue,
-                                minWidth: "92px",
-                                justifyContent: "center"
-                            }}
-                        >
-                            {sending ? "Sending..." : "Send"}
-                        </button>
                     </div>
                 </div>
             </div>
@@ -495,14 +390,15 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
+    const [query, setQuery] = useState("");
     const [commentTask, setCommentTask] = useState(null);
     const [currentUserId, setCurrentUserId] = useState(null);
 
     useEffect(() => {
         fetch("php/get_current_user.php")
-            .then((r) => r.json())
+            .then((res) => res.json())
             .then((data) => {
-                if (data?.id) setCurrentUserId(data.id);
+                if (data.id) setCurrentUserId(data.id);
             })
             .catch(() => {});
     }, []);
@@ -512,6 +408,7 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
         setError("");
         setTasks([]);
         setActiveTab("all");
+        setQuery("");
 
         fetch(
             `php/get_employee_tasks_annual.php?employee_id=${emp.id}&year_start=${yearStart}&year_end=${yearEnd}`
@@ -539,6 +436,8 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
         return () => window.removeEventListener("keydown", onEsc);
     }, [onClose]);
 
+    const yearLabel = yearStart.slice(0, 4);
+
     const annotatedTasks = useMemo(
         () =>
             tasks.map((task) => ({
@@ -549,37 +448,55 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
     );
 
     const filteredTasks = useMemo(() => {
-        return activeTab === "all"
-            ? annotatedTasks
-            : annotatedTasks.filter((task) => task.derivedStatus === activeTab);
-    }, [annotatedTasks, activeTab]);
+        let base =
+            activeTab === "all"
+                ? annotatedTasks
+                : annotatedTasks.filter((task) => task.derivedStatus === activeTab);
+
+        const term = query.trim().toLowerCase();
+        if (!term) return base;
+
+        return base.filter((task) => {
+            const title = String(task?.title || "").toLowerCase();
+            const description = String(task?.description || "").toLowerCase();
+            const priority = String(task?.priority || "").toLowerCase();
+            const status = String(task?.derivedStatus || "").toLowerCase();
+
+            return (
+                title.includes(term) ||
+                description.includes(term) ||
+                priority.includes(term) ||
+                status.includes(term)
+            );
+        });
+    }, [annotatedTasks, activeTab, query]);
 
     const countFor = (status) =>
         annotatedTasks.filter((task) => task.derivedStatus === status).length;
 
-    return portalWrap(
+    return (
         <>
             <div
                 className="dr-modal-backdrop"
                 onClick={(e) => e.target === e.currentTarget && onClose()}
             >
-                <div className="dr-modal-card">
+                <div
+                    className="dr-modal-card"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={`${emp.name} annual tasks`}
+                >
                     <div className="dr-modal-head">
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div className="dr-modal-person">
                             <img
                                 src={buildAvatarFallbackUrl(emp.name)}
                                 alt={`${emp.name} Profile`}
-                                style={{
-                                    width: "48px",
-                                    height: "48px",
-                                    borderRadius: "999px",
-                                    border: "1px solid var(--dr-border)"
-                                }}
+                                className="dr-modal-avatar"
                             />
                             <div>
                                 <h5 className="dr-modal-title">{emp.name}</h5>
                                 <div className="dr-modal-subtitle">
-                                    {emp.department} · {yearStart} to {yearEnd}
+                                    {emp.department} · {yearLabel}
                                 </div>
                             </div>
                         </div>
@@ -611,15 +528,28 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                                 );
                             })}
                         </div>
+
+                        <div className="dr-search-box dr-search-box--modal">
+                            <i className="bi bi-search"></i>
+                            <input
+                                type="text"
+                                placeholder="Search tasks..."
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     <div className="dr-modal-body">
                         {loading ? (
-                            <div className="dr-empty-state">Loading tasks...</div>
+                            <div className="dr-empty-state">
+                                <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                                Loading tasks...
+                            </div>
                         ) : error ? (
                             <div className="alert alert-danger mb-0">{error}</div>
                         ) : filteredTasks.length === 0 ? (
-                            <div className="dr-empty-state">No matching tasks found.</div>
+                            <div className="dr-empty-state">No matching tasks found for this year.</div>
                         ) : (
                             <div className="dr-task-list">
                                 {filteredTasks.map((task, idx) => {
@@ -637,9 +567,9 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                                             task.days_until_deadline !== undefined
                                         ) {
                                             if (status === "Overdue") {
-                                                deadlineMeta += ` · ${Math.abs(task.days_until_deadline)} day${
-                                                    Math.abs(task.days_until_deadline) !== 1 ? "s" : ""
-                                                } overdue`;
+                                                deadlineMeta += ` · ${Math.abs(
+                                                    task.days_until_deadline
+                                                )} day${Math.abs(task.days_until_deadline) !== 1 ? "s" : ""} overdue`;
                                             } else if (status === "Ongoing") {
                                                 deadlineMeta +=
                                                     task.days_until_deadline === 0
@@ -648,7 +578,10 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                                                               task.days_until_deadline !== 1 ? "s" : ""
                                                           } left`;
                                             } else if (status === "Completed" && task.completed_at) {
-                                                deadlineMeta += ` · Done ${formatDatePH(task.completed_at, false)}`;
+                                                deadlineMeta += ` · Done ${formatDatePH(
+                                                    task.completed_at,
+                                                    false
+                                                )}`;
                                             }
                                         }
                                     }
@@ -659,11 +592,13 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                                                 <div className="dr-task-item-title">
                                                     {task.title || "Untitled Task"}
                                                 </div>
-                                                {task.description && (
+
+                                                {task.description ? (
                                                     <div className="dr-task-item-desc">
                                                         {task.description}
                                                     </div>
-                                                )}
+                                                ) : null}
+
                                                 <div className="dr-task-item-meta">{deadlineMeta}</div>
                                             </div>
 
@@ -678,11 +613,12 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                                                 </span>
 
                                                 <button
-                                                    className="dr-eye-btn"
-                                                    title="Open comments"
+                                                    type="button"
+                                                    className="dr-ghost-btn dr-comment-open-btn"
                                                     onClick={() => setCommentTask(task)}
                                                 >
                                                     <i className="bi bi-chat-dots"></i>
+                                                    <span>Comments</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -700,14 +636,14 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                 </div>
             </div>
 
-            {commentTask && (
+            {commentTask ? (
                 <TaskCommentModal
                     task={commentTask}
                     recipientId={emp.id}
                     currentUserId={currentUserId}
                     onClose={() => setCommentTask(null)}
                 />
-            )}
+            ) : null}
         </>
     );
 }
@@ -717,19 +653,21 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
+    const [query, setQuery] = useState("");
 
     useEffect(() => {
         setLoading(true);
         setError("");
         setTasks([]);
         setActiveTab("all");
+        setQuery("");
 
         fetch(
             `php/get_department_tasks_report.php?department_id=${dept.department_id}&week_start=${yearStart}&week_end=${yearEnd}`
         )
-            .then((r) => {
-                if (!r.ok) throw new Error(`Server returned ${r.status}`);
-                return r.json();
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
             })
             .then((data) => {
                 if (data.error) throw new Error(data.error);
@@ -750,6 +688,8 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
         return () => window.removeEventListener("keydown", onEsc);
     }, [onClose]);
 
+    const yearLabel = yearStart.slice(0, 4);
+
     const annotatedTasks = useMemo(
         () =>
             tasks.map((task) => ({
@@ -759,25 +699,51 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
         [tasks]
     );
 
-    const filteredTasks =
-        activeTab === "all"
-            ? annotatedTasks
-            : annotatedTasks.filter((task) => task.derivedStatus === activeTab);
+    const filteredTasks = useMemo(() => {
+        let base =
+            activeTab === "all"
+                ? annotatedTasks
+                : annotatedTasks.filter((task) => task.derivedStatus === activeTab);
+
+        const term = query.trim().toLowerCase();
+        if (!term) return base;
+
+        return base.filter((task) => {
+            const title = String(task?.title || "").toLowerCase();
+            const description = String(task?.description || "").toLowerCase();
+            const assignee = String(task?.assigned_to_name || "").toLowerCase();
+            const priority = String(task?.priority || "").toLowerCase();
+            const status = String(task?.derivedStatus || "").toLowerCase();
+
+            return (
+                title.includes(term) ||
+                description.includes(term) ||
+                assignee.includes(term) ||
+                priority.includes(term) ||
+                status.includes(term)
+            );
+        });
+    }, [annotatedTasks, activeTab, query]);
 
     const countFor = (status) =>
         annotatedTasks.filter((task) => task.derivedStatus === status).length;
 
-    return portalWrap(
+    return (
         <div
             className="dr-modal-backdrop"
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
-            <div className="dr-modal-card">
+            <div
+                className="dr-modal-card"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${dept.department} annual tasks`}
+            >
                 <div className="dr-modal-head">
                     <div>
                         <h5 className="dr-modal-title">{dept.department}</h5>
                         <div className="dr-modal-subtitle">
-                            Department tasks · {yearStart.slice(0, 4)}
+                            Department tasks · {yearLabel}
                         </div>
                     </div>
 
@@ -808,15 +774,28 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
                             );
                         })}
                     </div>
+
+                    <div className="dr-search-box dr-search-box--modal">
+                        <i className="bi bi-search"></i>
+                        <input
+                            type="text"
+                            placeholder="Search department tasks..."
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 <div className="dr-modal-body">
                     {loading ? (
-                        <div className="dr-empty-state">Loading tasks...</div>
+                        <div className="dr-empty-state">
+                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading tasks...
+                        </div>
                     ) : error ? (
                         <div className="alert alert-danger mb-0">{error}</div>
                     ) : filteredTasks.length === 0 ? (
-                        <div className="dr-empty-state">No matching tasks found.</div>
+                        <div className="dr-empty-state">No matching department tasks found.</div>
                     ) : (
                         <div className="dr-task-list">
                             {filteredTasks.map((task, idx) => {
@@ -834,9 +813,9 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
                                         task.days_until_deadline !== undefined
                                     ) {
                                         if (status === "Overdue") {
-                                            deadlineMeta += ` · ${Math.abs(task.days_until_deadline)} day${
-                                                Math.abs(task.days_until_deadline) !== 1 ? "s" : ""
-                                            } overdue`;
+                                            deadlineMeta += ` · ${Math.abs(
+                                                task.days_until_deadline
+                                            )} day${Math.abs(task.days_until_deadline) !== 1 ? "s" : ""} overdue`;
                                         } else if (status === "Ongoing") {
                                             deadlineMeta +=
                                                 task.days_until_deadline === 0
@@ -845,7 +824,10 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
                                                           task.days_until_deadline !== 1 ? "s" : ""
                                                       } left`;
                                         } else if (status === "Completed" && task.completed_at) {
-                                            deadlineMeta += ` · Done ${formatDatePH(task.completed_at, false)}`;
+                                            deadlineMeta += ` · Done ${formatDatePH(
+                                                task.completed_at,
+                                                false
+                                            )}`;
                                         }
                                     }
                                 }
@@ -856,16 +838,19 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
                                             <div className="dr-task-item-title">
                                                 {task.title || "Untitled Task"}
                                             </div>
-                                            {task.description && (
+
+                                            {task.description ? (
                                                 <div className="dr-task-item-desc">
                                                     {task.description}
                                                 </div>
-                                            )}
-                                            <div className="dr-task-item-meta">
-                                                {task.assigned_to_name
-                                                    ? `${task.assigned_to_name} · ${deadlineMeta}`
-                                                    : deadlineMeta}
+                                            ) : null}
+
+                                            <div className="ar-task-assignee">
+                                                <i className="bi bi-person"></i>
+                                                <span>{task.assigned_to_name || "Unassigned"}</span>
                                             </div>
+
+                                            <div className="dr-task-item-meta">{deadlineMeta}</div>
                                         </div>
 
                                         <div className="dr-task-item-side">
@@ -895,399 +880,6 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
     );
 }
 
-function buildPremiumLineOption(labels, completed, ongoing, overdue, isDark) {
-    return {
-        backgroundColor: "transparent",
-        animationDuration: 700,
-        animationEasing: "cubicOut",
-        color: [PREMIUM.green, PREMIUM.blue, PREMIUM.red],
-
-        grid: {
-            top: 28,
-            left: 18,
-            right: 18,
-            bottom: 52,
-            containLabel: true
-        },
-
-        tooltip: {
-            trigger: "axis",
-            backgroundColor: isDark ? "#182133" : "#fff",
-            borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)",
-            borderWidth: 1,
-            textStyle: {
-                color: isDark ? "#f8fafc" : "#202939",
-                fontFamily: "Nunito, sans-serif"
-            },
-            extraCssText: "border-radius:14px; box-shadow:0 12px 30px rgba(15,23,42,0.10);"
-        },
-
-        legend: {
-            bottom: 2,
-            right: 8,
-            itemWidth: 10,
-            itemHeight: 10,
-            icon: "circle",
-            textStyle: {
-                color: isDark ? "#a8b3c7" : PREMIUM.text,
-                fontSize: 12,
-                fontFamily: "Nunito, sans-serif",
-                fontWeight: 700
-            }
-        },
-
-        xAxis: {
-            type: "category",
-            boundaryGap: false,
-            data: labels,
-            axisLine: { show: false },
-            axisTick: { show: false },
-            axisLabel: {
-                color: isDark ? "#a8b3c7" : PREMIUM.text,
-                fontSize: 12,
-                fontFamily: "Nunito, sans-serif",
-                fontWeight: 700,
-                margin: 14
-            }
-        },
-
-        yAxis: {
-            type: "value",
-            min: 0,
-            minInterval: 1,
-            axisLine: { show: false },
-            axisTick: { show: false },
-            axisLabel: {
-                color: isDark ? "#a8b3c7" : PREMIUM.text,
-                fontSize: 12,
-                fontFamily: "Nunito, sans-serif",
-                fontWeight: 700,
-                margin: 12
-            },
-            splitLine: {
-                show: true,
-                lineStyle: {
-                    color: isDark ? "rgba(255,255,255,0.08)" : PREMIUM.grid,
-                    width: 1,
-                    type: "solid"
-                }
-            }
-        },
-
-        series: [
-            {
-                name: "Task Completed",
-                type: "line",
-                smooth: true,
-                symbol: "circle",
-                symbolSize: 5,
-                data: completed,
-                lineStyle: {
-                    width: 2,
-                    color: PREMIUM.green
-                },
-                itemStyle: {
-                    color: PREMIUM.green
-                },
-                areaStyle: {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                        { offset: 0, color: "rgba(24,178,107,0.18)" },
-                        { offset: 1, color: "rgba(24,178,107,0.02)" }
-                    ])
-                },
-                markLine: {
-                    symbol: "none",
-                    silent: true,
-                    lineStyle: {
-                        color: "rgba(24,178,107,0.35)",
-                        type: "dotted",
-                        width: 1
-                    },
-                    data: [{ yAxis: 2 }]
-                }
-            },
-            {
-                name: "Task Ongoing",
-                type: "line",
-                smooth: true,
-                symbol: "circle",
-                symbolSize: 4,
-                data: ongoing,
-                lineStyle: {
-                    width: 1.8,
-                    color: PREMIUM.blue
-                },
-                itemStyle: {
-                    color: PREMIUM.blue
-                },
-                areaStyle: { opacity: 0 },
-                markLine: {
-                    symbol: "none",
-                    silent: true,
-                    lineStyle: {
-                        color: "rgba(59,130,246,0.28)",
-                        type: "dotted",
-                        width: 1
-                    },
-                    data: [{ yAxis: 1 }]
-                }
-            },
-            {
-                name: "Task Overdue",
-                type: "line",
-                smooth: true,
-                symbol: "circle",
-                symbolSize: 4,
-                data: overdue,
-                lineStyle: {
-                    width: 1.8,
-                    color: PREMIUM.red
-                },
-                itemStyle: {
-                    color: PREMIUM.red
-                },
-                areaStyle: { opacity: 0 },
-                markLine: {
-                    symbol: "none",
-                    silent: true,
-                    lineStyle: {
-                        color: "rgba(229,72,77,0.24)",
-                        type: "dotted",
-                        width: 1
-                    },
-                    data: [{ yAxis: 0 }]
-                }
-            }
-        ]
-    };
-}
-
-function buildPremiumGroupedBarOption(
-    labels,
-    aLabel,
-    aSeries,
-    bLabel,
-    bSeries,
-    cLabel,
-    cSeries,
-    isDark,
-    opts = {}
-) {
-    const rotateLabels = opts.rotateLabels ?? false;
-    const bottomSpace = opts.bottomSpace ?? 52;
-    const barWidth = opts.barWidth ?? 16;
-    const labelInterval = opts.labelInterval ?? 0;
-
-    return {
-        backgroundColor: "transparent",
-        animationDuration: 700,
-        animationEasing: "cubicOut",
-        color: [PREMIUM.green, PREMIUM.blue, PREMIUM.red],
-
-        grid: {
-            top: 24,
-            left: 18,
-            right: 16,
-            bottom: bottomSpace,
-            containLabel: true
-        },
-
-        tooltip: {
-            trigger: "axis",
-            axisPointer: {
-                type: "shadow",
-                shadowStyle: {
-                    color: isDark ? "rgba(255,255,255,0.03)" : "rgba(15,23,42,0.03)"
-                }
-            },
-            backgroundColor: isDark ? "#182133" : "#fff",
-            borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)",
-            borderWidth: 1,
-            textStyle: {
-                color: isDark ? "#f8fafc" : "#202939",
-                fontFamily: "Nunito, sans-serif"
-            },
-            extraCssText: "border-radius:14px; box-shadow:0 12px 30px rgba(15,23,42,0.10);"
-        },
-
-        legend: {
-            bottom: 2,
-            right: 8,
-            itemWidth: 10,
-            itemHeight: 10,
-            icon: "circle",
-            textStyle: {
-                color: isDark ? "#a8b3c7" : PREMIUM.text,
-                fontSize: 12,
-                fontFamily: "Nunito, sans-serif",
-                fontWeight: 700
-            }
-        },
-
-        xAxis: {
-            type: "category",
-            data: labels,
-            axisLine: { show: false },
-            axisTick: { show: false },
-            axisLabel: {
-                color: isDark ? "#a8b3c7" : PREMIUM.text,
-                fontSize: 11,
-                fontFamily: "Nunito, sans-serif",
-                fontWeight: 700,
-                margin: 12,
-                interval: labelInterval,
-                rotate: rotateLabels ? 22 : 0,
-                hideOverlap: false
-            }
-        },
-
-        yAxis: {
-            type: "value",
-            min: 0,
-            axisLine: { show: false },
-            axisTick: { show: false },
-            axisLabel: {
-                color: isDark ? "#a8b3c7" : PREMIUM.text,
-                fontSize: 12,
-                fontFamily: "Nunito, sans-serif",
-                fontWeight: 700
-            },
-            splitLine: {
-                show: true,
-                lineStyle: {
-                    color: isDark ? "rgba(255,255,255,0.08)" : PREMIUM.grid,
-                    width: 1
-                }
-            }
-        },
-
-        series: [
-            {
-                name: aLabel,
-                type: "bar",
-                data: aSeries,
-                barWidth,
-                barGap: "24%",
-                itemStyle: {
-                    color: "rgba(24,178,107,0.74)",
-                    borderRadius: [4, 4, 0, 0]
-                },
-                emphasis: {
-                    itemStyle: {
-                        color: PREMIUM.green
-                    }
-                }
-            },
-            {
-                name: bLabel,
-                type: "bar",
-                data: bSeries,
-                barWidth,
-                itemStyle: {
-                    color: "rgba(59,130,246,0.74)",
-                    borderRadius: [4, 4, 0, 0]
-                },
-                emphasis: {
-                    itemStyle: {
-                        color: PREMIUM.blue
-                    }
-                }
-            },
-            ...(cSeries
-                ? [
-                      {
-                          name: cLabel,
-                          type: "bar",
-                          data: cSeries,
-                          barWidth,
-                          itemStyle: {
-                              color: "rgba(229,72,77,0.74)",
-                              borderRadius: [4, 4, 0, 0]
-                          },
-                          emphasis: {
-                              itemStyle: {
-                                  color: PREMIUM.red
-                              }
-                          }
-                      }
-                  ]
-                : [])
-        ]
-    };
-}
-
-function buildPremiumDonutOption(summary, isDark) {
-    const separatorColor = isDark ? "#12192b" : "#ffffff";
-
-    return {
-        animation: true,
-        tooltip: {
-            trigger: "item",
-            formatter: (params) => `${params.name}: ${params.value} (${params.percent}%)`,
-            backgroundColor: isDark ? "#182133" : "#ffffff",
-            borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4",
-            borderWidth: 1,
-            textStyle: {
-                color: isDark ? "#f8fafc" : "#18263f",
-                fontFamily: "Nunito, sans-serif"
-            }
-        },
-        legend: {
-            bottom: 0,
-            icon: "circle",
-            textStyle: {
-                color: isDark ? "#a8b3c7" : PREMIUM.text,
-                fontFamily: "Nunito, sans-serif",
-                fontSize: 12,
-                fontWeight: 700
-            }
-        },
-        series: [
-            {
-                type: "pie",
-                radius: ["60%", "82%"],
-                center: ["50%", "42%"],
-                startAngle: 90,
-                clockwise: true,
-                minAngle: 1,
-                label: { show: false },
-                labelLine: { show: false },
-                emphasis: {
-                    scale: true,
-                    scaleSize: 8,
-                    itemStyle: {
-                        borderColor: separatorColor,
-                        borderWidth: 5,
-                        borderRadius: 10
-                    }
-                },
-                itemStyle: {
-                    borderColor: separatorColor,
-                    borderWidth: 4,
-                    borderRadius: 10
-                },
-                data: [
-                    {
-                        value: safeNum(summary.completed),
-                        name: "Completed",
-                        itemStyle: { color: PREMIUM.green }
-                    },
-                    {
-                        value: safeNum(summary.ongoing),
-                        name: "Ongoing",
-                        itemStyle: { color: PREMIUM.blue }
-                    },
-                    {
-                        value: safeNum(summary.overdue),
-                        name: "Overdue",
-                        itemStyle: { color: PREMIUM.red }
-                    }
-                ]
-            }
-        ]
-    };
-}
-
 function AnnualReportPage() {
     const now = new Date();
 
@@ -1307,6 +899,8 @@ function AnnualReportPage() {
     const [selectedDept, setSelectedDept] = useState(null);
     const [modalEmp, setModalEmp] = useState(null);
     const [modalDept, setModalDept] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     const [themeMode, setThemeMode] = useState(getThemeMode());
 
     const deptChartRef = useRef(null);
@@ -1320,10 +914,7 @@ function AnnualReportPage() {
 
     useEffect(() => {
         fetch("php/get_departments.php")
-            .then((res) => {
-                if (!res.ok) throw new Error(`Server returned ${res.status}`);
-                return res.json();
-            })
+            .then((res) => res.json())
             .then((data) => setAllDepartments(Array.isArray(data) ? data : []))
             .catch(() => setAllDepartments([]));
     }, []);
@@ -1332,6 +923,8 @@ function AnnualReportPage() {
         setSelectedDept(null);
         setModalEmp(null);
         setModalDept(null);
+        setLoading(true);
+        setError("");
 
         fetch(`php/get_annual_report.php?year=${year}&department=${departmentFilter}`)
             .then((res) => {
@@ -1345,14 +938,11 @@ function AnnualReportPage() {
                 setQuarterlyTrend(Array.isArray(data.quarterly_trend) ? data.quarterly_trend : []);
                 setMonthlyTrend(Array.isArray(data.monthly_trend) ? data.monthly_trend : []);
                 setEmployees(Array.isArray(data.employees) ? data.employees : []);
+                setLoading(false);
             })
             .catch((err) => {
-                console.error("Failed to load annual report:", err);
-                setSummary({ total: 0, completed: 0, ongoing: 0, overdue: 0 });
-                setDepartments([]);
-                setQuarterlyTrend([]);
-                setMonthlyTrend([]);
-                setEmployees([]);
+                setError(`Failed to load report: ${err.message}`);
+                setLoading(false);
             });
     }, [year, departmentFilter]);
 
@@ -1370,26 +960,83 @@ function AnnualReportPage() {
         return () => observer.disconnect();
     }, []);
 
-    const isDark = themeMode === "dark";
+    const departmentFilterLabel = useMemo(() => {
+        if (departmentFilter === "all") return "All Departments";
+        const found = allDepartments.find((dep) => String(dep.id) === String(departmentFilter));
+        return found?.name || "Selected Department";
+    }, [departmentFilter, allDepartments]);
 
-    const summaryTotal = useMemo(() => {
-        return safeNum(summary.total) ||
-            safeNum(summary.completed) + safeNum(summary.ongoing) + safeNum(summary.overdue);
-    }, [summary]);
+    const departmentRows = useMemo(
+        () =>
+            departments.map((dept) => ({
+                ...dept,
+                total: safeNum(dept.total),
+                completed: safeNum(dept.completed),
+                ongoing: safeNum(dept.ongoing),
+                overdue: safeNum(dept.overdue),
+                completion_rate: safeNum(dept.completion_rate)
+            })),
+        [departments]
+    );
 
-    const summaryRate = pct(summary.completed, summaryTotal);
-    const isCurrentYear = year === now.getFullYear();
+    const employeesInScope = useMemo(() => {
+        if (!selectedDept) return employees;
+        return employees.filter((emp) => String(emp.department) === String(selectedDept.department));
+    }, [employees, selectedDept]);
 
-    const chartDepts = useMemo(() => {
+    const employeeRows = useMemo(
+        () =>
+            employeesInScope.map((emp) => {
+                const completed = safeNum(emp.completed);
+                const ongoing = safeNum(emp.ongoing);
+                const overdue = safeNum(emp.overdue);
+                const total = safeNum(emp.total) || completed + ongoing + overdue;
+
+                return {
+                    ...emp,
+                    completed,
+                    ongoing,
+                    overdue,
+                    total,
+                    completion_rate: safeNum(emp.completion_rate) || pct(completed, total)
+                };
+            }),
+        [employeesInScope]
+    );
+
+    const scopedSummary = useMemo(() => {
+        if (!selectedDept) {
+            return {
+                total: safeNum(summary.total),
+                completed: safeNum(summary.completed),
+                ongoing: safeNum(summary.ongoing),
+                overdue: safeNum(summary.overdue)
+            };
+        }
+
+        return {
+            total: safeNum(selectedDept.total),
+            completed: safeNum(selectedDept.completed),
+            ongoing: safeNum(selectedDept.ongoing),
+            overdue: safeNum(selectedDept.overdue)
+        };
+    }, [summary, selectedDept]);
+
+    const scopedCompletionRate = useMemo(
+        () => pct(scopedSummary.completed, scopedSummary.total),
+        [scopedSummary]
+    );
+
+    const deptChartRows = useMemo(() => {
         return selectedDept
-            ? departments.filter((d) => d.department_id === selectedDept.department_id)
-            : departments;
-    }, [departments, selectedDept]);
+            ? departmentRows.filter((d) => d.department_id === selectedDept.department_id)
+            : departmentRows;
+    }, [departmentRows, selectedDept]);
 
-    const deptLabels = useMemo(() => chartDepts.map((d) => d.department), [chartDepts]);
-    const deptCompleted = useMemo(() => chartDepts.map((d) => safeNum(d.completed)), [chartDepts]);
-    const deptOngoing = useMemo(() => chartDepts.map((d) => safeNum(d.ongoing)), [chartDepts]);
-    const deptOverdue = useMemo(() => chartDepts.map((d) => safeNum(d.overdue)), [chartDepts]);
+    const deptLabels = useMemo(() => deptChartRows.map((d) => d.department), [deptChartRows]);
+    const deptCompleted = useMemo(() => deptChartRows.map((d) => d.completed), [deptChartRows]);
+    const deptOngoing = useMemo(() => deptChartRows.map((d) => d.ongoing), [deptChartRows]);
+    const deptOverdue = useMemo(() => deptChartRows.map((d) => d.overdue), [deptChartRows]);
 
     const monthNames = useMemo(() => monthlyTrend.map((m) => m.month_name), [monthlyTrend]);
     const lineCompleted = useMemo(() => monthlyTrend.map((m) => safeNum(m.completed)), [monthlyTrend]);
@@ -1401,14 +1048,43 @@ function AnnualReportPage() {
     const qOngoing = useMemo(() => quarterlyTrend.map((q) => safeNum(q.ongoing)), [quarterlyTrend]);
     const qOverdue = useMemo(() => quarterlyTrend.map((q) => safeNum(q.overdue)), [quarterlyTrend]);
 
-    const employeeSorted = useMemo(() => {
-        return [...employees].sort((a, b) => safeNum(b.completion_rate) - safeNum(a.completion_rate));
-    }, [employees]);
+    const donutLegendData = useMemo(() => {
+        const total = scopedSummary.total || 0;
 
-    const empNames = useMemo(() => employeeSorted.map((e) => e.name), [employeeSorted]);
-    const empCompleted = useMemo(() => employeeSorted.map((e) => safeNum(e.completed)), [employeeSorted]);
-    const empOngoing = useMemo(() => employeeSorted.map((e) => safeNum(e.ongoing)), [employeeSorted]);
-    const empOverdue = useMemo(() => employeeSorted.map((e) => safeNum(e.overdue)), [employeeSorted]);
+        return [
+            { label: "Completed", value: scopedSummary.completed, color: "#16a34a" },
+            { label: "Ongoing", value: scopedSummary.ongoing, color: "#f59e0b" },
+            { label: "Overdue", value: scopedSummary.overdue, color: "#ec4899" }
+        ].map((item) => ({
+            ...item,
+            percent: pct(item.value, total)
+        }));
+    }, [scopedSummary]);
+
+    const employeePerformanceRows = useMemo(
+        () => [...employeeRows].sort((a, b) => b.completion_rate - a.completion_rate),
+        [employeeRows]
+    );
+
+    const empNames = useMemo(
+        () => employeePerformanceRows.map((e) => e.name),
+        [employeePerformanceRows]
+    );
+
+    const empCompleted = useMemo(
+        () => employeePerformanceRows.map((e) => e.completed),
+        [employeePerformanceRows]
+    );
+
+    const empOngoing = useMemo(
+        () => employeePerformanceRows.map((e) => e.ongoing),
+        [employeePerformanceRows]
+    );
+
+    const empOverdue = useMemo(
+        () => employeePerformanceRows.map((e) => e.overdue),
+        [employeePerformanceRows]
+    );
 
     useEffect(() => {
         if (!window.echarts || !deptChartRef.current) return;
@@ -1417,28 +1093,109 @@ function AnnualReportPage() {
             window.echarts.getInstanceByDom(deptChartRef.current) ||
             window.echarts.init(deptChartRef.current);
 
+        const isDark = themeMode === "dark";
+        const axisColor = isDark ? "#98a2b3" : "#7b8794";
+        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
+        const textColor = isDark ? "#f8fafc" : "#18263f";
+        const tooltipBg = isDark ? "#182133" : "#ffffff";
+        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+
         chart.setOption(
-            buildPremiumGroupedBarOption(
-                deptLabels,
-                "Completed",
-                deptCompleted,
-                "Ongoing",
-                deptOngoing,
-                "Overdue",
-                deptOverdue,
-                isDark
-            ),
+            {
+                animationDuration: 650,
+                animationEasing: "cubicOut",
+                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                grid: {
+                    top: 28,
+                    left: 22,
+                    right: 18,
+                    bottom: 44,
+                    containLabel: true
+                },
+                tooltip: {
+                    trigger: "axis",
+                    axisPointer: { type: "shadow" },
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    textStyle: {
+                        color: textColor,
+                        fontFamily: "Nunito, sans-serif"
+                    }
+                },
+                legend: {
+                    top: 0,
+                    textStyle: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontWeight: 800
+                    }
+                },
+                xAxis: {
+                    type: "category",
+                    data: deptLabels,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        margin: 10
+                    }
+                },
+                yAxis: {
+                    type: "value",
+                    minInterval: 1,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: splitLine,
+                            type: "dashed"
+                        }
+                    }
+                },
+                series: [
+                    { name: "Completed", type: "bar", barWidth: 18, data: deptCompleted, itemStyle: { borderRadius: [8, 8, 0, 0] } },
+                    { name: "Ongoing", type: "bar", barWidth: 18, data: deptOngoing, itemStyle: { borderRadius: [8, 8, 0, 0] } },
+                    { name: "Overdue", type: "bar", barWidth: 18, data: deptOverdue, itemStyle: { borderRadius: [8, 8, 0, 0] } }
+                ]
+            },
             true
         );
+
+        const clickHandler = (params) => {
+            const clicked = deptChartRows[params.dataIndex];
+            if (!clicked) return;
+
+            setSelectedDept((prev) =>
+                prev?.department_id === clicked.department_id ? null : clicked
+            );
+        };
+
+        chart.off("click");
+        chart.on("click", clickHandler);
+
+        requestAnimationFrame(() => chart.resize());
+        const resizeTimer = setTimeout(() => chart.resize(), 120);
 
         const onResize = () => chart.resize();
         window.addEventListener("resize", onResize);
 
         return () => {
+            clearTimeout(resizeTimer);
+            chart.off("click", clickHandler);
             window.removeEventListener("resize", onResize);
             chart.dispose();
         };
-    }, [deptLabels, deptCompleted, deptOngoing, deptOverdue, isDark]);
+    }, [deptLabels, deptCompleted, deptOngoing, deptOverdue, deptChartRows, themeMode]);
 
     useEffect(() => {
         if (!window.echarts || !lineChartRef.current) return;
@@ -1447,25 +1204,116 @@ function AnnualReportPage() {
             window.echarts.getInstanceByDom(lineChartRef.current) ||
             window.echarts.init(lineChartRef.current);
 
+        const isDark = themeMode === "dark";
+        const axisColor = isDark ? "#98a2b3" : "#7b8794";
+        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
+        const textColor = isDark ? "#f8fafc" : "#18263f";
+        const tooltipBg = isDark ? "#182133" : "#ffffff";
+        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+
         chart.setOption(
-            buildPremiumLineOption(
-                monthNames,
-                lineCompleted,
-                lineOngoing,
-                lineOverdue,
-                isDark
-            ),
+            {
+                animationDuration: 700,
+                animationEasing: "cubicOut",
+                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                grid: {
+                    top: 28,
+                    left: 24,
+                    right: 18,
+                    bottom: 44,
+                    containLabel: true
+                },
+                tooltip: {
+                    trigger: "axis",
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    textStyle: {
+                        color: textColor,
+                        fontFamily: "Nunito, sans-serif"
+                    }
+                },
+                legend: {
+                    top: 0,
+                    textStyle: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontWeight: 800
+                    }
+                },
+                xAxis: {
+                    type: "category",
+                    data: monthNames,
+                    boundaryGap: false,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800
+                    }
+                },
+                yAxis: {
+                    type: "value",
+                    minInterval: 1,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: splitLine,
+                            type: "dashed"
+                        }
+                    }
+                },
+                series: [
+                    {
+                        name: "Completed",
+                        type: "line",
+                        smooth: true,
+                        symbolSize: 7,
+                        areaStyle: { opacity: 0.08 },
+                        data: lineCompleted
+                    },
+                    {
+                        name: "Ongoing",
+                        type: "line",
+                        smooth: true,
+                        symbolSize: 7,
+                        areaStyle: { opacity: 0.06 },
+                        data: lineOngoing
+                    },
+                    {
+                        name: "Overdue",
+                        type: "line",
+                        smooth: true,
+                        symbolSize: 7,
+                        areaStyle: { opacity: 0.06 },
+                        data: lineOverdue
+                    }
+                ]
+            },
             true
         );
+
+        requestAnimationFrame(() => chart.resize());
+        const resizeTimer = setTimeout(() => chart.resize(), 120);
 
         const onResize = () => chart.resize();
         window.addEventListener("resize", onResize);
 
         return () => {
+            clearTimeout(resizeTimer);
             window.removeEventListener("resize", onResize);
             chart.dispose();
         };
-    }, [monthNames, lineCompleted, lineOngoing, lineOverdue, isDark]);
+    }, [monthNames, lineCompleted, lineOngoing, lineOverdue, themeMode]);
 
     useEffect(() => {
         if (!window.echarts || !quarterChartRef.current) return;
@@ -1474,28 +1322,96 @@ function AnnualReportPage() {
             window.echarts.getInstanceByDom(quarterChartRef.current) ||
             window.echarts.init(quarterChartRef.current);
 
+        const isDark = themeMode === "dark";
+        const axisColor = isDark ? "#98a2b3" : "#7b8794";
+        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
+        const textColor = isDark ? "#f8fafc" : "#18263f";
+        const tooltipBg = isDark ? "#182133" : "#ffffff";
+        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+
         chart.setOption(
-            buildPremiumGroupedBarOption(
-                quarterLabels,
-                "Completed",
-                qCompleted,
-                "Ongoing",
-                qOngoing,
-                "Overdue",
-                qOverdue,
-                isDark
-            ),
+            {
+                animationDuration: 700,
+                animationEasing: "cubicOut",
+                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                grid: {
+                    top: 28,
+                    left: 22,
+                    right: 18,
+                    bottom: 44,
+                    containLabel: true
+                },
+                tooltip: {
+                    trigger: "axis",
+                    axisPointer: { type: "shadow" },
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    textStyle: {
+                        color: textColor,
+                        fontFamily: "Nunito, sans-serif"
+                    }
+                },
+                legend: {
+                    top: 0,
+                    textStyle: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontWeight: 800
+                    }
+                },
+                xAxis: {
+                    type: "category",
+                    data: quarterLabels,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        margin: 10
+                    }
+                },
+                yAxis: {
+                    type: "value",
+                    minInterval: 1,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: splitLine,
+                            type: "dashed"
+                        }
+                    }
+                },
+                series: [
+                    { name: "Completed", type: "bar", stack: "quarters", barWidth: 28, data: qCompleted, itemStyle: { borderRadius: [0, 0, 8, 8] } },
+                    { name: "Ongoing", type: "bar", stack: "quarters", barWidth: 28, data: qOngoing, itemStyle: { borderRadius: [0, 0, 0, 0] } },
+                    { name: "Overdue", type: "bar", stack: "quarters", barWidth: 28, data: qOverdue, itemStyle: { borderRadius: [8, 8, 0, 0] } }
+                ]
+            },
             true
         );
+
+        requestAnimationFrame(() => chart.resize());
+        const resizeTimer = setTimeout(() => chart.resize(), 120);
 
         const onResize = () => chart.resize();
         window.addEventListener("resize", onResize);
 
         return () => {
+            clearTimeout(resizeTimer);
             window.removeEventListener("resize", onResize);
             chart.dispose();
         };
-    }, [quarterLabels, qCompleted, qOngoing, qOverdue, isDark]);
+    }, [quarterLabels, qCompleted, qOngoing, qOverdue, themeMode]);
 
     useEffect(() => {
         if (!window.echarts || !donutChartRef.current) return;
@@ -1504,16 +1420,84 @@ function AnnualReportPage() {
             window.echarts.getInstanceByDom(donutChartRef.current) ||
             window.echarts.init(donutChartRef.current);
 
-        chart.setOption(buildPremiumDonutOption(summary, isDark), true);
+        const isDark = themeMode === "dark";
+        const separatorColor = isDark ? "#12192b" : "#ffffff";
+
+        chart.setOption(
+            {
+                animation: true,
+                tooltip: {
+                    trigger: "item",
+                    formatter: (params) =>
+                        `${params.name}: ${params.value} (${params.percent}%)`,
+                    backgroundColor: isDark ? "#182133" : "#ffffff",
+                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4",
+                    borderWidth: 1,
+                    textStyle: {
+                        color: isDark ? "#f8fafc" : "#18263f",
+                        fontFamily: "Nunito, sans-serif"
+                    }
+                },
+                series: [
+                    {
+                        type: "pie",
+                        radius: ["63%", "84%"],
+                        center: ["50%", "50%"],
+                        startAngle: 90,
+                        clockwise: true,
+                        minAngle: 1,
+                        avoidLabelOverlap: true,
+                        label: { show: false },
+                        labelLine: { show: false },
+                        emphasis: {
+                            scale: true,
+                            scaleSize: 8,
+                            itemStyle: {
+                                borderColor: separatorColor,
+                                borderWidth: 5,
+                                borderRadius: 10
+                            }
+                        },
+                        itemStyle: {
+                            borderColor: separatorColor,
+                            borderWidth: 4,
+                            borderRadius: 10
+                        },
+                        data: [
+                            {
+                                value: scopedSummary.completed,
+                                name: "Completed",
+                                itemStyle: { color: "#16a34a" }
+                            },
+                            {
+                                value: scopedSummary.ongoing,
+                                name: "Ongoing",
+                                itemStyle: { color: "#f59e0b" }
+                            },
+                            {
+                                value: scopedSummary.overdue,
+                                name: "Overdue",
+                                itemStyle: { color: "#ec4899" }
+                            }
+                        ]
+                    }
+                ]
+            },
+            true
+        );
+
+        requestAnimationFrame(() => chart.resize());
+        const resizeTimer = setTimeout(() => chart.resize(), 120);
 
         const onResize = () => chart.resize();
         window.addEventListener("resize", onResize);
 
         return () => {
+            clearTimeout(resizeTimer);
             window.removeEventListener("resize", onResize);
             chart.dispose();
         };
-    }, [summary, isDark]);
+    }, [scopedSummary, themeMode]);
 
     useEffect(() => {
         if (!window.echarts || !employeeChartRef.current) return;
@@ -1522,254 +1506,420 @@ function AnnualReportPage() {
             window.echarts.getInstanceByDom(employeeChartRef.current) ||
             window.echarts.init(employeeChartRef.current);
 
-        const shouldRotate = empNames.length > 8;
+        const isDark = themeMode === "dark";
+        const axisColor = isDark ? "#98a2b3" : "#7b8794";
+        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
+        const textColor = isDark ? "#f8fafc" : "#18263f";
+        const tooltipBg = isDark ? "#182133" : "#ffffff";
+        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+
+        const visiblePercent =
+            empNames.length <= 8 ? 100 : Math.max(35, Math.round((8 / empNames.length) * 100));
 
         chart.setOption(
-            buildPremiumGroupedBarOption(
-                empNames,
-                "Completed",
-                empCompleted,
-                "Ongoing",
-                empOngoing,
-                "Overdue",
-                empOverdue,
-                isDark,
-                {
-                    rotateLabels: shouldRotate,
-                    bottomSpace: shouldRotate ? 86 : 58,
-                    barWidth: shouldRotate ? 14 : 16,
-                    labelInterval: 0
-                }
-            ),
+            {
+                animationDuration: 700,
+                animationEasing: "cubicOut",
+                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                grid: {
+                    top: 56,
+                    left: 24,
+                    right: 18,
+                    bottom: 90,
+                    containLabel: true
+                },
+                tooltip: {
+                    trigger: "axis",
+                    axisPointer: { type: "shadow" },
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    textStyle: {
+                        color: textColor,
+                        fontFamily: "Nunito, sans-serif"
+                    }
+                },
+                legend: {
+                    top: 0,
+                    textStyle: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontWeight: 800
+                    }
+                },
+                dataZoom: empNames.length > 8
+                    ? [
+                          {
+                              type: "inside",
+                              xAxisIndex: 0,
+                              start: 0,
+                              end: visiblePercent
+                          },
+                          {
+                              type: "slider",
+                              xAxisIndex: 0,
+                              start: 0,
+                              end: visiblePercent,
+                              height: 18,
+                              bottom: 18
+                          }
+                      ]
+                    : [],
+                xAxis: {
+                    type: "category",
+                    data: empNames,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        interval: 0,
+                        rotate: empNames.length > 6 ? 35 : 0,
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        margin: 14
+                    }
+                },
+                yAxis: {
+                    type: "value",
+                    minInterval: 1,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: axisColor,
+                        fontFamily: "Nunito, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: splitLine,
+                            type: "dashed"
+                        }
+                    }
+                },
+                series: [
+                    {
+                        name: "Completed",
+                        type: "bar",
+                        barMaxWidth: 26,
+                        data: empCompleted,
+                        itemStyle: { borderRadius: [8, 8, 0, 0] }
+                    },
+                    {
+                        name: "Ongoing",
+                        type: "bar",
+                        barMaxWidth: 26,
+                        data: empOngoing,
+                        itemStyle: { borderRadius: [8, 8, 0, 0] }
+                    },
+                    {
+                        name: "Overdue",
+                        type: "bar",
+                        barMaxWidth: 26,
+                        data: empOverdue,
+                        itemStyle: { borderRadius: [8, 8, 0, 0] }
+                    }
+                ]
+            },
             true
         );
+
+        requestAnimationFrame(() => chart.resize());
+        const resizeTimer = setTimeout(() => chart.resize(), 120);
 
         const onResize = () => chart.resize();
         window.addEventListener("resize", onResize);
 
         return () => {
+            clearTimeout(resizeTimer);
             window.removeEventListener("resize", onResize);
             chart.dispose();
         };
-    }, [empNames, empCompleted, empOngoing, empOverdue, isDark]);
+    }, [empNames, empCompleted, empOngoing, empOverdue, themeMode]);
+
+    const isCurrentYear = year === now.getFullYear();
+
+    function goToPrevYear() {
+        setYear((y) => y - 1);
+    }
+
+    function goToNextYear() {
+        if (!isCurrentYear) {
+            setYear((y) => y + 1);
+        }
+    }
+
+    function goToCurrentYear() {
+        setYear(now.getFullYear());
+    }
+
+    if (error) {
+        return (
+            <div className="dr-page">
+                <div className="dr-error-card">
+                    <h5>Report Error</h5>
+                    <p>{error}</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="dr-page">
+                <div className="dr-loading-card">
+                    <div className="spinner-border me-2" role="status"></div>
+                    <span>Loading annual report…</span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="dr-page">
-            <div className="dr-toolbar">
-                <div>
-                    <h2 className="dr-toolbar-title">Annual Task Report</h2>
-                    <div className="dr-toolbar-subtitle">
-                        Department-wide yearly analytics, trends, and assignee performance
+            <div className="dr-card ar-toolbar-card">
+                <div className="dr-card-head ar-toolbar-row">
+                    <div>
+                        <h5 className="dr-card-title">Annual Task Report</h5>
+                        <div className="dr-card-subtitle">
+                            Year-wide department and employee performance overview
+                        </div>
                     </div>
-                </div>
 
-                <div className="dr-toolbar-group">
-                    <button
-                        className="dr-icon-btn"
-                        onClick={() => setYear((y) => y - 1)}
-                        aria-label="Previous year"
-                    >
-                        <i className="bi bi-chevron-left"></i>
-                    </button>
+                    <div className="ar-toolbar-actions">
+                        <div className="ar-period-nav">
+                            <button className="dr-ghost-btn" onClick={goToPrevYear}>
+                                <i className="bi bi-chevron-left"></i>
+                                <span>Prev</span>
+                            </button>
 
-                    <div className="dr-filter-pill">{year}</div>
+                            <div className="ar-period-label">{year}</div>
 
-                    <button
-                        className="dr-icon-btn"
-                        onClick={() => setYear((y) => y + 1)}
-                        disabled={isCurrentYear}
-                        aria-label="Next year"
-                    >
-                        <i className="bi bi-chevron-right"></i>
-                    </button>
+                            <button
+                                className="dr-ghost-btn"
+                                onClick={goToNextYear}
+                                disabled={isCurrentYear}
+                            >
+                                <span>Next</span>
+                                <i className="bi bi-chevron-right"></i>
+                            </button>
 
-                    {!isCurrentYear && (
-                        <button
-                            className="dr-ghost-btn"
-                            onClick={() => setYear(now.getFullYear())}
-                        >
-                            This Year
-                        </button>
-                    )}
+                            {!isCurrentYear ? (
+                                <button className="dr-filter-pill dr-filter-pill--button" onClick={goToCurrentYear}>
+                                    This Year
+                                </button>
+                            ) : null}
+                        </div>
 
-                    <select
-                        className="dr-select"
-                        value={departmentFilter}
-                        onChange={(e) => {
-                            setDepartmentFilter(e.target.value);
-                            setSelectedDept(null);
-                        }}
-                    >
-                        <option value="all">All Departments</option>
-                        {allDepartments.map((dep) => (
-                            <option key={dep.id} value={dep.id}>
-                                {dep.name}
-                            </option>
-                        ))}
-                    </select>
+                        <div className="dr-search-box dr-search-box--select ar-select-shell">
+                            <i className="bi bi-buildings"></i>
+                            <select
+                                className="dr-select"
+                                value={departmentFilter}
+                                onChange={(e) => {
+                                    setDepartmentFilter(e.target.value);
+                                    setSelectedDept(null);
+                                }}
+                            >
+                                <option value="all">All Departments</option>
+                                {allDepartments.map((dep) => (
+                                    <option key={dep.id} value={dep.id}>
+                                        {dep.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <i className="bi bi-chevron-down dr-select-chevron"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="dr-summary-grid">
+            <div className="dr-summary-grid ar-summary-grid">
                 <SummaryCard
                     icon="bi-list-task"
                     label="Total Tasks"
-                    value={summaryTotal}
-                    subtext="All tasks recorded this year"
+                    value={scopedSummary.total}
+                    subtext={selectedDept ? selectedDept.department : departmentFilterLabel}
                     tone="primary"
                     meta={`${year}`}
                 />
                 <SummaryCard
                     icon="bi-check2-circle"
-                    label="Completed"
-                    value={safeNum(summary.completed)}
-                    subtext="Finished tasks in selected scope"
+                    label="Completed Tasks"
+                    value={scopedSummary.completed}
+                    subtext="Finished tasks during the selected year"
                     tone="success"
-                    meta={`${pct(summary.completed, summaryTotal)}% of total`}
+                    meta={`${pct(scopedSummary.completed, scopedSummary.total)}% of total`}
                 />
                 <SummaryCard
                     icon="bi-arrow-repeat"
-                    label="Ongoing"
-                    value={safeNum(summary.ongoing)}
-                    subtext="Active tasks being worked on"
+                    label="In Progress Tasks"
+                    value={scopedSummary.ongoing}
+                    subtext="Active tasks still underway"
                     tone="warning"
-                    meta={`${pct(summary.ongoing, summaryTotal)}% of total`}
+                    meta={`${pct(scopedSummary.ongoing, scopedSummary.total)}% of total`}
                 />
                 <SummaryCard
                     icon="bi-exclamation-circle"
-                    label="Overdue"
-                    value={safeNum(summary.overdue)}
-                    subtext="Tasks past the deadline"
+                    label="Overdue Tasks"
+                    value={scopedSummary.overdue}
+                    subtext="Tasks that missed their deadline"
                     tone="danger"
-                    meta={`${pct(summary.overdue, summaryTotal)}% of total`}
+                    meta={`${pct(scopedSummary.overdue, scopedSummary.total)}% of total`}
                 />
                 <SummaryCard
                     icon="bi-graph-up-arrow"
                     label="Completion Rate"
-                    value={`${summaryRate}%`}
-                    subtext="Share of completed tasks"
-                    tone="primary"
-                    meta={`${employees.length} staff member${employees.length !== 1 ? "s" : ""}`}
+                    value={`${scopedCompletionRate}%`}
+                    subtext="Completed versus total tasks"
+                    tone={scopedCompletionRate >= 70 ? "success" : scopedCompletionRate >= 40 ? "warning" : "danger"}
+                    meta={selectedDept ? "Focused Department" : "Year Scope"}
                 />
             </div>
 
-            <div
-                className="dr-top-grid"
-                style={{
-                    gridTemplateColumns: "minmax(300px, 0.72fr) minmax(0, 1.58fr)"
-                }}
-            >
-                <div className="dr-card">
-                    <div className="dr-card-head">
-                        <div>
-                            <h5 className="dr-card-title">Annual Status Mix</h5>
-                            <div className="dr-card-subtitle">
-                                Overall status distribution for {year}
-                            </div>
-                        </div>
-
-                        <div className="dr-filter-pill">{summaryTotal} tasks</div>
-                    </div>
-
-                    <div ref={donutChartRef} className="dr-chart-box dr-chart-box--sm"></div>
-                </div>
-
-                <div className="dr-card">
-                    <div className="dr-card-head">
-                        <div>
-                            <h5 className="dr-card-title">Employee Performance</h5>
-                            <div className="dr-card-subtitle">
-                                Sorted by completion rate and task volume
-                            </div>
-                        </div>
-
-                        <div className="dr-filter-pill">
-                            {employeeSorted.length} employee{employeeSorted.length !== 1 ? "s" : ""}
-                        </div>
-                    </div>
-
-                    <div
-                        ref={employeeChartRef}
-                        className="dr-chart-box"
-                        style={{ height: "360px" }}
-                    ></div>
-                </div>
-            </div>
-
-            <div className="dr-card" style={{ marginBottom: "18px" }}>
+            <div className="dr-card ar-block-gap">
                 <div className="dr-card-head">
                     <div>
-                        <h5 className="dr-card-title">Task Status Trend</h5>
+                        <h5 className="dr-card-title">Department Task Comparison</h5>
                         <div className="dr-card-subtitle">
-                            Monthly completed, ongoing, and overdue task movement
+                            Click a department bar or table row to focus the report
                         </div>
                     </div>
 
-                    <div className="dr-filter-pill">This Year</div>
+                    {selectedDept ? (
+                        <button
+                            className="dr-filter-pill dr-filter-pill--button"
+                            onClick={() => setSelectedDept(null)}
+                        >
+                            Clear Selection
+                        </button>
+                    ) : (
+                        <div className="dr-filter-pill">{departmentFilterLabel}</div>
+                    )}
                 </div>
 
-                <div ref={lineChartRef} className="dr-chart-box"></div>
+                <div ref={deptChartRef} className="ar-chart-lg"></div>
             </div>
 
-            <div
-                className="dr-bottom-grid"
-                style={{
-                    gridTemplateColumns: "minmax(0, 0.92fr) minmax(0, 1.28fr)"
-                }}
-            >
+            <div className="dr-card ar-block-gap">
+                <div className="dr-card-head">
+                    <div>
+                        <h5 className="dr-card-title">Monthly Activity Trend</h5>
+                        <div className="dr-card-subtitle">
+                            Task completion, ongoing, and overdue counts across all 12 months of {year}
+                        </div>
+                    </div>
+
+                    <div className="dr-filter-pill">{year}</div>
+                </div>
+
+                <div ref={lineChartRef} className="ar-chart-line"></div>
+            </div>
+
+            <div className="ar-split-grid">
                 <div className="dr-card">
                     <div className="dr-card-head">
                         <div>
                             <h5 className="dr-card-title">Quarterly Breakdown</h5>
                             <div className="dr-card-subtitle">
-                                Status composition across Q1–Q4
+                                Volume and status composition per quarter
                             </div>
                         </div>
 
-                        <div className="dr-filter-pill">Quarterly</div>
+                        <div className="dr-filter-pill">{year}</div>
                     </div>
 
-                    <div ref={quarterChartRef} className="dr-chart-box"></div>
+                    <div ref={quarterChartRef} className="ar-chart-md"></div>
                 </div>
 
-                <div className="dr-card">
+                <div className="dr-card ar-donut-card">
                     <div className="dr-card-head">
                         <div>
-                            <h5 className="dr-card-title">Department Task Comparison</h5>
+                            <h5 className="dr-card-title">Annual Status Mix</h5>
                             <div className="dr-card-subtitle">
                                 {selectedDept
-                                    ? `Focused: ${selectedDept.department}`
-                                    : `Completed, ongoing, and overdue totals by department for ${year}`}
+                                    ? `${selectedDept.department} summary`
+                                    : `Overall share of completed, ongoing, and overdue for ${year}`}
                             </div>
                         </div>
 
-                        {selectedDept ? (
-                            <button
-                                className="dr-filter-pill dr-filter-pill--button"
-                                onClick={() => setSelectedDept(null)}
-                            >
-                                Clear Focus
-                            </button>
-                        ) : (
-                            <div className="dr-filter-pill">This Year</div>
-                        )}
+                        <div className="dr-filter-pill">
+                            {selectedDept ? "Selected Department" : "All Departments"}
+                        </div>
                     </div>
 
-                    <div ref={deptChartRef} className="dr-chart-box"></div>
+                    <div className="dr-donut-stack">
+                        <div className="dr-donut-shell">
+                            <div ref={donutChartRef} className="dr-donut-chart"></div>
+
+                            <div className="dr-donut-center">
+                                <span className="dr-donut-center-kicker">Total</span>
+                                <div className="dr-donut-center-line">
+                                    <strong className="dr-donut-center-value">
+                                        {scopedSummary.total}
+                                    </strong>
+                                    <span className="dr-donut-center-unit">
+                                        task{scopedSummary.total !== 1 ? "s" : ""}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="dr-donut-legend">
+                            {donutLegendData.map((item) => (
+                                <div className="dr-donut-legend-item" key={item.label}>
+                                    <span
+                                        className="dr-donut-dot"
+                                        style={{ borderColor: item.color }}
+                                    ></span>
+
+                                    <div className="dr-donut-legend-copy">
+                                        <div className="dr-donut-legend-label">{item.label}</div>
+                                        <div className="dr-donut-legend-meta">
+                                            {item.value} task{item.value !== 1 ? "s" : ""} · {item.percent}%
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="dr-card" style={{ marginBottom: "18px" }}>
+            <div className="dr-card ar-block-gap">
                 <div className="dr-card-head">
                     <div>
-                        <h5 className="dr-card-title">Department Details</h5>
+                        <h5 className="dr-card-title">Employee Performance</h5>
                         <div className="dr-card-subtitle">
-                            Click a row to focus charts · click the eye icon to inspect tasks
+                            Sorted by completion rate
+                            {selectedDept ? ` · ${selectedDept.department}` : ""}
                         </div>
                     </div>
 
                     <div className="dr-filter-pill">
-                        {departments.length} department{departments.length !== 1 ? "s" : ""}
+                        {employeePerformanceRows.length} employee{employeePerformanceRows.length !== 1 ? "s" : ""}
+                    </div>
+                </div>
+
+                <div
+                    ref={employeeChartRef}
+                    className="ar-chart-hbar"
+                    style={{ height: "430px" }}
+                ></div>
+            </div>
+
+            <div className="dr-card dr-card--table dr-card--table-full ar-block-gap">
+                <div className="dr-card-head">
+                    <div>
+                        <h5 className="dr-card-title">Quarterly Summary</h5>
+                        <div className="dr-card-subtitle">
+                            Per-quarter totals and completion rates
+                        </div>
+                    </div>
+
+                    <div className="dr-filter-pill">
+                        {quarterlyTrend.length} quarter{quarterlyTrend.length !== 1 ? "s" : ""}
                     </div>
                 </div>
 
@@ -1777,26 +1927,95 @@ function AnnualReportPage() {
                     <table className="dr-table">
                         <thead>
                             <tr>
+                                <th style={{ width: "90px" }}>Quarter</th>
+                                <th>Period</th>
+                                <th style={{ width: "100px" }}>Total</th>
+                                <th style={{ width: "110px" }}>Completed</th>
+                                <th style={{ width: "110px" }}>Ongoing</th>
+                                <th style={{ width: "98px" }}>Overdue</th>
+                                <th style={{ width: "140px" }}>Completion Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {quarterlyTrend.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="dr-table-empty">
+                                        No quarterly summary found for this year.
+                                    </td>
+                                </tr>
+                            ) : (
+                                quarterlyTrend.map((q, index) => (
+                                    <tr key={q.quarter ?? index}>
+                                        <td>
+                                            <span className="ar-quarter-name">{q.quarter_label}</span>
+                                        </td>
+                                        <td>{q.quarter_range}</td>
+                                        <td>{q.total}</td>
+                                        <td>{q.completed}</td>
+                                        <td>{q.ongoing}</td>
+                                        <td className="dr-overdue-cell">{q.overdue}</td>
+                                        <td>
+                                            {safeNum(q.total) === 0 ? (
+                                                <span className="dr-empty-inline">No tasks yet</span>
+                                            ) : safeNum(q.completion_rate) === 0 ? (
+                                                <span className="dr-rate-danger">0% — None completed</span>
+                                            ) : (
+                                                <div className="dr-progress">
+                                                    <div
+                                                        className="dr-progress-bar"
+                                                        style={{ width: `${q.completion_rate}%` }}
+                                                    >
+                                                        {q.completion_rate}%
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="dr-card dr-card--table dr-card--table-full ar-block-gap">
+                <div className="dr-card-head">
+                    <div>
+                        <h5 className="dr-card-title">Department Details</h5>
+                        <div className="dr-card-subtitle">
+                            Click a row to focus the report · click the eye icon to inspect department tasks
+                        </div>
+                    </div>
+
+                    <div className="dr-filter-pill">
+                        {departmentRows.length} department{departmentRows.length !== 1 ? "s" : ""}
+                    </div>
+                </div>
+
+                <div className="dr-table-shell">
+                    <table className="dr-table">
+                        <thead>
+                            <tr>
+                                <th style={{ width: "52px" }}>#</th>
                                 <th>Department</th>
-                                <th>Total</th>
-                                <th>Completed</th>
-                                <th>Ongoing</th>
-                                <th>Overdue</th>
-                                <th>Completion Rate</th>
+                                <th style={{ width: "100px" }}>Total</th>
+                                <th style={{ width: "110px" }}>Completed</th>
+                                <th style={{ width: "110px" }}>Ongoing</th>
+                                <th style={{ width: "98px" }}>Overdue</th>
+                                <th style={{ width: "140px" }}>Completion Rate</th>
                                 <th style={{ width: "70px", textAlign: "center" }}>View</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {departments.length === 0 ? (
+                            {departmentRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="dr-table-empty">
+                                    <td colSpan="8" className="dr-table-empty">
                                         No departments found for this year.
                                     </td>
                                 </tr>
                             ) : (
-                                departments.map((dept) => {
-                                    const active =
-                                        selectedDept?.department_id === dept.department_id;
+                                departmentRows.map((dept, index) => {
+                                    const active = selectedDept?.department_id === dept.department_id;
 
                                     return (
                                         <tr
@@ -1804,29 +2023,33 @@ function AnnualReportPage() {
                                             className={active ? "is-active" : ""}
                                             onClick={() =>
                                                 setSelectedDept((prev) =>
-                                                    prev?.department_id === dept.department_id
-                                                        ? null
-                                                        : dept
+                                                    prev?.department_id === dept.department_id ? null : dept
                                                 )
                                             }
                                         >
-                                            <td>{dept.department}</td>
-                                            <td>{safeNum(dept.total)}</td>
-                                            <td>{safeNum(dept.completed)}</td>
-                                            <td>{safeNum(dept.ongoing)}</td>
-                                            <td className="dr-overdue-cell">{safeNum(dept.overdue)}</td>
+                                            <td>{index + 1}</td>
                                             <td>
-                                                <div className="dr-rate-bar">
-                                                    <div
-                                                        className="dr-rate-fill"
-                                                        style={{
-                                                            width: `${safeNum(dept.completion_rate)}%`
-                                                        }}
-                                                    ></div>
-                                                </div>
-                                                <div className="dr-rate-text">
-                                                    {safeNum(dept.completion_rate)}%
-                                                </div>
+                                                <span className="ar-dept-name">{dept.department}</span>
+                                            </td>
+                                            <td>{dept.total}</td>
+                                            <td>{dept.completed}</td>
+                                            <td>{dept.ongoing}</td>
+                                            <td className="dr-overdue-cell">{dept.overdue}</td>
+                                            <td>
+                                                {dept.total === 0 ? (
+                                                    <span className="dr-empty-inline">No tasks yet</span>
+                                                ) : dept.completion_rate === 0 ? (
+                                                    <span className="dr-rate-danger">0% — None completed</span>
+                                                ) : (
+                                                    <div className="dr-progress">
+                                                        <div
+                                                            className="dr-progress-bar"
+                                                            style={{ width: `${dept.completion_rate}%` }}
+                                                        >
+                                                            {dept.completion_rate}%
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </td>
                                             <td
                                                 style={{ textAlign: "center" }}
@@ -1851,17 +2074,17 @@ function AnnualReportPage() {
                 </div>
             </div>
 
-            <div className="dr-card">
+            <div className="dr-card dr-card--table dr-card--table-full">
                 <div className="dr-card-head">
                     <div>
                         <h5 className="dr-card-title">Employee Details</h5>
                         <div className="dr-card-subtitle">
-                            Review annual assignee performance and inspect task lists
+                            Click the eye icon to inspect annual tasks and comments
                         </div>
                     </div>
 
                     <div className="dr-filter-pill">
-                        {employees.length} employee{employees.length !== 1 ? "s" : ""}
+                        {employeeRows.length} employee{employeeRows.length !== 1 ? "s" : ""}
                     </div>
                 </div>
 
@@ -1869,42 +2092,63 @@ function AnnualReportPage() {
                     <table className="dr-table">
                         <thead>
                             <tr>
+                                <th style={{ width: "52px" }}>#</th>
                                 <th>Employee</th>
-                                <th>Department</th>
-                                <th>Completed</th>
-                                <th>Ongoing</th>
-                                <th>Overdue</th>
-                                <th>Completion Rate</th>
+                                <th style={{ width: "150px" }}>Department</th>
+                                <th style={{ width: "110px" }}>Completed</th>
+                                <th style={{ width: "110px" }}>Ongoing</th>
+                                <th style={{ width: "98px" }}>Overdue</th>
+                                <th style={{ width: "140px" }}>Completion Rate</th>
                                 <th style={{ width: "70px", textAlign: "center" }}>View</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {employees.length === 0 ? (
+                            {employeeRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="dr-table-empty">
-                                        No employees found for this year.
+                                    <td colSpan="8" className="dr-table-empty">
+                                        No employees found for this scope.
                                     </td>
                                 </tr>
                             ) : (
-                                employees.map((emp) => (
+                                employeeRows.map((emp, index) => (
                                     <tr key={emp.id}>
-                                        <td>{emp.name}</td>
-                                        <td>{emp.department}</td>
-                                        <td>{safeNum(emp.completed)}</td>
-                                        <td>{safeNum(emp.ongoing)}</td>
-                                        <td className="dr-overdue-cell">{safeNum(emp.overdue)}</td>
+                                        <td>{index + 1}</td>
                                         <td>
-                                            <div className="dr-rate-bar">
+                                            <div className="dr-assignee">
                                                 <div
-                                                    className="dr-rate-fill"
+                                                    className="dr-assignee-avatar dr-assignee-avatar--fallback"
                                                     style={{
-                                                        width: `${safeNum(emp.completion_rate)}%`
+                                                        background: avatarColor(emp.name),
+                                                        color: avatarTextColor(emp.name)
                                                     }}
-                                                ></div>
+                                                >
+                                                    {initials(emp.name)}
+                                                </div>
+
+                                                <div className="dr-assignee-copy">
+                                                    <span className="dr-assignee-name">{emp.name}</span>
+                                                </div>
                                             </div>
-                                            <div className="dr-rate-text">
-                                                {safeNum(emp.completion_rate)}%
-                                            </div>
+                                        </td>
+                                        <td>{emp.department}</td>
+                                        <td>{emp.completed}</td>
+                                        <td>{emp.ongoing}</td>
+                                        <td className="dr-overdue-cell">{emp.overdue}</td>
+                                        <td>
+                                            {emp.total === 0 ? (
+                                                <span className="dr-empty-inline">No tasks yet</span>
+                                            ) : emp.completion_rate === 0 ? (
+                                                <span className="dr-rate-danger">0% — None completed</span>
+                                            ) : (
+                                                <div className="dr-progress">
+                                                    <div
+                                                        className="dr-progress-bar"
+                                                        style={{ width: `${emp.completion_rate}%` }}
+                                                    >
+                                                        {emp.completion_rate}%
+                                                    </div>
+                                                </div>
+                                            )}
                                         </td>
                                         <td
                                             style={{ textAlign: "center" }}
@@ -1915,7 +2159,7 @@ function AnnualReportPage() {
                                         >
                                             <button
                                                 className="dr-eye-btn"
-                                                title={`View ${emp.name} tasks`}
+                                                title={`View ${emp.name}'s annual tasks`}
                                             >
                                                 <i className="bi bi-eye"></i>
                                             </button>
@@ -1928,23 +2172,23 @@ function AnnualReportPage() {
                 </div>
             </div>
 
-            {modalEmp && (
-                <EmployeeTaskModal
-                    emp={modalEmp}
-                    yearStart={yearStart}
-                    yearEnd={yearEnd}
-                    onClose={() => setModalEmp(null)}
-                />
-            )}
-
-            {modalDept && (
+            {modalDept ? (
                 <DepartmentTaskModal
                     dept={modalDept}
                     yearStart={yearStart}
                     yearEnd={yearEnd}
                     onClose={() => setModalDept(null)}
                 />
-            )}
+            ) : null}
+
+            {modalEmp ? (
+                <EmployeeTaskModal
+                    emp={modalEmp}
+                    yearStart={yearStart}
+                    yearEnd={yearEnd}
+                    onClose={() => setModalEmp(null)}
+                />
+            ) : null}
         </div>
     );
 }

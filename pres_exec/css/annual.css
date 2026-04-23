@@ -590,6 +590,458 @@
     text-align: center;
 }
 
+.dr-donut-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    min-height: 0;
+}
+
+.dr-donut-shell {
+    position: relative;
+    width: 272px;
+    height: 272px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dr-donut-chart {
+    width: 272px;
+    height: 272px;
+    min-width: 272px;
+    min-height: 272px;
+}
+
+.dr-donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    text-align: center;
+}
+
+.dr-donut-center-kicker {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--dr-muted);
+    margin-bottom: 6px;
+}
+
+.dr-donut-center-line {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    line-height: 1;
+}
+
+.dr-donut-center-value {
+    font-size: 3.2rem;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    color: var(--dr-text);
+}
+
+.dr-donut-center-unit {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--dr-subtle);
+    margin-bottom: 6px;
+}
+
+.dr-donut-legend {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px 18px;
+}
+
+.dr-donut-legend-item {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 130px;
+}
+
+.dr-donut-dot {
+    width: 13px;
+    height: 13px;
+    border-radius: 999px;
+    border: 3px solid;
+    background: transparent;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+.dr-donut-legend-copy {
+    display: flex;
+    flex-direction: column;
+}
+
+.dr-donut-legend-label {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--dr-text);
+    line-height: 1.1;
+}
+
+.dr-donut-legend-meta {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--dr-muted);
+    line-height: 1.2;
+}
+
+.ar-donut-card .dr-donut-stack {
+    min-height: 360px;
+    justify-content: center;
+}
+
+.ar-donut-card .dr-donut-shell {
+    width: 260px;
+    height: 260px;
+    margin: 0 auto;
+}
+
+.ar-donut-card .dr-donut-chart {
+    width: 260px;
+    height: 260px;
+    min-width: 260px;
+    min-height: 260px;
+}
+
+
+
+.dr-table tbody td {
+    vertical-align: middle;
+}
+
+.dr-assignee {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 220px;
+}
+
+.dr-assignee-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px;
+    min-height: 36px;
+    max-width: 36px;
+    max-height: 36px;
+    border-radius: 999px !important;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    object-fit: cover;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.dr-assignee-avatar--fallback {
+    border: 1px solid var(--dr-border);
+}
+
+.dr-assignee-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.dr-assignee-name {
+    display: block;
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--dr-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#annualReportRoot .dr-table {
+    min-width: 1180px;
+}
+
+#annualReportRoot .dr-table th,
+#annualReportRoot .dr-table td {
+    white-space: nowrap;
+}
+
+#annualReportRoot .dr-card--table {
+    overflow: hidden;
+}
+
+#annualReportRoot .dr-table-shell {
+    overflow: auto;
+    border: 1px solid var(--dr-border);
+    border-radius: 14px;
+    background: var(--dr-card);
+    max-height: 56vh;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#annualReportRoot .dr-table-shell::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+#annualReportRoot .dr-table {
+    min-width: 1080px;
+}
+
+#annualReportRoot .dr-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--dr-card);
+    z-index: 1;
+}
+
+#annualReportRoot .dr-table tbody td {
+    vertical-align: middle;
+}
+
+#annualReportRoot .dr-assignee {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 220px;
+}
+
+#annualReportRoot .dr-assignee-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    max-width: 36px;
+    max-height: 36px;
+    border-radius: 999px;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    object-fit: cover;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+#annualReportRoot .dr-assignee-avatar--fallback {
+    border: 1px solid var(--dr-border);
+}
+
+#annualReportRoot .dr-assignee-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#annualReportRoot .dr-assignee-name {
+    display: block;
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--dr-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#annualReportRoot .ar-dept-name,
+#annualReportRoot .ar-quarter-name {
+    font-weight: 900;
+    color: var(--dr-text);
+}
+
+@media (max-width: 767px) {
+    .ar-donut-card .dr-donut-shell,
+    .ar-donut-card .dr-donut-chart {
+        width: 220px;
+        height: 220px;
+        min-width: 220px;
+        min-height: 220px;
+    }
+
+}
+.ar-toolbar-card {
+    margin-bottom: 18px;
+}
+
+.ar-toolbar-row {
+    margin-bottom: 0;
+}
+
+.ar-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ar-period-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ar-period-label {
+    min-width: 120px;
+    text-align: center;
+    height: 42px;
+    padding: 0 16px;
+    border-radius: 13px;
+    border: 1px solid var(--dr-border);
+    background: var(--dr-card-soft);
+    color: var(--dr-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 900;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.ar-select-shell {
+    min-width: 240px;
+}
+
+.ar-summary-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.ar-chart-lg {
+    width: 100%;
+    height: 340px;
+    border-radius: 14px;
+}
+
+.ar-chart-line {
+    width: 100%;
+    height: 340px;
+    border-radius: 14px;
+}
+
+.ar-chart-md {
+    width: 100%;
+    height: 320px;
+    border-radius: 14px;
+}
+
+
+.ar-split-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.ar-block-gap {
+    margin-bottom: 16px;
+}
+
+.ar-dept-name,
+.ar-quarter-name {
+    font-weight: 900;
+    color: var(--dr-text);
+}
+
+.ar-task-assignee {
+    margin-top: 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--dr-muted);
+}
+
+.ar-chart-employee {
+    width: 100%;
+    height: 430px;
+    border-radius: 14px;
+}
+
+.ar-donut-card .dr-donut-stack {
+    min-height: 360px;
+    justify-content: center;
+}
+
+.ar-donut-card .dr-donut-shell {
+    width: 260px;
+    height: 260px;
+    margin: 0 auto;
+}
+
+.ar-donut-card .dr-donut-chart {
+    width: 260px;
+    height: 260px;
+}
+
+@media (max-width: 767px) {
+    .ar-chart-employee {
+        height: 380px;
+    }
+
+    .ar-donut-card .dr-donut-shell,
+    .ar-donut-card .dr-donut-chart {
+        width: 220px;
+        height: 220px;
+    }
+}
+
+@media (max-width: 1399px) {
+    .ar-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1199px) {
+    .ar-split-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767px) {
+    .ar-toolbar-actions,
+    .ar-period-nav {
+        width: 100%;
+    }
+
+    .ar-period-label {
+        min-width: 100%;
+    }
+
+    .ar-select-shell {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    .ar-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ar-chart-lg,
+    .ar-chart-line,
+    .ar-chart-md {
+        height: 300px;
+    }
+}
 @media (max-width: 1199px) {
     .dr-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
