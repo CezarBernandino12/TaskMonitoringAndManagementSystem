@@ -144,8 +144,9 @@ $summarySql = "
     AND u.role = 'staff'
     AND u.department_id = ?
     AND (
-        (t.status = 'Completed' AND DATE(t.completed_at) = CURDATE())
-        OR (t.status NOT IN ('Completed') AND t.deadline IS NOT NULL)
+        (t.status = 'Completed' AND t.completed_at IS NOT NULL AND DATE(t.completed_at) = CURDATE())
+        OR (t.deadline IS NOT NULL AND DATE(t.deadline) = CURDATE())
+        OR (t.status NOT IN ('Completed') AND t.deadline IS NOT NULL AND DATE(t.deadline) < CURDATE())
     )
 ";
 
@@ -191,8 +192,9 @@ $employeeSql = "
     LEFT JOIN departments d ON u.department_id = d.id
     LEFT JOIN tasks t ON t.assigned_to = u.id
         AND (
-            (t.status = 'Completed' AND DATE(t.completed_at) = CURDATE())
-            OR (t.status NOT IN ('Completed') AND t.deadline IS NOT NULL)
+            (t.status = 'Completed' AND t.completed_at IS NOT NULL AND DATE(t.completed_at) = CURDATE())
+            OR (t.deadline IS NOT NULL AND DATE(t.deadline) = CURDATE())
+            OR (t.status NOT IN ('Completed') AND t.deadline IS NOT NULL AND DATE(t.deadline) < CURDATE())
         )
 
     WHERE u.role = 'staff'

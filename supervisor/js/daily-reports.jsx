@@ -815,7 +815,22 @@ function SupervisorDailyReportPage() {
                                             <td>{emp.completed}</td>
                                             <td>{emp.ongoing}</td>
                                             <td className="dr-overdue-cell">{emp.overdue}</td>
-                                            <td>{emp.completionRate}%</td>
+                                            <td>
+                                                {emp.total === 0 ? (
+                                                    <span className="dr-empty-inline">No tasks yet</span>
+                                                ) : emp.completionRate === 0 ? (
+                                                    <span className="dr-rate-danger">0% — None completed</span>
+                                                ) : (
+                                                    <div className="dr-progress">
+                                                        <div
+                                                            className="dr-progress-bar"
+                                                            style={{ width: `${emp.completionRate}%` }}
+                                                        >
+                                                            {emp.completionRate}%
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </td>
 
                                             <td
                                                 style={{ textAlign: "center" }}
