@@ -469,6 +469,42 @@
     color: var(--dr-pink);
 }
 
+.dr-progress {
+    width: 100%;
+    height: 20px;
+    background: #ebf0f6;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .dr-progress {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.dr-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #16a34a 0%, #23c15a 100%);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+}
+
+.dr-empty-inline {
+    color: var(--dr-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.dr-rate-danger {
+    color: var(--dr-pink);
+    font-size: 12px;
+    font-weight: 800;
+}
+
 .dr-eye-btn {
     width: 34px;
     padding: 0;
