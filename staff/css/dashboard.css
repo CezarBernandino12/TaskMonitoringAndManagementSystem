@@ -4,7 +4,7 @@
 
 :root {
     --bg-page: #ffffff;
-    --bg-card: #ffffff;
+    --bg-cards: #ffffff;
     --bg-soft: #f8fafc;
     --bg-soft-2: #f4f6f8;
     --bg-input: #f4f5f7;
@@ -179,7 +179,7 @@ body.has-bulk-action-bar {
 }
 
 .stats-strip {
-    background: var(--bg-card);
+    background: var(--bg-cards);
     border: 1px solid var(--border);
     border-radius: 16px;
     box-shadow: var(--shadow-sm);
