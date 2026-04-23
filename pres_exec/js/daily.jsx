@@ -647,6 +647,13 @@ function EmployeeTaskModal({ emp, onClose }) {
     );
 }
 
+function compactEmployeeName(name) {
+    if (!name) return "";
+    const parts = String(name).trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+}
+
 function PresidentDailyReportPage() {
     const [summary, setSummary] = useState({
         total: 0,
@@ -770,8 +777,8 @@ function PresidentDailyReportPage() {
     }, [selectedEmp, summary]);
 
     const chartLabels = useMemo(() => {
-        if (selectedEmp) return [selectedEmp.name];
-        return employeeRows.map((emp) => emp.name);
+        if (selectedEmp) return [compactEmployeeName(selectedEmp.name)];
+        return employeeRows.map((emp) => compactEmployeeName(emp.name));
     }, [employeeRows, selectedEmp]);
 
     const completedSeries = useMemo(() => {
@@ -814,125 +821,179 @@ function PresidentDailyReportPage() {
         }));
     }, [scopedSummary]);
 
-    useEffect(() => {
-        if (!window.echarts || !trendChartRef.current) return;
+useEffect(() => {
+    if (!window.echarts || !trendChartRef.current) return;
 
-        const chart =
-            window.echarts.getInstanceByDom(trendChartRef.current) ||
-            window.echarts.init(trendChartRef.current);
+    const chart =
+        window.echarts.getInstanceByDom(trendChartRef.current) ||
+        window.echarts.init(trendChartRef.current);
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+    const isDark = themeMode === "dark";
+    const axisColor = isDark ? "#94a3b8" : "#475569";
+    const textColor = isDark ? "#f8fafc" : "#111827";
+    const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
+    const tooltipBg = isDark ? "#0f172a" : "#ffffff";
+    const tooltipBorder = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
 
-        chart.setOption(
-            {
-                animationDuration: 650,
-                animationEasing: "cubicOut",
-                color: ["#5b57d9", "#9c82df", "#c8b8ee"],
-                grid: {
-                    top: 26,
-                    left: 22,
-                    right: 18,
-                    bottom: 42,
-                    containLabel: true
-                },
-                tooltip: {
-                    trigger: "axis",
-                    axisPointer: {
-                        type: "shadow"
-                    },
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    },
-                    extraCssText:
-                        "box-shadow:0 18px 40px rgba(15,23,42,0.12); border-radius:16px;"
-                },
-                legend: {
-                    show: false
-                },
-                xAxis: {
-                    type: "category",
-                    data: chartLabels,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        margin: 10
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
-                    },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
-                        }
-                    }
-                },
-                series: [
-                    {
-                        name: "Task Completed",
-                        type: "bar",
-                        stack: "tasks",
-                        barWidth: 28,
-                        itemStyle: {
-                            borderRadius: [0, 0, 8, 8]
-                        },
-                        data: completedSeries
-                    },
-                    {
-                        name: "Task Ongoing",
-                        type: "bar",
-                        stack: "tasks",
-                        barWidth: 28,
-                        itemStyle: {
-                            borderRadius: [0, 0, 0, 0]
-                        },
-                        data: ongoingSeries
-                    },
-                    {
-                        name: "Task Overdue",
-                        type: "bar",
-                        stack: "tasks",
-                        barWidth: 28,
-                        itemStyle: {
-                            borderRadius: [8, 8, 0, 0]
-                        },
-                        data: overdueSeries
-                    }
-                ]
+    const completedColor = new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: "#34d399" },
+        { offset: 1, color: "#16a34a" }
+    ]);
+
+    const ongoingColor = new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: "#4f8cff" },
+        { offset: 1, color: "#2563eb" }
+    ]);
+
+    const overdueColor = new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: "#ff6b6b" },
+        { offset: 1, color: "#e11d48" }
+    ]);
+
+    chart.setOption(
+        {
+            animationDuration: 700,
+            animationEasing: "cubicOut",
+            backgroundColor: "transparent",
+
+            title: {
+                text: "Task Status Overview",
+                left: 14,
+                top: 10,
+                textStyle: {
+                    color: textColor,
+                    fontFamily: "Nunito, sans-serif",
+                    fontSize: 22,
+                    fontWeight: 800
+                }
             },
-            true
-        );
 
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+            legend: {
+                data: ["Completed", "Ongoing", "Overdue"],
+                left: 14,
+                top: 52,
+                icon: "circle",
+                itemWidth: 12,
+                itemHeight: 12,
+                itemGap: 24,
+                textStyle: {
+                    color: axisColor,
+                    fontFamily: "Nunito, sans-serif",
+                    fontSize: 14,
+                    fontWeight: 700
+                }
+            },
 
-        return () => {
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
-        };
-    }, [chartLabels, completedSeries, ongoingSeries, overdueSeries, themeMode]);
+            grid: {
+                top: 86,
+                left: 46,
+                right: 18,
+                bottom: 72,
+                containLabel: true
+            },
+
+            tooltip: {
+                trigger: "axis",
+                axisPointer: {
+                    type: "shadow",
+                    shadowStyle: {
+                        color: isDark
+                            ? "rgba(255,255,255,0.04)"
+                            : "rgba(15,23,42,0.04)"
+                    }
+                },
+                backgroundColor: tooltipBg,
+                borderColor: tooltipBorder,
+                borderWidth: 1,
+                textStyle: {
+                    color: textColor,
+                    fontFamily: "Nunito, sans-serif"
+                },
+                extraCssText:
+                    "box-shadow:0 18px 40px rgba(15,23,42,0.12); border-radius:16px;"
+            },
+
+            xAxis: {
+                type: "category",
+                data: chartLabels,
+                axisLine: { show: false },
+                axisTick: { show: false },
+                axisLabel: {
+                    color: axisColor,
+                    fontFamily: "Nunito, sans-serif",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    margin: 14,
+                    interval: 0,
+                    rotate: 0
+                }
+            },
+
+            yAxis: {
+                type: "value",
+                min: 0,
+                minInterval: 1,
+                splitNumber: 6,
+                axisLine: { show: false },
+                axisTick: { show: false },
+                axisLabel: {
+                    color: axisColor,
+                    fontFamily: "Nunito, sans-serif",
+                    fontSize: 13,
+                    fontWeight: 700
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: splitLine,
+                        type: "dashed"
+                    }
+                }
+            },
+
+            series: [
+                {
+                    name: "Completed",
+                    type: "bar",
+                    data: completedSeries,
+                    barWidth: 16,
+                    itemStyle: {
+                        color: completedColor,
+                        borderRadius: [999, 999, 999, 999]
+                    }
+                },
+                {
+                    name: "Ongoing",
+                    type: "bar",
+                    data: ongoingSeries,
+                    barWidth: 16,
+                    itemStyle: {
+                        color: ongoingColor,
+                        borderRadius: [999, 999, 999, 999]
+                    }
+                },
+                {
+                    name: "Overdue",
+                    type: "bar",
+                    data: overdueSeries,
+                    barWidth: 16,
+                    itemStyle: {
+                        color: overdueColor,
+                        borderRadius: [999, 999, 999, 999]
+                    }
+                }
+            ]
+        },
+        true
+    );
+
+    const onResize = () => chart.resize();
+    window.addEventListener("resize", onResize);
+
+    return () => {
+        window.removeEventListener("resize", onResize);
+        chart.dispose();
+    };
+}, [chartLabels, completedSeries, ongoingSeries, overdueSeries, themeMode]);
 
     useEffect(() => {
         if (!window.echarts || !donutChartRef.current) return;
@@ -942,11 +1003,31 @@ function PresidentDailyReportPage() {
             window.echarts.init(donutChartRef.current);
 
         const isDark = themeMode === "dark";
-        const separatorColor = isDark ? "#12192b" : "#ffffff";
+        const separatorColor = isDark ? "#141b2d" : "#ffffff";
+
+        const donutData = [
+            {
+                value: safeNum(scopedSummary.ongoing),
+                name: "Ongoing",
+                itemStyle: { color: "#1E84F3" } // bright blue
+            },
+            {
+                value: safeNum(scopedSummary.completed),
+                name: "Completed",
+                itemStyle: { color: "#7A6CF2" } // premium purple
+            },
+            {
+                value: safeNum(scopedSummary.overdue),
+                name: "Overdue",
+                itemStyle: { color: "#F6A30D" } // warm orange
+            }
+        ].filter((item) => item.value > 0);
 
         chart.setOption(
             {
-                animation: true,
+                animationDuration: 700,
+                animationEasing: "cubicOut",
+                backgroundColor: "transparent",
                 tooltip: {
                     trigger: "item",
                     formatter: (params) =>
@@ -962,45 +1043,36 @@ function PresidentDailyReportPage() {
                 series: [
                     {
                         type: "pie",
-                        radius: ["63%", "84%"],
+                        radius: ["62%", "82%"],
                         center: ["50%", "50%"],
-                        startAngle: 90,
+                        startAngle: 102,
                         clockwise: true,
-                        minAngle: 1,
+                        padAngle: 4,
+                        minAngle: 8,
                         avoidLabelOverlap: true,
                         label: { show: false },
                         labelLine: { show: false },
+                        selectedMode: false,
                         emphasis: {
-                            scale: true,
-                            scaleSize: 8,
-                            itemStyle: {
-                                borderColor: separatorColor,
-                                borderWidth: 5,
-                                borderRadius: 10
-                            }
+                            scale: false
                         },
                         itemStyle: {
                             borderColor: separatorColor,
-                            borderWidth: 4,
-                            borderRadius: 10
+                            borderWidth: 6,
+                            borderRadius: 12
                         },
-                        data: [
-                            {
-                                value: scopedSummary.completed,
-                                name: "Completed",
-                                itemStyle: { color: "#16a34a" }
-                            },
-                            {
-                                value: scopedSummary.ongoing,
-                                name: "Ongoing",
-                                itemStyle: { color: "#f59e0b" }
-                            },
-                            {
-                                value: scopedSummary.overdue,
-                                name: "Overdue",
-                                itemStyle: { color: "#ec4899" }
-                            }
-                        ]
+                        data:
+                            donutData.length > 0
+                                ? donutData
+                                : [
+                                    {
+                                        value: 1,
+                                        name: "No data",
+                                        itemStyle: {
+                                            color: isDark ? "#334155" : "#e5e7eb"
+                                        }
+                                    }
+                                ]
                     }
                 ]
             },
@@ -1104,82 +1176,42 @@ function PresidentDailyReportPage() {
             </div>
 
             <div className="dr-top-grid">
-                <div className="dr-card dr-card--trend">
-                    <div className="dr-card-head">
-                        <div>
-                            <h5 className="dr-card-title">Task Status Trend</h5>
-                            <div className="dr-card-subtitle">
-                                {selectedEmp
-                                    ? `${selectedEmp.name} task counts`
-                                    : `${departmentLabel} staff task distribution`}
-                            </div>
-                        </div>
-
-                        {selectedEmp ? (
-                            <button
-                                className="dr-filter-pill dr-filter-pill--button"
-                                onClick={() => setSelectedEmp(null)}
-                            >
-                                Clear Selection
-                            </button>
-                        ) : (
-                            <div className="dr-filter-pill">{departmentLabel}</div>
-                        )}
-                    </div>
-
-                    <div ref={trendChartRef} className="dr-trend-chart"></div>
+                <div className="dr-card dr-card--trend dr-card--trend-reference">
+                    <div ref={trendChartRef} className="dr-trend-chart dr-trend-chart-reference"></div>
                 </div>
 
-                <div className="dr-card dr-card--donut">
-                    <div className="dr-card-head">
-                        <div>
-                            <h5 className="dr-card-title">Task Status Distribution</h5>
-                            <div className="dr-card-subtitle">
-                                {selectedEmp ? `${selectedEmp.name} summary` : departmentLabel}
-                            </div>
-                        </div>
-
-                        <div className="dr-filter-pill">
-                            {selectedEmp ? "Selected Staff" : "All Staff"}
+            <div className="dr-card dr-card--donut dr-card--donut-reference">
+                <div className="dr-card-head">
+                    <div>
+                        <h5 className="dr-card-title">Status Summary</h5>
+                        <div className="dr-card-subtitle">
+                            {selectedEmp ? `${selectedEmp.name} summary` : departmentLabel}
                         </div>
                     </div>
 
-                    <div className="dr-donut-stack">
-                        <div className="dr-donut-shell">
-                            <div ref={donutChartRef} className="dr-donut-chart"></div>
+                    <div className="dr-filter-pill">
+                        {selectedEmp ? "Selected Staff" : "All Staff"}
+                    </div>
+                </div>
 
-                            <div className="dr-donut-center">
-                                <span className="dr-donut-center-kicker">Total</span>
-                                <div className="dr-donut-center-line">
-                                    <strong className="dr-donut-center-value">
-                                        {scopedSummary.total}
-                                    </strong>
-                                    <span className="dr-donut-center-unit">
-                                        task{scopedSummary.total !== 1 ? "s" : ""}
-                                    </span>
-                                </div>
+                <div className="dr-donut-stack dr-donut-stack--reference">
+                    <div className="dr-donut-shell dr-donut-shell--reference">
+                        <div ref={donutChartRef} className="dr-donut-chart dr-donut-chart--reference"></div>
+
+                        <div className="dr-donut-center dr-donut-center--reference">
+                            <span className="dr-donut-center-kicker">Total</span>
+                            <div className="dr-donut-center-line">
+                                <strong className="dr-donut-center-value">
+                                    {scopedSummary.total}
+                                </strong>
+                                <span className="dr-donut-center-unit">
+                                    task{scopedSummary.total !== 1 ? "s" : ""}
+                                </span>
                             </div>
-                        </div>
-
-                        <div className="dr-donut-legend">
-                            {donutLegendData.map((item) => (
-                                <div className="dr-donut-legend-item" key={item.label}>
-                                    <span
-                                        className="dr-donut-dot"
-                                        style={{ borderColor: item.color }}
-                                    ></span>
-
-                                    <div className="dr-donut-legend-copy">
-                                        <div className="dr-donut-legend-label">{item.label}</div>
-                                        <div className="dr-donut-legend-meta">
-                                            {item.value} task{item.value !== 1 ? "s" : ""} · {item.percent}%
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
 
             <div className="dr-card dr-card--table dr-card--table-full">

@@ -252,17 +252,30 @@
 
 .dr-top-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.52fr) minmax(350px, 0.82fr);
-    gap: 16px;
-    margin-bottom: 16px;
+    grid-template-columns: minmax(0, 1.9fr) minmax(280px, 0.78fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.dr-card--trend {
+    min-width: 0;
+}
+
+.dr-card--donut {
+    min-width: 0;
+    padding: 16px 18px;
 }
 
 .dr-trend-chart {
     width: 100%;
-    height: 330px;
-    border-radius: 14px;
+    height: 430px;
 }
 
+.dr-donut-chart {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+}
 .dr-donut-stack {
     display: flex;
     flex-direction: column;
@@ -280,9 +293,142 @@
     justify-content: center;
 }
 
-.dr-donut-chart {
-    width: 272px;
-    height: 272px;
+.dr-card--donut .dr-card-title {
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.dr-card--donut .dr-card-subtitle {
+    font-size: 12px;
+}
+
+.dr-card--donut .dr-filter-pill {
+    font-size: 11px;
+    padding: 4px 10px;
+}
+
+.dr-donut-stack {
+    gap: 12px;
+}
+
+.dr-donut-center-kicker {
+    font-size: 10px;
+}
+
+.dr-donut-center-value {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.dr-donut-center-unit {
+    font-size: 11px;
+}
+
+.dr-donut-legend {
+    gap: 8px;
+}
+.dr-card--donut-reference {
+    padding: 18px 20px 20px;
+}
+
+.dr-card--donut-reference .dr-card-head {
+    margin-bottom: 6px;
+}
+
+.dr-donut-stack--reference {
+    min-height: 290px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dr-donut-shell--reference {
+    position: relative;
+    width: 248px;
+    height: 248px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dr-donut-chart--reference {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+.dr-donut-center--reference {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    text-align: center;
+}
+
+.dr-donut-center--reference .dr-donut-center-kicker {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4b5563;
+    margin-bottom: 8px;
+}
+
+.dr-donut-center--reference .dr-donut-center-line {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    line-height: 1;
+}
+
+.dr-donut-center--reference .dr-donut-center-value {
+    font-size: 48px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    color: #111827;
+    line-height: 0.92;
+}
+
+.dr-donut-center--reference .dr-donut-center-unit {
+    font-size: 13px;
+    font-weight: 700;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.dr-donut-legend {
+    display: none;
+}
+
+[data-theme="dark"] .dr-donut-center--reference .dr-donut-center-kicker {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .dr-donut-center--reference .dr-donut-center-value {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .dr-donut-center--reference .dr-donut-center-unit {
+    color: #94a3b8;
+}
+.dr-donut-legend-item {
+    gap: 8px;
+}
+
+.dr-donut-legend-label {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.dr-donut-legend-meta {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.dr-donut-dot {
+    width: 10px;
+    height: 10px;
 }
 
 .dr-donut-center {
@@ -1098,6 +1244,17 @@
     height: 34px;
     font-size: 12px;
     padding: 0 12px;
+}
+
+.dr-card--trend-reference {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 24px;
+}
+
+.dr-trend-chart-reference {
+    width: 100%;
+    height: 460px;
 }
 
 @media (max-width: 1199px) {

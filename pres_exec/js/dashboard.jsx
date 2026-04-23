@@ -1,11 +1,63 @@
 const { useState, useEffect, useRef } = React;
 
-// ====================================================================
-// ORG HEALTH RING — ECharts doughnut
-// ====================================================================
-function HealthRing({ ongoing, overdue, completedToday, overallRate }) {
+const CHART_COLORS = {
+    completed: "#16a34a",
+    ongoing: "#d97706",
+    overdue: "#e11d48"
+};
+
+function safeNumber(value, fallback = 0) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function percent(part, total) {
+    if (!total) return 0;
+    return Math.round((safeNumber(part) / safeNumber(total)) * 100);
+}
+
+function getChartTheme() {
+    const root = document.documentElement;
+    const dark = root.getAttribute("data-theme") === "dark";
+
+    return {
+        dark,
+        text: dark ? "#f3f4f6" : "#111827",
+        muted: dark ? "#9ca3af" : "#6b7280",
+        grid: dark ? "rgba(255,255,255,0.08)" : "#eceff3",
+        panel: dark ? "#18212f" : "#ffffff",
+        tooltipBg: dark ? "rgba(17,24,39,0.96)" : "rgba(17,24,39,0.92)"
+    };
+}
+
+function HealthRing({ ongoing, overdue, completedToday, totalActive }) {
     const ref = useRef(null);
     const chartRef = useRef(null);
+
+    const legendItems = [
+        {
+            label: "Completed today",
+            value: safeNumber(completedToday),
+            percent: percent(completedToday, totalActive),
+            color: CHART_COLORS.completed
+        },
+        {
+            label: "Ongoing",
+            value: safeNumber(ongoing),
+            percent: percent(ongoing, totalActive),
+            color: CHART_COLORS.ongoing
+        },
+        {
+            label: "Overdue",
+            value: safeNumber(overdue),
+            percent: percent(overdue, totalActive),
+            color: CHART_COLORS.overdue
+        }
+    ];
 
     useEffect(() => {
         if (!ref.current) return;
@@ -30,13 +82,23 @@ function HealthRing({ ongoing, overdue, completedToday, overallRate }) {
     useEffect(() => {
         if (!chartRef.current) return;
 
+        const theme = getChartTheme();
+
+        const data = legendItems
+            .filter((item) => item.value > 0)
+            .map((item) => ({
+                value: item.value,
+                name: item.label,
+                itemStyle: { color: item.color }
+            }));
+
         chartRef.current.setOption(
             {
-                animationDuration: 500,
+                animationDuration: 450,
                 animationEasing: "cubicOut",
                 tooltip: {
                     trigger: "item",
-                    backgroundColor: "rgba(40,40,40,0.92)",
+                    backgroundColor: theme.tooltipBg,
                     borderWidth: 0,
                     textStyle: { color: "#fff" },
                     formatter: ({ name, value }) => `${name}: ${value}`
@@ -44,72 +106,78 @@ function HealthRing({ ongoing, overdue, completedToday, overallRate }) {
                 series: [
                     {
                         type: "pie",
-                        radius: ["72%", "90%"],
+                        radius: ["60%", "84%"],
                         center: ["50%", "50%"],
+                        startAngle: 92,
+                        clockwise: true,
+                        padAngle: 3,
+                        minAngle: 6,
                         avoidLabelOverlap: true,
                         label: { show: false },
                         labelLine: { show: false },
-                        emphasis: {
-                            scale: true,
-                            scaleSize: 4
-                        },
+                        emphasis: { scale: false },
                         itemStyle: {
-                            borderColor: "#fff",
-                            borderWidth: 2,
-                            borderRadius: 6
+                            borderColor: theme.panel,
+                            borderWidth: 6,
+                            borderRadius: 10
                         },
-                        data: [
-                            {
-                                value: completedToday,
-                                name: "Completed today",
-                                itemStyle: { color: "#28a745" }
-                            },
-                            {
-                                value: ongoing,
-                                name: "Ongoing",
-                                itemStyle: { color: "#ffc107" }
-                            },
-                            {
-                                value: overdue,
-                                name: "Overdue",
-                                itemStyle: { color: "#dc3545" }
-                            }
-                        ]
+                        data:
+                            data.length > 0
+                                ? data
+                                : [
+                                      {
+                                          value: 1,
+                                          name: "No data",
+                                          itemStyle: {
+                                              color: theme.dark ? "#334155" : "#e5e7eb"
+                                          }
+                                      }
+                                  ]
                     }
                 ]
             },
             true
         );
-    }, [ongoing, overdue, completedToday]);
+    }, [ongoing, overdue, completedToday, totalActive]);
 
     return (
-        <div className="health-ring-wrap">
-            <div
-                ref={ref}
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%"
-                }}
-            ></div>
+        <div className="dash-ring-block">
+            <div className="dash-ring-shell">
+                <div className="dash-ring">
+                    <div ref={ref} className="dash-ring-canvas"></div>
 
-            <div className="health-ring-label">
-                <span style={{ fontSize: 26, fontWeight: 700, color: "#333" }}>
-                    {overallRate}%
-                </span>
-                <span style={{ fontSize: 11, color: "#888" }}>
-                    all-time rate
-                </span>
+                    <div className="dash-ring-center">
+                        <div className="dash-ring-kicker">Total</div>
+                        <div className="dash-ring-value">{safeNumber(totalActive)}</div>
+                        <div className="dash-ring-sub">
+                            task{safeNumber(totalActive) !== 1 ? "s" : ""}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="dash-ring-legend">
+                {legendItems.map((item) => (
+                    <div className="dash-ring-legend-item" key={item.label}>
+                        <span
+                            className="dash-ring-legend-dot"
+                            style={{ color: item.color }}
+                        ></span>
+
+                        <div className="dash-ring-legend-copy">
+                            <div className="dash-ring-legend-title">{item.label}</div>
+                            <div className="dash-ring-legend-meta">
+                                Tasks <strong>{item.value}</strong> · {item.percent}%
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
 }
 
-// ====================================================================
-// OVERDUE TREND — ECharts smooth line chart
-// ====================================================================
-function OverdueTrend({ trend }) {
+function TrendChart({ seriesMap, periodLabel = "This week" }) {
     const ref = useRef(null);
     const chartRef = useRef(null);
 
@@ -136,151 +204,321 @@ function OverdueTrend({ trend }) {
     useEffect(() => {
         if (!chartRef.current) return;
 
-        if (!trend.length) {
+        const theme = getChartTheme();
+
+        const firstNonEmpty = [seriesMap.completed, seriesMap.ongoing, seriesMap.overdue].find(
+            (arr) => Array.isArray(arr) && arr.length > 0
+        );
+
+        const labels = firstNonEmpty ? firstNonEmpty.map((item) => item.label) : [];
+
+        const buildSeries = (name, color, data, fillColor) => ({
+            name,
+            type: "line",
+            smooth: true,
+            symbol: "circle",
+            symbolSize: 5,
+            showSymbol: true,
+            data: data.map((item) => safeNumber(item.count)),
+            lineStyle: {
+                width: 2,
+                color
+            },
+            itemStyle: {
+                color,
+                borderWidth: 0
+            },
+            areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: fillColor },
+                    { offset: 1, color: "rgba(255,255,255,0)" }
+                ])
+            }
+        });
+
+        const series = [
+            Array.isArray(seriesMap.completed) && seriesMap.completed.length
+                ? buildSeries(
+                      "Task Completed",
+                      CHART_COLORS.completed,
+                      seriesMap.completed,
+                      "rgba(22,163,74,0.12)"
+                  )
+                : null,
+            Array.isArray(seriesMap.ongoing) && seriesMap.ongoing.length
+                ? buildSeries(
+                      "Task Ongoing",
+                      CHART_COLORS.ongoing,
+                      seriesMap.ongoing,
+                      "rgba(217,119,6,0.10)"
+                  )
+                : null,
+            Array.isArray(seriesMap.overdue) && seriesMap.overdue.length
+                ? buildSeries(
+                      "Task Overdue",
+                      CHART_COLORS.overdue,
+                      seriesMap.overdue,
+                      "rgba(225,17,72,0.08)"
+                  )
+                : null
+        ].filter(Boolean);
+
+        if (!labels.length || !series.length) {
             chartRef.current.clear();
             return;
         }
 
         chartRef.current.setOption(
             {
-                animationDuration: 500,
+                animationDuration: 450,
                 animationEasing: "cubicOut",
                 tooltip: {
                     trigger: "axis",
-                    backgroundColor: "rgba(40,40,40,0.92)",
+                    backgroundColor: theme.tooltipBg,
                     borderWidth: 0,
                     textStyle: { color: "#fff" }
                 },
+                legend: {
+                    show: true,
+                    right: 0,
+                    bottom: 0,
+                    icon: "circle",
+                    itemWidth: 9,
+                    itemHeight: 9,
+                    textStyle: {
+                        color: theme.muted,
+                        fontSize: 12,
+                        fontWeight: 500
+                    }
+                },
                 grid: {
-                    top: 12,
-                    right: 12,
-                    bottom: 28,
-                    left: 36
+                    top: 8,
+                    right: 8,
+                    bottom: 40,
+                    left: 18,
+                    containLabel: true
                 },
                 xAxis: {
                     type: "category",
                     boundaryGap: false,
-                    data: trend.map((t) => t.label),
-                    axisLine: {
-                        lineStyle: { color: "#e5e5e5" }
-                    },
+                    data: labels,
+                    axisLine: { show: false },
                     axisTick: { show: false },
                     axisLabel: {
-                        color: "#666",
-                        fontSize: 11
+                        color: theme.muted,
+                        fontSize: 11,
+                        margin: 12
                     },
                     splitLine: { show: false }
                 },
                 yAxis: {
                     type: "value",
+                    min: 0,
                     minInterval: 1,
                     axisLine: { show: false },
                     axisTick: { show: false },
                     axisLabel: {
-                        color: "#666",
-                        fontSize: 11
+                        color: theme.muted,
+                        fontSize: 11,
+                        margin: 10
                     },
                     splitLine: {
+                        show: true,
                         lineStyle: {
-                            color: "#f0f0f0"
+                            color: theme.grid,
+                            width: 1
                         }
                     }
                 },
-                series: [
-                    {
-                        name: "Overdue tasks",
-                        type: "line",
-                        smooth: true,
-                        symbol: "circle",
-                        symbolSize: 8,
-                        data: trend.map((t) => t.count),
-                        lineStyle: {
-                            width: 3,
-                            color: "#dc3545"
-                        },
-                        itemStyle: {
-                            color: "#dc3545",
-                            borderColor: "#fff",
-                            borderWidth: 2
-                        },
-                        areaStyle: {
-                            color: "rgba(220,53,69,0.10)"
-                        }
-                    }
-                ]
+                series
             },
             true
         );
-    }, [trend]);
+    }, [seriesMap]);
 
-    let trendIcon = null;
-    if (trend.length >= 2) {
-        const first = trend[0].count;
-        const last = trend[trend.length - 1].count;
-
-        if (last > first) {
-            trendIcon = <span className="trend-up ms-2 fw-semibold">↑ Increasing</span>;
-        } else if (last < first) {
-            trendIcon = <span className="trend-down ms-2 fw-semibold">↓ Decreasing</span>;
-        } else {
-            trendIcon = <span className="trend-flat ms-2 fw-semibold">→ Stable</span>;
-        }
-    }
+    const hasSeries =
+        (Array.isArray(seriesMap.completed) && seriesMap.completed.length > 0) ||
+        (Array.isArray(seriesMap.ongoing) && seriesMap.ongoing.length > 0) ||
+        (Array.isArray(seriesMap.overdue) && seriesMap.overdue.length > 0);
 
     return (
         <div>
-            <div className="d-flex align-items-center mb-2">
-                <h6 className="mb-0">Overdue trend (last 4 weeks)</h6>
-                {trendIcon}
+            <div className="dash-chart-head">
+                <div className="dash-card-title">Task Status Trend</div>
+                <div className="dash-pill">{periodLabel}</div>
             </div>
 
-            {!trend.length ? (
-                <div className="text-muted" style={{ fontSize: 13 }}>
-                    No trend data available.
+            {hasSeries ? (
+                <div className="dash-chart-wrap">
+                    <div ref={ref} className="dash-chart"></div>
                 </div>
             ) : (
-                <div style={{ height: 110 }}>
-                    <div
-                        ref={ref}
-                        style={{ width: "100%", height: "100%" }}
-                    ></div>
-                </div>
+                <div className="dash-empty">No trend data available.</div>
             )}
         </div>
     );
 }
 
-// ====================================================================
-// DASHBOARD
-// ====================================================================
+function RiskList({ rows }) {
+    if (!rows.length) {
+        return <div className="dash-empty-box">No departments at risk right now.</div>;
+    }
+
+    return (
+        <div className="dash-risk-list">
+            {rows.map((dept) => {
+                const rate = clamp(safeNumber(dept.overdue_rate), 0, 100);
+                const riskClass = rate >= 50 ? "is-high" : "is-mid";
+
+                return (
+                    <div key={dept.department} className="dash-risk-item">
+                        <div className="dash-risk-row">
+                            <div className="dash-risk-name">{dept.department}</div>
+                            <div className="dash-risk-rate">{rate}% overdue</div>
+                        </div>
+
+                        <div className="dash-risk-bar">
+                            <div
+                                className={`dash-risk-bar-fill ${riskClass}`}
+                                style={{ width: `${rate}%` }}
+                            ></div>
+                        </div>
+
+                        <div className="dash-risk-meta">
+                            {safeNumber(dept.overdue)} of {safeNumber(dept.total)} tasks overdue
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function TopPerformersTable({ rows, monthLabel }) {
+    if (!rows.length) {
+        return (
+            <div className="dash-empty-box">
+                No completions recorded for {monthLabel || "this month"} yet.
+            </div>
+        );
+    }
+
+    return (
+        <div className="dash-table-wrap">
+            <table className="dash-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Assignee</th>
+                        <th>Department</th>
+                        <th>Completed</th>
+                        <th>Standing</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((person, index) => {
+                        const label =
+                            index === 0 ? "Top" : index === 1 ? "Strong" : "Active";
+
+                        return (
+                            <tr key={`${person.name}-${index}`}>
+                                <td>{index + 1}</td>
+                                <td className="dash-name-cell">{person.name}</td>
+                                <td className="dash-muted-cell">{person.department}</td>
+                                <td>{safeNumber(person.completed_this_month)}</td>
+                                <td>
+                                    <span className="dash-table-tag">{label}</span>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+function SnapshotLinks({ snapshots }) {
+    if (!snapshots.length) {
+        return <div className="dash-empty-box">No report snapshots available.</div>;
+    }
+
+    return (
+        <div className="dash-snapshot-list">
+            {snapshots.map((snap) => {
+                const total = safeNumber(snap?.data?.total);
+                const completed = safeNumber(snap?.data?.completed);
+                const overdue = safeNumber(snap?.data?.overdue);
+                const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+                return (
+                    <a key={snap.label} href={snap.href} className="dash-snapshot-card">
+                        <div className="dash-snapshot-top">
+                            <div>
+                                <div className="dash-snapshot-title">{snap.label}</div>
+                                <div className="dash-snapshot-sub">{snap.sub}</div>
+                            </div>
+
+                            <div className="dash-snapshot-score">
+                                <div className="dash-snapshot-rate">{rate}%</div>
+                                <div className="dash-snapshot-rate-label">completion</div>
+                            </div>
+                        </div>
+
+                        <div className="dash-snapshot-meta">
+                            <span>
+                                <strong>{total}</strong> total
+                            </span>
+                            <span>
+                                <strong>{completed}</strong> completed
+                            </span>
+                            <span>
+                                <strong>{overdue}</strong> overdue
+                            </span>
+                        </div>
+                    </a>
+                );
+            })}
+        </div>
+    );
+}
+
 function Dashboard() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState("");
 
     useEffect(() => {
-        fetch("php/get_dashboard.php")
-            .then((r) => r.json())
-            .then((d) => {
-                if (d.error) throw new Error(d.error);
-                setData(d);
-                setLoading(false);
+        const controller = new AbortController();
+
+        fetch("php/get_dashboard.php", { signal: controller.signal })
+            .then(async (response) => {
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(text || `HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then((payload) => {
+                if (payload?.error) throw new Error(payload.error);
+                setData(payload);
             })
             .catch((err) => {
-                setError(err.message);
-                setLoading(false);
-            });
+                if (err.name !== "AbortError") {
+                    setError(err.message || "Unable to load dashboard data.");
+                }
+            })
+            .finally(() => setLoading(false));
+
+        return () => controller.abort();
     }, []);
 
     if (loading) {
         return (
-            <div
-                className="p-4 d-flex align-items-center justify-content-center"
-                style={{ minHeight: "60vh" }}
-            >
+            <div className="dash-page dash-loading">
                 <div className="text-center text-muted">
                     <div className="spinner-border mb-3" role="status"></div>
-                    <div>Loading dashboard…</div>
+                    <div>Loading dashboard...</div>
                 </div>
             </div>
         );
@@ -288,301 +526,111 @@ function Dashboard() {
 
     if (error) {
         return (
-            <div className="p-4">
-                <div className="alert alert-danger mt-2">Error: {error}</div>
+            <div className="dash-page">
+                <div className="alert alert-danger mb-0">Error: {error}</div>
             </div>
         );
     }
 
-    const {
-        org_health,
-        overdue_trend,
-        at_risk,
-        top_performers,
-        snapshots,
-        month_label
-    } = data;
+    const orgHealth = data?.org_health ?? {
+        ongoing: 0,
+        overdue: 0,
+        completed_today: 0,
+        overall_rate: 0,
+        total_active: 0
+    };
+
+    const taskStatusTrend = data?.task_status_trend ?? {};
+    const overdueFallback = Array.isArray(data?.overdue_trend) ? data.overdue_trend : [];
+
+    const seriesMap = {
+        completed: Array.isArray(taskStatusTrend.completed) ? taskStatusTrend.completed : [],
+        ongoing: Array.isArray(taskStatusTrend.ongoing) ? taskStatusTrend.ongoing : [],
+        overdue:
+            Array.isArray(taskStatusTrend.overdue) && taskStatusTrend.overdue.length
+                ? taskStatusTrend.overdue
+                : overdueFallback
+    };
+
+    const atRisk = Array.isArray(data?.at_risk) ? data.at_risk : [];
+    const topPerformers = Array.isArray(data?.top_performers) ? data.top_performers : [];
+    const snapshots = Array.isArray(data?.snapshots) ? data.snapshots : [];
+    const monthLabel = data?.month_label ?? "This month";
+
+    const totalActive = safeNumber(orgHealth.total_active);
+    const completedToday = safeNumber(orgHealth.completed_today);
+    const ongoing = safeNumber(orgHealth.ongoing);
+    const overdue = safeNumber(orgHealth.overdue);
+    const overallRate = safeNumber(orgHealth.overall_rate);
 
     return (
-        <div className="p-4">
-            <div className="mb-4">
-                <h3 className="mb-0">President Dashboard</h3>
-                <p className="text-muted mb-0">
-                    Real-time organization overview ·{" "}
-                    {new Date().toLocaleDateString("en-PH", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric"
-                    })}
-                </p>
-            </div>
+        <div className="dash-page">
+            <div className="dash-shell">
+                <section className="dash-card dash-chart-card">
+                    <TrendChart seriesMap={seriesMap} periodLabel="This week" />
+                </section>
 
-            <div className="row mb-4">
-                <div className="col-md-4">
-                    <div className="card p-3 h-100">
-                        <h6 className="mb-3 fw-semibold">Organization Health</h6>
-
-                        <HealthRing
-                            ongoing={org_health.ongoing}
-                            overdue={org_health.overdue}
-                            completedToday={org_health.completed_today}
-                            overallRate={org_health.overall_rate}
-                        />
-
-                        <div
-                            className="d-flex justify-content-center gap-3 mt-3"
-                            style={{ fontSize: 13 }}
-                        >
-                            <span>
-                                <span
-                                    style={{
-                                        background: "#28a745",
-                                        borderRadius: 3,
-                                        display: "inline-block",
-                                        width: 10,
-                                        height: 10,
-                                        marginRight: 4
-                                    }}
-                                ></span>
-                                Done today: <strong>{org_health.completed_today}</strong>
-                            </span>
-
-                            <span>
-                                <span
-                                    style={{
-                                        background: "#ffc107",
-                                        borderRadius: 3,
-                                        display: "inline-block",
-                                        width: 10,
-                                        height: 10,
-                                        marginRight: 4
-                                    }}
-                                ></span>
-                                Ongoing: <strong>{org_health.ongoing}</strong>
-                            </span>
-
-                            <span>
-                                <span
-                                    style={{
-                                        background: "#dc3545",
-                                        borderRadius: 3,
-                                        display: "inline-block",
-                                        width: 10,
-                                        height: 10,
-                                        marginRight: 4
-                                    }}
-                                ></span>
-                                Overdue: <strong>{org_health.overdue}</strong>
-                            </span>
+                <div className="dash-grid">
+                    <section className="dash-card">
+                        <div className="dash-section-head">
+                            <div>
+                                <div className="dash-card-title">Organization Health</div>
+                                <div className="dash-card-subtitle">
+                                    A cleaner overview of the same live task metrics.
+                                </div>
+                            </div>
+                            <div className="dash-pill">{overallRate}% rate</div>
                         </div>
 
-                        <div
-                            className="text-center mt-2"
-                            style={{ fontSize: 12, color: "#888" }}
-                        >
-                            Based on all {org_health.total_active} active tasks
+                        <div className="dash-health-layout">
+                            <HealthRing
+                                ongoing={ongoing}
+                                overdue={overdue}
+                                completedToday={completedToday}
+                                totalActive={totalActive}
+                            />
                         </div>
-                    </div>
-                </div>
 
-                <div className="col-md-4">
-                    <div className="card p-3 h-100">
-                        <OverdueTrend trend={overdue_trend} />
-                        <p className="text-muted mt-2 mb-0" style={{ fontSize: 12 }}>
-                            Counts tasks whose deadline fell within each week and are still incomplete.
-                            A decreasing trend means the team is catching up.
-                        </p>
-                    </div>
-                </div>
+                        <div className="dash-divider"></div>
 
-                <div className="col-md-4">
-                    <div className="card p-3 h-100">
-                        <h6 className="mb-3 fw-semibold">Departments at Risk</h6>
-                        <p className="text-muted mb-3" style={{ fontSize: 12 }}>
-                            Ranked by overdue rate (overdue ÷ total tasks). Rate is fairer than raw count.
-                        </p>
-
-                        {at_risk.length === 0 ? (
-                            <div className="text-center text-success py-2">
-                                <div style={{ fontSize: 28 }}>✓</div>
-                                No departments at risk
+                        <div className="dash-section-head dash-section-head-tight">
+                            <div>
+                                <div className="dash-card-title">Departments at Risk</div>
+                                <div className="dash-card-subtitle">
+                                    Ranked by overdue rate for fair comparison.
+                                </div>
                             </div>
-                        ) : (
-                            <div className="d-flex flex-column gap-2">
-                                {at_risk.map((dept, i) => (
-                                    <div key={dept.department}>
-                                        <div className="d-flex justify-content-between align-items-center mb-1">
-                                            <span style={{ fontSize: 13, fontWeight: 500 }}>
-                                                {dept.department}
-                                            </span>
-                                            <span
-                                                style={{
-                                                    fontSize: 12,
-                                                    color: dept.overdue_rate >= 50 ? "#dc3545" : "#856404",
-                                                    fontWeight: 600
-                                                }}
-                                            >
-                                                {dept.overdue_rate}% overdue
-                                            </span>
-                                        </div>
+                        </div>
 
-                                        <div className="risk-bar">
-                                            <div
-                                                className="risk-bar-fill"
-                                                style={{
-                                                    width: `${dept.overdue_rate}%`,
-                                                    opacity: 0.7 + (i === 0 ? 0.3 : 0)
-                                                }}
-                                            ></div>
-                                        </div>
+                        <RiskList rows={atRisk} />
+                    </section>
 
-                                        <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
-                                            {dept.overdue} of {dept.total} tasks overdue
-                                        </div>
-                                    </div>
-                                ))}
+                    <section className="dash-card">
+                        <div className="dash-section-head">
+                            <div>
+                                <div className="dash-card-title">Task Assignee Overview</div>
+                                <div className="dash-card-subtitle">
+                                    Top performers for {monthLabel}.
+                                </div>
                             </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+                            <div className="dash-pill">{monthLabel}</div>
+                        </div>
 
-            <div className="row mb-4">
-                <div className="col-md-5">
-                    <div className="card p-3 h-100">
-                        <h6 className="mb-1 fw-semibold">Top Performers</h6>
-                        <p className="text-muted mb-3" style={{ fontSize: 12 }}>
-                            Most tasks completed this month · {month_label}
-                        </p>
+                        <TopPerformersTable rows={topPerformers} monthLabel={monthLabel} />
 
-                        {top_performers.length === 0 ? (
-                            <div className="text-center text-muted py-3">
-                                No completions recorded this month yet.
+                        <div className="dash-divider"></div>
+
+                        <div className="dash-section-head dash-section-head-tight">
+                            <div>
+                                <div className="dash-card-title">Report Snapshots</div>
+                                <div className="dash-card-subtitle">
+                                    All report links and actions remain intact.
+                                </div>
                             </div>
-                        ) : (
-                            <div className="d-flex flex-column gap-2">
-                                {top_performers.map((p, i) => (
-                                    <div
-                                        key={p.name}
-                                        className="d-flex align-items-center gap-3 p-2 rounded"
-                                        style={{
-                                            background: i === 0 ? "rgba(255,215,0,0.08)" : "transparent"
-                                        }}
-                                    >
-                                        <div
-                                            className={`performer-rank ${
-                                                i === 0
-                                                    ? "rank-1"
-                                                    : i === 1
-                                                    ? "rank-2"
-                                                    : i === 2
-                                                    ? "rank-3"
-                                                    : "rank-other"
-                                            }`}
-                                        >
-                                            {i + 1}
-                                        </div>
+                        </div>
 
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div
-                                                style={{
-                                                    fontWeight: 500,
-                                                    fontSize: 14,
-                                                    whiteSpace: "nowrap",
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis"
-                                                }}
-                                            >
-                                                {p.name}
-                                            </div>
-                                            <div style={{ fontSize: 12, color: "#888" }}>
-                                                {p.department}
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            style={{
-                                                fontWeight: 700,
-                                                fontSize: 18,
-                                                color: "#28a745",
-                                                minWidth: 32,
-                                                textAlign: "right"
-                                            }}
-                                        >
-                                            {p.completed_this_month}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="col-md-7">
-                    <h6 className="fw-semibold mb-3">Report Snapshots</h6>
-                    <div className="d-flex flex-column gap-2">
-                        {snapshots.map((snap) => {
-                            const rate =
-                                snap.data.total > 0
-                                    ? Math.round((snap.data.completed / snap.data.total) * 100)
-                                    : 0;
-
-                            return (
-                                <a
-                                    key={snap.label}
-                                    href={snap.href}
-                                    className="card snapshot-card p-3 d-flex flex-row align-items-center gap-3"
-                                    style={{ textDecoration: "none", color: "inherit" }}
-                                >
-                                    <div style={{ flex: 1 }}>
-                                        <div className="d-flex align-items-baseline gap-2">
-                                            <span style={{ fontWeight: 600, fontSize: 15 }}>
-                                                {snap.label}
-                                            </span>
-                                            <span style={{ fontSize: 12, color: "#888" }}>
-                                                {snap.sub}
-                                            </span>
-                                        </div>
-
-                                        <div className="d-flex gap-3 mt-1" style={{ fontSize: 13 }}>
-                                            <span><strong>{snap.data.total}</strong> tasks</span>
-                                            <span className="text-success">
-                                                <strong>{snap.data.completed}</strong> completed
-                                            </span>
-                                            {snap.data.overdue > 0 && (
-                                                <span className="text-danger">
-                                                    <strong>{snap.data.overdue}</strong> overdue
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div style={{ textAlign: "right", minWidth: 80 }}>
-                                        <div
-                                            style={{
-                                                fontSize: 22,
-                                                fontWeight: 700,
-                                                color:
-                                                    rate >= 70
-                                                        ? "#28a745"
-                                                        : rate >= 40
-                                                        ? "#cc8400"
-                                                        : "#dc3545"
-                                            }}
-                                        >
-                                            {rate}%
-                                        </div>
-                                        <div style={{ fontSize: 11, color: "#888" }}>
-                                            completion
-                                        </div>
-                                    </div>
-
-                                    <div style={{ color: "#ffb84d", fontSize: 18 }}>›</div>
-                                </a>
-                            );
-                        })}
-                    </div>
+                        <SnapshotLinks snapshots={snapshots} />
+                    </section>
                 </div>
             </div>
         </div>
