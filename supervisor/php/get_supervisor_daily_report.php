@@ -42,6 +42,14 @@ require '../../config/db.php';
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
+function getProfileImageUrl(?string $profileImage): ?string
+{
+    $profileImage = trim((string)$profileImage);
+    if ($profileImage === '') return null;
+    $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'], 3)), '/');
+    return $basePath . '/uploads/profiles/' . rawurlencode($profileImage);
+}
+
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // ----------------------------------------------------------------
@@ -159,6 +167,7 @@ $employeeSql = "
     SELECT
         u.id,
         u.name,
+        u.profile_image,
         COALESCE(d.name, u.department) AS department,
 
         SUM(
@@ -201,7 +210,7 @@ $employeeSql = "
     AND u.is_active = 1
     AND u.department_id = ?
 
-    GROUP BY u.id, u.name, d.name, u.department
+    GROUP BY u.id, u.name, u.profile_image, d.name, u.department
     ORDER BY overdue DESC, completed DESC, u.name ASC
 ";
 
@@ -211,12 +220,13 @@ $empRows = $empStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $employees = array_map(function ($row) {
     return [
-        'id'         => (int)$row['id'],
-        'name'       => $row['name'],
-        'department' => $row['department'],
-        'completed'  => (int)($row['completed'] ?? 0),
-        'ongoing'    => (int)($row['ongoing']   ?? 0),
-        'overdue'    => (int)($row['overdue']   ?? 0),
+        'id'                => (int)$row['id'],
+        'name'              => $row['name'],
+        'department'        => $row['department'],
+        'profile_image_url' => getProfileImageUrl($row['profile_image'] ?? null),
+        'completed'         => (int)($row['completed'] ?? 0),
+        'ongoing'           => (int)($row['ongoing']   ?? 0),
+        'overdue'           => (int)($row['overdue']   ?? 0),
     ];
 }, $empRows);
 

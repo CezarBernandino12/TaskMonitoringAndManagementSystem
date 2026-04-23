@@ -177,7 +177,7 @@ function EmployeeTaskModal({ emp, weekStart, weekEnd, onClose }) {
                 <div className="wr-modal-head">
                     <div className="wr-modal-person">
                         <img
-                            src={buildAvatarFallbackUrl(emp.name)}
+                            src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
                             alt={`${emp.name} Profile`}
                             className="wr-modal-avatar"
                         />
@@ -814,7 +814,7 @@ function SupervisorWeeklyReportPage() {
                                             <td>
                                                 <div className="wr-assignee">
                                                     <img
-                                                        src={buildAvatarFallbackUrl(emp.name)}
+                                                        src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
                                                         alt={`${emp.name} Profile`}
                                                         className="wr-assignee-avatar"
                                                     />

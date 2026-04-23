@@ -169,7 +169,7 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
                 <div className="qr-modal-head">
                     <div className="qr-modal-person">
                         <img
-                            src={buildAvatarFallbackUrl(emp.name)}
+                            src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
                             alt={`${emp.name} Profile`}
                             className="qr-modal-avatar"
                         />
@@ -914,7 +914,7 @@ function SupervisorQuarterlyReportPage() {
                                             <td>
                                                 <div className="qr-assignee">
                                                     <img
-                                                        src={buildAvatarFallbackUrl(emp.name)}
+                                                        src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
                                                         alt={`${emp.name} Profile`}
                                                         className="qr-assignee-avatar"
                                                     />

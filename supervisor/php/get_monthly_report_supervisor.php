@@ -27,6 +27,14 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
+function getProfileImageUrl(?string $profileImage): ?string
+{
+    $profileImage = trim((string)$profileImage);
+    if ($profileImage === '') return null;
+    $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'], 3)), '/');
+    return $basePath . '/uploads/profiles/' . rawurlencode($profileImage);
+}
+
 // ====================================================================
 // AUTH — supervisor must be logged in
 // ====================================================================
@@ -360,6 +368,7 @@ $employeeSql = "
     SELECT
         u.id,
         u.name,
+        u.profile_image,
         COALESCE(d.name, 'No Department') AS department,
 
         SUM(
@@ -415,7 +424,7 @@ $employeeSql = "
     AND u.is_active = 1
     AND u.department_id = ?
 
-    GROUP BY u.id, u.name, d.name
+    GROUP BY u.id, u.name, u.profile_image, d.name
     ORDER BY completed DESC, overdue ASC, u.name ASC
 ";
 
@@ -436,14 +445,15 @@ $employees = array_values(array_filter(array_map(function ($e) {
     $total     = $completed + $ongoing + $overdue;
     if ($total === 0) return null;
     return [
-        'id'              => (int)$e['id'],
-        'name'            => $e['name'],
-        'department'      => $e['department'],
-        'completed'       => $completed,
-        'ongoing'         => $ongoing,
-        'overdue'         => $overdue,
-        'total'           => $total,
-        'completion_rate' => $total > 0 ? round(($completed / $total) * 100) : 0,
+        'id'                => (int)$e['id'],
+        'name'              => $e['name'],
+        'department'        => $e['department'],
+        'profile_image_url' => getProfileImageUrl($e['profile_image'] ?? null),
+        'completed'         => $completed,
+        'ongoing'           => $ongoing,
+        'overdue'           => $overdue,
+        'total'             => $total,
+        'completion_rate'   => $total > 0 ? round(($completed / $total) * 100) : 0,
     ];
 }, $empRows)));
 

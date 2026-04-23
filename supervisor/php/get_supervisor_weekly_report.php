@@ -30,6 +30,14 @@ require_once '../../config/db.php';
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
+function getProfileImageUrl(?string $profileImage): ?string
+{
+    $profileImage = trim((string)$profileImage);
+    if ($profileImage === '') return null;
+    $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'], 3)), '/');
+    return $basePath . '/uploads/profiles/' . rawurlencode($profileImage);
+}
+
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // ====================================================================
@@ -240,6 +248,7 @@ $empSql = "
     SELECT
         u.id,
         u.name,
+        u.profile_image,
         ? AS department,
 
         SUM(CASE WHEN t.status = 'Completed' AND t.completed_at IS NOT NULL AND t.completed_at >= ? AND t.completed_at < ? THEN 1 ELSE 0 END) AS completed,
@@ -258,7 +267,7 @@ $empSql = "
     AND u.role = 'staff'
     AND u.is_active = 1
 
-    GROUP BY u.id, u.name
+    GROUP BY u.id, u.name, u.profile_image
     ORDER BY overdue DESC, completed DESC, u.name ASC
 ";
 $empStmt = $conn->prepare($empSql);
@@ -316,13 +325,14 @@ foreach ($empRows as $emp) {
 
     if ($completed > 0 || $ongoing > 0 || $overdue > 0) {
         $employees[] = [
-            'id'          => (int)$emp['id'],
-            'name'        => $emp['name'],
-            'department'  => $departmentName,
-            'completed'   => $completed,
-            'ongoing'     => $ongoing,
-            'overdue'     => $overdue,
-            'daily_trend' => $empTrend,
+            'id'                => (int)$emp['id'],
+            'name'              => $emp['name'],
+            'department'        => $departmentName,
+            'profile_image_url' => getProfileImageUrl($emp['profile_image'] ?? null),
+            'completed'         => $completed,
+            'ongoing'           => $ongoing,
+            'overdue'           => $overdue,
+            'daily_trend'       => $empTrend,
         ];
     }
 }

@@ -156,7 +156,7 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                 <div className="ar-modal-head">
                     <div className="ar-modal-person">
                         <img
-                            src={buildAvatarFallbackUrl(emp.name)}
+                            src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
                             alt={`${emp.name} Profile`}
                             className="ar-modal-avatar"
                         />
@@ -1230,7 +1230,7 @@ function AnnualReportPage() {
                                         <td>
                                             <div className="ar-assignee">
                                                 <img
-                                                    src={buildAvatarFallbackUrl(emp.name)}
+                                                    src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
                                                     alt={`${emp.name} Profile`}
                                                     className="ar-assignee-avatar"
                                                 />
