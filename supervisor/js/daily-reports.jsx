@@ -137,7 +137,7 @@ function EmployeeTaskModal({ emp, onClose, themeMode }) {
                 <div className="dr-modal-head">
                     <div className="dr-modal-person">
                         <img
-                            src={buildAvatarFallbackUrl(emp.name)}
+                            src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
                             alt={`${emp.name} Profile`}
                             className="dr-modal-avatar"
                         />
@@ -801,7 +801,7 @@ function SupervisorDailyReportPage() {
                                             <td>
                                                 <div className="dr-assignee">
                                                     <img
-                                                        src={buildAvatarFallbackUrl(emp.name)}
+                                                        src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
                                                         alt={`${emp.name} Profile`}
                                                         className="dr-assignee-avatar"
                                                     />

@@ -30,6 +30,14 @@ header('Content-Type: application/json');
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
+function getProfileImageUrl(?string $profileImage): ?string
+{
+    $profileImage = trim((string)$profileImage);
+    if ($profileImage === '') return null;
+    $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'], 3)), '/');
+    return $basePath . '/uploads/profiles/' . rawurlencode($profileImage);
+}
+
 // ====================================================================
 // AUTHENTICATION & DEPARTMENT SCOPING
 // ====================================================================
@@ -217,6 +225,7 @@ $empStmt = $conn->prepare("
     SELECT
         u.id,
         u.name,
+        u.profile_image,
         ? AS department,
         SUM(CASE WHEN t.status = 'Completed' AND t.completed_at IS NOT NULL AND t.completed_at >= ? AND t.completed_at < ? THEN 1 ELSE 0 END) AS completed,
         SUM(CASE WHEN t.status NOT IN ('Completed') AND t.deadline IS NOT NULL AND DATE(t.deadline) >= CURDATE() THEN 1 ELSE 0 END) AS ongoing,
@@ -231,7 +240,7 @@ $empStmt = $conn->prepare("
     WHERE u.department_id = ?
     AND u.role = 'staff'
     AND u.is_active = 1
-    GROUP BY u.id, u.name
+    GROUP BY u.id, u.name, u.profile_image
     ORDER BY completed DESC, overdue ASC, u.name ASC
 ");
 $empStmt->execute([
@@ -251,14 +260,15 @@ $employees = array_values(array_filter(array_map(function ($e) {
     $total = $comp + $ong + $over;
     if ($total === 0) return null;
     return [
-        'id'              => (int)$e['id'],
-        'name'            => $e['name'],
-        'department'      => $e['department'],
-        'completed'       => $comp,
-        'ongoing'         => $ong,
-        'overdue'         => $over,
-        'total'           => $total,
-        'completion_rate' => $total > 0 ? round(($comp / $total) * 100) : 0,
+        'id'                => (int)$e['id'],
+        'name'              => $e['name'],
+        'department'        => $e['department'],
+        'profile_image_url' => getProfileImageUrl($e['profile_image'] ?? null),
+        'completed'         => $comp,
+        'ongoing'           => $ong,
+        'overdue'           => $over,
+        'total'             => $total,
+        'completion_rate'   => $total > 0 ? round(($comp / $total) * 100) : 0,
     ];
 }, $empRows)));
 
