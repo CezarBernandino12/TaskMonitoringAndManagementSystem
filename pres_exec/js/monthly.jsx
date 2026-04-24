@@ -259,7 +259,17 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                     ) : error ? (
                         <div className="alert alert-danger mb-0">{error}</div>
                     ) : messages.length === 0 ? (
-                        <div className="dr-empty-state">No comments yet.</div>
+                        <div className="dr-empty-state dr-chat-empty-state">
+                            <div className="dr-chat-empty-icon">
+                                <i className="bi bi-chat-quote-fill"></i>
+                            </div>
+
+                            <div className="dr-chat-empty-title">No comments yet</div>
+
+                            <div className="dr-chat-empty-subtitle">
+                                No comments yet. Be the first to reply.
+                            </div>
+                        </div>
                     ) : (
                         <div className="dr-comment-stream">
                             {messages.map((msg) => {
@@ -503,7 +513,7 @@ function EmployeeTaskModal({ emp, monthStart, monthEnd, onClose }) {
                 onClick={(e) => e.target === e.currentTarget && onClose()}
             >
                 <div
-                    className="dr-modal-card"
+                    className="dr-modal-card dr-employee-task-modal"
                     role="dialog"
                     aria-modal="true"
                     aria-label={`${emp.name} monthly tasks`}
@@ -528,8 +538,8 @@ function EmployeeTaskModal({ emp, monthStart, monthEnd, onClose }) {
                         </button>
                     </div>
 
-                    <div className="dr-modal-toolbar">
-                        <div className="dr-pill-row">
+                    <div className="dr-modal-toolbar dr-modal-toolbar--badges-only">
+                        <div className="dr-pill-row dr-pill-row--clean">
                             {[
                                 { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
                                 { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
@@ -544,21 +554,11 @@ function EmployeeTaskModal({ emp, monthStart, monthEnd, onClose }) {
                                         className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
                                         onClick={() => setActiveTab(tab.key)}
                                     >
-                                        {tab.label}
+                                        <span className="dr-pill-tab-label">{tab.label}</span>
                                         <span className="dr-pill-tab-count">{tab.count}</span>
                                     </button>
                                 );
                             })}
-                        </div>
-
-                        <div className="dr-search-box dr-search-box--modal">
-                            <i className="bi bi-search"></i>
-                            <input
-                                type="text"
-                                placeholder="Search tasks..."
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                            />
                         </div>
                     </div>
 
@@ -769,7 +769,7 @@ function DepartmentTaskModal({ dept, monthStart, monthEnd, onClose }) {
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
             <div
-                className="dr-modal-card"
+                className="dr-modal-card dr-employee-task-modal dr-department-task-modal"
                 role="dialog"
                 aria-modal="true"
                 aria-label={`${dept.department} monthly tasks`}
@@ -787,8 +787,8 @@ function DepartmentTaskModal({ dept, monthStart, monthEnd, onClose }) {
                     </button>
                 </div>
 
-                <div className="dr-modal-toolbar">
-                    <div className="dr-pill-row">
+                <div className="dr-modal-toolbar dr-modal-toolbar--badges-only">
+                    <div className="dr-pill-row dr-pill-row--clean">
                         {[
                             { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
                             { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
@@ -803,21 +803,11 @@ function DepartmentTaskModal({ dept, monthStart, monthEnd, onClose }) {
                                     className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
                                     onClick={() => setActiveTab(tab.key)}
                                 >
-                                    {tab.label}
+                                    <span className="dr-pill-tab-label">{tab.label}</span>
                                     <span className="dr-pill-tab-count">{tab.count}</span>
                                 </button>
                             );
                         })}
-                    </div>
-
-                    <div className="dr-search-box dr-search-box--modal">
-                        <i className="bi bi-search"></i>
-                        <input
-                            type="text"
-                            placeholder="Search department tasks..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                        />
                     </div>
                 </div>
 
@@ -1109,7 +1099,7 @@ function MonthlyReportPage() {
             {
                 animationDuration: 650,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 28,
                     left: 22,
@@ -1216,7 +1206,7 @@ function MonthlyReportPage() {
             {
                 animationDuration: 700,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 28,
                     left: 24,
@@ -1330,7 +1320,7 @@ function MonthlyReportPage() {
             {
                 animationDuration: 700,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#ec4899"],
+                color: ["#16a34a", "#e11d48"],
                 grid: {
                     top: 30,
                     left: 110,
@@ -1683,16 +1673,15 @@ function MonthlyReportPage() {
                                             <td>
                                                 {dept.total === 0 ? (
                                                     <span className="dr-empty-inline">No tasks yet</span>
-                                                ) : dept.completion_rate === 0 ? (
-                                                    <span className="dr-rate-danger">0% — None completed</span>
                                                 ) : (
-                                                    <div className="dr-progress">
-                                                        <div
-                                                            className="dr-progress-bar"
-                                                            style={{ width: `${dept.completion_rate}%` }}
-                                                        >
-                                                            {dept.completion_rate}%
+                                                    <div className="dr-performance-cell">
+                                                        <div className="dr-progress">
+                                                            <div
+                                                                className="dr-progress-bar"
+                                                                style={{ width: `${dept.completion_rate}%` }}
+                                                            ></div>
                                                         </div>
+                                                        <span className="dr-performance-value">{dept.completion_rate}%</span>
                                                     </div>
                                                 )}
                                             </td>
@@ -1760,11 +1749,15 @@ function MonthlyReportPage() {
                                         <td>{index + 1}</td>
                                         <td>
                                             <div className="dr-assignee">
-                                                <img
-                                                    src={buildAvatarFallbackUrl(emp.name)}
-                                                    alt={`${emp.name} Profile`}
-                                                    className="dr-assignee-avatar"
-                                                />
+                                                <div
+                                                    className="dr-assignee-avatar dr-assignee-avatar--fallback"
+                                                    style={{
+                                                        background: avatarColor(emp.name),
+                                                        color: avatarTextColor(emp.name)
+                                                    }}
+                                                >
+                                                    {initials(emp.name)}
+                                                </div>
                                                 <div className="dr-assignee-copy">
                                                     <span className="dr-assignee-name">{emp.name}</span>
                                                 </div>
@@ -1776,19 +1769,18 @@ function MonthlyReportPage() {
                                         <td className="dr-overdue-cell">{emp.overdue}</td>
                                         <td>
                                             {emp.total === 0 ? (
-                                                <span className="dr-empty-inline">No tasks yet</span>
-                                            ) : emp.completion_rate === 0 ? (
-                                                <span className="dr-rate-danger">0% — None completed</span>
-                                            ) : (
-                                                <div className="dr-progress">
-                                                    <div
-                                                        className="dr-progress-bar"
-                                                        style={{ width: `${emp.completion_rate}%` }}
-                                                    >
-                                                        {emp.completion_rate}%
+                                                    <span className="dr-empty-inline">No tasks yet</span>
+                                                ) : (
+                                                    <div className="dr-performance-cell">
+                                                        <div className="dr-progress">
+                                                            <div
+                                                                className="dr-progress-bar"
+                                                                style={{ width: `${emp.completion_rate}%` }}
+                                                            ></div>
+                                                        </div>
+                                                        <span className="dr-performance-value">{emp.completion_rate}%</span>
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
                                         </td>
                                         <td
                                             style={{ textAlign: "center" }}

@@ -284,7 +284,17 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                     ) : error ? (
                         <div className="alert alert-danger mb-0">{error}</div>
                     ) : messages.length === 0 ? (
-                        <div className="dr-empty-state">No comments yet.</div>
+                        <div className="dr-empty-state dr-chat-empty-state">
+                            <div className="dr-chat-empty-icon">
+                                <i className="bi bi-chat-quote-fill"></i>
+                            </div>
+
+                            <div className="dr-chat-empty-title">No comments yet</div>
+
+                            <div className="dr-chat-empty-subtitle">
+                                No comments yet. Be the first to reply.
+                            </div>
+                        </div>
                     ) : (
                         <div className="dr-comment-stream">
                             {messages.map((msg) => {
@@ -518,7 +528,7 @@ function EmployeeTaskModal({ emp, weekStart, weekEnd, onClose }) {
                 onClick={(e) => e.target === e.currentTarget && onClose()}
             >
                 <div
-                    className="dr-modal-card"
+                    className="dr-modal-card dr-employee-task-modal"
                     role="dialog"
                     aria-modal="true"
                     aria-label={`${emp.name} weekly tasks`}
@@ -543,8 +553,8 @@ function EmployeeTaskModal({ emp, weekStart, weekEnd, onClose }) {
                         </button>
                     </div>
 
-                    <div className="dr-modal-toolbar">
-                        <div className="dr-pill-row">
+                    <div className="dr-modal-toolbar dr-modal-toolbar--badges-only">
+                        <div className="dr-pill-row dr-pill-row--clean">
                             {[
                                 { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
                                 { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
@@ -559,21 +569,11 @@ function EmployeeTaskModal({ emp, weekStart, weekEnd, onClose }) {
                                         className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
                                         onClick={() => setActiveTab(tab.key)}
                                     >
-                                        {tab.label}
+                                        <span className="dr-pill-tab-label">{tab.label}</span>
                                         <span className="dr-pill-tab-count">{tab.count}</span>
                                     </button>
                                 );
                             })}
-                        </div>
-
-                        <div className="dr-search-box dr-search-box--modal">
-                            <i className="bi bi-search"></i>
-                            <input
-                                type="text"
-                                placeholder="Search tasks..."
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                            />
                         </div>
                     </div>
 
@@ -774,7 +774,7 @@ function DepartmentTaskModal({ dept, weekStart, weekEnd, onClose }) {
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
             <div
-                className="dr-modal-card"
+                className="dr-modal-card dr-employee-task-modal dr-department-task-modal"
                 role="dialog"
                 aria-modal="true"
                 aria-label={`${dept.department} weekly tasks`}
@@ -792,8 +792,8 @@ function DepartmentTaskModal({ dept, weekStart, weekEnd, onClose }) {
                     </button>
                 </div>
 
-                <div className="dr-modal-toolbar">
-                    <div className="dr-pill-row">
+                <div className="dr-modal-toolbar dr-modal-toolbar--badges-only">
+                    <div className="dr-pill-row dr-pill-row--clean">
                         {[
                             { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
                             { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
@@ -808,21 +808,11 @@ function DepartmentTaskModal({ dept, weekStart, weekEnd, onClose }) {
                                     className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
                                     onClick={() => setActiveTab(tab.key)}
                                 >
-                                    {tab.label}
+                                    <span className="dr-pill-tab-label">{tab.label}</span>
                                     <span className="dr-pill-tab-count">{tab.count}</span>
                                 </button>
                             );
                         })}
-                    </div>
-
-                    <div className="dr-search-box dr-search-box--modal">
-                        <i className="bi bi-search"></i>
-                        <input
-                            type="text"
-                            placeholder="Search department tasks..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                        />
                     </div>
                 </div>
 
@@ -1054,8 +1044,8 @@ function WeeklyReportPage() {
 
         return [
             { label: "Completed", value: scopedSummary.completed, color: "#16a34a" },
-            { label: "Ongoing", value: scopedSummary.ongoing, color: "#f59e0b" },
-            { label: "Overdue", value: scopedSummary.overdue, color: "#ec4899" }
+            { label: "Ongoing", value: scopedSummary.ongoing, color: "#2563eb" },
+            { label: "Overdue", value: scopedSummary.overdue, color: "#e11d48" }
         ].map((item) => ({
             ...item,
             percent: pct(item.value, total)
@@ -1129,7 +1119,7 @@ function WeeklyReportPage() {
             {
                 animationDuration: 700,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 28,
                     left: 24,
@@ -1253,7 +1243,7 @@ function WeeklyReportPage() {
                 series: [
                     {
                         type: "pie",
-                        radius: ["63%", "84%"],
+                        radius: ["46%", "82%"],
                         center: ["50%", "50%"],
                         startAngle: 90,
                         clockwise: true,
@@ -1284,12 +1274,12 @@ function WeeklyReportPage() {
                             {
                                 value: scopedSummary.ongoing,
                                 name: "Ongoing",
-                                itemStyle: { color: "#f59e0b" }
+                                itemStyle: { color: "#2563eb" }
                             },
                             {
                                 value: scopedSummary.overdue,
                                 name: "Overdue",
-                                itemStyle: { color: "#ec4899" }
+                                itemStyle: { color: "#e11d48" }
                             }
                         ]
                     }
@@ -1325,7 +1315,7 @@ function WeeklyReportPage() {
             {
                 animationDuration: 650,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 28,
                     left: 22,
@@ -1671,16 +1661,15 @@ function WeeklyReportPage() {
                                         <td>
                                             {dept.total === 0 ? (
                                                 <span className="dr-empty-inline">No tasks yet</span>
-                                            ) : dept.completion_rate === 0 ? (
-                                                <span className="dr-rate-danger">0% — None completed</span>
                                             ) : (
-                                                <div className="dr-progress">
-                                                    <div
-                                                        className="dr-progress-bar"
-                                                        style={{ width: `${dept.completion_rate}%` }}
-                                                    >
-                                                        {dept.completion_rate}%
+                                                <div className="dr-performance-cell">
+                                                    <div className="dr-progress">
+                                                        <div
+                                                            className="dr-progress-bar"
+                                                            style={{ width: `${dept.completion_rate}%` }}
+                                                        ></div>
                                                     </div>
+                                                    <span className="dr-performance-value">{dept.completion_rate}%</span>
                                                 </div>
                                             )}
                                         </td>
@@ -1776,16 +1765,15 @@ function WeeklyReportPage() {
                                             <td>
                                                 {emp.total === 0 ? (
                                                     <span className="dr-empty-inline">No tasks yet</span>
-                                                ) : emp.completionRate === 0 ? (
-                                                    <span className="dr-rate-danger">0% — None completed</span>
                                                 ) : (
-                                                    <div className="dr-progress">
-                                                        <div
-                                                            className="dr-progress-bar"
-                                                            style={{ width: `${emp.completionRate}%` }}
-                                                        >
-                                                            {emp.completionRate}%
+                                                    <div className="dr-performance-cell">
+                                                        <div className="dr-progress">
+                                                            <div
+                                                                className="dr-progress-bar"
+                                                                style={{ width: `${emp.completionRate}%` }}
+                                                            ></div>
                                                         </div>
+                                                        <span className="dr-performance-value">{emp.completionRate}%</span>
                                                     </div>
                                                 )}
                                             </td>

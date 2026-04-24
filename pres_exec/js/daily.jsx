@@ -254,9 +254,19 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                         </div>
                     ) : error ? (
                         <div className="alert alert-danger mb-0">{error}</div>
-                    ) : messages.length === 0 ? (
-                        <div className="dr-empty-state">No comments yet.</div>
-                    ) : (
+                        ) : messages.length === 0 ? (
+                            <div className="dr-empty-state dr-chat-empty-state">
+                                <div className="dr-chat-empty-icon">
+                                    <i className="bi bi-chat-quote-fill"></i>
+                                </div>
+
+                                <div className="dr-chat-empty-title">No comments yet</div>
+
+                                <div className="dr-chat-empty-subtitle">
+                                    No comments yet. Be the first to reply.
+                                </div>
+                            </div>
+                        ) : (
                         <div className="dr-comment-stream">
                             {messages.map((msg) => {
                                 const isOwn = safeNum(msg.sender_id) === safeNum(currentUserId);
@@ -481,12 +491,12 @@ function EmployeeTaskModal({ emp, onClose }) {
                 className="dr-modal-backdrop"
                 onClick={(e) => e.target === e.currentTarget && onClose()}
             >
-                <div
-                    className="dr-modal-card"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label={`${emp.name} tasks`}
-                >
+            <div
+                className="dr-modal-card dr-employee-task-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${emp.name} tasks`}
+            >
                     <div className="dr-modal-head">
                         <div className="dr-modal-person">
                             <img
@@ -505,8 +515,8 @@ function EmployeeTaskModal({ emp, onClose }) {
                         </button>
                     </div>
 
-                    <div className="dr-modal-toolbar">
-                        <div className="dr-pill-row">
+                    <div className="dr-modal-toolbar dr-modal-toolbar--badges-only">
+                        <div className="dr-pill-row dr-pill-row--clean">
                             {[
                                 { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
                                 { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
@@ -521,21 +531,11 @@ function EmployeeTaskModal({ emp, onClose }) {
                                         className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
                                         onClick={() => setActiveTab(tab.key)}
                                     >
-                                        {tab.label}
+                                        <span className="dr-pill-tab-label">{tab.label}</span>
                                         <span className="dr-pill-tab-count">{tab.count}</span>
                                     </button>
                                 );
                             })}
-                        </div>
-
-                        <div className="dr-search-box dr-search-box--modal">
-                            <i className="bi bi-search"></i>
-                            <input
-                                type="text"
-                                placeholder="Search tasks..."
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                            />
                         </div>
                     </div>
 
@@ -1326,16 +1326,15 @@ const donutData = [
                                             <td>
                                                 {emp.total === 0 ? (
                                                     <span className="dr-empty-inline">No tasks yet</span>
-                                                ) : emp.completionRate === 0 ? (
-                                                    <span className="dr-rate-danger">0% — None completed</span>
                                                 ) : (
-                                                    <div className="dr-progress">
-                                                        <div
-                                                            className="dr-progress-bar"
-                                                            style={{ width: `${emp.completionRate}%` }}
-                                                        >
-                                                            {emp.completionRate}%
+                                                    <div className="dr-performance-cell">
+                                                        <div className="dr-progress">
+                                                            <div
+                                                                className="dr-progress-bar"
+                                                                style={{ width: `${emp.completionRate}%` }}
+                                                            ></div>
                                                         </div>
+                                                        <span className="dr-performance-value">{emp.completionRate}%</span>
                                                     </div>
                                                 )}
                                             </td>

@@ -250,7 +250,17 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                     ) : error ? (
                         <div className="alert alert-danger mb-0">{error}</div>
                     ) : messages.length === 0 ? (
-                        <div className="dr-empty-state">No comments yet.</div>
+                        <div className="dr-empty-state dr-chat-empty-state">
+                            <div className="dr-chat-empty-icon">
+                                <i className="bi bi-chat-quote-fill"></i>
+                            </div>
+
+                            <div className="dr-chat-empty-title">No comments yet</div>
+
+                            <div className="dr-chat-empty-subtitle">
+                                No comments yet. Be the first to reply.
+                            </div>
+                        </div>
                     ) : (
                         <div className="dr-comment-stream">
                             {messages.map((msg) => {
@@ -366,7 +376,7 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                         handleSend();
                                     }
                                 }}
-                                placeholder="Write a comment... (Ctrl+Enter to send)"
+                                placeholder="Write a thoughtful reply..."
                             />
 
                             <button
@@ -481,7 +491,7 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                 onClick={(e) => e.target === e.currentTarget && onClose()}
             >
                 <div
-                    className="dr-modal-card"
+                    className="dr-modal-card dr-employee-task-modal"
                     role="dialog"
                     aria-modal="true"
                     aria-label={`${emp.name} annual tasks`}
@@ -506,8 +516,8 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                         </button>
                     </div>
 
-                    <div className="dr-modal-toolbar">
-                        <div className="dr-pill-row">
+                    <div className="dr-modal-toolbar dr-modal-toolbar--badges-only">
+                        <div className="dr-pill-row dr-pill-row--clean">
                             {[
                                 { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
                                 { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
@@ -522,21 +532,11 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                                         className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
                                         onClick={() => setActiveTab(tab.key)}
                                     >
-                                        {tab.label}
+                                        <span className="dr-pill-tab-label">{tab.label}</span>
                                         <span className="dr-pill-tab-count">{tab.count}</span>
                                     </button>
                                 );
                             })}
-                        </div>
-
-                        <div className="dr-search-box dr-search-box--modal">
-                            <i className="bi bi-search"></i>
-                            <input
-                                type="text"
-                                placeholder="Search tasks..."
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                            />
                         </div>
                     </div>
 
@@ -734,7 +734,7 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
             <div
-                className="dr-modal-card"
+                className="dr-modal-card dr-employee-task-modal dr-department-task-modal"
                 role="dialog"
                 aria-modal="true"
                 aria-label={`${dept.department} annual tasks`}
@@ -752,8 +752,8 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
                     </button>
                 </div>
 
-                <div className="dr-modal-toolbar">
-                    <div className="dr-pill-row">
+                <div className="dr-modal-toolbar dr-modal-toolbar--badges-only">
+                    <div className="dr-pill-row dr-pill-row--clean">
                         {[
                             { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
                             { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
@@ -768,21 +768,11 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
                                     className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
                                     onClick={() => setActiveTab(tab.key)}
                                 >
-                                    {tab.label}
+                                    <span className="dr-pill-tab-label">{tab.label}</span>
                                     <span className="dr-pill-tab-count">{tab.count}</span>
                                 </button>
                             );
                         })}
-                    </div>
-
-                    <div className="dr-search-box dr-search-box--modal">
-                        <i className="bi bi-search"></i>
-                        <input
-                            type="text"
-                            placeholder="Search department tasks..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                        />
                     </div>
                 </div>
 
@@ -1053,8 +1043,8 @@ function AnnualReportPage() {
 
         return [
             { label: "Completed", value: scopedSummary.completed, color: "#16a34a" },
-            { label: "Ongoing", value: scopedSummary.ongoing, color: "#f59e0b" },
-            { label: "Overdue", value: scopedSummary.overdue, color: "#ec4899" }
+            { label: "Ongoing", value: scopedSummary.ongoing, color: "#2563eb" },
+            { label: "Overdue", value: scopedSummary.overdue, color: "#e11d48" }
         ].map((item) => ({
             ...item,
             percent: pct(item.value, total)
@@ -1104,7 +1094,7 @@ function AnnualReportPage() {
             {
                 animationDuration: 650,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 28,
                     left: 22,
@@ -1215,7 +1205,7 @@ function AnnualReportPage() {
             {
                 animationDuration: 700,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 28,
                     left: 24,
@@ -1333,7 +1323,7 @@ function AnnualReportPage() {
             {
                 animationDuration: 700,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 28,
                     left: 22,
@@ -1472,12 +1462,12 @@ function AnnualReportPage() {
                             {
                                 value: scopedSummary.ongoing,
                                 name: "Ongoing",
-                                itemStyle: { color: "#f59e0b" }
+                                itemStyle: { color: "#2563eb" }
                             },
                             {
                                 value: scopedSummary.overdue,
                                 name: "Overdue",
-                                itemStyle: { color: "#ec4899" }
+                                itemStyle: { color: "#e11d48" }
                             }
                         ]
                     }
@@ -1520,7 +1510,7 @@ function AnnualReportPage() {
             {
                 animationDuration: 700,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 56,
                     left: 24,
@@ -1678,7 +1668,7 @@ function AnnualReportPage() {
 
     return (
         <div className="dr-page">
-            <div className="dr-card ar-toolbar-card">
+            <div className="dr-card dr-page-intro-card ar-toolbar-card">
                 <div className="dr-card-head ar-toolbar-row">
                     <div>
                         <h5 className="dr-card-title">Annual Task Report</h5>
@@ -1957,16 +1947,15 @@ function AnnualReportPage() {
                                         <td>
                                             {safeNum(q.total) === 0 ? (
                                                 <span className="dr-empty-inline">No tasks yet</span>
-                                            ) : safeNum(q.completion_rate) === 0 ? (
-                                                <span className="dr-rate-danger">0% — None completed</span>
                                             ) : (
-                                                <div className="dr-progress">
-                                                    <div
-                                                        className="dr-progress-bar"
-                                                        style={{ width: `${q.completion_rate}%` }}
-                                                    >
-                                                        {q.completion_rate}%
+                                                <div className="dr-performance-cell">
+                                                    <div className="dr-progress">
+                                                        <div
+                                                            className="dr-progress-bar"
+                                                            style={{ width: `${q.completion_rate}%` }}
+                                                        ></div>
                                                     </div>
+                                                    <span className="dr-performance-value">{q.completion_rate}%</span>
                                                 </div>
                                             )}
                                         </td>
@@ -2038,16 +2027,15 @@ function AnnualReportPage() {
                                             <td>
                                                 {dept.total === 0 ? (
                                                     <span className="dr-empty-inline">No tasks yet</span>
-                                                ) : dept.completion_rate === 0 ? (
-                                                    <span className="dr-rate-danger">0% — None completed</span>
                                                 ) : (
-                                                    <div className="dr-progress">
-                                                        <div
-                                                            className="dr-progress-bar"
-                                                            style={{ width: `${dept.completion_rate}%` }}
-                                                        >
-                                                            {dept.completion_rate}%
+                                                    <div className="dr-performance-cell">
+                                                        <div className="dr-progress">
+                                                            <div
+                                                                className="dr-progress-bar"
+                                                                style={{ width: `${dept.completion_rate}%` }}
+                                                            ></div>
                                                         </div>
+                                                        <span className="dr-performance-value">{dept.completion_rate}%</span>
                                                     </div>
                                                 )}
                                             </td>
@@ -2115,15 +2103,11 @@ function AnnualReportPage() {
                                         <td>{index + 1}</td>
                                         <td>
                                             <div className="dr-assignee">
-                                                <div
-                                                    className="dr-assignee-avatar dr-assignee-avatar--fallback"
-                                                    style={{
-                                                        background: avatarColor(emp.name),
-                                                        color: avatarTextColor(emp.name)
-                                                    }}
-                                                >
-                                                    {initials(emp.name)}
-                                                </div>
+                                                <img
+                                                    src={buildAvatarFallbackUrl(emp.name)}
+                                                    alt={`${emp.name} Profile`}
+                                                    className="dr-assignee-avatar"
+                                                />
 
                                                 <div className="dr-assignee-copy">
                                                     <span className="dr-assignee-name">{emp.name}</span>
@@ -2137,16 +2121,15 @@ function AnnualReportPage() {
                                         <td>
                                             {emp.total === 0 ? (
                                                 <span className="dr-empty-inline">No tasks yet</span>
-                                            ) : emp.completion_rate === 0 ? (
-                                                <span className="dr-rate-danger">0% — None completed</span>
                                             ) : (
-                                                <div className="dr-progress">
-                                                    <div
-                                                        className="dr-progress-bar"
-                                                        style={{ width: `${emp.completion_rate}%` }}
-                                                    >
-                                                        {emp.completion_rate}%
+                                                <div className="dr-performance-cell">
+                                                    <div className="dr-progress">
+                                                        <div
+                                                            className="dr-progress-bar"
+                                                            style={{ width: `${emp.completion_rate}%` }}
+                                                        ></div>
                                                     </div>
+                                                    <span className="dr-performance-value">{emp.completion_rate}%</span>
                                                 </div>
                                             )}
                                         </td>
