@@ -24,7 +24,9 @@ register_shutdown_function(function () {
 require_once '../../config/db.php';
 header('Content-Type: application/json');
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 $createdBy = $_SESSION['user_id'] ?? null;
 
 // ── INPUT ────────────────────────────────────────────────────────────
