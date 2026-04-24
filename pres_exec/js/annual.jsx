@@ -2,6 +2,301 @@ const { useEffect, useMemo, useRef, useState } = React;
 
 const MANILA_TZ = "Asia/Manila";
 
+
+const STATUS_COLORS = {
+    Completed: "#16a34a",
+    Ongoing: "#2563eb",
+    Overdue: "#f43f5e"
+};
+
+function hexToRgba(hex, alpha) {
+    const clean = String(hex).replace("#", "");
+    const bigint = parseInt(clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function chartAreaGradient(context, color, topAlpha = 0.16, bottomAlpha = 0.02) {
+    const chart = context.chart;
+    const { ctx, chartArea } = chart;
+
+    if (!chartArea) {
+        return hexToRgba(color, topAlpha);
+    }
+
+    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    gradient.addColorStop(0, hexToRgba(color, topAlpha));
+    gradient.addColorStop(0.62, hexToRgba(color, topAlpha * 0.36));
+    gradient.addColorStop(1, hexToRgba(color, bottomAlpha));
+
+    return gradient;
+}
+
+function barGradient(context, color) {
+    const chart = context.chart;
+    const { ctx, chartArea } = chart;
+
+    if (!chartArea) {
+        return color;
+    }
+
+    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+    gradient.addColorStop(0, hexToRgba(color, 0.84));
+    gradient.addColorStop(1, hexToRgba(color, 1));
+
+    return gradient;
+}
+
+function chartTheme(themeMode) {
+    const isDark = themeMode === "dark";
+
+    return {
+        isDark,
+        axisColor: isDark ? "#a8b3c7" : "#7f8a9b",
+        gridColor: isDark ? "rgba(255,255,255,0.08)" : "#edf1f7",
+        cardBg: isDark ? "#131c2f" : "#ffffff",
+        tooltipBg: isDark ? "#182235" : "#ffffff",
+        tooltipBorder: isDark ? "rgba(255,255,255,0.10)" : "#e6ebf3",
+        tooltipText: isDark ? "#f8fafc" : "#18263f"
+    };
+}
+
+function chartDefaults(themeMode) {
+    const theme = chartTheme(themeMode);
+
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+            padding: {
+                top: 8,
+                right: 12,
+                bottom: 2,
+                left: 4
+            }
+        },
+        interaction: {
+            mode: "index",
+            intersect: false
+        },
+        plugins: {
+            legend: {
+                position: "bottom",
+                align: "center",
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: "circle",
+                    color: theme.axisColor,
+                    padding: 22,
+                    boxWidth: 8,
+                    boxHeight: 8,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "800"
+                    }
+                }
+            },
+            tooltip: {
+                enabled: true,
+                backgroundColor: theme.tooltipBg,
+                borderColor: theme.tooltipBorder,
+                borderWidth: 1,
+                titleColor: theme.tooltipText,
+                bodyColor: theme.tooltipText,
+                footerColor: theme.tooltipText,
+                padding: 12,
+                cornerRadius: 14,
+                displayColors: true,
+                usePointStyle: true,
+                titleFont: {
+                    family: "Nunito, sans-serif",
+                    size: 13,
+                    weight: "900"
+                },
+                bodyFont: {
+                    family: "Nunito, sans-serif",
+                    size: 12,
+                    weight: "800"
+                },
+                footerFont: {
+                    family: "Nunito, sans-serif",
+                    size: 11,
+                    weight: "800"
+                }
+            }
+        },
+        elements: {
+            line: {
+                borderWidth: 2.2,
+                tension: 0.42,
+                capBezierPoints: true
+            },
+            point: {
+                radius: 3,
+                hoverRadius: 5,
+                hitRadius: 10,
+                borderWidth: 2
+            },
+            bar: {
+                borderSkipped: false,
+                borderRadius: 10
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false,
+                    drawBorder: false
+                },
+                border: {
+                    display: false
+                },
+                ticks: {
+                    color: theme.axisColor,
+                    padding: 10,
+                    maxRotation: 0,
+                    autoSkip: true,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "850"
+                    }
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grace: "6%",
+                border: {
+                    display: false
+                },
+                grid: {
+                    color: theme.gridColor,
+                    drawBorder: false,
+                    lineWidth: 1
+                },
+                ticks: {
+                    stepSize: 1,
+                    padding: 10,
+                    color: theme.axisColor,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "750"
+                    },
+                    callback: (value) => Number.isInteger(value) ? value : ""
+                }
+            }
+        }
+    };
+}
+
+function makeLineDataset(label, data, color, themeMode, fillAlpha = 0.16) {
+    const theme = chartTheme(themeMode);
+
+    return {
+        label,
+        data,
+        borderColor: color,
+        backgroundColor: (context) => chartAreaGradient(context, color, fillAlpha, 0),
+        pointBackgroundColor: color,
+        pointBorderColor: theme.cardBg,
+        pointHoverBackgroundColor: color,
+        pointHoverBorderColor: theme.cardBg,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointBorderWidth: 2,
+        borderWidth: 2.2,
+        tension: 0.42,
+        fill: true
+    };
+}
+
+function makeBarDataset(label, data, color, maxBarThickness = 28) {
+    return {
+        label,
+        data,
+        backgroundColor: (context) => barGradient(context, color),
+        borderColor: color,
+        borderWidth: 0,
+        borderRadius: 10,
+        borderSkipped: "bottom",
+        maxBarThickness,
+        categoryPercentage: 0.6,
+        barPercentage: 0.72
+    };
+}
+
+function getStackedRadius(datasetIndex, dataIndex, stackValues) {
+    const value = safeNum(stackValues[datasetIndex]?.[dataIndex]);
+
+    if (value <= 0) return 0;
+
+    const hasAbove = stackValues
+        .slice(datasetIndex + 1)
+        .some((series) => safeNum(series?.[dataIndex]) > 0);
+
+    const hasBelow = stackValues
+        .slice(0, datasetIndex)
+        .some((series) => safeNum(series?.[dataIndex]) > 0);
+
+    return {
+        topLeft: hasAbove ? 0 : 14,
+        topRight: hasAbove ? 0 : 14,
+        bottomLeft: hasBelow ? 0 : 4,
+        bottomRight: hasBelow ? 0 : 4
+    };
+}
+
+function makeStackedBarDataset(label, data, color, stackValues, datasetIndex, maxBarThickness = 28) {
+    return {
+        label,
+        data,
+        backgroundColor: (context) => barGradient(context, color),
+        borderColor: color,
+        borderWidth: 0,
+        borderSkipped: false,
+        borderRadius: (context) =>
+            getStackedRadius(datasetIndex, context.dataIndex, stackValues),
+        maxBarThickness,
+        categoryPercentage: 0.58,
+        barPercentage: 0.58
+    };
+}
+
+function loadChartJs() {
+    if (window.Chart) {
+        return Promise.resolve(window.Chart);
+    }
+
+    if (window.__annualChartJsPromise) {
+        return window.__annualChartJsPromise;
+    }
+
+    window.__annualChartJsPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[src*="chart.js"]');
+
+        if (existing) {
+            existing.addEventListener("load", () => resolve(window.Chart));
+            existing.addEventListener("error", reject);
+            if (window.Chart) resolve(window.Chart);
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+        script.async = true;
+        script.onload = () => resolve(window.Chart);
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+
+    return window.__annualChartJsPromise;
+}
+
 function getThemeMode() {
     return document.documentElement.getAttribute("data-theme") === "dark"
         ? "dark"
@@ -250,7 +545,17 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                     ) : error ? (
                         <div className="alert alert-danger mb-0">{error}</div>
                     ) : messages.length === 0 ? (
-                        <div className="dr-empty-state">No comments yet.</div>
+                        <div className="dr-empty-state dr-chat-empty-state">
+                            <div className="dr-chat-empty-icon">
+                                <i className="bi bi-chat-quote-fill"></i>
+                            </div>
+
+                            <div className="dr-chat-empty-title">No comments yet</div>
+
+                            <div className="dr-chat-empty-subtitle">
+                                No comments yet. Be the first to reply.
+                            </div>
+                        </div>
                     ) : (
                         <div className="dr-comment-stream">
                             {messages.map((msg) => {
@@ -366,7 +671,7 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                         handleSend();
                                     }
                                 }}
-                                placeholder="Write a comment... (Ctrl+Enter to send)"
+                                placeholder="Write a thoughtful reply..."
                             />
 
                             <button
@@ -481,7 +786,7 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                 onClick={(e) => e.target === e.currentTarget && onClose()}
             >
                 <div
-                    className="dr-modal-card"
+                    className="dr-modal-card dr-employee-task-modal"
                     role="dialog"
                     aria-modal="true"
                     aria-label={`${emp.name} annual tasks`}
@@ -506,8 +811,8 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                         </button>
                     </div>
 
-                    <div className="dr-modal-toolbar">
-                        <div className="dr-pill-row">
+                    <div className="dr-modal-toolbar dr-modal-toolbar--badges-only">
+                        <div className="dr-pill-row dr-pill-row--clean">
                             {[
                                 { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
                                 { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
@@ -522,21 +827,11 @@ function EmployeeTaskModal({ emp, yearStart, yearEnd, onClose }) {
                                         className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
                                         onClick={() => setActiveTab(tab.key)}
                                     >
-                                        {tab.label}
+                                        <span className="dr-pill-tab-label">{tab.label}</span>
                                         <span className="dr-pill-tab-count">{tab.count}</span>
                                     </button>
                                 );
                             })}
-                        </div>
-
-                        <div className="dr-search-box dr-search-box--modal">
-                            <i className="bi bi-search"></i>
-                            <input
-                                type="text"
-                                placeholder="Search tasks..."
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                            />
                         </div>
                     </div>
 
@@ -734,7 +1029,7 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
             <div
-                className="dr-modal-card"
+                className="dr-modal-card dr-employee-task-modal dr-department-task-modal"
                 role="dialog"
                 aria-modal="true"
                 aria-label={`${dept.department} annual tasks`}
@@ -752,8 +1047,8 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
                     </button>
                 </div>
 
-                <div className="dr-modal-toolbar">
-                    <div className="dr-pill-row">
+                <div className="dr-modal-toolbar dr-modal-toolbar--badges-only">
+                    <div className="dr-pill-row dr-pill-row--clean">
                         {[
                             { key: "all", label: "All", count: annotatedTasks.length, tone: "neutral" },
                             { key: "Completed", label: "Completed", count: countFor("Completed"), tone: "success" },
@@ -768,21 +1063,11 @@ function DepartmentTaskModal({ dept, yearStart, yearEnd, onClose }) {
                                     className={`dr-pill-tab ${tab.tone} ${active ? "is-active" : ""}`}
                                     onClick={() => setActiveTab(tab.key)}
                                 >
-                                    {tab.label}
+                                    <span className="dr-pill-tab-label">{tab.label}</span>
                                     <span className="dr-pill-tab-count">{tab.count}</span>
                                 </button>
                             );
                         })}
-                    </div>
-
-                    <div className="dr-search-box dr-search-box--modal">
-                        <i className="bi bi-search"></i>
-                        <input
-                            type="text"
-                            placeholder="Search department tasks..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                        />
                     </div>
                 </div>
 
@@ -908,6 +1193,12 @@ function AnnualReportPage() {
     const quarterChartRef = useRef(null);
     const donutChartRef = useRef(null);
     const employeeChartRef = useRef(null);
+
+    const deptChart = useRef(null);
+    const lineChart = useRef(null);
+    const quarterChart = useRef(null);
+    const donutChart = useRef(null);
+    const employeeChart = useRef(null);
 
     const yearStart = `${year}-01-01`;
     const yearEnd = `${year}-12-31`;
@@ -1052,9 +1343,9 @@ function AnnualReportPage() {
         const total = scopedSummary.total || 0;
 
         return [
-            { label: "Completed", value: scopedSummary.completed, color: "#16a34a" },
-            { label: "Ongoing", value: scopedSummary.ongoing, color: "#f59e0b" },
-            { label: "Overdue", value: scopedSummary.overdue, color: "#ec4899" }
+            { label: "Completed", value: scopedSummary.completed, color: STATUS_COLORS.Completed },
+            { label: "Ongoing", value: scopedSummary.ongoing, color: STATUS_COLORS.Ongoing },
+            { label: "Overdue", value: scopedSummary.overdue, color: STATUS_COLORS.Overdue }
         ].map((item) => ({
             ...item,
             percent: pct(item.value, total)
@@ -1087,556 +1378,313 @@ function AnnualReportPage() {
     );
 
     useEffect(() => {
-        if (!window.echarts || !deptChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(deptChartRef.current) ||
-            window.echarts.init(deptChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !deptChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+            if (deptChart.current) deptChart.current.destroy();
 
-        chart.setOption(
-            {
-                animationDuration: 650,
-                animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
-                grid: {
-                    top: 28,
-                    left: 22,
-                    right: 18,
-                    bottom: 44,
-                    containLabel: true
+            const defaults = chartDefaults(themeMode);
+            deptChart.current = new Chart(deptChartRef.current, {
+                type: "bar",
+                data: {
+                    labels: deptLabels,
+                    datasets: [
+                        makeBarDataset("Completed", deptCompleted, STATUS_COLORS.Completed, 24),
+                        makeBarDataset("Ongoing", deptOngoing, STATUS_COLORS.Ongoing, 24),
+                        makeBarDataset("Overdue", deptOverdue, STATUS_COLORS.Overdue, 24)
+                    ]
                 },
-                tooltip: {
-                    trigger: "axis",
-                    axisPointer: { type: "shadow" },
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                legend: {
-                    top: 0,
-                    textStyle: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontWeight: 800
-                    }
-                },
-                xAxis: {
-                    type: "category",
-                    data: deptLabels,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        margin: 10
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
+                options: {
+                    ...defaults,
+                    onClick: (_event, elements) => {
+                        if (!elements.length) return;
+
+                        const clicked = deptChartRows[elements[0].index];
+                        if (!clicked) return;
+
+                        setSelectedDept((prev) =>
+                            prev?.department_id === clicked.department_id ? null : clicked
+                        );
                     },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
+                    plugins: {
+                        ...defaults.plugins,
+                        legend: { ...defaults.plugins.legend, position: "bottom" },
+                        tooltip: {
+                            ...defaults.plugins.tooltip,
+                            callbacks: {
+                                afterLabel: (ctx) => {
+                                    const dept = deptChartRows[ctx.dataIndex];
+                                    return dept ? `Completion rate: ${dept.completion_rate}%` : "";
+                                }
+                            }
                         }
-                    }
-                },
-                series: [
-                    { name: "Completed", type: "bar", barWidth: 18, data: deptCompleted, itemStyle: { borderRadius: [8, 8, 0, 0] } },
-                    { name: "Ongoing", type: "bar", barWidth: 18, data: deptOngoing, itemStyle: { borderRadius: [8, 8, 0, 0] } },
-                    { name: "Overdue", type: "bar", barWidth: 18, data: deptOverdue, itemStyle: { borderRadius: [8, 8, 0, 0] } }
-                ]
-            },
-            true
-        );
-
-        const clickHandler = (params) => {
-            const clicked = deptChartRows[params.dataIndex];
-            if (!clicked) return;
-
-            setSelectedDept((prev) =>
-                prev?.department_id === clicked.department_id ? null : clicked
-            );
-        };
-
-        chart.off("click");
-        chart.on("click", clickHandler);
-
-        requestAnimationFrame(() => chart.resize());
-        const resizeTimer = setTimeout(() => chart.resize(), 120);
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                    },
+                    scales: defaults.scales
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            clearTimeout(resizeTimer);
-            chart.off("click", clickHandler);
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (deptChart.current) {
+                deptChart.current.destroy();
+                deptChart.current = null;
+            }
         };
     }, [deptLabels, deptCompleted, deptOngoing, deptOverdue, deptChartRows, themeMode]);
 
     useEffect(() => {
-        if (!window.echarts || !lineChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(lineChartRef.current) ||
-            window.echarts.init(lineChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !lineChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+            if (lineChart.current) lineChart.current.destroy();
 
-        chart.setOption(
-            {
-                animationDuration: 700,
-                animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
-                grid: {
-                    top: 28,
-                    left: 24,
-                    right: 18,
-                    bottom: 44,
-                    containLabel: true
+            const defaults = chartDefaults(themeMode);
+            lineChart.current = new Chart(lineChartRef.current, {
+                type: "line",
+                data: {
+                    labels: monthNames,
+                    datasets: [
+                        makeLineDataset("Completed", lineCompleted, STATUS_COLORS.Completed, themeMode, 0.16),
+                        makeLineDataset("Ongoing", lineOngoing, STATUS_COLORS.Ongoing, themeMode, 0.13),
+                        makeLineDataset("Overdue", lineOverdue, STATUS_COLORS.Overdue, themeMode, 0.18)
+                    ]
                 },
-                tooltip: {
-                    trigger: "axis",
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                legend: {
-                    top: 0,
-                    textStyle: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontWeight: 800
-                    }
-                },
-                xAxis: {
-                    type: "category",
-                    data: monthNames,
-                    boundaryGap: false,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
-                    },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
+                options: {
+                    ...defaults,
+                    plugins: {
+                        ...defaults.plugins,
+                        legend: { ...defaults.plugins.legend, position: "bottom" },
+                        tooltip: {
+                            ...defaults.plugins.tooltip,
+                            callbacks: {
+                                footer: (items) => {
+                                    if (!items.length) return "";
+
+                                    const idx = items[0].dataIndex;
+                                    const comp = lineCompleted[idx] || 0;
+                                    const total =
+                                        comp +
+                                        (lineOngoing[idx] || 0) +
+                                        (lineOverdue[idx] || 0);
+
+                                    return `Completion rate: ${pct(comp, total)}%`;
+                                }
+                            }
                         }
-                    }
-                },
-                series: [
-                    {
-                        name: "Completed",
-                        type: "line",
-                        smooth: true,
-                        symbolSize: 7,
-                        areaStyle: { opacity: 0.08 },
-                        data: lineCompleted
                     },
-                    {
-                        name: "Ongoing",
-                        type: "line",
-                        smooth: true,
-                        symbolSize: 7,
-                        areaStyle: { opacity: 0.06 },
-                        data: lineOngoing
-                    },
-                    {
-                        name: "Overdue",
-                        type: "line",
-                        smooth: true,
-                        symbolSize: 7,
-                        areaStyle: { opacity: 0.06 },
-                        data: lineOverdue
-                    }
-                ]
-            },
-            true
-        );
-
-        requestAnimationFrame(() => chart.resize());
-        const resizeTimer = setTimeout(() => chart.resize(), 120);
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                    scales: defaults.scales
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            clearTimeout(resizeTimer);
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (lineChart.current) {
+                lineChart.current.destroy();
+                lineChart.current = null;
+            }
         };
     }, [monthNames, lineCompleted, lineOngoing, lineOverdue, themeMode]);
 
     useEffect(() => {
-        if (!window.echarts || !quarterChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(quarterChartRef.current) ||
-            window.echarts.init(quarterChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !quarterChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+            if (quarterChart.current) quarterChart.current.destroy();
 
-        chart.setOption(
-            {
-                animationDuration: 700,
-                animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
-                grid: {
-                    top: 28,
-                    left: 22,
-                    right: 18,
-                    bottom: 44,
-                    containLabel: true
+            const defaults = chartDefaults(themeMode);
+            const quarterStackValues = [qCompleted, qOngoing, qOverdue];
+
+            quarterChart.current = new Chart(quarterChartRef.current, {
+                type: "bar",
+                data: {
+                    labels: quarterLabels,
+                    datasets: [
+                        makeStackedBarDataset(
+                            "Completed",
+                            qCompleted,
+                            STATUS_COLORS.Completed,
+                            quarterStackValues,
+                            0,
+                            28
+                        ),
+                        makeStackedBarDataset(
+                            "Ongoing",
+                            qOngoing,
+                            STATUS_COLORS.Ongoing,
+                            quarterStackValues,
+                            1,
+                            28
+                        ),
+                        makeStackedBarDataset(
+                            "Overdue",
+                            qOverdue,
+                            STATUS_COLORS.Overdue,
+                            quarterStackValues,
+                            2,
+                            28
+                        )
+                    ]
                 },
-                tooltip: {
-                    trigger: "axis",
-                    axisPointer: { type: "shadow" },
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                legend: {
-                    top: 0,
-                    textStyle: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontWeight: 800
-                    }
-                },
-                xAxis: {
-                    type: "category",
-                    data: quarterLabels,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        margin: 10
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
+                options: {
+                    ...defaults,
+                    plugins: {
+                        ...defaults.plugins,
+                        legend: { ...defaults.plugins.legend, position: "bottom" },
+                        tooltip: {
+                            ...defaults.plugins.tooltip,
+                            callbacks: {
+                                footer: (items) => {
+                                    if (!items.length) return "";
+                                    const q = quarterlyTrend[items[0].dataIndex];
+                                    return q ? `Completion rate: ${q.completion_rate}%` : "";
+                                }
+                            }
+                        }
                     },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
+                    scales: {
+                        x: {
+                            ...defaults.scales.x,
+                            stacked: true
+                        },
+                        y: {
+                            ...defaults.scales.y,
+                            stacked: true,
+                            grace: "12%"
                         }
                     }
-                },
-                series: [
-                    { name: "Completed", type: "bar", stack: "quarters", barWidth: 28, data: qCompleted, itemStyle: { borderRadius: [0, 0, 8, 8] } },
-                    { name: "Ongoing", type: "bar", stack: "quarters", barWidth: 28, data: qOngoing, itemStyle: { borderRadius: [0, 0, 0, 0] } },
-                    { name: "Overdue", type: "bar", stack: "quarters", barWidth: 28, data: qOverdue, itemStyle: { borderRadius: [8, 8, 0, 0] } }
-                ]
-            },
-            true
-        );
-
-        requestAnimationFrame(() => chart.resize());
-        const resizeTimer = setTimeout(() => chart.resize(), 120);
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            clearTimeout(resizeTimer);
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (quarterChart.current) {
+                quarterChart.current.destroy();
+                quarterChart.current = null;
+            }
         };
-    }, [quarterLabels, qCompleted, qOngoing, qOverdue, themeMode]);
+    }, [quarterLabels, qCompleted, qOngoing, qOverdue, quarterlyTrend, themeMode]);
 
     useEffect(() => {
-        if (!window.echarts || !donutChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(donutChartRef.current) ||
-            window.echarts.init(donutChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !donutChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const separatorColor = isDark ? "#12192b" : "#ffffff";
+            if (donutChart.current) donutChart.current.destroy();
 
-        chart.setOption(
-            {
-                animation: true,
-                tooltip: {
-                    trigger: "item",
-                    formatter: (params) =>
-                        `${params.name}: ${params.value} (${params.percent}%)`,
-                    backgroundColor: isDark ? "#182133" : "#ffffff",
-                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4",
-                    borderWidth: 1,
-                    textStyle: {
-                        color: isDark ? "#f8fafc" : "#18263f",
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                series: [
-                    {
-                        type: "pie",
-                        radius: ["63%", "84%"],
-                        center: ["50%", "50%"],
-                        startAngle: 90,
-                        clockwise: true,
-                        minAngle: 1,
-                        avoidLabelOverlap: true,
-                        label: { show: false },
-                        labelLine: { show: false },
-                        emphasis: {
-                            scale: true,
-                            scaleSize: 8,
-                            itemStyle: {
-                                borderColor: separatorColor,
-                                borderWidth: 5,
-                                borderRadius: 10
-                            }
-                        },
-                        itemStyle: {
-                            borderColor: separatorColor,
-                            borderWidth: 4,
+            const theme = chartTheme(themeMode);
+            donutChart.current = new Chart(donutChartRef.current, {
+                type: "doughnut",
+                data: {
+                    labels: ["Completed", "Ongoing", "Overdue"],
+                    datasets: [
+                        {
+                            data: [
+                                safeNum(scopedSummary.completed),
+                                safeNum(scopedSummary.ongoing),
+                                safeNum(scopedSummary.overdue)
+                            ],
+                            backgroundColor: [
+                                STATUS_COLORS.Completed,
+                                STATUS_COLORS.Ongoing,
+                                STATUS_COLORS.Overdue
+                            ],
+                            borderWidth: 5,
+                            borderColor: theme.cardBg,
+                            hoverOffset: 6,
                             borderRadius: 10
-                        },
-                        data: [
-                            {
-                                value: scopedSummary.completed,
-                                name: "Completed",
-                                itemStyle: { color: "#16a34a" }
-                            },
-                            {
-                                value: scopedSummary.ongoing,
-                                name: "Ongoing",
-                                itemStyle: { color: "#f59e0b" }
-                            },
-                            {
-                                value: scopedSummary.overdue,
-                                name: "Overdue",
-                                itemStyle: { color: "#ec4899" }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "74%",
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            ...chartDefaults(themeMode).plugins.tooltip,
+                            callbacks: {
+                                label: (ctx) => {
+                                    const val = safeNum(ctx.raw);
+                                    return ` ${ctx.label}: ${val} (${pct(val, scopedSummary.total)}%)`;
+                                }
                             }
-                        ]
+                        }
                     }
-                ]
-            },
-            true
-        );
-
-        requestAnimationFrame(() => chart.resize());
-        const resizeTimer = setTimeout(() => chart.resize(), 120);
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            clearTimeout(resizeTimer);
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (donutChart.current) {
+                donutChart.current.destroy();
+                donutChart.current = null;
+            }
         };
     }, [scopedSummary, themeMode]);
 
     useEffect(() => {
-        if (!window.echarts || !employeeChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(employeeChartRef.current) ||
-            window.echarts.init(employeeChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !employeeChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+            if (employeeChart.current) employeeChart.current.destroy();
 
-        const visiblePercent =
-            empNames.length <= 8 ? 100 : Math.max(35, Math.round((8 / empNames.length) * 100));
-
-        chart.setOption(
-            {
-                animationDuration: 700,
-                animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
-                grid: {
-                    top: 56,
-                    left: 24,
-                    right: 18,
-                    bottom: 90,
-                    containLabel: true
+            const defaults = chartDefaults(themeMode);
+            employeeChart.current = new Chart(employeeChartRef.current, {
+                type: "bar",
+                data: {
+                    labels: empNames,
+                    datasets: [
+                        makeBarDataset("Completed", empCompleted, STATUS_COLORS.Completed, 18),
+                        makeBarDataset("Ongoing", empOngoing, STATUS_COLORS.Ongoing, 18),
+                        makeBarDataset("Overdue", empOverdue, STATUS_COLORS.Overdue, 18)
+                    ]
                 },
-                tooltip: {
-                    trigger: "axis",
-                    axisPointer: { type: "shadow" },
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                legend: {
-                    top: 0,
-                    textStyle: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontWeight: 800
-                    }
-                },
-                dataZoom: empNames.length > 8
-                    ? [
-                          {
-                              type: "inside",
-                              xAxisIndex: 0,
-                              start: 0,
-                              end: visiblePercent
-                          },
-                          {
-                              type: "slider",
-                              xAxisIndex: 0,
-                              start: 0,
-                              end: visiblePercent,
-                              height: 18,
-                              bottom: 18
-                          }
-                      ]
-                    : [],
-                xAxis: {
-                    type: "category",
-                    data: empNames,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        interval: 0,
-                        rotate: empNames.length > 6 ? 35 : 0,
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        margin: 14
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
-                    },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
+                options: {
+                    ...defaults,
+                    indexAxis: "y",
+                    plugins: {
+                        ...defaults.plugins,
+                        legend: { ...defaults.plugins.legend, position: "bottom" },
+                        tooltip: {
+                            ...defaults.plugins.tooltip,
+                            callbacks: {
+                                afterLabel: (ctx) => {
+                                    const emp = employeePerformanceRows[ctx.dataIndex];
+                                    return emp ? `Completion rate: ${emp.completion_rate}%` : "";
+                                }
+                            }
                         }
-                    }
-                },
-                series: [
-                    {
-                        name: "Completed",
-                        type: "bar",
-                        barMaxWidth: 26,
-                        data: empCompleted,
-                        itemStyle: { borderRadius: [8, 8, 0, 0] }
                     },
-                    {
-                        name: "Ongoing",
-                        type: "bar",
-                        barMaxWidth: 26,
-                        data: empOngoing,
-                        itemStyle: { borderRadius: [8, 8, 0, 0] }
-                    },
-                    {
-                        name: "Overdue",
-                        type: "bar",
-                        barMaxWidth: 26,
-                        data: empOverdue,
-                        itemStyle: { borderRadius: [8, 8, 0, 0] }
+                    scales: {
+                        x: defaults.scales.y,
+                        y: defaults.scales.x
                     }
-                ]
-            },
-            true
-        );
-
-        requestAnimationFrame(() => chart.resize());
-        const resizeTimer = setTimeout(() => chart.resize(), 120);
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            clearTimeout(resizeTimer);
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (employeeChart.current) {
+                employeeChart.current.destroy();
+                employeeChart.current = null;
+            }
         };
-    }, [empNames, empCompleted, empOngoing, empOverdue, themeMode]);
+    }, [empNames, empCompleted, empOngoing, empOverdue, employeePerformanceRows, themeMode]);
 
     const isCurrentYear = year === now.getFullYear();
 
@@ -1678,7 +1726,7 @@ function AnnualReportPage() {
 
     return (
         <div className="dr-page">
-            <div className="dr-card ar-toolbar-card">
+            <div className="dr-card dr-page-intro-card ar-toolbar-card">
                 <div className="dr-card-head ar-toolbar-row">
                     <div>
                         <h5 className="dr-card-title">Annual Task Report</h5>
@@ -1799,7 +1847,7 @@ function AnnualReportPage() {
                     )}
                 </div>
 
-                <div ref={deptChartRef} className="ar-chart-lg"></div>
+                <div className="ar-chart-wrap ar-chart-lg"><canvas ref={deptChartRef}></canvas></div>
             </div>
 
             <div className="dr-card ar-block-gap">
@@ -1814,7 +1862,7 @@ function AnnualReportPage() {
                     <div className="dr-filter-pill">{year}</div>
                 </div>
 
-                <div ref={lineChartRef} className="ar-chart-line"></div>
+                <div className="ar-chart-wrap ar-chart-line"><canvas ref={lineChartRef}></canvas></div>
             </div>
 
             <div className="ar-split-grid">
@@ -1830,7 +1878,7 @@ function AnnualReportPage() {
                         <div className="dr-filter-pill">{year}</div>
                     </div>
 
-                    <div ref={quarterChartRef} className="ar-chart-md"></div>
+                    <div className="ar-chart-wrap ar-chart-md"><canvas ref={quarterChartRef}></canvas></div>
                 </div>
 
                 <div className="dr-card ar-donut-card">
@@ -1851,7 +1899,7 @@ function AnnualReportPage() {
 
                     <div className="dr-donut-stack">
                         <div className="dr-donut-shell">
-                            <div ref={donutChartRef} className="dr-donut-chart"></div>
+                            <canvas ref={donutChartRef} className="dr-donut-chart"></canvas>
 
                             <div className="dr-donut-center">
                                 <span className="dr-donut-center-kicker">Total</span>
@@ -1903,10 +1951,11 @@ function AnnualReportPage() {
                 </div>
 
                 <div
-                    ref={employeeChartRef}
-                    className="ar-chart-hbar"
-                    style={{ height: "430px" }}
-                ></div>
+                    className="ar-chart-wrap ar-chart-hbar"
+                    style={{ height: `${Math.max(260, employeePerformanceRows.length * 42)}px` }}
+                >
+                    <canvas ref={employeeChartRef}></canvas>
+                </div>
             </div>
 
             <div className="dr-card dr-card--table dr-card--table-full ar-block-gap">
@@ -1957,16 +2006,15 @@ function AnnualReportPage() {
                                         <td>
                                             {safeNum(q.total) === 0 ? (
                                                 <span className="dr-empty-inline">No tasks yet</span>
-                                            ) : safeNum(q.completion_rate) === 0 ? (
-                                                <span className="dr-rate-danger">0% — None completed</span>
                                             ) : (
-                                                <div className="dr-progress">
-                                                    <div
-                                                        className="dr-progress-bar"
-                                                        style={{ width: `${q.completion_rate}%` }}
-                                                    >
-                                                        {q.completion_rate}%
+                                                <div className="dr-performance-cell">
+                                                    <div className="dr-progress">
+                                                        <div
+                                                            className="dr-progress-bar"
+                                                            style={{ width: `${q.completion_rate}%` }}
+                                                        ></div>
                                                     </div>
+                                                    <span className="dr-performance-value">{q.completion_rate}%</span>
                                                 </div>
                                             )}
                                         </td>
@@ -2038,16 +2086,15 @@ function AnnualReportPage() {
                                             <td>
                                                 {dept.total === 0 ? (
                                                     <span className="dr-empty-inline">No tasks yet</span>
-                                                ) : dept.completion_rate === 0 ? (
-                                                    <span className="dr-rate-danger">0% — None completed</span>
                                                 ) : (
-                                                    <div className="dr-progress">
-                                                        <div
-                                                            className="dr-progress-bar"
-                                                            style={{ width: `${dept.completion_rate}%` }}
-                                                        >
-                                                            {dept.completion_rate}%
+                                                    <div className="dr-performance-cell">
+                                                        <div className="dr-progress">
+                                                            <div
+                                                                className="dr-progress-bar"
+                                                                style={{ width: `${dept.completion_rate}%` }}
+                                                            ></div>
                                                         </div>
+                                                        <span className="dr-performance-value">{dept.completion_rate}%</span>
                                                     </div>
                                                 )}
                                             </td>
@@ -2115,15 +2162,11 @@ function AnnualReportPage() {
                                         <td>{index + 1}</td>
                                         <td>
                                             <div className="dr-assignee">
-                                                <div
-                                                    className="dr-assignee-avatar dr-assignee-avatar--fallback"
-                                                    style={{
-                                                        background: avatarColor(emp.name),
-                                                        color: avatarTextColor(emp.name)
-                                                    }}
-                                                >
-                                                    {initials(emp.name)}
-                                                </div>
+                                                <img
+                                                    src={buildAvatarFallbackUrl(emp.name)}
+                                                    alt={`${emp.name} Profile`}
+                                                    className="dr-assignee-avatar"
+                                                />
 
                                                 <div className="dr-assignee-copy">
                                                     <span className="dr-assignee-name">{emp.name}</span>
@@ -2137,16 +2180,15 @@ function AnnualReportPage() {
                                         <td>
                                             {emp.total === 0 ? (
                                                 <span className="dr-empty-inline">No tasks yet</span>
-                                            ) : emp.completion_rate === 0 ? (
-                                                <span className="dr-rate-danger">0% — None completed</span>
                                             ) : (
-                                                <div className="dr-progress">
-                                                    <div
-                                                        className="dr-progress-bar"
-                                                        style={{ width: `${emp.completion_rate}%` }}
-                                                    >
-                                                        {emp.completion_rate}%
+                                                <div className="dr-performance-cell">
+                                                    <div className="dr-progress">
+                                                        <div
+                                                            className="dr-progress-bar"
+                                                            style={{ width: `${emp.completion_rate}%` }}
+                                                        ></div>
                                                     </div>
+                                                    <span className="dr-performance-value">{emp.completion_rate}%</span>
                                                 </div>
                                             )}
                                         </td>
