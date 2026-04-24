@@ -2074,3 +2074,108 @@
         height: 300px !important;
     }
 }
+
+/* ===== FINAL FIX: Reduce Quarter Status Mix width ===== */
+#quarterlyReportRoot .dr-page > .qr-split-grid {
+    --qr-status-card-width: 350px !important;
+    --qr-split-gap: 22px !important;
+
+    display: grid !important;
+    grid-template-columns:
+        minmax(0, calc(100% - var(--qr-status-card-width) - var(--qr-split-gap)))
+        var(--qr-status-card-width) !important;
+    column-gap: var(--qr-split-gap) !important;
+    row-gap: 20px !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    margin-bottom: 20px !important;
+}
+
+/* Monthly Breakdown gets the remaining wider space */
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:first-child {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+}
+
+/* Quarter Status Mix becomes narrower */
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child {
+    width: var(--qr-status-card-width) !important;
+    max-width: var(--qr-status-card-width) !important;
+    min-width: var(--qr-status-card-width) !important;
+    justify-self: end !important;
+}
+
+/* Make Monthly Breakdown chart use the extra space */
+#quarterlyReportRoot .dr-page > .qr-split-grid .qr-chart-md {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 360px !important;
+}
+
+/* Compact the Quarter Status Mix donut */
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-stack {
+    min-height: 300px !important;
+    justify-content: center !important;
+    gap: 12px !important;
+}
+
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-shell,
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-chart {
+    width: 205px !important;
+    height: 205px !important;
+}
+
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-center-value {
+    font-size: 2.35rem !important;
+}
+
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-legend {
+    gap: 10px 14px !important;
+    justify-content: center !important;
+}
+
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-legend-item {
+    min-width: 120px !important;
+}
+
+/* Stack normally on tablet/mobile */
+@media (max-width: 1199px) {
+    #quarterlyReportRoot .dr-page > .qr-split-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        justify-self: stretch !important;
+    }
+
+    #quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-shell,
+    #quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-chart {
+        width: 250px !important;
+        height: 250px !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #quarterlyReportRoot .dr-page > .qr-split-grid .qr-chart-md {
+        height: 300px !important;
+    }
+
+    #quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-shell,
+    #quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-chart {
+        width: 226px !important;
+        height: 226px !important;
+    }
+
+    #quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-legend {
+        justify-content: flex-start !important;
+    }
+
+    #quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-legend-item {
+        min-width: 100% !important;
+    }
+}

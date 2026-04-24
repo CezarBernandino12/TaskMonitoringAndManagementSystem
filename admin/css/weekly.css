@@ -1457,10 +1457,10 @@
 }
 
 #weeklyReportRoot .wr-top-grid {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr) !important;
-    gap: 16px !important;
-    margin-bottom: 16px !important;
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.7fr);
+    gap: 20px;
+    margin-bottom: 20px;
 }
 
 #weeklyReportRoot .wr-chart-lg,
@@ -2299,3 +2299,191 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================================
+   FINAL V2: Match Daily Reports top-card proportions
+   Target layout:
+   - Daily Task Trend: wide left card
+   - Status Distribution: narrow right card, same as Daily Reports
+   Paste this at the VERY END of the CSS file.
+========================================================= */
+
+#weeklyReportRoot .dr-page > .wr-top-grid {
+    --wr-status-card-width: 426px;
+    --wr-top-gap: 26px;
+
+    display: grid !important;
+    grid-template-columns: minmax(0, calc(100% - var(--wr-status-card-width) - var(--wr-top-gap))) var(--wr-status-card-width) !important;
+    column-gap: var(--wr-top-gap) !important;
+    row-gap: 20px !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    margin-bottom: 20px !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:first-child {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child {
+    width: var(--wr-status-card-width) !important;
+    max-width: var(--wr-status-card-width) !important;
+    min-width: var(--wr-status-card-width) !important;
+    justify-self: end !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid .wr-chart-lg {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 360px !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-card-head {
+    flex-wrap: nowrap !important;
+    align-items: flex-start !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-filter-pill {
+    flex-shrink: 0 !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-stack {
+    min-height: 340px !important;
+    justify-content: center !important;
+    gap: 16px !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-shell,
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-chart {
+    width: 240px !important;
+    height: 240px !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-center-value {
+    font-size: 2.75rem !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-legend {
+    width: 100% !important;
+    justify-content: center !important;
+    gap: 12px 18px !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-legend-item {
+    min-width: 136px !important;
+}
+
+/* Keep the two-column look on large laptop screens */
+@media (max-width: 1399px) {
+    #weeklyReportRoot .dr-page > .wr-top-grid {
+        --wr-status-card-width: 410px;
+        --wr-top-gap: 22px;
+    }
+
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-shell,
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-chart {
+        width: 230px !important;
+        height: 230px !important;
+    }
+}
+
+/* Stack only on tablet/mobile */
+@media (max-width: 1199px) {
+    #weeklyReportRoot .dr-page > .wr-top-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        justify-self: stretch !important;
+    }
+
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-shell,
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-chart {
+        width: 250px !important;
+        height: 250px !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #weeklyReportRoot .dr-page > .wr-top-grid .wr-chart-lg {
+        height: 300px !important;
+    }
+
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-card-head {
+        flex-wrap: wrap !important;
+    }
+
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-shell,
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-chart {
+        width: 226px !important;
+        height: 226px !important;
+    }
+
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-legend {
+        justify-content: flex-start !important;
+    }
+
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-legend-item {
+        min-width: 100% !important;
+    }
+}
+
+/* ===== FINAL FIX: Reduce Status Distribution width ===== */
+#weeklyReportRoot .dr-page > .wr-top-grid {
+    --wr-status-card-width: 350px !important;
+    --wr-top-gap: 22px !important;
+
+    grid-template-columns:
+        minmax(0, calc(100% - var(--wr-status-card-width) - var(--wr-top-gap)))
+        var(--wr-status-card-width) !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child {
+    width: var(--wr-status-card-width) !important;
+    max-width: var(--wr-status-card-width) !important;
+    min-width: var(--wr-status-card-width) !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-stack {
+    min-height: 300px !important;
+    gap: 12px !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-shell,
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-chart {
+    width: 205px !important;
+    height: 205px !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-center-value {
+    font-size: 2.35rem !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-legend {
+    gap: 10px 14px !important;
+}
+
+#weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child .dr-donut-legend-item {
+    min-width: 120px !important;
+}
+
+/* Keep responsive stacking */
+@media (max-width: 1199px) {
+    #weeklyReportRoot .dr-page > .wr-top-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #weeklyReportRoot .dr-page > .wr-top-grid > .dr-card:last-child {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+}
+
