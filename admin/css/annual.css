@@ -1842,3 +1842,60 @@
         min-width: 100% !important;
     }
 }
+.ar-page .ar-chart-wrap {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+.ar-page .ar-chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
+.ar-page .ar-card--trend-full,
+.ar-page .ar-card--quarter,
+.ar-page .ar-card--staff-chart {
+    background: #ffffff;
+}
+
+[data-theme="dark"] .ar-page .ar-card--trend-full,
+[data-theme="dark"] .ar-page .ar-card--quarter,
+[data-theme="dark"] .ar-page .ar-card--staff-chart {
+    background: var(--ar-card);
+}
+
+.ar-page .ar-card--trend-full .ar-card-head,
+.ar-page .ar-card--quarter .ar-card-head,
+.ar-page .ar-card--staff-chart .ar-card-head {
+    margin-bottom: 8px;
+}
+
+.ar-page .ar-chart-wrap--dept {
+    height: 320px;
+}
+
+.ar-page .ar-chart-wrap--line {
+    height: 330px;
+}
+
+.ar-page .ar-chart-wrap--quarter {
+    height: 285px !important;
+}
+
+.ar-page .ar-chart-wrap--employee {
+    min-height: 260px;
+}
+
+@media (max-width: 767px) {
+    .ar-page .ar-chart-wrap--dept,
+    .ar-page .ar-chart-wrap--line {
+        height: 290px;
+    }
+
+    .ar-page .ar-chart-wrap--quarter {
+        height: 300px !important;
+    }
+}

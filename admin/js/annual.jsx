@@ -1,11 +1,62 @@
+// AnnualReportPage.jsx
+// Updated Chart.js UI to match the provided reference screenshots:
+// - soft grid lines
+// - bottom centered dot legend
+// - rounded gradient bars
+// - smooth line curves
+// - light gradient area fills
+// - small white/card-bordered points
+
 const { useEffect, useMemo, useRef, useState } = React;
 
 const MANILA_TZ = "Asia/Manila";
+
 const STATUS_COLORS = {
     Completed: "#16a34a",
     Ongoing: "#2563eb",
-    Overdue: "#ec4899"
+    Overdue: "#f43f5e"
 };
+
+function hexToRgba(hex, alpha) {
+    const clean = String(hex).replace("#", "");
+    const bigint = parseInt(clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function chartAreaGradient(context, color, topAlpha = 0.16, bottomAlpha = 0.02) {
+    const chart = context.chart;
+    const { ctx, chartArea } = chart;
+
+    if (!chartArea) {
+        return hexToRgba(color, topAlpha);
+    }
+
+    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    gradient.addColorStop(0, hexToRgba(color, topAlpha));
+    gradient.addColorStop(0.62, hexToRgba(color, topAlpha * 0.36));
+    gradient.addColorStop(1, hexToRgba(color, bottomAlpha));
+
+    return gradient;
+}
+
+function barGradient(context, color) {
+    const chart = context.chart;
+    const { ctx, chartArea } = chart;
+
+    if (!chartArea) {
+        return color;
+    }
+
+    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+    gradient.addColorStop(0, hexToRgba(color, 0.84));
+    gradient.addColorStop(1, hexToRgba(color, 1));
+
+    return gradient;
+}
 
 function getThemeMode() {
     return document.documentElement.getAttribute("data-theme") === "dark"
@@ -114,37 +165,56 @@ function buildDeadlineText(task) {
 
 function chartTheme(themeMode) {
     const isDark = themeMode === "dark";
+
     return {
         isDark,
-        axisColor: isDark ? "#a8b3c7" : "#7b8794",
+        axisColor: isDark ? "#a8b3c7" : "#7f8a9b",
         gridColor: isDark ? "rgba(255,255,255,0.08)" : "#edf1f7",
-        tooltipBg: isDark ? "#182133" : "#ffffff",
-        tooltipBorder: isDark ? "rgba(255,255,255,0.10)" : "#e5ebf4",
+        cardBg: isDark ? "#131c2f" : "#ffffff",
+        tooltipBg: isDark ? "#182235" : "#ffffff",
+        tooltipBorder: isDark ? "rgba(255,255,255,0.10)" : "#e6ebf3",
         tooltipText: isDark ? "#f8fafc" : "#18263f"
     };
 }
 
 function chartDefaults(themeMode) {
     const theme = chartTheme(themeMode);
+
     return {
         responsive: true,
         maintainAspectRatio: false,
+        layout: {
+            padding: {
+                top: 8,
+                right: 12,
+                bottom: 2,
+                left: 4
+            }
+        },
+        interaction: {
+            mode: "index",
+            intersect: false
+        },
         plugins: {
             legend: {
+                position: "bottom",
+                align: "center",
                 labels: {
                     usePointStyle: true,
                     pointStyle: "circle",
                     color: theme.axisColor,
+                    padding: 22,
+                    boxWidth: 8,
+                    boxHeight: 8,
                     font: {
                         family: "Nunito, sans-serif",
-                        size: 12,
+                        size: 13,
                         weight: "800"
-                    },
-                    boxWidth: 8,
-                    boxHeight: 8
+                    }
                 }
             },
             tooltip: {
+                enabled: true,
                 backgroundColor: theme.tooltipBg,
                 borderColor: theme.tooltipBorder,
                 borderWidth: 1,
@@ -153,31 +223,158 @@ function chartDefaults(themeMode) {
                 footerColor: theme.tooltipText,
                 padding: 12,
                 cornerRadius: 14,
-                titleFont: { family: "Nunito, sans-serif", weight: "900" },
-                bodyFont: { family: "Nunito, sans-serif", weight: "700" },
-                footerFont: { family: "Nunito, sans-serif", weight: "800" }
+                displayColors: true,
+                usePointStyle: true,
+                titleFont: {
+                    family: "Nunito, sans-serif",
+                    size: 13,
+                    weight: "900"
+                },
+                bodyFont: {
+                    family: "Nunito, sans-serif",
+                    size: 12,
+                    weight: "800"
+                },
+                footerFont: {
+                    family: "Nunito, sans-serif",
+                    size: 11,
+                    weight: "800"
+                }
+            }
+        },
+        elements: {
+            line: {
+                borderWidth: 2.2,
+                tension: 0.42,
+                capBezierPoints: true
+            },
+            point: {
+                radius: 3,
+                hoverRadius: 5,
+                hitRadius: 10,
+                borderWidth: 2
+            },
+            bar: {
+                borderSkipped: false,
+                borderRadius: 999
             }
         },
         scales: {
             x: {
-                grid: { display: false },
-                border: { display: false },
+                grid: {
+                    display: false,
+                    drawBorder: false
+                },
+                border: {
+                    display: false
+                },
                 ticks: {
                     color: theme.axisColor,
-                    font: { family: "Nunito, sans-serif", size: 12, weight: "800" }
+                    padding: 10,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "850"
+                    }
                 }
             },
             y: {
                 beginAtZero: true,
+                grace: "6%",
+                border: {
+                    display: false
+                },
+                grid: {
+                    color: theme.gridColor,
+                    drawBorder: false,
+                    lineWidth: 1
+                },
                 ticks: {
                     stepSize: 1,
+                    padding: 10,
                     color: theme.axisColor,
-                    font: { family: "Nunito, sans-serif", size: 12, weight: "700" }
-                },
-                grid: { color: theme.gridColor },
-                border: { display: false }
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "750"
+                    },
+                    callback: (value) => Number.isInteger(value) ? value : ""
+                }
             }
         }
+    };
+}
+
+function makeLineDataset(label, data, color, themeMode, fillAlpha = 0.16) {
+    const theme = chartTheme(themeMode);
+
+    return {
+        label,
+        data,
+        borderColor: color,
+        backgroundColor: (context) => chartAreaGradient(context, color, fillAlpha, 0),
+        pointBackgroundColor: color,
+        pointBorderColor: theme.cardBg,
+        pointHoverBackgroundColor: color,
+        pointHoverBorderColor: theme.cardBg,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointBorderWidth: 2,
+        borderWidth: 2.2,
+        tension: 0.42,
+        fill: true
+    };
+}
+
+function makeBarDataset(label, data, color, maxBarThickness = 28) {
+    return {
+        label,
+        data,
+        backgroundColor: (context) => barGradient(context, color),
+        borderColor: color,
+        borderWidth: 0,
+        borderRadius: 10,
+        borderSkipped: "bottom",
+        maxBarThickness,
+        categoryPercentage: 0.6,
+        barPercentage: 0.72
+    };
+}
+
+function getStackedRadius(datasetIndex, dataIndex, stackValues) {
+    const value = safeNum(stackValues[datasetIndex]?.[dataIndex]);
+
+    if (value <= 0) return 0;
+
+    const hasAbove = stackValues
+        .slice(datasetIndex + 1)
+        .some((series) => safeNum(series?.[dataIndex]) > 0);
+
+    const hasBelow = stackValues
+        .slice(0, datasetIndex)
+        .some((series) => safeNum(series?.[dataIndex]) > 0);
+
+    return {
+        topLeft: hasAbove ? 0 : 14,
+        topRight: hasAbove ? 0 : 14,
+        bottomLeft: hasBelow ? 0 : 4,
+        bottomRight: hasBelow ? 0 : 4
+    };
+}
+
+function makeStackedBarDataset(label, data, color, stackValues, datasetIndex, maxBarThickness = 28) {
+    return {
+        label,
+        data,
+        backgroundColor: (context) => barGradient(context, color),
+        borderColor: color,
+        borderWidth: 0,
+        borderSkipped: false,
+        borderRadius: (context) =>
+            getStackedRadius(datasetIndex, context.dataIndex, stackValues),
+        maxBarThickness,
+        categoryPercentage: 0.58,
+        barPercentage: 0.58
     };
 }
 
@@ -868,16 +1065,16 @@ function AnnualReportPage() {
             data: {
                 labels: deptLabels,
                 datasets: [
-                    { label: "Completed", data: deptCompleted, backgroundColor: STATUS_COLORS.Completed, borderRadius: 8, maxBarThickness: 28 },
-                    { label: "Ongoing", data: deptOngoing, backgroundColor: STATUS_COLORS.Ongoing, borderRadius: 8, maxBarThickness: 28 },
-                    { label: "Overdue", data: deptOverdue, backgroundColor: STATUS_COLORS.Overdue, borderRadius: 8, maxBarThickness: 28 }
+                    makeBarDataset("Completed", deptCompleted, STATUS_COLORS.Completed, 24),
+                    makeBarDataset("Ongoing", deptOngoing, STATUS_COLORS.Ongoing, 24),
+                    makeBarDataset("Overdue", deptOverdue, STATUS_COLORS.Overdue, 24)
                 ]
             },
             options: {
                 ...defaults,
                 plugins: {
                     ...defaults.plugins,
-                    legend: { ...defaults.plugins.legend, position: "top" },
+                    legend: { ...defaults.plugins.legend, position: "bottom" },
                     tooltip: {
                         ...defaults.plugins.tooltip,
                         callbacks: {
@@ -908,52 +1105,16 @@ function AnnualReportPage() {
             data: {
                 labels: monthNames,
                 datasets: [
-                    {
-                        label: "Completed",
-                        data: lineCompleted,
-                        borderColor: STATUS_COLORS.Completed,
-                        backgroundColor: "rgba(22,163,74,0.12)",
-                        pointBackgroundColor: STATUS_COLORS.Completed,
-                        pointBorderColor: themeMode === "dark" ? "#141b2d" : "#ffffff",
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        borderWidth: 2.4,
-                        tension: 0.42,
-                        fill: true
-                    },
-                    {
-                        label: "Ongoing",
-                        data: lineOngoing,
-                        borderColor: STATUS_COLORS.Ongoing,
-                        backgroundColor: "rgba(37,99,235,0.10)",
-                        pointBackgroundColor: STATUS_COLORS.Ongoing,
-                        pointBorderColor: themeMode === "dark" ? "#141b2d" : "#ffffff",
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        borderWidth: 2.2,
-                        tension: 0.42,
-                        fill: true
-                    },
-                    {
-                        label: "Overdue",
-                        data: lineOverdue,
-                        borderColor: STATUS_COLORS.Overdue,
-                        backgroundColor: "rgba(236,72,153,0.10)",
-                        pointBackgroundColor: STATUS_COLORS.Overdue,
-                        pointBorderColor: themeMode === "dark" ? "#141b2d" : "#ffffff",
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        borderWidth: 2.2,
-                        tension: 0.42,
-                        fill: true
-                    }
+                    makeLineDataset("Completed", lineCompleted, STATUS_COLORS.Completed, themeMode, 0.16),
+                    makeLineDataset("Ongoing", lineOngoing, STATUS_COLORS.Ongoing, themeMode, 0.13),
+                    makeLineDataset("Overdue", lineOverdue, STATUS_COLORS.Overdue, themeMode, 0.18)
                 ]
             },
             options: {
                 ...defaults,
                 plugins: {
                     ...defaults.plugins,
-                    legend: { ...defaults.plugins.legend, position: "top" },
+                    legend: { ...defaults.plugins.legend, position: "bottom" },
                     tooltip: {
                         ...defaults.plugins.tooltip,
                         callbacks: {
@@ -967,25 +1128,14 @@ function AnnualReportPage() {
                         }
                     }
                 },
-                scales: {
-                    ...defaults.scales,
-                    x: {
-                        ...defaults.scales.x,
-                        title: {
-                            display: true,
-                            text: `${year} Monthly Activity`,
-                            color: chartTheme(themeMode).axisColor,
-                            font: { family: "Nunito, sans-serif", weight: "800" }
-                        }
-                    }
-                }
+                scales: defaults.scales
             }
         });
 
         return () => {
             if (lineChart.current) lineChart.current.destroy();
         };
-    }, [monthNames, lineCompleted, lineOngoing, lineOverdue, year, themeMode]);
+    }, [monthNames, lineCompleted, lineOngoing, lineOverdue, themeMode]);
 
     useEffect(() => {
         if (!window.Chart || !quarterBarRef.current) return;
@@ -993,21 +1143,44 @@ function AnnualReportPage() {
         if (quarterBarChart.current) quarterBarChart.current.destroy();
 
         const defaults = chartDefaults(themeMode);
+        const quarterStackValues = [qCompleted, qOngoing, qOverdue];
+
         quarterBarChart.current = new Chart(quarterBarRef.current, {
             type: "bar",
             data: {
                 labels: quarterLabels,
                 datasets: [
-                    { label: "Completed", data: qCompleted, backgroundColor: STATUS_COLORS.Completed, borderRadius: 8, maxBarThickness: 30 },
-                    { label: "Ongoing", data: qOngoing, backgroundColor: STATUS_COLORS.Ongoing, borderRadius: 8, maxBarThickness: 30 },
-                    { label: "Overdue", data: qOverdue, backgroundColor: STATUS_COLORS.Overdue, borderRadius: 8, maxBarThickness: 30 }
+                    makeStackedBarDataset(
+                        "Completed",
+                        qCompleted,
+                        STATUS_COLORS.Completed,
+                        quarterStackValues,
+                        0,
+                        28
+                    ),
+                    makeStackedBarDataset(
+                        "Ongoing",
+                        qOngoing,
+                        STATUS_COLORS.Ongoing,
+                        quarterStackValues,
+                        1,
+                        28
+                    ),
+                    makeStackedBarDataset(
+                        "Overdue",
+                        qOverdue,
+                        STATUS_COLORS.Overdue,
+                        quarterStackValues,
+                        2,
+                        28
+                    )
                 ]
             },
             options: {
                 ...defaults,
                 plugins: {
                     ...defaults.plugins,
-                    legend: { ...defaults.plugins.legend, position: "top" },
+                    legend: { ...defaults.plugins.legend, position: "bottom" },
                     tooltip: {
                         ...defaults.plugins.tooltip,
                         callbacks: {
@@ -1020,8 +1193,15 @@ function AnnualReportPage() {
                     }
                 },
                 scales: {
-                    x: { ...defaults.scales.x, stacked: true },
-                    y: { ...defaults.scales.y, stacked: true }
+                    x: {
+                        ...defaults.scales.x,
+                        stacked: true
+                    },
+                    y: {
+                        ...defaults.scales.y,
+                        stacked: true,
+                        grace: "12%"
+                    }
                 }
             }
         });
@@ -1045,7 +1225,7 @@ function AnnualReportPage() {
                         data: [safeNum(summary.completed), safeNum(summary.ongoing), safeNum(summary.overdue)],
                         backgroundColor: [STATUS_COLORS.Completed, STATUS_COLORS.Ongoing, STATUS_COLORS.Overdue],
                         borderWidth: 4,
-                        borderColor: themeMode === "dark" ? "#141b2d" : "#ffffff",
+                        borderColor: chartTheme(themeMode).cardBg,
                         hoverOffset: 8,
                         borderRadius: 10
                     }
@@ -1086,8 +1266,8 @@ function AnnualReportPage() {
             data: {
                 labels: empNames,
                 datasets: [
-                    { label: "Completed", data: empCompleted, backgroundColor: STATUS_COLORS.Completed, borderRadius: 8, maxBarThickness: 18 },
-                    { label: "Overdue", data: empOverdue, backgroundColor: STATUS_COLORS.Overdue, borderRadius: 8, maxBarThickness: 18 }
+                    makeBarDataset("Completed", empCompleted, STATUS_COLORS.Completed, 18),
+                    makeBarDataset("Overdue", empOverdue, STATUS_COLORS.Overdue, 18)
                 ]
             },
             options: {
@@ -1095,7 +1275,7 @@ function AnnualReportPage() {
                 indexAxis: "y",
                 plugins: {
                     ...defaults.plugins,
-                    legend: { ...defaults.plugins.legend, position: "top" },
+                    legend: { ...defaults.plugins.legend, position: "bottom" },
                     tooltip: {
                         ...defaults.plugins.tooltip,
                         callbacks: {
@@ -1122,63 +1302,63 @@ function AnnualReportPage() {
 
     return (
         <div className="ar-page">
-        <div className="ar-page-head">
-            <div className="ar-page-head-main">
-                <h2 className="ar-page-title">Annual Task Report</h2>
-                <div className="ar-page-meta">
-                    <span className="ar-page-sub">{year}</span>
+            <div className="ar-page-head">
+                <div className="ar-page-head-main">
+                    <h2 className="ar-page-title">Annual Task Report</h2>
+                    <div className="ar-page-meta">
+                        <span className="ar-page-sub">{year}</span>
+                    </div>
                 </div>
-            </div>
 
-            <div className="ar-head-actions">
-                <div className="ar-year-nav">
-                    <button className="ar-ghost-btn" onClick={() => setYear((value) => value - 1)}>
-                        <i className="bi bi-chevron-left"></i>
-                        Prev
-                    </button>
-
-                    <div className="ar-year-range">{year}</div>
-
-                    <button
-                        className="ar-ghost-btn"
-                        onClick={() => setYear((value) => value + 1)}
-                        disabled={isCurrentYear}
-                    >
-                        Next
-                        <i className="bi bi-chevron-right"></i>
-                    </button>
-
-                    {!isCurrentYear ? (
-                        <button
-                            className="ar-ghost-btn ar-ghost-btn--primary"
-                            onClick={() => setYear(now.getFullYear())}
-                        >
-                            This Year
+                <div className="ar-head-actions">
+                    <div className="ar-year-nav">
+                        <button className="ar-ghost-btn" onClick={() => setYear((value) => value - 1)}>
+                            <i className="bi bi-chevron-left"></i>
+                            Prev
                         </button>
-                    ) : null}
-                </div>
 
-                <div className="ar-search-box ar-search-box--select ar-head-select">
-                    <i className="bi bi-buildings"></i>
-                    <select
-                        className="ar-select"
-                        value={departmentFilter}
-                        onChange={(e) => {
-                            setDepartmentFilter(e.target.value);
-                            setSelectedDept(null);
-                        }}
-                    >
-                        <option value="all">All Departments</option>
-                        {allDepartments.map((dep) => (
-                            <option key={dep.id} value={dep.id}>
-                                {dep.name}
-                            </option>
-                        ))}
-                    </select>
-                    <i className="bi bi-chevron-down ar-select-chevron"></i>
+                        <div className="ar-year-range">{year}</div>
+
+                        <button
+                            className="ar-ghost-btn"
+                            onClick={() => setYear((value) => value + 1)}
+                            disabled={isCurrentYear}
+                        >
+                            Next
+                            <i className="bi bi-chevron-right"></i>
+                        </button>
+
+                        {!isCurrentYear ? (
+                            <button
+                                className="ar-ghost-btn ar-ghost-btn--primary"
+                                onClick={() => setYear(now.getFullYear())}
+                            >
+                                This Year
+                            </button>
+                        ) : null}
+                    </div>
+
+                    <div className="ar-search-box ar-search-box--select ar-head-select">
+                        <i className="bi bi-buildings"></i>
+                        <select
+                            className="ar-select"
+                            value={departmentFilter}
+                            onChange={(e) => {
+                                setDepartmentFilter(e.target.value);
+                                setSelectedDept(null);
+                            }}
+                        >
+                            <option value="all">All Departments</option>
+                            {allDepartments.map((dep) => (
+                                <option key={dep.id} value={dep.id}>
+                                    {dep.name}
+                                </option>
+                            ))}
+                        </select>
+                        <i className="bi bi-chevron-down ar-select-chevron"></i>
+                    </div>
                 </div>
             </div>
-        </div>
 
             <div className="ar-toolbar-row">
                 <div className="ar-search-box ar-search-box--select">
@@ -1200,52 +1380,52 @@ function AnnualReportPage() {
                 </div>
             </div>
 
-<div className="ar-summary-grid ar-summary-grid--quarterly-style">
-    <SummaryCard
-        icon="bi-check2-circle"
-        label="Completed Tasks"
-        value={summary.completed}
-        subtext="Finished tasks during the selected year"
-        tone="success"
-        meta={`${pct(safeNum(summary.completed), safeNum(summary.total))}% of total`}
-    />
+            <div className="ar-summary-grid ar-summary-grid--quarterly-style">
+                <SummaryCard
+                    icon="bi-check2-circle"
+                    label="Completed Tasks"
+                    value={summary.completed}
+                    subtext="Finished tasks during the selected year"
+                    tone="success"
+                    meta={`${pct(safeNum(summary.completed), safeNum(summary.total))}% of total`}
+                />
 
-    <SummaryCard
-        icon="bi-arrow-repeat"
-        label="In Progress Tasks"
-        value={summary.ongoing}
-        subtext="Active tasks still underway"
-        tone="warning"
-        meta={`${pct(safeNum(summary.ongoing), safeNum(summary.total))}% of total`}
-    />
+                <SummaryCard
+                    icon="bi-arrow-repeat"
+                    label="In Progress Tasks"
+                    value={summary.ongoing}
+                    subtext="Active tasks still underway"
+                    tone="warning"
+                    meta={`${pct(safeNum(summary.ongoing), safeNum(summary.total))}% of total`}
+                />
 
-    <SummaryCard
-        icon="bi-exclamation-circle"
-        label="Overdue Tasks"
-        value={summary.overdue}
-        subtext="Tasks that missed their deadline"
-        tone="danger"
-        meta={`${pct(safeNum(summary.overdue), safeNum(summary.total))}% of total`}
-    />
+                <SummaryCard
+                    icon="bi-exclamation-circle"
+                    label="Overdue Tasks"
+                    value={summary.overdue}
+                    subtext="Tasks that missed their deadline"
+                    tone="danger"
+                    meta={`${pct(safeNum(summary.overdue), safeNum(summary.total))}% of total`}
+                />
 
-    <SummaryCard
-        icon="bi-list-task"
-        label="Total Tasks"
-        value={summary.total}
-        subtext="Annual task scope"
-        tone="primary"
-        meta={year}
-    />
+                <SummaryCard
+                    icon="bi-list-task"
+                    label="Total Tasks"
+                    value={summary.total}
+                    subtext="Annual task scope"
+                    tone="primary"
+                    meta={year}
+                />
 
-    <SummaryCard
-        icon="bi-graph-up-arrow"
-        label="Completion Rate"
-        value={`${summaryRate}%`}
-        subtext="Completed versus total tasks"
-        tone={summaryRate >= 70 ? "success" : summaryRate >= 40 ? "warning" : "danger"}
-        meta="Annual Result"
-    />
-</div>
+                <SummaryCard
+                    icon="bi-graph-up-arrow"
+                    label="Completion Rate"
+                    value={`${summaryRate}%`}
+                    subtext="Completed versus total tasks"
+                    tone={summaryRate >= 70 ? "success" : summaryRate >= 40 ? "warning" : "danger"}
+                    meta="Annual Result"
+                />
+            </div>
 
             <div className="ar-card ar-card--trend-full">
                 <div className="ar-card-head">
@@ -1342,7 +1522,7 @@ function AnnualReportPage() {
                         <div className="ar-card-subtitle">Sorted by most tasks completed in {year}</div>
                     </div>
                 </div>
-                <div className="ar-chart-wrap ar-chart-wrap--employee" style={{ height: `${Math.max(240, empSorted.length * 38)}px` }}>
+                <div className="ar-chart-wrap ar-chart-wrap--employee" style={{ height: `${Math.max(260, empSorted.length * 42)}px` }}>
                     <canvas ref={hBarRef}></canvas>
                 </div>
             </div>
@@ -1516,3 +1696,5 @@ function AnnualReportPage() {
 const mountNode = document.getElementById("root") || document.getElementById("annualReportRoot");
 const root = ReactDOM.createRoot(mountNode);
 root.render(<AnnualReportPage />);
+
+
