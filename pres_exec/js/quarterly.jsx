@@ -9,6 +9,280 @@ const QUARTER_RANGES = {
     4: "Oct – Dec"
 };
 
+
+const STATUS_COLORS = {
+    Completed: "#16a34a",
+    Ongoing: "#2563eb",
+    Overdue: "#f43f5e"
+};
+
+function hexToRgba(hex, alpha) {
+    const clean = String(hex).replace("#", "");
+    const bigint = parseInt(clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function chartAreaGradient(context, color, topAlpha = 0.16, bottomAlpha = 0.02) {
+    const chart = context.chart;
+    const { ctx, chartArea } = chart;
+
+    if (!chartArea) {
+        return hexToRgba(color, topAlpha);
+    }
+
+    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    gradient.addColorStop(0, hexToRgba(color, topAlpha));
+    gradient.addColorStop(0.62, hexToRgba(color, topAlpha * 0.36));
+    gradient.addColorStop(1, hexToRgba(color, bottomAlpha));
+
+    return gradient;
+}
+
+function barGradient(context, color) {
+    const chart = context.chart;
+    const { ctx, chartArea } = chart;
+
+    if (!chartArea) {
+        return color;
+    }
+
+    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+    gradient.addColorStop(0, hexToRgba(color, 0.84));
+    gradient.addColorStop(1, hexToRgba(color, 1));
+
+    return gradient;
+}
+
+function chartTheme(themeMode) {
+    const isDark = themeMode === "dark";
+
+    return {
+        isDark,
+        axisColor: isDark ? "#a8b3c7" : "#7f8a9b",
+        gridColor: isDark ? "rgba(255,255,255,0.08)" : "#edf1f7",
+        cardBg: isDark ? "#131c2f" : "#ffffff",
+        tooltipBg: isDark ? "#182235" : "#ffffff",
+        tooltipBorder: isDark ? "rgba(255,255,255,0.10)" : "#e6ebf3",
+        tooltipText: isDark ? "#f8fafc" : "#18263f"
+    };
+}
+
+function chartDefaults(themeMode) {
+    const theme = chartTheme(themeMode);
+
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+            padding: {
+                top: 8,
+                right: 12,
+                bottom: 2,
+                left: 4
+            }
+        },
+        interaction: {
+            mode: "index",
+            intersect: false
+        },
+        plugins: {
+            legend: {
+                position: "bottom",
+                align: "center",
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: "circle",
+                    color: theme.axisColor,
+                    padding: 22,
+                    boxWidth: 8,
+                    boxHeight: 8,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "800"
+                    }
+                }
+            },
+            tooltip: {
+                enabled: true,
+                backgroundColor: theme.tooltipBg,
+                borderColor: theme.tooltipBorder,
+                borderWidth: 1,
+                titleColor: theme.tooltipText,
+                bodyColor: theme.tooltipText,
+                footerColor: theme.tooltipText,
+                padding: 12,
+                cornerRadius: 14,
+                displayColors: true,
+                usePointStyle: true,
+                titleFont: {
+                    family: "Nunito, sans-serif",
+                    size: 13,
+                    weight: "900"
+                },
+                bodyFont: {
+                    family: "Nunito, sans-serif",
+                    size: 12,
+                    weight: "800"
+                },
+                footerFont: {
+                    family: "Nunito, sans-serif",
+                    size: 11,
+                    weight: "800"
+                }
+            }
+        },
+        elements: {
+            line: {
+                borderWidth: 2.2,
+                tension: 0.42,
+                capBezierPoints: true
+            },
+            point: {
+                radius: 3,
+                hoverRadius: 5,
+                hitRadius: 10,
+                borderWidth: 2
+            },
+            bar: {
+                borderSkipped: false,
+                borderRadius: 10
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false,
+                    drawBorder: false
+                },
+                border: {
+                    display: false
+                },
+                ticks: {
+                    color: theme.axisColor,
+                    padding: 10,
+                    maxRotation: 0,
+                    autoSkip: true,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "850"
+                    }
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grace: "6%",
+                border: {
+                    display: false
+                },
+                grid: {
+                    color: theme.gridColor,
+                    drawBorder: false,
+                    lineWidth: 1
+                },
+                ticks: {
+                    stepSize: 1,
+                    padding: 10,
+                    color: theme.axisColor,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "750"
+                    },
+                    callback: (value) => Number.isInteger(value) ? value : ""
+                }
+            }
+        }
+    };
+}
+
+function makeBarDataset(label, data, color, maxBarThickness = 28) {
+    return {
+        label,
+        data,
+        backgroundColor: (context) => barGradient(context, color),
+        borderColor: color,
+        borderWidth: 0,
+        borderRadius: 10,
+        borderSkipped: "bottom",
+        maxBarThickness,
+        categoryPercentage: 0.6,
+        barPercentage: 0.72
+    };
+}
+
+function getStackedRadius(datasetIndex, dataIndex, stackValues) {
+    const value = safeNum(stackValues[datasetIndex]?.[dataIndex]);
+
+    if (value <= 0) return 0;
+
+    const hasAbove = stackValues
+        .slice(datasetIndex + 1)
+        .some((series) => safeNum(series?.[dataIndex]) > 0);
+
+    const hasBelow = stackValues
+        .slice(0, datasetIndex)
+        .some((series) => safeNum(series?.[dataIndex]) > 0);
+
+    return {
+        topLeft: hasAbove ? 0 : 14,
+        topRight: hasAbove ? 0 : 14,
+        bottomLeft: hasBelow ? 0 : 4,
+        bottomRight: hasBelow ? 0 : 4
+    };
+}
+
+function makeStackedBarDataset(label, data, color, stackValues, datasetIndex, maxBarThickness = 28) {
+    return {
+        label,
+        data,
+        backgroundColor: (context) => barGradient(context, color),
+        borderColor: color,
+        borderWidth: 0,
+        borderSkipped: false,
+        borderRadius: (context) =>
+            getStackedRadius(datasetIndex, context.dataIndex, stackValues),
+        maxBarThickness,
+        categoryPercentage: 0.58,
+        barPercentage: 0.58
+    };
+}
+
+function loadChartJs() {
+    if (window.Chart) {
+        return Promise.resolve(window.Chart);
+    }
+
+    if (window.__quarterlyChartJsPromise) {
+        return window.__quarterlyChartJsPromise;
+    }
+
+    window.__quarterlyChartJsPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[src*="chart.js"]');
+
+        if (existing) {
+            existing.addEventListener("load", () => resolve(window.Chart));
+            existing.addEventListener("error", reject);
+            if (window.Chart) resolve(window.Chart);
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+        script.async = true;
+        script.onload = () => resolve(window.Chart);
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+
+    return window.__quarterlyChartJsPromise;
+}
+
 function getThemeMode() {
     return document.documentElement.getAttribute("data-theme") === "dark"
         ? "dark"
@@ -924,6 +1198,11 @@ function QuarterlyReportPage() {
     const donutChartRef = useRef(null);
     const employeeChartRef = useRef(null);
 
+    const deptChart = useRef(null);
+    const monthlyChart = useRef(null);
+    const donutChart = useRef(null);
+    const employeeChart = useRef(null);
+
     const { quarterStart, quarterEnd } = useMemo(
         () => getQuarterRange(year, quarter),
         [year, quarter]
@@ -1067,9 +1346,9 @@ function QuarterlyReportPage() {
         const total = scopedSummary.total || 0;
 
         return [
-            { label: "Completed", value: scopedSummary.completed, color: "#16a34a" },
-            { label: "Ongoing", value: scopedSummary.ongoing, color: "#2563eb" },
-            { label: "Overdue", value: scopedSummary.overdue, color: "#e11d48" }
+            { label: "Completed", value: scopedSummary.completed, color: STATUS_COLORS.Completed },
+            { label: "Ongoing", value: scopedSummary.ongoing, color: STATUS_COLORS.Ongoing },
+            { label: "Overdue", value: scopedSummary.overdue, color: STATUS_COLORS.Overdue }
         ].map((item) => ({
             ...item,
             percent: pct(item.value, total)
@@ -1086,391 +1365,262 @@ function QuarterlyReportPage() {
     const empOverdue = useMemo(() => employeePerformanceRows.map((e) => e.overdue), [employeePerformanceRows]);
 
     useEffect(() => {
-        if (!window.echarts || !deptChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(deptChartRef.current) ||
-            window.echarts.init(deptChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !deptChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+            if (deptChart.current) deptChart.current.destroy();
 
-        chart.setOption(
-            {
-                animationDuration: 650,
-                animationEasing: "cubicOut",
-                color: ["#16a34a", "#2563eb", "#e11d48"],
-                grid: {
-                    top: 28,
-                    left: 22,
-                    right: 18,
-                    bottom: 44,
-                    containLabel: true
+            const defaults = chartDefaults(themeMode);
+            deptChart.current = new Chart(deptChartRef.current, {
+                type: "bar",
+                data: {
+                    labels: deptLabels,
+                    datasets: [
+                        makeBarDataset("Completed", deptCompleted, STATUS_COLORS.Completed, 24),
+                        makeBarDataset("Ongoing", deptOngoing, STATUS_COLORS.Ongoing, 24),
+                        makeBarDataset("Overdue", deptOverdue, STATUS_COLORS.Overdue, 24)
+                    ]
                 },
-                tooltip: {
-                    trigger: "axis",
-                    axisPointer: { type: "shadow" },
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                legend: {
-                    top: 0,
-                    textStyle: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontWeight: 800
-                    }
-                },
-                xAxis: {
-                    type: "category",
-                    data: deptLabels,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        margin: 10
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
+                options: {
+                    ...defaults,
+                    onClick: (_event, elements) => {
+                        if (!elements.length) return;
+
+                        const clicked = deptChartRows[elements[0].index];
+                        if (!clicked) return;
+
+                        setSelectedDept((prev) =>
+                            prev?.department_id === clicked.department_id ? null : clicked
+                        );
                     },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
+                    plugins: {
+                        ...defaults.plugins,
+                        legend: { ...defaults.plugins.legend, position: "bottom" },
+                        tooltip: {
+                            ...defaults.plugins.tooltip,
+                            callbacks: {
+                                afterLabel: (ctx) => {
+                                    const dept = deptChartRows[ctx.dataIndex];
+                                    return dept ? `Completion rate: ${dept.completion_rate}%` : "";
+                                }
+                            }
                         }
-                    }
-                },
-                series: [
-                    { name: "Completed", type: "bar", barWidth: 18, data: deptCompleted, itemStyle: { borderRadius: [8, 8, 0, 0] } },
-                    { name: "Ongoing", type: "bar", barWidth: 18, data: deptOngoing, itemStyle: { borderRadius: [8, 8, 0, 0] } },
-                    { name: "Overdue", type: "bar", barWidth: 18, data: deptOverdue, itemStyle: { borderRadius: [8, 8, 0, 0] } }
-                ]
-            },
-            true
-        );
-
-        const clickHandler = (params) => {
-            const clicked = deptChartRows[params.dataIndex];
-            if (!clicked) return;
-
-            setSelectedDept((prev) =>
-                prev?.department_id === clicked.department_id ? null : clicked
-            );
-        };
-
-        chart.off("click");
-        chart.on("click", clickHandler);
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                    },
+                    scales: defaults.scales
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            chart.off("click", clickHandler);
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (deptChart.current) {
+                deptChart.current.destroy();
+                deptChart.current = null;
+            }
         };
     }, [deptLabels, deptCompleted, deptOngoing, deptOverdue, deptChartRows, themeMode]);
 
     useEffect(() => {
-        if (!window.echarts || !monthlyChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(monthlyChartRef.current) ||
-            window.echarts.init(monthlyChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !monthlyChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+            if (monthlyChart.current) monthlyChart.current.destroy();
 
-        chart.setOption(
-            {
-                animationDuration: 700,
-                animationEasing: "cubicOut",
-                color: ["#16a34a", "#2563eb", "#e11d48"],
-                grid: {
-                    top: 28,
-                    left: 22,
-                    right: 18,
-                    bottom: 44,
-                    containLabel: true
+            const defaults = chartDefaults(themeMode);
+            const monthlyStackValues = [trendCompleted, trendOngoing, trendOverdue];
+
+            monthlyChart.current = new Chart(monthlyChartRef.current, {
+                type: "bar",
+                data: {
+                    labels: monthNames,
+                    datasets: [
+                        makeStackedBarDataset(
+                            "Completed",
+                            trendCompleted,
+                            STATUS_COLORS.Completed,
+                            monthlyStackValues,
+                            0,
+                            28
+                        ),
+                        makeStackedBarDataset(
+                            "Ongoing",
+                            trendOngoing,
+                            STATUS_COLORS.Ongoing,
+                            monthlyStackValues,
+                            1,
+                            28
+                        ),
+                        makeStackedBarDataset(
+                            "Overdue",
+                            trendOverdue,
+                            STATUS_COLORS.Overdue,
+                            monthlyStackValues,
+                            2,
+                            28
+                        )
+                    ]
                 },
-                tooltip: {
-                    trigger: "axis",
-                    axisPointer: { type: "shadow" },
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                legend: {
-                    top: 0,
-                    textStyle: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontWeight: 800
-                    }
-                },
-                xAxis: {
-                    type: "category",
-                    data: monthNames,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        margin: 10
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
+                options: {
+                    ...defaults,
+                    plugins: {
+                        ...defaults.plugins,
+                        legend: { ...defaults.plugins.legend, position: "bottom" },
+                        tooltip: {
+                            ...defaults.plugins.tooltip,
+                            callbacks: {
+                                footer: (items) => {
+                                    if (!items.length) return "";
+                                    const idx = items[0].dataIndex;
+                                    const completed = trendCompleted[idx] || 0;
+                                    const total =
+                                        completed +
+                                        (trendOngoing[idx] || 0) +
+                                        (trendOverdue[idx] || 0);
+
+                                    return `Completion rate: ${pct(completed, total)}%`;
+                                }
+                            }
+                        }
                     },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
+                    scales: {
+                        x: {
+                            ...defaults.scales.x,
+                            stacked: true
+                        },
+                        y: {
+                            ...defaults.scales.y,
+                            stacked: true,
+                            grace: "12%"
                         }
                     }
-                },
-                series: [
-                    { name: "Completed", type: "bar", stack: "months", barWidth: 28, data: trendCompleted, itemStyle: { borderRadius: [0, 0, 8, 8] } },
-                    { name: "Ongoing", type: "bar", stack: "months", barWidth: 28, data: trendOngoing, itemStyle: { borderRadius: [0, 0, 0, 0] } },
-                    { name: "Overdue", type: "bar", stack: "months", barWidth: 28, data: trendOverdue, itemStyle: { borderRadius: [8, 8, 0, 0] } }
-                ]
-            },
-            true
-        );
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (monthlyChart.current) {
+                monthlyChart.current.destroy();
+                monthlyChart.current = null;
+            }
         };
     }, [monthNames, trendCompleted, trendOngoing, trendOverdue, themeMode]);
 
     useEffect(() => {
-        if (!window.echarts || !donutChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(donutChartRef.current) ||
-            window.echarts.init(donutChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !donutChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const separatorColor = isDark ? "#12192b" : "#ffffff";
+            if (donutChart.current) donutChart.current.destroy();
 
-        chart.setOption(
-            {
-                animation: true,
-                tooltip: {
-                    trigger: "item",
-                    formatter: (params) =>
-                        `${params.name}: ${params.value} (${params.percent}%)`,
-                    backgroundColor: isDark ? "#182133" : "#ffffff",
-                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4",
-                    borderWidth: 1,
-                    textStyle: {
-                        color: isDark ? "#f8fafc" : "#18263f",
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                series: [
-                    {
-                        type: "pie",
-                        radius: ["62%", "85%"],
-                        center: ["50%", "50%"],
-                        startAngle: 90,
-                        clockwise: true,
-                        minAngle: 1,
-                        avoidLabelOverlap: true,
-                        label: { show: false },
-                        labelLine: { show: false },
-                        emphasis: {
-                            scale: true,
-                            scaleSize: 8,
-                            itemStyle: {
-                                borderColor: separatorColor,
-                                borderWidth: 5,
-                                borderRadius: 10
-                            }
-                        },
-                        itemStyle: {
-                            borderColor: separatorColor,
-                            borderWidth: 4,
+            const theme = chartTheme(themeMode);
+            donutChart.current = new Chart(donutChartRef.current, {
+                type: "doughnut",
+                data: {
+                    labels: ["Completed", "Ongoing", "Overdue"],
+                    datasets: [
+                        {
+                            data: [
+                                safeNum(scopedSummary.completed),
+                                safeNum(scopedSummary.ongoing),
+                                safeNum(scopedSummary.overdue)
+                            ],
+                            backgroundColor: [
+                                STATUS_COLORS.Completed,
+                                STATUS_COLORS.Ongoing,
+                                STATUS_COLORS.Overdue
+                            ],
+                            borderWidth: 5,
+                            borderColor: theme.cardBg,
+                            hoverOffset: 6,
                             borderRadius: 10
-                        },
-                        data: [
-                            {
-                                value: scopedSummary.completed,
-                                name: "Completed",
-                                itemStyle: { color: "#16a34a" }
-                            },
-                            {
-                                value: scopedSummary.ongoing,
-                                name: "Ongoing",
-                                itemStyle: { color: "#2563eb" }
-                            },
-                            {
-                                value: scopedSummary.overdue,
-                                name: "Overdue",
-                                itemStyle: { color: "#e11d48" }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "74%",
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            ...chartDefaults(themeMode).plugins.tooltip,
+                            callbacks: {
+                                label: (ctx) => {
+                                    const val = safeNum(ctx.raw);
+                                    return ` ${ctx.label}: ${val} (${pct(val, scopedSummary.total)}%)`;
+                                }
                             }
-                        ]
+                        }
                     }
-                ]
-            },
-            true
-        );
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (donutChart.current) {
+                donutChart.current.destroy();
+                donutChart.current = null;
+            }
         };
     }, [scopedSummary, themeMode]);
 
     useEffect(() => {
-        if (!window.echarts || !employeeChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(employeeChartRef.current) ||
-            window.echarts.init(employeeChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !employeeChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+            if (employeeChart.current) employeeChart.current.destroy();
 
-        chart.setOption(
-            {
-                animationDuration: 700,
-                animationEasing: "cubicOut",
-                color: ["#16a34a", "#e11d48"],
-                grid: {
-                    top: 30,
-                    left: 110,
-                    right: 18,
-                    bottom: 20,
-                    containLabel: true
+            const defaults = chartDefaults(themeMode);
+            employeeChart.current = new Chart(employeeChartRef.current, {
+                type: "bar",
+                data: {
+                    labels: empNames,
+                    datasets: [
+                        makeBarDataset("Completed", empCompleted, STATUS_COLORS.Completed, 18),
+                        makeBarDataset("Overdue", empOverdue, STATUS_COLORS.Overdue, 18)
+                    ]
                 },
-                tooltip: {
-                    trigger: "axis",
-                    axisPointer: { type: "shadow" },
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                legend: {
-                    top: 0,
-                    textStyle: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontWeight: 800
-                    }
-                },
-                xAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
-                    },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
+                options: {
+                    ...defaults,
+                    indexAxis: "y",
+                    plugins: {
+                        ...defaults.plugins,
+                        legend: { ...defaults.plugins.legend, position: "bottom" },
+                        tooltip: {
+                            ...defaults.plugins.tooltip,
+                            callbacks: {
+                                afterLabel: (ctx) => {
+                                    const emp = employeePerformanceRows[ctx.dataIndex];
+                                    return emp ? `Completion rate: ${emp.completion_rate}%` : "";
+                                }
+                            }
                         }
-                    }
-                },
-                yAxis: {
-                    type: "category",
-                    data: empNames,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800
-                    }
-                },
-                series: [
-                    {
-                        name: "Completed",
-                        type: "bar",
-                        barWidth: 16,
-                        data: empCompleted,
-                        itemStyle: { borderRadius: [0, 8, 8, 0] }
                     },
-                    {
-                        name: "Overdue",
-                        type: "bar",
-                        barWidth: 16,
-                        data: empOverdue,
-                        itemStyle: { borderRadius: [0, 8, 8, 0] }
+                    scales: {
+                        x: defaults.scales.y,
+                        y: defaults.scales.x
                     }
-                ]
-            },
-            true
-        );
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (employeeChart.current) {
+                employeeChart.current.destroy();
+                employeeChart.current = null;
+            }
         };
-    }, [empNames, empCompleted, empOverdue, themeMode]);
+    }, [empNames, empCompleted, empOverdue, employeePerformanceRows, themeMode]);
 
     const isCurrentQuarter =
         year === now.getFullYear() && quarter === getCurrentQuarter();
@@ -1643,7 +1793,7 @@ function QuarterlyReportPage() {
                     )}
                 </div>
 
-                <div ref={deptChartRef} className="qr-chart-lg"></div>
+                <div className="ar-chart-wrap qr-chart-lg"><canvas ref={deptChartRef}></canvas></div>
             </div>
 
             <div className="qr-split-grid">
@@ -1659,7 +1809,7 @@ function QuarterlyReportPage() {
                         <div className="dr-filter-pill">{quarterLabel}</div>
                     </div>
 
-                    <div ref={monthlyChartRef} className="qr-chart-md"></div>
+                    <div className="ar-chart-wrap qr-chart-md"><canvas ref={monthlyChartRef}></canvas></div>
                 </div>
 
                 <div className="dr-card">
@@ -1678,7 +1828,7 @@ function QuarterlyReportPage() {
 
                     <div className="dr-donut-stack">
                         <div className="dr-donut-shell">
-                            <div ref={donutChartRef} className="dr-donut-chart"></div>
+                            <canvas ref={donutChartRef} className="dr-donut-chart"></canvas>
 
                             <div className="dr-donut-center">
                                 <span className="dr-donut-center-kicker">Total</span>
@@ -1730,12 +1880,13 @@ function QuarterlyReportPage() {
                 </div>
 
                 <div
-                    ref={employeeChartRef}
-                    className="qr-chart-hbar"
+                    className="ar-chart-wrap qr-chart-hbar"
                     style={{
-                        height: `${Math.max(320, employeePerformanceRows.length * 42)}px`
+                        height: `${Math.max(260, employeePerformanceRows.length * 42)}px`
                     }}
-                ></div>
+                >
+                    <canvas ref={employeeChartRef}></canvas>
+                </div>
             </div>
 
             <div className="dr-card dr-card--table dr-card--table-full qr-block-gap">

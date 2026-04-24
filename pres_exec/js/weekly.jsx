@@ -2,6 +2,264 @@ const { useEffect, useMemo, useRef, useState } = React;
 
 const MANILA_TZ = "Asia/Manila";
 
+
+const STATUS_COLORS = {
+    Completed: "#16a34a",
+    Ongoing: "#2563eb",
+    Overdue: "#f43f5e"
+};
+
+function hexToRgba(hex, alpha) {
+    const clean = String(hex).replace("#", "");
+    const bigint = parseInt(clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function chartAreaGradient(context, color, topAlpha = 0.16, bottomAlpha = 0.02) {
+    const chart = context.chart;
+    const { ctx, chartArea } = chart;
+
+    if (!chartArea) {
+        return hexToRgba(color, topAlpha);
+    }
+
+    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    gradient.addColorStop(0, hexToRgba(color, topAlpha));
+    gradient.addColorStop(0.62, hexToRgba(color, topAlpha * 0.36));
+    gradient.addColorStop(1, hexToRgba(color, bottomAlpha));
+
+    return gradient;
+}
+
+function barGradient(context, color) {
+    const chart = context.chart;
+    const { ctx, chartArea } = chart;
+
+    if (!chartArea) {
+        return color;
+    }
+
+    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+    gradient.addColorStop(0, hexToRgba(color, 0.84));
+    gradient.addColorStop(1, hexToRgba(color, 1));
+
+    return gradient;
+}
+
+function chartTheme(themeMode) {
+    const isDark = themeMode === "dark";
+
+    return {
+        isDark,
+        axisColor: isDark ? "#a8b3c7" : "#7f8a9b",
+        gridColor: isDark ? "rgba(255,255,255,0.08)" : "#edf1f7",
+        cardBg: isDark ? "#131c2f" : "#ffffff",
+        tooltipBg: isDark ? "#182235" : "#ffffff",
+        tooltipBorder: isDark ? "rgba(255,255,255,0.10)" : "#e6ebf3",
+        tooltipText: isDark ? "#f8fafc" : "#18263f"
+    };
+}
+
+function chartDefaults(themeMode) {
+    const theme = chartTheme(themeMode);
+
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+            padding: {
+                top: 8,
+                right: 12,
+                bottom: 2,
+                left: 4
+            }
+        },
+        interaction: {
+            mode: "index",
+            intersect: false
+        },
+        plugins: {
+            legend: {
+                position: "bottom",
+                align: "center",
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: "circle",
+                    color: theme.axisColor,
+                    padding: 22,
+                    boxWidth: 8,
+                    boxHeight: 8,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "800"
+                    }
+                }
+            },
+            tooltip: {
+                enabled: true,
+                backgroundColor: theme.tooltipBg,
+                borderColor: theme.tooltipBorder,
+                borderWidth: 1,
+                titleColor: theme.tooltipText,
+                bodyColor: theme.tooltipText,
+                footerColor: theme.tooltipText,
+                padding: 12,
+                cornerRadius: 14,
+                displayColors: true,
+                usePointStyle: true,
+                titleFont: {
+                    family: "Nunito, sans-serif",
+                    size: 13,
+                    weight: "900"
+                },
+                bodyFont: {
+                    family: "Nunito, sans-serif",
+                    size: 12,
+                    weight: "800"
+                },
+                footerFont: {
+                    family: "Nunito, sans-serif",
+                    size: 11,
+                    weight: "800"
+                }
+            }
+        },
+        elements: {
+            line: {
+                borderWidth: 2.2,
+                tension: 0.42,
+                capBezierPoints: true
+            },
+            point: {
+                radius: 3,
+                hoverRadius: 5,
+                hitRadius: 10,
+                borderWidth: 2
+            },
+            bar: {
+                borderSkipped: false,
+                borderRadius: 10
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false,
+                    drawBorder: false
+                },
+                border: {
+                    display: false
+                },
+                ticks: {
+                    color: theme.axisColor,
+                    padding: 10,
+                    maxRotation: 0,
+                    autoSkip: true,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "850"
+                    }
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grace: "6%",
+                border: {
+                    display: false
+                },
+                grid: {
+                    color: theme.gridColor,
+                    drawBorder: false,
+                    lineWidth: 1
+                },
+                ticks: {
+                    stepSize: 1,
+                    padding: 10,
+                    color: theme.axisColor,
+                    font: {
+                        family: "Nunito, sans-serif",
+                        size: 13,
+                        weight: "750"
+                    },
+                    callback: (value) => Number.isInteger(value) ? value : ""
+                }
+            }
+        }
+    };
+}
+
+function makeLineDataset(label, data, color, themeMode, fillAlpha = 0.16) {
+    const theme = chartTheme(themeMode);
+
+    return {
+        label,
+        data,
+        borderColor: color,
+        backgroundColor: (context) => chartAreaGradient(context, color, fillAlpha, 0),
+        pointBackgroundColor: color,
+        pointBorderColor: theme.cardBg,
+        pointHoverBackgroundColor: color,
+        pointHoverBorderColor: theme.cardBg,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointBorderWidth: 2,
+        borderWidth: 2.2,
+        tension: 0.42,
+        fill: true
+    };
+}
+
+function makeBarDataset(label, data, color, maxBarThickness = 28) {
+    return {
+        label,
+        data,
+        backgroundColor: (context) => barGradient(context, color),
+        borderColor: color,
+        borderWidth: 0,
+        borderRadius: 10,
+        borderSkipped: "bottom",
+        maxBarThickness,
+        categoryPercentage: 0.6,
+        barPercentage: 0.72
+    };
+}
+
+function loadChartJs() {
+    if (window.Chart) {
+        return Promise.resolve(window.Chart);
+    }
+
+    if (window.__weeklyChartJsPromise) {
+        return window.__weeklyChartJsPromise;
+    }
+
+    window.__weeklyChartJsPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[src*="chart.js"]');
+
+        if (existing) {
+            existing.addEventListener("load", () => resolve(window.Chart));
+            existing.addEventListener("error", reject);
+            if (window.Chart) resolve(window.Chart);
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+        script.async = true;
+        script.onload = () => resolve(window.Chart);
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+
+    return window.__weeklyChartJsPromise;
+}
+
 function getThemeMode() {
     return document.documentElement.getAttribute("data-theme") === "dark"
         ? "dark"
@@ -933,6 +1191,10 @@ function WeeklyReportPage() {
     const donutChartRef = useRef(null);
     const deptChartRef = useRef(null);
 
+    const trendChart = useRef(null);
+    const donutChart = useRef(null);
+    const deptChart = useRef(null);
+
     const weekStart = useMemo(() => getWeekStart(weekOffset), [weekOffset]);
     const weekEnd = useMemo(() => {
         const d = new Date(weekStart);
@@ -1043,9 +1305,9 @@ function WeeklyReportPage() {
         const total = scopedSummary.total || 0;
 
         return [
-            { label: "Completed", value: scopedSummary.completed, color: "#16a34a" },
-            { label: "Ongoing", value: scopedSummary.ongoing, color: "#2563eb" },
-            { label: "Overdue", value: scopedSummary.overdue, color: "#e11d48" }
+            { label: "Completed", value: scopedSummary.completed, color: STATUS_COLORS.Completed },
+            { label: "Ongoing", value: scopedSummary.ongoing, color: STATUS_COLORS.Ongoing },
+            { label: "Overdue", value: scopedSummary.overdue, color: STATUS_COLORS.Overdue }
         ].map((item) => ({
             ...item,
             percent: pct(item.value, total)
@@ -1102,294 +1364,169 @@ function WeeklyReportPage() {
     const deptOverdue = useMemo(() => departmentRows.map((d) => d.overdue), [departmentRows]);
 
     useEffect(() => {
-        if (!window.echarts || !trendChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(trendChartRef.current) ||
-            window.echarts.init(trendChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !trendChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+            if (trendChart.current) trendChart.current.destroy();
 
-        chart.setOption(
-            {
-                animationDuration: 700,
-                animationEasing: "cubicOut",
-                color: ["#16a34a", "#2563eb", "#e11d48"],
-                grid: {
-                    top: 28,
-                    left: 24,
-                    right: 18,
-                    bottom: 44,
-                    containLabel: true
+            const defaults = chartDefaults(themeMode);
+            trendChart.current = new Chart(trendChartRef.current, {
+                type: "line",
+                data: {
+                    labels: trendLabels,
+                    datasets: [
+                        makeLineDataset("Completed", trendCompleted, STATUS_COLORS.Completed, themeMode, 0.16),
+                        makeLineDataset("Ongoing", trendOngoing, STATUS_COLORS.Ongoing, themeMode, 0.13),
+                        makeLineDataset("Overdue", trendOverdue, STATUS_COLORS.Overdue, themeMode, 0.18)
+                    ]
                 },
-                tooltip: {
-                    trigger: "axis",
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                legend: {
-                    top: 0,
-                    textStyle: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontWeight: 800
-                    }
-                },
-                xAxis: {
-                    type: "category",
-                    data: trendLabels,
-                    boundaryGap: false,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
-                    },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
+                options: {
+                    ...defaults,
+                    plugins: {
+                        ...defaults.plugins,
+                        legend: { ...defaults.plugins.legend, position: "bottom" },
+                        tooltip: {
+                            ...defaults.plugins.tooltip,
+                            callbacks: {
+                                footer: (items) => {
+                                    if (!items.length) return "";
+
+                                    const idx = items[0].dataIndex;
+                                    const comp = trendCompleted[idx] || 0;
+                                    const total =
+                                        comp +
+                                        (trendOngoing[idx] || 0) +
+                                        (trendOverdue[idx] || 0);
+
+                                    return `Completion rate: ${pct(comp, total)}%`;
+                                }
+                            }
                         }
-                    }
-                },
-                series: [
-                    {
-                        name: "Completed",
-                        type: "line",
-                        smooth: true,
-                        symbolSize: 7,
-                        areaStyle: { opacity: 0.08 },
-                        data: trendCompleted
                     },
-                    {
-                        name: "Ongoing",
-                        type: "line",
-                        smooth: true,
-                        symbolSize: 7,
-                        areaStyle: { opacity: 0.06 },
-                        data: trendOngoing
-                    },
-                    {
-                        name: "Overdue",
-                        type: "line",
-                        smooth: true,
-                        symbolSize: 7,
-                        areaStyle: { opacity: 0.06 },
-                        data: trendOverdue
-                    }
-                ]
-            },
-            true
-        );
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                    scales: defaults.scales
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (trendChart.current) {
+                trendChart.current.destroy();
+                trendChart.current = null;
+            }
         };
     }, [trendLabels, trendCompleted, trendOngoing, trendOverdue, themeMode]);
 
     useEffect(() => {
-        if (!window.echarts || !donutChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(donutChartRef.current) ||
-            window.echarts.init(donutChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !donutChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const separatorColor = isDark ? "#12192b" : "#ffffff";
+            if (donutChart.current) donutChart.current.destroy();
 
-        chart.setOption(
-            {
-                animation: true,
-                tooltip: {
-                    trigger: "item",
-                    formatter: (params) =>
-                        `${params.name}: ${params.value} (${params.percent}%)`,
-                    backgroundColor: isDark ? "#182133" : "#ffffff",
-                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4",
-                    borderWidth: 1,
-                    textStyle: {
-                        color: isDark ? "#f8fafc" : "#18263f",
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                series: [
-                    {
-                        type: "pie",
-                        radius: ["62%", "85%"],
-                        center: ["50%", "50%"],
-                        startAngle: 90,
-                        clockwise: true,
-                        minAngle: 1,
-                        avoidLabelOverlap: true,
-                        label: { show: false },
-                        labelLine: { show: false },
-                        emphasis: {
-                            scale: true,
-                            scaleSize: 8,
-                            itemStyle: {
-                                borderColor: separatorColor,
-                                borderWidth: 5,
-                                borderRadius: 10
-                            }
-                        },
-                        itemStyle: {
-                            borderColor: separatorColor,
-                            borderWidth: 4,
+            const theme = chartTheme(themeMode);
+            donutChart.current = new Chart(donutChartRef.current, {
+                type: "doughnut",
+                data: {
+                    labels: ["Completed", "Ongoing", "Overdue"],
+                    datasets: [
+                        {
+                            data: [
+                                safeNum(scopedSummary.completed),
+                                safeNum(scopedSummary.ongoing),
+                                safeNum(scopedSummary.overdue)
+                            ],
+                            backgroundColor: [
+                                STATUS_COLORS.Completed,
+                                STATUS_COLORS.Ongoing,
+                                STATUS_COLORS.Overdue
+                            ],
+                            borderWidth: 5,
+                            borderColor: theme.cardBg,
+                            hoverOffset: 6,
                             borderRadius: 10
-                        },
-                        data: [
-                            {
-                                value: scopedSummary.completed,
-                                name: "Completed",
-                                itemStyle: { color: "#16a34a" }
-                            },
-                            {
-                                value: scopedSummary.ongoing,
-                                name: "Ongoing",
-                                itemStyle: { color: "#2563eb" }
-                            },
-                            {
-                                value: scopedSummary.overdue,
-                                name: "Overdue",
-                                itemStyle: { color: "#e11d48" }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "74%",
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            ...chartDefaults(themeMode).plugins.tooltip,
+                            callbacks: {
+                                label: (ctx) => {
+                                    const val = safeNum(ctx.raw);
+                                    return ` ${ctx.label}: ${val} (${pct(val, scopedSummary.total)}%)`;
+                                }
                             }
-                        ]
+                        }
                     }
-                ]
-            },
-            true
-        );
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (donutChart.current) {
+                donutChart.current.destroy();
+                donutChart.current = null;
+            }
         };
     }, [scopedSummary, themeMode]);
 
     useEffect(() => {
-        if (!window.echarts || !deptChartRef.current) return;
+        let cancelled = false;
 
-        const chart =
-            window.echarts.getInstanceByDom(deptChartRef.current) ||
-            window.echarts.init(deptChartRef.current);
+        loadChartJs().then(() => {
+            if (cancelled || !deptChartRef.current || !window.Chart) return;
 
-        const isDark = themeMode === "dark";
-        const axisColor = isDark ? "#98a2b3" : "#7b8794";
-        const splitLine = isDark ? "rgba(255,255,255,0.08)" : "#edf1f7";
-        const textColor = isDark ? "#f8fafc" : "#18263f";
-        const tooltipBg = isDark ? "#182133" : "#ffffff";
-        const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5ebf4";
+            if (deptChart.current) deptChart.current.destroy();
 
-        chart.setOption(
-            {
-                animationDuration: 650,
-                animationEasing: "cubicOut",
-                color: ["#16a34a", "#2563eb", "#e11d48"],
-                grid: {
-                    top: 28,
-                    left: 22,
-                    right: 18,
-                    bottom: 44,
-                    containLabel: true
+            const defaults = chartDefaults(themeMode);
+            deptChart.current = new Chart(deptChartRef.current, {
+                type: "bar",
+                data: {
+                    labels: deptLabels,
+                    datasets: [
+                        makeBarDataset("Completed", deptCompleted, STATUS_COLORS.Completed, 24),
+                        makeBarDataset("Ongoing", deptOngoing, STATUS_COLORS.Ongoing, 24),
+                        makeBarDataset("Overdue", deptOverdue, STATUS_COLORS.Overdue, 24)
+                    ]
                 },
-                tooltip: {
-                    trigger: "axis",
-                    axisPointer: { type: "shadow" },
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    textStyle: {
-                        color: textColor,
-                        fontFamily: "Nunito, sans-serif"
-                    }
-                },
-                legend: {
-                    top: 0,
-                    textStyle: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontWeight: 800
-                    }
-                },
-                xAxis: {
-                    type: "category",
-                    data: deptLabels,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        margin: 10
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    minInterval: 1,
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: axisColor,
-                        fontFamily: "Nunito, sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700
-                    },
-                    splitLine: {
-                        lineStyle: {
-                            color: splitLine,
-                            type: "dashed"
+                options: {
+                    ...defaults,
+                    plugins: {
+                        ...defaults.plugins,
+                        legend: { ...defaults.plugins.legend, position: "bottom" },
+                        tooltip: {
+                            ...defaults.plugins.tooltip,
+                            callbacks: {
+                                afterLabel: (ctx) => {
+                                    const dept = departmentRows[ctx.dataIndex];
+                                    return dept ? `Completion rate: ${dept.completion_rate}%` : "";
+                                }
+                            }
                         }
-                    }
-                },
-                series: [
-                    { name: "Completed", type: "bar", barWidth: 18, data: deptCompleted, itemStyle: { borderRadius: [8, 8, 0, 0] } },
-                    { name: "Ongoing", type: "bar", barWidth: 18, data: deptOngoing, itemStyle: { borderRadius: [8, 8, 0, 0] } },
-                    { name: "Overdue", type: "bar", barWidth: 18, data: deptOverdue, itemStyle: { borderRadius: [8, 8, 0, 0] } }
-                ]
-            },
-            true
-        );
-
-        const onResize = () => chart.resize();
-        window.addEventListener("resize", onResize);
+                    },
+                    scales: defaults.scales
+                }
+            });
+        }).catch((err) => console.error("Chart.js failed to load:", err));
 
         return () => {
-            window.removeEventListener("resize", onResize);
-            chart.dispose();
+            cancelled = true;
+            if (deptChart.current) {
+                deptChart.current.destroy();
+                deptChart.current = null;
+            }
         };
-    }, [deptLabels, deptCompleted, deptOngoing, deptOverdue, themeMode]);
+    }, [deptLabels, deptCompleted, deptOngoing, deptOverdue, departmentRows, themeMode]);
 
     const isCurrentWeek = weekOffset === 0;
 
@@ -1542,7 +1679,7 @@ function WeeklyReportPage() {
                         )}
                     </div>
 
-                    <div ref={trendChartRef} className="wr-chart-lg"></div>
+                    <div className="ar-chart-wrap wr-chart-lg"><canvas ref={trendChartRef}></canvas></div>
                 </div>
 
                 <div className="dr-card">
@@ -1561,7 +1698,7 @@ function WeeklyReportPage() {
 
                     <div className="dr-donut-stack">
                         <div className="dr-donut-shell">
-                            <div ref={donutChartRef} className="dr-donut-chart"></div>
+                            <canvas ref={donutChartRef} className="dr-donut-chart"></canvas>
 
                             <div className="dr-donut-center">
                                 <span className="dr-donut-center-kicker">Total</span>
@@ -1611,7 +1748,7 @@ function WeeklyReportPage() {
                     </div>
                 </div>
 
-                <div ref={deptChartRef} className="wr-chart-md"></div>
+                <div className="ar-chart-wrap wr-chart-md"><canvas ref={deptChartRef}></canvas></div>
             </div>
 
             <div className="dr-card dr-card--table dr-card--table-full wr-block-gap">

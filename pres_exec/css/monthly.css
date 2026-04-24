@@ -2882,3 +2882,115 @@
         height: 300px !important;
     }
 }
+
+
+/* =========================================================
+   FINAL FIX: Monthly Report charts matched to Annual Reports
+   Put last so it wins over older monthly overrides.
+========================================================= */
+
+#monthlyReportRoot .mr-top-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+    align-items: stretch !important;
+    margin-bottom: 18px !important;
+}
+
+#monthlyReportRoot .mr-top-grid > .dr-card,
+#monthlyReportRoot .dr-card.mr-block-gap {
+    padding: 16px 18px !important;
+    border-radius: 20px !important;
+    background: linear-gradient(180deg, var(--dr-card) 0%, var(--dr-card-soft) 100%) !important;
+    border: 1px solid var(--dr-border) !important;
+    box-shadow: var(--dr-shadow-sm) !important;
+}
+
+#monthlyReportRoot .mr-top-grid > .dr-card .dr-card-head,
+#monthlyReportRoot .dr-card.mr-block-gap .dr-card-head {
+    margin-bottom: 8px !important;
+}
+
+#monthlyReportRoot .ar-chart-wrap,
+#monthlyReportRoot .mr-chart-lg,
+#monthlyReportRoot .mr-chart-md,
+#monthlyReportRoot .mr-chart-hbar {
+    position: relative !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+}
+
+#monthlyReportRoot .ar-chart-wrap canvas,
+#monthlyReportRoot .mr-chart-lg canvas,
+#monthlyReportRoot .mr-chart-md canvas,
+#monthlyReportRoot .mr-chart-hbar canvas {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+#monthlyReportRoot .mr-chart-lg {
+    height: 320px !important;
+    min-height: 320px !important;
+    max-height: 320px !important;
+}
+
+#monthlyReportRoot .mr-chart-md {
+    height: 330px !important;
+    min-height: 330px !important;
+    max-height: 330px !important;
+}
+
+#monthlyReportRoot .mr-chart-hbar {
+    min-height: 260px !important;
+    border-radius: 16px !important;
+}
+
+#monthlyReportRoot .dr-card-head .dr-filter-pill {
+    min-height: 38px !important;
+    height: 38px !important;
+    border-radius: 999px !important;
+    padding: 0 14px !important;
+    background: var(--dr-card-soft) !important;
+    color: var(--dr-muted) !important;
+    border: 1px solid var(--dr-border) !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+}
+
+#monthlyReportRoot .dr-summary-icon.warning,
+#monthlyReportRoot .dr-summary-chip.warning,
+#monthlyReportRoot .dr-status-inline.ongoing {
+    color: #2563eb !important;
+}
+
+#monthlyReportRoot .dr-summary-icon.warning,
+#monthlyReportRoot .dr-summary-chip.warning {
+    background: rgba(37, 99, 235, 0.10) !important;
+}
+
+#monthlyReportRoot .dr-summary-icon.danger,
+#monthlyReportRoot .dr-summary-chip.danger,
+#monthlyReportRoot .dr-status-inline.overdue,
+#monthlyReportRoot .dr-overdue-cell {
+    color: #f43f5e !important;
+}
+
+#monthlyReportRoot .dr-summary-icon.danger,
+#monthlyReportRoot .dr-summary-chip.danger {
+    background: rgba(244, 63, 94, 0.10) !important;
+}
+
+@media (max-width: 767px) {
+    #monthlyReportRoot .mr-chart-lg,
+    #monthlyReportRoot .mr-chart-md {
+        height: 290px !important;
+        min-height: 290px !important;
+        max-height: 290px !important;
+    }
+
+    #monthlyReportRoot .mr-chart-hbar {
+        min-height: 320px !important;
+    }
+}

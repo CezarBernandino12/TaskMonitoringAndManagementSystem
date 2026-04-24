@@ -2581,3 +2581,257 @@
         display: none;
     }
 }
+
+
+/* =========================================================
+   FINAL FIX: Annual Report charts matched to approved Annual UI
+   Put last so it wins over older ECharts/annual overrides.
+========================================================= */
+
+#annualReportRoot .ar-block-gap,
+#annualReportRoot .ar-split-grid {
+    margin-bottom: 18px !important;
+}
+
+#annualReportRoot .ar-split-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.75fr) !important;
+    gap: 18px !important;
+    align-items: stretch !important;
+}
+
+#annualReportRoot .ar-block-gap,
+#annualReportRoot .ar-split-grid > .dr-card {
+    padding: 16px 18px !important;
+    border-radius: 20px !important;
+    background: linear-gradient(180deg, var(--dr-card) 0%, var(--dr-card-soft) 100%) !important;
+    border: 1px solid var(--dr-border) !important;
+    box-shadow: var(--dr-shadow-sm) !important;
+}
+
+#annualReportRoot .ar-block-gap .dr-card-head,
+#annualReportRoot .ar-split-grid > .dr-card .dr-card-head {
+    margin-bottom: 8px !important;
+}
+
+#annualReportRoot .ar-chart-wrap,
+#annualReportRoot .ar-chart-lg,
+#annualReportRoot .ar-chart-line,
+#annualReportRoot .ar-chart-md,
+#annualReportRoot .ar-chart-hbar {
+    position: relative !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+}
+
+#annualReportRoot .ar-chart-wrap canvas,
+#annualReportRoot .ar-chart-lg canvas,
+#annualReportRoot .ar-chart-line canvas,
+#annualReportRoot .ar-chart-md canvas,
+#annualReportRoot .ar-chart-hbar canvas {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+#annualReportRoot .ar-chart-lg {
+    height: 320px !important;
+    min-height: 320px !important;
+    max-height: 320px !important;
+}
+
+#annualReportRoot .ar-chart-line {
+    height: 330px !important;
+    min-height: 330px !important;
+    max-height: 330px !important;
+}
+
+#annualReportRoot .ar-chart-md {
+    height: 235px !important;
+    min-height: 235px !important;
+    max-height: 235px !important;
+}
+
+#annualReportRoot .ar-chart-hbar {
+    min-height: 260px !important;
+    border-radius: 16px !important;
+}
+
+#annualReportRoot .ar-split-grid > .dr-card {
+    min-height: 380px !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+#annualReportRoot .ar-split-grid > .dr-card:first-child .ar-chart-wrap {
+    flex: 0 0 auto !important;
+}
+
+#annualReportRoot .ar-donut-card,
+#annualReportRoot .ar-split-grid > .dr-card:last-child {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-stack,
+#annualReportRoot .ar-split-grid > .dr-card:last-child .dr-donut-stack {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 14px !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-shell,
+#annualReportRoot .ar-donut-card .dr-donut-chart,
+#annualReportRoot .ar-split-grid > .dr-card:last-child .dr-donut-shell,
+#annualReportRoot .ar-split-grid > .dr-card:last-child .dr-donut-chart {
+    width: 250px !important;
+    height: 250px !important;
+    min-width: 250px !important;
+    min-height: 250px !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-chart,
+#annualReportRoot .ar-split-grid > .dr-card:last-child .dr-donut-chart {
+    display: block !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-center-kicker {
+    font-size: 13px !important;
+    font-weight: 850 !important;
+    color: var(--dr-muted) !important;
+    margin-bottom: 6px !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-center-value {
+    font-size: 2.85rem !important;
+    font-weight: 950 !important;
+    letter-spacing: -0.05em !important;
+    color: var(--dr-text) !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-center-unit {
+    font-size: 12px !important;
+    font-weight: 750 !important;
+    color: var(--dr-subtle) !important;
+    margin-bottom: 6px !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-legend {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 12px 18px !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-legend-item {
+    display: inline-flex !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    min-width: 128px !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-dot {
+    width: 13px !important;
+    height: 13px !important;
+    border-radius: 999px !important;
+    border-width: 3px !important;
+    background: transparent !important;
+    flex-shrink: 0 !important;
+    margin-top: 3px !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-legend-label {
+    font-size: 13px !important;
+    font-weight: 950 !important;
+    color: var(--dr-text) !important;
+    line-height: 1.1 !important;
+}
+
+#annualReportRoot .ar-donut-card .dr-donut-legend-meta {
+    margin-top: 2px !important;
+    font-size: 11px !important;
+    font-weight: 750 !important;
+    color: var(--dr-muted) !important;
+    line-height: 1.2 !important;
+}
+
+#annualReportRoot .dr-card-head .dr-filter-pill {
+    min-height: 38px !important;
+    height: 38px !important;
+    border-radius: 999px !important;
+    padding: 0 14px !important;
+    background: var(--dr-card-soft) !important;
+    color: var(--dr-muted) !important;
+    border: 1px solid var(--dr-border) !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+}
+
+#annualReportRoot .dr-summary-icon.warning,
+#annualReportRoot .dr-summary-chip.warning,
+#annualReportRoot .dr-status-inline.ongoing {
+    color: #2563eb !important;
+}
+
+#annualReportRoot .dr-summary-icon.warning,
+#annualReportRoot .dr-summary-chip.warning {
+    background: rgba(37, 99, 235, 0.10) !important;
+}
+
+#annualReportRoot .dr-summary-icon.danger,
+#annualReportRoot .dr-summary-chip.danger,
+#annualReportRoot .dr-status-inline.overdue,
+#annualReportRoot .dr-overdue-cell {
+    color: #f43f5e !important;
+}
+
+#annualReportRoot .dr-summary-icon.danger,
+#annualReportRoot .dr-summary-chip.danger {
+    background: rgba(244, 63, 94, 0.10) !important;
+}
+
+@media (max-width: 1199px) {
+    #annualReportRoot .ar-split-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #annualReportRoot .ar-split-grid > .dr-card {
+        min-height: auto !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #annualReportRoot .ar-chart-lg,
+    #annualReportRoot .ar-chart-line,
+    #annualReportRoot .ar-chart-md {
+        height: 290px !important;
+        min-height: 290px !important;
+        max-height: 290px !important;
+    }
+
+    #annualReportRoot .ar-chart-hbar {
+        min-height: 320px !important;
+    }
+
+    #annualReportRoot .ar-donut-card .dr-donut-shell,
+    #annualReportRoot .ar-donut-card .dr-donut-chart {
+        width: 236px !important;
+        height: 236px !important;
+        min-width: 236px !important;
+        min-height: 236px !important;
+    }
+
+    #annualReportRoot .ar-donut-card .dr-donut-legend {
+        justify-content: flex-start !important;
+    }
+
+    #annualReportRoot .ar-donut-card .dr-donut-legend-item {
+        min-width: 100% !important;
+    }
+}
