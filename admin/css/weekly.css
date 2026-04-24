@@ -1334,104 +1334,102 @@
         min-width: 100%;
     }
 }
-
-
+/* ===== FINAL FIX: Weekly toolbar single-line alignment ===== */
 #weeklyReportRoot .wr-toolbar-card {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     padding: 0 6px !important;
-    margin-bottom: 18px;
-    overflow-x: auto;
+    margin-bottom: 18px !important;
+    overflow-x: auto !important;
 }
 
 #weeklyReportRoot .wr-toolbar-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    flex-wrap: nowrap;
-    margin-bottom: 0;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    flex-wrap: nowrap !important;
+    margin-bottom: 0 !important;
+}
+
+#weeklyReportRoot .wr-toolbar-row > div:first-child {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
 }
 
 #weeklyReportRoot .wr-toolbar-actions {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-    flex-wrap: nowrap;
-    margin-left: auto;
-}
-
-@media (max-width: 991px) {
-    #weeklyReportRoot .wr-period-label {
-        min-width: 250px;
-    }
-
-    #weeklyReportRoot .wr-select-shell {
-        min-width: 260px;
-        width: 260px;
-    }
-}
-
-/* Mobile fallback */
-@media (max-width: 767px) {
-    #weeklyReportRoot .wr-toolbar-row {
-        flex-wrap: wrap;
-    }
-
-    #weeklyReportRoot .wr-toolbar-actions {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-    }
-
-    #weeklyReportRoot .wr-period-nav {
-        flex-wrap: wrap;
-    }
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    flex-wrap: nowrap !important;
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
 }
 
 #weeklyReportRoot .wr-period-nav {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    flex-wrap: nowrap;
-    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    flex-wrap: nowrap !important;
+    flex: 0 0 auto !important;
 }
 
 #weeklyReportRoot .wr-period-nav .dr-ghost-btn,
 #weeklyReportRoot .wr-period-label,
 #weeklyReportRoot .wr-select-shell {
-    height: 48px;
-    border-radius: 16px;
-    border: 1px solid #e0e7f2;
-    background: #ffffff;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
-    flex-shrink: 0;
+    height: 48px !important;
+    border-radius: 16px !important;
+    border: 1px solid #e0e7f2 !important;
+    background: #ffffff !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035) !important;
+    flex-shrink: 0 !important;
 }
 
 #weeklyReportRoot .wr-period-label {
-    min-width: 280px;
-    padding: 0 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #0f172a;
-    font-size: 14px;
-    font-weight: 950;
-    white-space: nowrap;
+    min-width: 290px !important;
+    padding: 0 18px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #0f172a !important;
+    font-size: 14px !important;
+    font-weight: 950 !important;
+    white-space: nowrap !important;
 }
 
 #weeklyReportRoot .wr-select-shell {
-    min-width: 300px;
-    width: 300px;
-    padding: 0 16px;
-    display: inline-flex;
-    align-items: center;
-    flex-shrink: 0;
+    min-width: 320px !important;
+    width: 320px !important;
+    padding: 0 16px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    margin: 0 !important;
+}
+
+#weeklyReportRoot .wr-select-shell .dr-select {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+@media (max-width: 1200px) {
+    #weeklyReportRoot .wr-toolbar-row {
+        flex-wrap: wrap !important;
+    }
+
+    #weeklyReportRoot .wr-toolbar-actions {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+
+    #weeklyReportRoot .wr-period-nav {
+        flex-wrap: wrap !important;
+    }
 }
 
 #weeklyReportRoot .dr-summary-grid {

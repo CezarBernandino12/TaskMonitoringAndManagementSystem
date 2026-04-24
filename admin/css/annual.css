@@ -52,13 +52,130 @@
     font-family: "Nunito", sans-serif;
 }
 
+/* ===== FINAL FIX: Annual header single-line alignment ===== */
+
 .ar-page-head {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    flex-wrap: nowrap !important;
+    margin-bottom: 18px !important;
+}
+
+.ar-page-head-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.ar-head-actions {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 18px;
-    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.ar-year-nav {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    flex-wrap: nowrap !important;
+    flex: 0 0 auto;
+}
+
+.ar-year-range,
+.ar-year-nav .ar-ghost-btn,
+.ar-head-select {
+    height: 48px;
+    border-radius: 16px;
+    border: 1px solid var(--ar-border);
+    background: var(--ar-card);
+    box-shadow: var(--ar-shadow-xs);
+    flex-shrink: 0;
+}
+
+.ar-year-range {
+    min-width: 96px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 950;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.ar-head-select {
+    min-width: 320px;
+    width: 320px;
+    padding: 0 14px;
+}
+
+.ar-head-select .ar-select {
+    width: 100%;
+    min-width: 0;
+}
+
+.ar-toolbar-row {
+    display: none !important;
+}
+
+/* Tablet */
+@media (max-width: 1200px) {
+    .ar-page-head {
+        flex-wrap: wrap !important;
+    }
+
+    .ar-head-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .ar-year-nav {
+        flex-wrap: wrap !important;
+    }
+
+    .ar-head-select {
+        min-width: 280px;
+        width: 280px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+    .ar-page-head {
+        align-items: stretch !important;
+    }
+
+    .ar-head-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ar-year-nav {
+        width: 100%;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+
+    .ar-year-range {
+        min-width: 100%;
+        width: 100%;
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .ar-head-select {
+        min-width: 100%;
+        width: 100%;
+    }
 }
 
 .ar-page-title {

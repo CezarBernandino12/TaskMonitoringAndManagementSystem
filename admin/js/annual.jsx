@@ -1117,31 +1117,63 @@ function AnnualReportPage() {
 
     return (
         <div className="ar-page">
-            <div className="ar-page-head">
-                <div>
-                    <h2 className="ar-page-title">Annual Task Report</h2>
-                    <div className="ar-page-meta">
-                        <span className="ar-page-sub">{year}</span>
-                    </div>
+        <div className="ar-page-head">
+            <div className="ar-page-head-main">
+                <h2 className="ar-page-title">Annual Task Report</h2>
+                <div className="ar-page-meta">
+                    <span className="ar-page-sub">{year}</span>
                 </div>
+            </div>
 
+            <div className="ar-head-actions">
                 <div className="ar-year-nav">
                     <button className="ar-ghost-btn" onClick={() => setYear((value) => value - 1)}>
                         <i className="bi bi-chevron-left"></i>
                         Prev
                     </button>
+
                     <div className="ar-year-range">{year}</div>
-                    <button className="ar-ghost-btn" onClick={() => setYear((value) => value + 1)} disabled={isCurrentYear}>
+
+                    <button
+                        className="ar-ghost-btn"
+                        onClick={() => setYear((value) => value + 1)}
+                        disabled={isCurrentYear}
+                    >
                         Next
                         <i className="bi bi-chevron-right"></i>
                     </button>
+
                     {!isCurrentYear ? (
-                        <button className="ar-ghost-btn ar-ghost-btn--primary" onClick={() => setYear(now.getFullYear())}>
+                        <button
+                            className="ar-ghost-btn ar-ghost-btn--primary"
+                            onClick={() => setYear(now.getFullYear())}
+                        >
                             This Year
                         </button>
                     ) : null}
                 </div>
+
+                <div className="ar-search-box ar-search-box--select ar-head-select">
+                    <i className="bi bi-buildings"></i>
+                    <select
+                        className="ar-select"
+                        value={departmentFilter}
+                        onChange={(e) => {
+                            setDepartmentFilter(e.target.value);
+                            setSelectedDept(null);
+                        }}
+                    >
+                        <option value="all">All Departments</option>
+                        {allDepartments.map((dep) => (
+                            <option key={dep.id} value={dep.id}>
+                                {dep.name}
+                            </option>
+                        ))}
+                    </select>
+                    <i className="bi bi-chevron-down ar-select-chevron"></i>
+                </div>
             </div>
+        </div>
 
             <div className="ar-toolbar-row">
                 <div className="ar-search-box ar-search-box--select">
