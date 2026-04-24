@@ -1243,7 +1243,7 @@ function WeeklyReportPage() {
                 series: [
                     {
                         type: "pie",
-                        radius: ["46%", "82%"],
+                        radius: ["62%", "85%"],
                         center: ["50%", "50%"],
                         startAngle: 90,
                         clockwise: true,

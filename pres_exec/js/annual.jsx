@@ -1431,7 +1431,7 @@ function AnnualReportPage() {
                 series: [
                     {
                         type: "pie",
-                        radius: ["63%", "84%"],
+                        radius: ["62%", "85%"],
                         center: ["50%", "50%"],
                         startAngle: 90,
                         clockwise: true,

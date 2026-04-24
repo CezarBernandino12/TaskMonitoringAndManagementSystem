@@ -1335,64 +1335,103 @@
     }
 }
 
-/* =========================================================
-   Quarterly Report - Final Daily/Annual Consistency Fixes
-   Applies the finalized system UI to the quarterly report.
-========================================================= */
 
-/* Header should match Daily/Annual: no outer card border/background/shadow */
 #weeklyReportRoot .wr-toolbar-card {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     padding: 0 6px !important;
-    margin-bottom: 18px !important;
+    margin-bottom: 18px;
+    overflow-x: auto;
 }
 
 #weeklyReportRoot .wr-toolbar-row {
-    margin-bottom: 0 !important;
-    align-items: center !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: nowrap;
+    margin-bottom: 0;
 }
 
 #weeklyReportRoot .wr-toolbar-actions {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-end !important;
-    gap: 10px !important;
-    flex-wrap: wrap !important;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: nowrap;
+    margin-left: auto;
+}
+
+@media (max-width: 991px) {
+    #weeklyReportRoot .wr-period-label {
+        min-width: 250px;
+    }
+
+    #weeklyReportRoot .wr-select-shell {
+        min-width: 260px;
+        width: 260px;
+    }
+}
+
+/* Mobile fallback */
+@media (max-width: 767px) {
+    #weeklyReportRoot .wr-toolbar-row {
+        flex-wrap: wrap;
+    }
+
+    #weeklyReportRoot .wr-toolbar-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    #weeklyReportRoot .wr-period-nav {
+        flex-wrap: wrap;
+    }
 }
 
 #weeklyReportRoot .wr-period-nav {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    flex-wrap: wrap !important;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
 }
 
 #weeklyReportRoot .wr-period-nav .dr-ghost-btn,
 #weeklyReportRoot .wr-period-label,
 #weeklyReportRoot .wr-select-shell {
-    height: 42px !important;
-    border-radius: 14px !important;
-    background: var(--dr-card) !important;
-    border: 1px solid var(--dr-border) !important;
-    box-shadow: var(--dr-shadow-soft) !important;
+    height: 48px;
+    border-radius: 16px;
+    border: 1px solid #e0e7f2;
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
+    flex-shrink: 0;
 }
 
 #weeklyReportRoot .wr-period-label {
-    min-width: 196px !important;
-    padding: 0 16px !important;
-    color: var(--dr-text) !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 13px !important;
-    font-weight: 900 !important;
+    min-width: 280px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 950;
+    white-space: nowrap;
 }
 
 #weeklyReportRoot .wr-select-shell {
-    min-width: 260px !important;
+    min-width: 300px;
+    width: 300px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 #weeklyReportRoot .dr-summary-grid {
