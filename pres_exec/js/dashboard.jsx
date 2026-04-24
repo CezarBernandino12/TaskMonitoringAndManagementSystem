@@ -22,21 +22,29 @@ function percent(part, total) {
 
 function getChartTheme() {
     const root = document.documentElement;
+    const styles = getComputedStyle(root);
     const dark = root.getAttribute("data-theme") === "dark";
 
     return {
         dark,
-        text: dark ? "#f3f4f6" : "#111827",
-        muted: dark ? "#9ca3af" : "#6b7280",
+        text: styles.getPropertyValue("--dash-text").trim() || (dark ? "#f3f4f6" : "#111827"),
+        muted: styles.getPropertyValue("--dash-muted").trim() || (dark ? "#9ca3af" : "#6b7280"),
+        panel: styles.getPropertyValue("--dash-surface").trim() || (dark ? "#18212f" : "#ffffff"),
+        surfaceSoft:
+            styles.getPropertyValue("--dash-surface-soft").trim() ||
+            (dark ? "#1d2736" : "#fafbfc"),
         grid: dark ? "rgba(255,255,255,0.08)" : "#eceff3",
-        panel: dark ? "#18212f" : "#ffffff",
-        tooltipBg: dark ? "rgba(17,24,39,0.96)" : "rgba(17,24,39,0.92)"
+        tooltipBg: dark ? "rgba(15,23,42,0.96)" : "rgba(17,24,39,0.92)"
     };
 }
+
+
+
 
 function HealthRing({ ongoing, overdue, completedToday, totalActive }) {
     const ref = useRef(null);
     const chartRef = useRef(null);
+    const [themeVersion, setThemeVersion] = useState(0);    
 
     const legendItems = [
         {
@@ -58,6 +66,21 @@ function HealthRing({ ongoing, overdue, completedToday, totalActive }) {
             color: CHART_COLORS.overdue
         }
     ];
+
+    useEffect(() => {
+        const root = document.documentElement;
+
+        const observer = new MutationObserver(() => {
+            setThemeVersion((prev) => prev + 1);
+        });
+
+        observer.observe(root, {
+            attributes: true,
+            attributeFilter: ["data-theme"]
+        });
+
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         if (!ref.current) return;
@@ -92,53 +115,57 @@ function HealthRing({ ongoing, overdue, completedToday, totalActive }) {
                 itemStyle: { color: item.color }
             }));
 
-        chartRef.current.setOption(
-            {
-                animationDuration: 450,
-                animationEasing: "cubicOut",
-                tooltip: {
-                    trigger: "item",
-                    backgroundColor: theme.tooltipBg,
-                    borderWidth: 0,
-                    textStyle: { color: "#fff" },
-                    formatter: ({ name, value }) => `${name}: ${value}`
-                },
-                series: [
-                    {
-                        type: "pie",
-                        radius: ["60%", "84%"],
-                        center: ["50%", "50%"],
-                        startAngle: 92,
-                        clockwise: true,
-                        padAngle: 3,
-                        minAngle: 6,
-                        avoidLabelOverlap: true,
-                        label: { show: false },
-                        labelLine: { show: false },
-                        emphasis: { scale: false },
-                        itemStyle: {
-                            borderColor: theme.panel,
-                            borderWidth: 6,
-                            borderRadius: 10
-                        },
-                        data:
-                            data.length > 0
-                                ? data
-                                : [
-                                      {
-                                          value: 1,
-                                          name: "No data",
-                                          itemStyle: {
-                                              color: theme.dark ? "#334155" : "#e5e7eb"
-                                          }
-                                      }
-                                  ]
-                    }
-                ]
+chartRef.current.setOption(
+    {
+        animationDuration: 350,
+        animationEasing: "cubicOut",
+        tooltip: {
+            trigger: "item",
+            backgroundColor: theme.tooltipBg,
+            borderWidth: 0,
+            padding: [8, 10],
+            textStyle: {
+                color: "#fff",
+                fontSize: 12
             },
-            true
-        );
-    }, [ongoing, overdue, completedToday, totalActive]);
+            formatter: ({ name, value }) => `${name}: ${value}`
+        },
+        series: [
+            {
+                type: "pie",
+                radius: ["62%", "79%"],
+                center: ["50%", "50%"],
+                startAngle: 90,
+                clockwise: true,
+                padAngle: 2,
+                minAngle: 4,
+                avoidLabelOverlap: true,
+                label: { show: false },
+                labelLine: { show: false },
+                emphasis: { scale: false },
+                itemStyle: {
+                    borderColor: theme.panel,
+                    borderWidth: 5,
+                    borderRadius: 9
+                },
+                data:
+                    data.length > 0
+                        ? data
+                        : [
+                              {
+                                  value: 1,
+                                  name: "No data",
+                                  itemStyle: {
+                                      color: theme.dark ? "#334155" : "#e5e7eb"
+                                  }
+                              }
+                          ]
+            }
+        ]
+    },
+    true
+);
+    }, [ongoing, overdue, completedToday, totalActive, themeVersion]);
 
     return (
         <div className="dash-ring-block">
@@ -206,13 +233,15 @@ function TrendChart({ seriesMap, periodLabel = "This week" }) {
 
         const theme = getChartTheme();
 
-        const firstNonEmpty = [seriesMap.completed, seriesMap.ongoing, seriesMap.overdue].find(
-            (arr) => Array.isArray(arr) && arr.length > 0
-        );
+        const firstNonEmpty = [
+            seriesMap.completed,
+            seriesMap.ongoing,
+            seriesMap.overdue
+        ].find((arr) => Array.isArray(arr) && arr.length > 0);
 
         const labels = firstNonEmpty ? firstNonEmpty.map((item) => item.label) : [];
 
-        const buildSeries = (name, color, data, fillColor) => ({
+        const buildSeries = (name, color, data, topFill) => ({
             name,
             type: "line",
             smooth: true,
@@ -230,7 +259,7 @@ function TrendChart({ seriesMap, periodLabel = "This week" }) {
             },
             areaStyle: {
                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: fillColor },
+                    { offset: 0, color: topFill },
                     { offset: 1, color: "rgba(255,255,255,0)" }
                 ])
             }
@@ -240,25 +269,25 @@ function TrendChart({ seriesMap, periodLabel = "This week" }) {
             Array.isArray(seriesMap.completed) && seriesMap.completed.length
                 ? buildSeries(
                       "Task Completed",
-                      CHART_COLORS.completed,
+                      "#22c55e",
                       seriesMap.completed,
-                      "rgba(22,163,74,0.12)"
+                      "rgba(34,197,94,0.14)"
                   )
                 : null,
             Array.isArray(seriesMap.ongoing) && seriesMap.ongoing.length
                 ? buildSeries(
                       "Task Ongoing",
-                      CHART_COLORS.ongoing,
+                      "#f59e0b",
                       seriesMap.ongoing,
-                      "rgba(217,119,6,0.10)"
+                      "rgba(245,158,11,0.10)"
                   )
                 : null,
             Array.isArray(seriesMap.overdue) && seriesMap.overdue.length
                 ? buildSeries(
                       "Task Overdue",
-                      CHART_COLORS.overdue,
+                      "#ec4899",
                       seriesMap.overdue,
-                      "rgba(225,17,72,0.08)"
+                      "rgba(236,72,153,0.08)"
                   )
                 : null
         ].filter(Boolean);
@@ -270,31 +299,40 @@ function TrendChart({ seriesMap, periodLabel = "This week" }) {
 
         chartRef.current.setOption(
             {
-                animationDuration: 450,
+                animationDuration: 500,
                 animationEasing: "cubicOut",
                 tooltip: {
                     trigger: "axis",
                     backgroundColor: theme.tooltipBg,
                     borderWidth: 0,
-                    textStyle: { color: "#fff" }
+                    textStyle: { color: "#fff" },
+                    axisPointer: {
+                        type: "line",
+                        lineStyle: {
+                            color: "rgba(148,163,184,0.24)",
+                            width: 1
+                        }
+                    }
                 },
                 legend: {
                     show: true,
                     right: 0,
                     bottom: 0,
                     icon: "circle",
-                    itemWidth: 9,
-                    itemHeight: 9,
+                    itemWidth: 10,
+                    itemHeight: 10,
+                    itemGap: 18,
                     textStyle: {
                         color: theme.muted,
                         fontSize: 12,
                         fontWeight: 500
-                    }
+                    },
+                    data: ["Task Completed", "Task Ongoing", "Task Overdue"]
                 },
                 grid: {
-                    top: 8,
+                    top: 16,
                     right: 8,
-                    bottom: 40,
+                    bottom: 42,
                     left: 18,
                     containLabel: true
                 },
@@ -326,7 +364,8 @@ function TrendChart({ seriesMap, periodLabel = "This week" }) {
                         show: true,
                         lineStyle: {
                             color: theme.grid,
-                            width: 1
+                            width: 1,
+                            type: "solid"
                         }
                     }
                 },
@@ -394,8 +433,25 @@ function RiskList({ rows }) {
     );
 }
 
+function getInitials(name) {
+    const parts = String(name || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (!parts.length) return "U";
+
+    return parts
+        .slice(0, 2)
+        .map((part) => part[0].toUpperCase())
+        .join("");
+}
+
+
 function TopPerformersTable({ rows, monthLabel }) {
-    if (!rows.length) {
+    const visibleRows = Array.isArray(rows) ? rows.slice(0, 5) : [];
+
+    if (!visibleRows.length) {
         return (
             <div className="dash-empty-box">
                 No completions recorded for {monthLabel || "this month"} yet.
@@ -404,39 +460,64 @@ function TopPerformersTable({ rows, monthLabel }) {
     }
 
     return (
-        <div className="dash-table-wrap">
-            <table className="dash-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Assignee</th>
-                        <th>Department</th>
-                        <th>Completed</th>
-                        <th>Standing</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((person, index) => {
-                        const label =
-                            index === 0 ? "Top" : index === 1 ? "Strong" : "Active";
+        <div className="dash-leaderboard">
+            <div className="dash-leaderboard-head">
+                <div>Rank</div>
+                <div>User</div>
+                <div>Completed</div>
+                <div>Department</div>
+            </div>
 
-                        return (
-                            <tr key={`${person.name}-${index}`}>
-                                <td>{index + 1}</td>
-                                <td className="dash-name-cell">{person.name}</td>
-                                <td className="dash-muted-cell">{person.department}</td>
-                                <td>{safeNumber(person.completed_this_month)}</td>
-                                <td>
-                                    <span className="dash-table-tag">{label}</span>
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+            <div className="dash-leaderboard-body">
+                {visibleRows.map((person, index) => {
+                    const rank = index + 1;
+
+                    return (
+                        <div
+                            className={`dash-leader-row ${rank <= 3 ? "is-top" : ""}`}
+                            key={`${person.id || person.name}-${rank}`}
+                        >
+                            <div className="dash-leader-rank">{rank}</div>
+
+                            <div className="dash-leader-user">
+                                <div className="dash-leader-avatar-wrap">
+                                    {person.profile_image_url ? (
+                                        <img
+                                            src={person.profile_image_url}
+                                            alt={person.name}
+                                            className="dash-leader-avatar"
+                                        />
+                                    ) : (
+                                        <div className="dash-leader-avatar dash-leader-avatar-fallback">
+                                            {person.initials || getInitials(person.name)}
+                                        </div>
+                                    )}
+
+                                    {rank <= 3 ? (
+                                        <span className={`dash-leader-avatar-badge rank-${rank}`}>
+                                            {rank}
+                                        </span>
+                                    ) : null}
+                                </div>
+
+                                <div className="dash-leader-user-copy">
+                                    <div className="dash-leader-name">{person.name}</div>
+                                    <div className="dash-leader-sub">{person.department}</div>
+                                </div>
+                            </div>
+
+                            <div className="dash-leader-completed">
+                                <strong>{safeNumber(person.completed_this_month)}</strong> tasks
+                            </div>
+
+                            <div className="dash-leader-department">{person.department}</div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
-}
+}   
 
 function SnapshotLinks({ snapshots }) {
     if (!snapshots.length) {
@@ -608,10 +689,10 @@ function Dashboard() {
                     <section className="dash-card">
                         <div className="dash-section-head">
                             <div>
-                                <div className="dash-card-title">Task Assignee Overview</div>
-                                <div className="dash-card-subtitle">
-                                    Top performers for {monthLabel}.
-                                </div>
+                            <div className="dash-card-title">Top Performers</div>
+                            <div className="dash-card-subtitle">
+                                Staff with the most completed tasks for {monthLabel}.
+                            </div>
                             </div>
                             <div className="dash-pill">{monthLabel}</div>
                         </div>
@@ -624,7 +705,7 @@ function Dashboard() {
                             <div>
                                 <div className="dash-card-title">Report Snapshots</div>
                                 <div className="dash-card-subtitle">
-                                    All report links and actions remain intact.
+                                    Monitor completion status and access full reports.
                                 </div>
                             </div>
                         </div>
