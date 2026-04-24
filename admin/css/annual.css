@@ -1605,3 +1605,240 @@
         padding: 0 8px;
     }
 }
+
+/* =========================================================
+   FINAL FIX: Make Annual summary cards match Quarterly UI
+========================================================= */
+
+.ar-page .ar-summary-grid,
+.ar-page .ar-summary-grid--quarterly-style {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    margin-bottom: 20px !important;
+}
+
+.ar-page .ar-summary-card {
+    padding: 14px 16px !important;
+    border: 1px solid var(--ar-border) !important;
+    background: linear-gradient(180deg, var(--ar-card) 0%, var(--ar-card-soft) 100%) !important;
+    border-radius: 20px !important;
+    box-shadow: var(--ar-shadow-sm) !important;
+}
+
+.ar-page .ar-summary-head {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 10px !important;
+    gap: 10px !important;
+}
+
+.ar-page .ar-summary-top {
+    display: none !important;
+}
+
+.ar-page .ar-summary-icon {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 16px !important;
+}
+
+.ar-page .ar-summary-icon.success,
+.ar-page .ar-summary-chip.success {
+    background: var(--ar-green-soft) !important;
+    color: var(--ar-green) !important;
+}
+
+.ar-page .ar-summary-icon.warning,
+.ar-page .ar-summary-chip.warning {
+    background: rgba(245, 158, 11, 0.1) !important;
+    color: #f59e0b !important;
+}
+
+.ar-page .ar-summary-icon.danger,
+.ar-page .ar-summary-chip.danger {
+    background: var(--ar-pink-soft) !important;
+    color: var(--ar-pink) !important;
+}
+
+.ar-page .ar-summary-icon.primary,
+.ar-page .ar-summary-chip.primary {
+    background: var(--ar-blue-soft) !important;
+    color: var(--ar-blue) !important;
+}
+
+.ar-page .ar-summary-chip {
+    padding: 5px 9px !important;
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+}
+
+.ar-page .ar-summary-label,
+.ar-page .ar-summary-title {
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    color: var(--ar-muted) !important;
+    margin-bottom: 4px !important;
+}
+
+.ar-page .ar-summary-value-line {
+    display: flex !important;
+    align-items: flex-end !important;
+    gap: 6px !important;
+}
+
+.ar-page .ar-summary-value {
+    font-size: 2rem !important;
+    line-height: 0.95 !important;
+    font-weight: 900 !important;
+    letter-spacing: normal !important;
+    color: var(--ar-text) !important;
+}
+
+.ar-page .ar-summary-value.success,
+.ar-page .ar-summary-value.warning,
+.ar-page .ar-summary-value.danger,
+.ar-page .ar-summary-value.primary {
+    color: var(--ar-text) !important;
+}
+
+.ar-page .ar-summary-subtext {
+    margin-top: 4px !important;
+    font-size: 11px !important;
+    color: var(--ar-subtle) !important;
+    font-weight: 700 !important;
+}
+
+/* Responsive behavior same as Quarterly */
+@media (max-width: 1399px) {
+    .ar-page .ar-summary-grid,
+    .ar-page .ar-summary-grid--quarterly-style {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 1199px) {
+    .ar-page .ar-summary-grid,
+    .ar-page .ar-summary-grid--quarterly-style {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .ar-page .ar-summary-grid,
+    .ar-page .ar-summary-grid--quarterly-style {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ===== FINAL FIX: Reduce Annual Status Mix width ===== */
+.ar-page > .ar-top-grid {
+    --ar-status-card-width: 350px;
+    --ar-split-gap: 22px;
+
+    display: grid !important;
+    grid-template-columns:
+        minmax(0, calc(100% - var(--ar-status-card-width) - var(--ar-split-gap)))
+        var(--ar-status-card-width) !important;
+    column-gap: var(--ar-split-gap) !important;
+    row-gap: 20px !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    margin-bottom: 20px !important;
+}
+
+/* Quarterly Breakdown gets the wider space */
+.ar-page > .ar-top-grid > .ar-card--quarter {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+}
+
+/* Annual Status Mix becomes narrower */
+.ar-page > .ar-top-grid > .ar-card--donut {
+    width: var(--ar-status-card-width) !important;
+    max-width: var(--ar-status-card-width) !important;
+    min-width: var(--ar-status-card-width) !important;
+    justify-self: end !important;
+}
+
+/* Let the Quarterly Breakdown chart use the extra width */
+.ar-page > .ar-top-grid .ar-chart-wrap--quarter {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 250px !important;
+}
+
+/* Compact the Annual Status Mix donut */
+.ar-page > .ar-top-grid > .ar-card--donut .ar-donut-stack {
+    min-height: 300px !important;
+    justify-content: center !important;
+    gap: 12px !important;
+}
+
+.ar-page > .ar-top-grid > .ar-card--donut .ar-donut-shell,
+.ar-page > .ar-top-grid > .ar-card--donut .ar-donut-chart {
+    width: 205px !important;
+    height: 205px !important;
+}
+
+.ar-page > .ar-top-grid > .ar-card--donut .ar-donut-center-value {
+    font-size: 2.35rem !important;
+}
+
+.ar-page > .ar-top-grid > .ar-card--donut .ar-donut-legend {
+    gap: 10px 14px !important;
+    justify-content: center !important;
+}
+
+.ar-page > .ar-top-grid > .ar-card--donut .ar-donut-legend-item {
+    min-width: 120px !important;
+}
+
+/* Stack normally on tablet/mobile */
+@media (max-width: 1199px) {
+    .ar-page > .ar-top-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .ar-page > .ar-top-grid > .ar-card--donut {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        justify-self: stretch !important;
+    }
+
+    .ar-page > .ar-top-grid > .ar-card--donut .ar-donut-shell,
+    .ar-page > .ar-top-grid > .ar-card--donut .ar-donut-chart {
+        width: 250px !important;
+        height: 250px !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .ar-page > .ar-top-grid .ar-chart-wrap--quarter {
+        height: 300px !important;
+    }
+
+    .ar-page > .ar-top-grid > .ar-card--donut .ar-donut-shell,
+    .ar-page > .ar-top-grid > .ar-card--donut .ar-donut-chart {
+        width: 226px !important;
+        height: 226px !important;
+    }
+
+    .ar-page > .ar-top-grid > .ar-card--donut .ar-donut-legend {
+        justify-content: flex-start !important;
+    }
+
+    .ar-page > .ar-top-grid > .ar-card--donut .ar-donut-legend-item {
+        min-width: 100% !important;
+    }
+}

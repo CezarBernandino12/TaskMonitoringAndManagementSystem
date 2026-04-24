@@ -199,18 +199,23 @@ function renderProgress(rate, total) {
     );
 }
 
-function SummaryCard({ icon, title, value, tone, sub }) {
+function SummaryCard({ icon, label, value, subtext, tone, meta }) {
     return (
         <div className="ar-summary-card">
-            <div className="ar-summary-top">
+            <div className="ar-summary-head">
                 <div className={`ar-summary-icon ${tone}`}>
                     <i className={`bi ${icon}`}></i>
                 </div>
-                <span className={`ar-summary-chip ${tone}`}>{sub}</span>
+                <span className={`ar-summary-chip ${tone}`}>{meta}</span>
             </div>
 
-            <div className="ar-summary-title">{title}</div>
-            <div className={`ar-summary-value ${tone}`}>{value}</div>
+            <div className="ar-summary-label">{label}</div>
+
+            <div className="ar-summary-value-line">
+                <span className="ar-summary-value">{value}</span>
+            </div>
+
+            <div className="ar-summary-subtext">{subtext}</div>
         </div>
     );
 }
@@ -1195,13 +1200,52 @@ function AnnualReportPage() {
                 </div>
             </div>
 
-            <div className="ar-summary-grid">
-                <SummaryCard icon="bi-list-task" title="Total Tasks" value={summary.total} tone="primary" sub="Annual scope" />
-                <SummaryCard icon="bi-check2-circle" title="Completed" value={summary.completed} tone="success" sub="Finished" />
-                <SummaryCard icon="bi-arrow-repeat" title="Ongoing" value={summary.ongoing} tone="warning" sub="Still active" />
-                <SummaryCard icon="bi-exclamation-circle" title="Overdue" value={summary.overdue} tone="danger" sub="Past deadline" />
-                <SummaryCard icon="bi-graph-up" title="Completion Rate" value={`${summaryRate}%`} tone="primary" sub="Annual result" />
-            </div>
+<div className="ar-summary-grid ar-summary-grid--quarterly-style">
+    <SummaryCard
+        icon="bi-check2-circle"
+        label="Completed Tasks"
+        value={summary.completed}
+        subtext="Finished tasks during the selected year"
+        tone="success"
+        meta={`${pct(safeNum(summary.completed), safeNum(summary.total))}% of total`}
+    />
+
+    <SummaryCard
+        icon="bi-arrow-repeat"
+        label="In Progress Tasks"
+        value={summary.ongoing}
+        subtext="Active tasks still underway"
+        tone="warning"
+        meta={`${pct(safeNum(summary.ongoing), safeNum(summary.total))}% of total`}
+    />
+
+    <SummaryCard
+        icon="bi-exclamation-circle"
+        label="Overdue Tasks"
+        value={summary.overdue}
+        subtext="Tasks that missed their deadline"
+        tone="danger"
+        meta={`${pct(safeNum(summary.overdue), safeNum(summary.total))}% of total`}
+    />
+
+    <SummaryCard
+        icon="bi-list-task"
+        label="Total Tasks"
+        value={summary.total}
+        subtext="Annual task scope"
+        tone="primary"
+        meta={year}
+    />
+
+    <SummaryCard
+        icon="bi-graph-up-arrow"
+        label="Completion Rate"
+        value={`${summaryRate}%`}
+        subtext="Completed versus total tasks"
+        tone={summaryRate >= 70 ? "success" : summaryRate >= 40 ? "warning" : "danger"}
+        meta="Annual Result"
+    />
+</div>
 
             <div className="ar-card ar-card--trend-full">
                 <div className="ar-card-head">
