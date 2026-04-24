@@ -2487,3 +2487,207 @@
     }
 }
 
+
+/* =========================================================
+   FINAL FIX: Weekly Report charts matched to Annual Reports
+========================================================= */
+
+#weeklyReportRoot .wr-top-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.75fr) !important;
+    gap: 18px !important;
+    align-items: stretch !important;
+    margin-bottom: 18px !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card,
+#weeklyReportRoot .dr-card.wr-block-gap {
+    padding: 16px 18px !important;
+    border-radius: 20px !important;
+    background: linear-gradient(180deg, var(--dr-card) 0%, var(--dr-card-soft) 100%) !important;
+    border: 1px solid var(--dr-border) !important;
+    box-shadow: var(--dr-shadow-soft) !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card .dr-card-head,
+#weeklyReportRoot .dr-card.wr-block-gap .dr-card-head {
+    margin-bottom: 8px !important;
+}
+
+#weeklyReportRoot .ar-chart-wrap,
+#weeklyReportRoot .wr-chart-lg,
+#weeklyReportRoot .wr-chart-md {
+    position: relative !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+}
+
+#weeklyReportRoot .ar-chart-wrap canvas,
+#weeklyReportRoot .wr-chart-lg canvas,
+#weeklyReportRoot .wr-chart-md canvas {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+#weeklyReportRoot .wr-chart-lg {
+    height: 330px !important;
+    min-height: 330px !important;
+}
+
+#weeklyReportRoot .wr-chart-md {
+    height: 320px !important;
+    min-height: 320px !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-card-head {
+    flex-wrap: wrap !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-stack {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 14px !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-shell,
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-chart {
+    width: 250px !important;
+    height: 250px !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-chart {
+    display: block !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-center-kicker {
+    font-size: 13px !important;
+    font-weight: 850 !important;
+    color: var(--dr-muted) !important;
+    margin-bottom: 6px !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-center-value {
+    font-size: 2.85rem !important;
+    font-weight: 950 !important;
+    letter-spacing: -0.05em !important;
+    color: var(--dr-text) !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-center-unit {
+    font-size: 12px !important;
+    font-weight: 750 !important;
+    color: var(--dr-subtle) !important;
+    margin-bottom: 6px !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-legend {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 12px 18px !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-legend-item {
+    display: inline-flex !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    min-width: 128px !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-dot {
+    width: 13px !important;
+    height: 13px !important;
+    border-radius: 999px !important;
+    border-width: 3px !important;
+    background: transparent !important;
+    flex-shrink: 0 !important;
+    margin-top: 3px !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-legend-label {
+    font-size: 13px !important;
+    font-weight: 950 !important;
+    color: var(--dr-text) !important;
+    line-height: 1.1 !important;
+}
+
+#weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-legend-meta {
+    margin-top: 2px !important;
+    font-size: 11px !important;
+    font-weight: 750 !important;
+    color: var(--dr-muted) !important;
+    line-height: 1.2 !important;
+}
+
+#weeklyReportRoot .dr-status-inline.ongoing,
+#weeklyReportRoot .dr-summary-icon.warning,
+#weeklyReportRoot .dr-summary-chip.warning {
+    color: #2563eb !important;
+}
+
+#weeklyReportRoot .dr-summary-icon.warning,
+#weeklyReportRoot .dr-summary-chip.warning {
+    background: rgba(37, 99, 235, 0.10) !important;
+}
+
+#weeklyReportRoot .dr-status-inline.overdue,
+#weeklyReportRoot .dr-overdue-cell,
+#weeklyReportRoot .dr-summary-icon.danger,
+#weeklyReportRoot .dr-summary-chip.danger {
+    color: #f43f5e !important;
+}
+
+#weeklyReportRoot .dr-summary-icon.danger,
+#weeklyReportRoot .dr-summary-chip.danger {
+    background: rgba(244, 63, 94, 0.10) !important;
+}
+
+@media (max-width: 1199px) {
+    #weeklyReportRoot .wr-top-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #weeklyReportRoot .wr-top-grid > .dr-card:last-child {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #weeklyReportRoot .wr-chart-lg,
+    #weeklyReportRoot .wr-chart-md {
+        height: 290px !important;
+        min-height: 290px !important;
+    }
+
+    #weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-shell,
+    #weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-chart {
+        width: 236px !important;
+        height: 236px !important;
+    }
+
+    #weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-legend {
+        justify-content: flex-start !important;
+    }
+
+    #weeklyReportRoot .wr-top-grid > .dr-card:last-child .dr-donut-legend-item {
+        min-width: 100% !important;
+    }
+}

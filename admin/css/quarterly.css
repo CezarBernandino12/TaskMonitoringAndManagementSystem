@@ -2179,3 +2179,714 @@
         min-width: 100% !important;
     }
 }
+
+#quarterlyReportRoot .qr-chart-lg,
+#quarterlyReportRoot .qr-chart-md,
+#quarterlyReportRoot .qr-chart-hbar,
+#quarterlyReportRoot .dr-donut-chart {
+    overflow: hidden !important;
+    border-radius: 16px !important;
+}
+
+#quarterlyReportRoot .qr-chart-lg,
+#quarterlyReportRoot .qr-chart-md {
+    height: 350px !important;
+}
+
+#quarterlyReportRoot .qr-chart-hbar {
+    min-height: 320px !important;
+}
+
+#quarterlyReportRoot .dr-card:has(.qr-chart-lg),
+#quarterlyReportRoot .dr-card:has(.qr-chart-md),
+#quarterlyReportRoot .dr-card:has(.qr-chart-hbar),
+#quarterlyReportRoot .dr-card:has(.dr-donut-chart) {
+    background: #ffffff !important;
+}
+
+[data-theme="dark"] #quarterlyReportRoot .dr-card:has(.qr-chart-lg),
+[data-theme="dark"] #quarterlyReportRoot .dr-card:has(.qr-chart-md),
+[data-theme="dark"] #quarterlyReportRoot .dr-card:has(.qr-chart-hbar),
+[data-theme="dark"] #quarterlyReportRoot .dr-card:has(.dr-donut-chart) {
+    background: var(--dr-card) !important;
+}
+
+#quarterlyReportRoot .dr-donut-stack {
+    justify-content: center !important;
+}
+
+
+/* =========================================================
+   Quarterly Report - Annual Report 1:1 UI Alignment
+   This block intentionally overrides the older daily/quarterly styling.
+   Keep this at the very bottom of the quarterly CSS file.
+========================================================= */
+
+#quarterlyReportRoot {
+    --dr-bg: #f6f8fc !important;
+    --dr-card: #ffffff !important;
+    --dr-card-soft: #fbfcff !important;
+    --dr-card-mute: #f3f6fb !important;
+    --dr-border: #e6ebf3 !important;
+    --dr-border-soft: #eef2f7 !important;
+    --dr-border-strong: #d8e0ec !important;
+    --dr-text: #0f172a !important;
+    --dr-text-soft: #334155 !important;
+    --dr-muted: #76839a !important;
+    --dr-subtle: #94a3b8 !important;
+    --dr-blue: #2563eb !important;
+    --dr-green: #16a34a !important;
+    --dr-pink: #ec4899 !important;
+    --dr-red: #ef4444 !important;
+    --dr-amber: #d97706 !important;
+    --dr-purple: #6d3df5 !important;
+    --dr-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+    --dr-shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.05) !important;
+    --dr-shadow-md: 0 16px 40px rgba(15, 23, 42, 0.08) !important;
+    --dr-shadow-lg: 0 30px 72px rgba(15, 23, 42, 0.22) !important;
+}
+
+[data-theme="dark"] #quarterlyReportRoot {
+    --dr-bg: #0b1220 !important;
+    --dr-card: #131c2f !important;
+    --dr-card-soft: #182235 !important;
+    --dr-card-mute: #11192b !important;
+    --dr-border: rgba(255, 255, 255, 0.08) !important;
+    --dr-border-soft: rgba(255, 255, 255, 0.06) !important;
+    --dr-border-strong: rgba(255, 255, 255, 0.14) !important;
+    --dr-text: #f8fafc !important;
+    --dr-text-soft: #dbe5f1 !important;
+    --dr-muted: #a8b3c7 !important;
+    --dr-subtle: #7f8aa1 !important;
+    --dr-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18) !important;
+    --dr-shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.24) !important;
+    --dr-shadow-md: 0 18px 42px rgba(0, 0, 0, 0.28) !important;
+    --dr-shadow-lg: 0 30px 72px rgba(0, 0, 0, 0.42) !important;
+}
+
+#quarterlyReportRoot .dr-page {
+    padding: 14px 14px 20px !important;
+    color: var(--dr-text) !important;
+    font-family: "Nunito", sans-serif !important;
+}
+
+#quarterlyReportRoot .qr-toolbar-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 6px !important;
+    margin-bottom: 18px !important;
+}
+
+#quarterlyReportRoot .qr-toolbar-row {
+    margin-bottom: 0 !important;
+    align-items: flex-start !important;
+}
+
+#quarterlyReportRoot .dr-card-title {
+    margin: 0 !important;
+    font-size: 1.05rem !important;
+    font-weight: 950 !important;
+    color: var(--dr-text) !important;
+    letter-spacing: -0.02em !important;
+}
+
+#quarterlyReportRoot .qr-toolbar-card .dr-card-title {
+    font-size: 1.85rem !important;
+    letter-spacing: -0.04em !important;
+}
+
+#quarterlyReportRoot .dr-card-subtitle {
+    margin-top: 3px !important;
+    font-size: 12px !important;
+    color: var(--dr-muted) !important;
+    font-weight: 750 !important;
+}
+
+#quarterlyReportRoot .dr-ghost-btn,
+#quarterlyReportRoot .dr-filter-pill,
+#quarterlyReportRoot .dr-icon-btn,
+#quarterlyReportRoot .dr-eye-btn,
+#quarterlyReportRoot .qr-period-label,
+#quarterlyReportRoot .qr-select-shell {
+    border: 1px solid var(--dr-border) !important;
+    background: var(--dr-card) !important;
+    color: var(--dr-text) !important;
+    border-radius: 14px !important;
+    height: 42px !important;
+    box-shadow: var(--dr-shadow-xs) !important;
+    font-size: 13px !important;
+    font-weight: 850 !important;
+}
+
+#quarterlyReportRoot .qr-period-label {
+    min-width: 196px !important;
+    padding: 0 16px !important;
+}
+
+#quarterlyReportRoot .qr-select-shell {
+    min-width: 280px !important;
+}
+
+#quarterlyReportRoot .dr-summary-grid,
+#quarterlyReportRoot .qr-summary-grid {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    margin-bottom: 18px !important;
+}
+
+#quarterlyReportRoot .dr-summary-card,
+#quarterlyReportRoot .dr-card {
+    border: 1px solid var(--dr-border) !important;
+    background: linear-gradient(180deg, var(--dr-card) 0%, var(--dr-card-soft) 100%) !important;
+    border-radius: 20px !important;
+    box-shadow: var(--dr-shadow-sm) !important;
+}
+
+#quarterlyReportRoot .dr-summary-card {
+    padding: 14px 16px !important;
+}
+
+#quarterlyReportRoot .dr-summary-head {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 10px !important;
+    gap: 10px !important;
+}
+
+#quarterlyReportRoot .dr-summary-icon {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 10px !important;
+    font-size: 16px !important;
+}
+
+#quarterlyReportRoot .dr-summary-chip {
+    padding: 5px 9px !important;
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+}
+
+#quarterlyReportRoot .dr-summary-icon.success,
+#quarterlyReportRoot .dr-summary-chip.success {
+    background: rgba(22, 163, 74, 0.1) !important;
+    color: #16a34a !important;
+}
+
+#quarterlyReportRoot .dr-summary-icon.warning,
+#quarterlyReportRoot .dr-summary-chip.warning,
+#quarterlyReportRoot .dr-summary-icon.primary,
+#quarterlyReportRoot .dr-summary-chip.primary {
+    background: rgba(37, 99, 235, 0.1) !important;
+    color: #2563eb !important;
+}
+
+#quarterlyReportRoot .dr-summary-icon.danger,
+#quarterlyReportRoot .dr-summary-chip.danger {
+    background: rgba(236, 72, 153, 0.1) !important;
+    color: #ec4899 !important;
+}
+
+#quarterlyReportRoot .dr-summary-label {
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    color: var(--dr-muted) !important;
+    margin-bottom: 5px !important;
+}
+
+#quarterlyReportRoot .dr-summary-value {
+    font-size: 2rem !important;
+    font-weight: 950 !important;
+    line-height: 1 !important;
+    letter-spacing: -0.04em !important;
+    color: var(--dr-text) !important;
+}
+
+#quarterlyReportRoot .dr-summary-subtext {
+    margin-top: 4px !important;
+    font-size: 11px !important;
+    color: var(--dr-subtle) !important;
+    font-weight: 750 !important;
+}
+
+#quarterlyReportRoot .dr-card {
+    padding: 16px 18px !important;
+    margin-bottom: 18px !important;
+}
+
+#quarterlyReportRoot .dr-card-head {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 14px !important;
+    flex-wrap: wrap !important;
+    margin-bottom: 14px !important;
+}
+
+#quarterlyReportRoot .qr-block-gap {
+    margin-bottom: 18px !important;
+}
+
+#quarterlyReportRoot .qr-split-grid,
+#quarterlyReportRoot .dr-page > .qr-split-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.75fr) !important;
+    gap: 18px !important;
+    margin-bottom: 18px !important;
+    align-items: stretch !important;
+}
+
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:first-child,
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+}
+
+#quarterlyReportRoot .qr-chart-lg,
+#quarterlyReportRoot .qr-chart-md,
+#quarterlyReportRoot .qr-chart-hbar,
+#quarterlyReportRoot .ar-chart-wrap {
+    position: relative !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+}
+
+#quarterlyReportRoot .qr-chart-lg,
+#quarterlyReportRoot .qr-chart-md {
+    height: 300px !important;
+}
+
+#quarterlyReportRoot .qr-chart-hbar {
+    min-height: 260px !important;
+}
+
+#quarterlyReportRoot .qr-chart-lg canvas,
+#quarterlyReportRoot .qr-chart-md canvas,
+#quarterlyReportRoot .qr-chart-hbar canvas,
+#quarterlyReportRoot .dr-donut-chart,
+#quarterlyReportRoot .ar-chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+#quarterlyReportRoot .dr-donut-stack,
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-stack {
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 14px !important;
+}
+
+#quarterlyReportRoot .dr-donut-shell,
+#quarterlyReportRoot .dr-donut-chart,
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-shell,
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-chart {
+    width: 250px !important;
+    height: 250px !important;
+}
+
+#quarterlyReportRoot .dr-donut-center-value,
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-center-value {
+    font-size: 2.85rem !important;
+    font-weight: 950 !important;
+    letter-spacing: -0.05em !important;
+    color: var(--dr-text) !important;
+}
+
+#quarterlyReportRoot .dr-donut-center-kicker {
+    font-size: 13px !important;
+    font-weight: 850 !important;
+    color: var(--dr-muted) !important;
+}
+
+#quarterlyReportRoot .dr-donut-center-unit {
+    font-size: 12px !important;
+    font-weight: 750 !important;
+    color: var(--dr-subtle) !important;
+}
+
+#quarterlyReportRoot .dr-donut-legend,
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-legend {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 12px 18px !important;
+}
+
+#quarterlyReportRoot .dr-donut-legend-item,
+#quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-legend-item {
+    display: inline-flex !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    min-width: 128px !important;
+}
+
+#quarterlyReportRoot .dr-donut-legend-label {
+    font-size: 13px !important;
+    font-weight: 950 !important;
+    color: var(--dr-text) !important;
+}
+
+#quarterlyReportRoot .dr-donut-legend-meta {
+    margin-top: 2px !important;
+    font-size: 11px !important;
+    font-weight: 750 !important;
+    color: var(--dr-muted) !important;
+}
+
+#quarterlyReportRoot .dr-table-shell {
+    overflow: auto !important;
+    max-height: 520px !important;
+    border: 1px solid var(--dr-border) !important;
+    border-radius: 16px !important;
+    background: var(--dr-card) !important;
+    scrollbar-width: thin !important;
+}
+
+#quarterlyReportRoot .dr-table {
+    width: 100% !important;
+    min-width: 880px !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: var(--dr-card) !important;
+}
+
+#quarterlyReportRoot .dr-table thead th {
+    height: 48px !important;
+    padding: 0 18px !important;
+    background: var(--dr-card-mute) !important;
+    border-bottom: 1px solid var(--dr-border) !important;
+    color: var(--dr-muted) !important;
+    font-size: 11px !important;
+    font-weight: 950 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+}
+
+#quarterlyReportRoot .dr-table tbody td {
+    height: 54px !important;
+    padding: 0 18px !important;
+    background: var(--dr-card) !important;
+    border-bottom: 1px solid var(--dr-border-soft) !important;
+    color: var(--dr-text-soft) !important;
+    font-size: 12px !important;
+    font-weight: 750 !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+}
+
+#quarterlyReportRoot .dr-table tbody tr:hover td {
+    background: rgba(109, 61, 245, 0.02) !important;
+}
+
+#quarterlyReportRoot .dr-table tbody tr.is-active td {
+    background: rgba(109, 61, 245, 0.04) !important;
+    border-top: 1px solid rgba(109, 61, 245, 0.14) !important;
+    border-bottom: 1px solid rgba(109, 61, 245, 0.14) !important;
+}
+
+#quarterlyReportRoot .dr-assignee-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 999px !important;
+    object-fit: cover !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: 0 0 0 1px var(--dr-border) !important;
+}
+
+#quarterlyReportRoot .dr-assignee-name,
+#quarterlyReportRoot .qr-dept-name {
+    max-width: 220px !important;
+    color: var(--dr-text) !important;
+    font-size: 12px !important;
+    font-weight: 950 !important;
+}
+
+#quarterlyReportRoot .dr-overdue-cell {
+    color: #ec4899 !important;
+    font-weight: 900 !important;
+}
+
+#quarterlyReportRoot .dr-performance-cell {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    min-width: 170px !important;
+}
+
+#quarterlyReportRoot .dr-progress {
+    width: 100% !important;
+    max-width: 190px !important;
+    height: 7px !important;
+    border-radius: 999px !important;
+    background: #ececf2 !important;
+    overflow: hidden !important;
+    position: relative !important;
+    flex: 1 !important;
+}
+
+#quarterlyReportRoot .dr-progress-bar {
+    height: 100% !important;
+    border-radius: 999px !important;
+    background: linear-gradient(90deg, #8b5cf6 0%, #6d3df5 100%) !important;
+    box-shadow: 0 2px 8px rgba(109, 61, 245, 0.28) !important;
+    min-width: 7px !important;
+    color: transparent !important;
+    font-size: 0 !important;
+}
+
+#quarterlyReportRoot .dr-performance-value {
+    min-width: 30px !important;
+    text-align: right !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    color: var(--dr-muted) !important;
+}
+
+#quarterlyReportRoot .dr-status-inline.completed { color: #16a34a !important; }
+#quarterlyReportRoot .dr-status-inline.ongoing { color: #2563eb !important; }
+#quarterlyReportRoot .dr-status-inline.overdue { color: #ec4899 !important; }
+#quarterlyReportRoot .dr-priority-inline.high { color: #ef4444 !important; }
+#quarterlyReportRoot .dr-priority-inline.medium { color: #d97706 !important; }
+#quarterlyReportRoot .dr-priority-inline.low { color: #16a34a !important; }
+
+@media (max-width: 1399px) {
+    #quarterlyReportRoot .dr-summary-grid,
+    #quarterlyReportRoot .qr-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 1199px) {
+    #quarterlyReportRoot .qr-split-grid,
+    #quarterlyReportRoot .dr-page > .qr-split-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #quarterlyReportRoot .dr-summary-grid,
+    #quarterlyReportRoot .qr-summary-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #quarterlyReportRoot .qr-chart-lg,
+    #quarterlyReportRoot .qr-chart-md {
+        height: 290px !important;
+    }
+
+    #quarterlyReportRoot .dr-donut-shell,
+    #quarterlyReportRoot .dr-donut-chart,
+    #quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-shell,
+    #quarterlyReportRoot .dr-page > .qr-split-grid > .dr-card:last-child .dr-donut-chart {
+        width: 236px !important;
+        height: 236px !important;
+    }
+}
+
+
+/* =========================================================
+   FINAL FIX: Quarterly Monthly Breakdown + Status Mix
+   Match Annual Report's Quarterly Breakdown + Annual Status Mix.
+========================================================= */
+
+#quarterlyReportRoot .qr-top-grid-annual,
+#quarterlyReportRoot .dr-page > .qr-top-grid-annual {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.75fr) !important;
+    gap: 18px !important;
+    align-items: stretch !important;
+    margin-bottom: 18px !important;
+}
+
+#quarterlyReportRoot .qr-top-grid-annual > .dr-card {
+    min-height: 380px !important;
+    margin-bottom: 0 !important;
+    padding: 16px 18px !important;
+    border-radius: 20px !important;
+    background: linear-gradient(180deg, var(--dr-card) 0%, var(--dr-card-soft) 100%) !important;
+    border: 1px solid var(--dr-border) !important;
+    box-shadow: var(--dr-shadow-soft) !important;
+}
+
+#quarterlyReportRoot .qr-card--monthly .dr-card-head,
+#quarterlyReportRoot .qr-card--status-mix .dr-card-head {
+    margin-bottom: 14px !important;
+}
+
+#quarterlyReportRoot .qr-month-chip-row {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+}
+
+#quarterlyReportRoot .qr-month-chip-row .ar-quarter-chip {
+    min-height: 32px !important;
+    border-radius: 999px !important;
+    border: 1px solid var(--dr-border) !important;
+    background: var(--dr-card) !important;
+    color: var(--dr-muted) !important;
+    padding: 0 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    box-shadow: none !important;
+}
+
+#quarterlyReportRoot .qr-month-chip-row .ar-quarter-chip strong {
+    font-weight: 950 !important;
+}
+
+#quarterlyReportRoot .qr-month-chip-row .ar-quarter-chip span {
+    color: #2563eb !important;
+    font-weight: 950 !important;
+}
+
+#quarterlyReportRoot .qr-card--monthly .qr-chart-md,
+#quarterlyReportRoot .qr-top-grid-annual .qr-chart-md,
+#quarterlyReportRoot .dr-page > .qr-top-grid-annual .qr-chart-md {
+    height: 235px !important;
+    min-height: 235px !important;
+    max-height: 235px !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    border-radius: 14px !important;
+}
+
+#quarterlyReportRoot .qr-card--monthly .qr-chart-md canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-stack {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 14px !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-shell,
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-chart {
+    width: 250px !important;
+    height: 250px !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-center-kicker {
+    font-size: 13px !important;
+    font-weight: 850 !important;
+    color: var(--dr-muted) !important;
+    margin-bottom: 6px !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-center-value {
+    font-size: 2.85rem !important;
+    font-weight: 950 !important;
+    letter-spacing: -0.05em !important;
+    color: var(--dr-text) !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-center-unit {
+    font-size: 12px !important;
+    font-weight: 750 !important;
+    color: var(--dr-subtle) !important;
+    margin-bottom: 6px !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-legend {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 12px 18px !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-legend-item {
+    display: inline-flex !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    min-width: 128px !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-dot {
+    width: 13px !important;
+    height: 13px !important;
+    border-radius: 999px !important;
+    border-width: 3px !important;
+    background: transparent !important;
+    flex-shrink: 0 !important;
+    margin-top: 3px !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-legend-label {
+    font-size: 13px !important;
+    font-weight: 950 !important;
+    color: var(--dr-text) !important;
+    line-height: 1.1 !important;
+}
+
+#quarterlyReportRoot .qr-card--status-mix .dr-donut-legend-meta {
+    margin-top: 2px !important;
+    font-size: 11px !important;
+    font-weight: 750 !important;
+    color: var(--dr-muted) !important;
+    line-height: 1.2 !important;
+}
+
+@media (max-width: 1199px) {
+    #quarterlyReportRoot .qr-top-grid-annual,
+    #quarterlyReportRoot .dr-page > .qr-top-grid-annual {
+        grid-template-columns: 1fr !important;
+    }
+
+    #quarterlyReportRoot .qr-top-grid-annual > .dr-card {
+        min-height: auto !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #quarterlyReportRoot .qr-card--monthly .qr-chart-md,
+    #quarterlyReportRoot .qr-top-grid-annual .qr-chart-md {
+        height: 290px !important;
+        max-height: 290px !important;
+    }
+
+    #quarterlyReportRoot .qr-card--status-mix .dr-donut-shell,
+    #quarterlyReportRoot .qr-card--status-mix .dr-donut-chart {
+        width: 236px !important;
+        height: 236px !important;
+    }
+
+    #quarterlyReportRoot .qr-card--status-mix .dr-donut-legend {
+        justify-content: flex-start !important;
+    }
+
+    #quarterlyReportRoot .qr-card--status-mix .dr-donut-legend-item {
+        min-width: 100% !important;
+    }
+}

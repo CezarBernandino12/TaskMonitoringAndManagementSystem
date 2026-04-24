@@ -52,8 +52,6 @@
     font-family: "Nunito", sans-serif;
 }
 
-/* ===== FINAL FIX: Annual header single-line alignment ===== */
-
 .ar-page-head {
     display: flex !important;
     align-items: flex-start !important;
@@ -125,7 +123,6 @@
     display: none !important;
 }
 
-/* Tablet */
 @media (max-width: 1200px) {
     .ar-page-head {
         flex-wrap: wrap !important;
@@ -147,7 +144,6 @@
     }
 }
 
-/* Mobile */
 @media (max-width: 767px) {
     .ar-page-head {
         align-items: stretch !important;
@@ -1606,10 +1602,6 @@
     }
 }
 
-/* =========================================================
-   FINAL FIX: Make Annual summary cards match Quarterly UI
-========================================================= */
-
 .ar-page .ar-summary-grid,
 .ar-page .ar-summary-grid--quarterly-style {
     display: grid !important;
@@ -1716,7 +1708,6 @@
     font-weight: 700 !important;
 }
 
-/* Responsive behavior same as Quarterly */
 @media (max-width: 1399px) {
     .ar-page .ar-summary-grid,
     .ar-page .ar-summary-grid--quarterly-style {
@@ -1738,7 +1729,6 @@
     }
 }
 
-/* ===== FINAL FIX: Reduce Annual Status Mix width ===== */
 .ar-page > .ar-top-grid {
     --ar-status-card-width: 350px;
     --ar-split-gap: 22px;
@@ -1754,7 +1744,6 @@
     margin-bottom: 20px !important;
 }
 
-/* Quarterly Breakdown gets the wider space */
 .ar-page > .ar-top-grid > .ar-card--quarter {
     width: 100% !important;
     max-width: none !important;
@@ -1762,7 +1751,6 @@
     justify-self: stretch !important;
 }
 
-/* Annual Status Mix becomes narrower */
 .ar-page > .ar-top-grid > .ar-card--donut {
     width: var(--ar-status-card-width) !important;
     max-width: var(--ar-status-card-width) !important;
@@ -1770,14 +1758,12 @@
     justify-self: end !important;
 }
 
-/* Let the Quarterly Breakdown chart use the extra width */
 .ar-page > .ar-top-grid .ar-chart-wrap--quarter {
     width: 100% !important;
     min-width: 0 !important;
     height: 250px !important;
 }
 
-/* Compact the Annual Status Mix donut */
 .ar-page > .ar-top-grid > .ar-card--donut .ar-donut-stack {
     min-height: 300px !important;
     justify-content: center !important;
@@ -1803,7 +1789,6 @@
     min-width: 120px !important;
 }
 
-/* Stack normally on tablet/mobile */
 @media (max-width: 1199px) {
     .ar-page > .ar-top-grid {
         grid-template-columns: 1fr !important;
