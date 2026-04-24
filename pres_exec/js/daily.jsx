@@ -796,30 +796,30 @@ function PresidentDailyReportPage() {
         return employeeRows.map((emp) => emp.overdue);
     }, [employeeRows, selectedEmp]);
 
-    const donutLegendData = useMemo(() => {
-        const total = scopedSummary.total || 0;
+const donutLegendData = useMemo(() => {
+    const total = scopedSummary.total || 0;
 
-        return [
-            {
-                label: "Completed",
-                value: scopedSummary.completed,
-                color: "#16a34a"
-            },
-            {
-                label: "Ongoing",
-                value: scopedSummary.ongoing,
-                color: "#f59e0b"
-            },
-            {
-                label: "Overdue",
-                value: scopedSummary.overdue,
-                color: "#ec4899"
-            }
-        ].map((item) => ({
-            ...item,
-            percent: pct(item.value, total)
-        }));
-    }, [scopedSummary]);
+    return [
+        {
+            label: "Completed",
+            value: scopedSummary.completed,
+            color: "#16a34a"
+        },
+        {
+            label: "Ongoing",
+            value: scopedSummary.ongoing,
+            color: "#2563eb"
+        },
+        {
+            label: "Overdue",
+            value: scopedSummary.overdue,
+            color: "#e11d48"
+        }
+    ].map((item) => ({
+        ...item,
+        percent: pct(item.value, total)
+    }));
+}, [scopedSummary]);
 
 useEffect(() => {
     if (!window.echarts || !trendChartRef.current) return;
@@ -1005,23 +1005,38 @@ useEffect(() => {
         const isDark = themeMode === "dark";
         const separatorColor = isDark ? "#141b2d" : "#ffffff";
 
-        const donutData = [
-            {
-                value: safeNum(scopedSummary.ongoing),
-                name: "Ongoing",
-                itemStyle: { color: "#1E84F3" } // bright blue
-            },
-            {
-                value: safeNum(scopedSummary.completed),
-                name: "Completed",
-                itemStyle: { color: "#7A6CF2" } // premium purple
-            },
-            {
-                value: safeNum(scopedSummary.overdue),
-                name: "Overdue",
-                itemStyle: { color: "#F6A30D" } // warm orange
-            }
-        ].filter((item) => item.value > 0);
+const completedDonutColor = new window.echarts.graphic.LinearGradient(0, 0, 1, 1, [
+    { offset: 0, color: "#34d399" },
+    { offset: 1, color: "#16a34a" }
+]);
+
+const ongoingDonutColor = new window.echarts.graphic.LinearGradient(0, 0, 1, 1, [
+    { offset: 0, color: "#4f8cff" },
+    { offset: 1, color: "#2563eb" }
+]);
+
+const overdueDonutColor = new window.echarts.graphic.LinearGradient(0, 0, 1, 1, [
+    { offset: 0, color: "#ff6b6b" },
+    { offset: 1, color: "#e11d48" }
+]);
+
+const donutData = [
+    {
+        value: safeNum(scopedSummary.completed),
+        name: "Completed",
+        itemStyle: { color: completedDonutColor }
+    },
+    {
+        value: safeNum(scopedSummary.ongoing),
+        name: "Ongoing",
+        itemStyle: { color: ongoingDonutColor }
+    },
+    {
+        value: safeNum(scopedSummary.overdue),
+        name: "Overdue",
+        itemStyle: { color: overdueDonutColor }
+    }
+].filter((item) => item.value > 0);
 
         chart.setOption(
             {
@@ -1043,7 +1058,7 @@ useEffect(() => {
                 series: [
                     {
                         type: "pie",
-                        radius: ["62%", "82%"],
+                        radius: ["62%", "85%"],
                         center: ["50%", "50%"],
                         startAngle: 102,
                         clockwise: true,
@@ -1058,8 +1073,8 @@ useEffect(() => {
                         },
                         itemStyle: {
                             borderColor: separatorColor,
-                            borderWidth: 6,
-                            borderRadius: 12
+                            borderWidth: 5,
+                            borderRadius: 9
                         },
                         data:
                             donutData.length > 0
@@ -1196,7 +1211,10 @@ useEffect(() => {
 
                 <div className="dr-donut-stack dr-donut-stack--reference">
                     <div className="dr-donut-shell dr-donut-shell--reference">
-                        <div ref={donutChartRef} className="dr-donut-chart dr-donut-chart--reference"></div>
+                        <div
+                            ref={donutChartRef}
+                            className="dr-donut-chart dr-donut-chart--reference"
+                        ></div>
 
                         <div className="dr-donut-center dr-donut-center--reference">
                             <span className="dr-donut-center-kicker">Total</span>
@@ -1209,6 +1227,28 @@ useEffect(() => {
                                 </span>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="dr-donut-legend">
+                        {donutLegendData
+                            .filter((item) => item.value > 0)
+                            .map((item) => (
+                                <div className="dr-donut-legend-item" key={item.label}>
+                                    <span
+                                        className="dr-donut-dot"
+                                        style={{
+                                            borderColor: item.color
+                                        }}
+                                    ></span>
+
+                                    <div className="dr-donut-legend-copy">
+                                        <span className="dr-donut-legend-label">{item.label}</span>
+                                        <span className="dr-donut-legend-meta">
+                                            {item.value} task{item.value !== 1 ? "s" : ""} · {item.percent}%
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
                     </div>
                 </div>
             </div>

@@ -338,14 +338,16 @@
 .dr-donut-stack--reference {
     min-height: 290px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 18px;
 }
 
 .dr-donut-shell--reference {
     position: relative;
-    width: 248px;
-    height: 248px;
+    width: 260px;
+    height: 260px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -355,6 +357,52 @@
     width: 100%;
     height: 100%;
     margin: 0;
+}
+
+.dr-donut-legend {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px 28px;
+    margin-top: 6px;
+}
+
+.dr-donut-legend-item {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 135px;
+}
+
+.dr-donut-dot {
+    width: 13px;
+    height: 13px;
+    border-radius: 999px;
+    border: 3px solid;
+    background: transparent;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.dr-donut-legend-copy {
+    display: flex;
+    flex-direction: column;
+}
+
+.dr-donut-legend-label {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--dr-text);
+    line-height: 1.1;
+}
+
+.dr-donut-legend-meta {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--dr-muted);
+    line-height: 1.2;
 }
 
 .dr-donut-center--reference {
@@ -397,9 +445,6 @@
     margin-bottom: 4px;
 }
 
-.dr-donut-legend {
-    display: none;
-}
 
 [data-theme="dark"] .dr-donut-center--reference .dr-donut-center-kicker {
     color: #cbd5e1;
@@ -412,24 +457,7 @@
 [data-theme="dark"] .dr-donut-center--reference .dr-donut-center-unit {
     color: #94a3b8;
 }
-.dr-donut-legend-item {
-    gap: 8px;
-}
 
-.dr-donut-legend-label {
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.dr-donut-legend-meta {
-    font-size: 11px;
-    opacity: 0.8;
-}
-
-.dr-donut-dot {
-    width: 10px;
-    height: 10px;
-}
 
 .dr-donut-center {
     position: absolute;
@@ -486,42 +514,6 @@
     display: none;
 }
 
-.dr-donut-legend-item {
-    display: inline-flex;
-    align-items: flex-start;
-    gap: 10px;
-    min-width: 130px;
-}
-
-.dr-donut-dot {
-    width: 13px;
-    height: 13px;
-    border-radius: 999px;
-    border: 3px solid;
-    background: transparent;
-    flex-shrink: 0;
-    margin-top: 3px;
-}
-
-.dr-donut-legend-copy {
-    display: flex;
-    flex-direction: column;
-}
-
-.dr-donut-legend-label {
-    font-size: 14px;
-    font-weight: 900;
-    color: var(--dr-text);
-    line-height: 1.1;
-}
-
-.dr-donut-legend-meta {
-    margin-top: 2px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--dr-muted);
-    line-height: 1.2;
-}
 
 .dr-table-shell {
     overflow: auto;
