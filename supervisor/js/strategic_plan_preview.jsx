@@ -32,13 +32,16 @@ function StrategicPlanPreview() {
       <div style={pageContainer}>
 
         {/* HEADER WITH LOGO */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 15, marginBottom: 30 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 15, marginBottom: 6 }}>
           <img src="../imgs/psi.png" style={{ width: 60 }} />
           <div style={{ textAlign: "left" }}>
-            <div style={companyStyle}>Psy Systems and Innovations, OPC</div>
+            <div style={companyStyle}>Psi Systems and Innovations, OPC</div>
             <div style={taglineStyle}>Your development is our achievement!</div>
           </div>
         </div>
+
+        {/* SINGLE RED LINE */}
+        <hr style={{ border: "none", borderTop: "2px solid #bb0000", margin: "0 0 16px 0" }} />
 
         {/* TITLE */}
         <div style={{ textAlign: "center" }}>
@@ -94,11 +97,11 @@ function StrategicPlanPreview() {
           </tbody>
         </table>
 
-        {/* SIGNATURES */}
+        {/* SIGNATURES — no box/table, just label above and name+title below a line */}
         <div style={signatureRow}>
-          <Signature name={plan.prepared_by} subtitle={plan.prepared_by_title} label="Prepared By" />
-          <Signature name={plan.noted_by_exec_dir} subtitle="Executive Director" label="Noted By" />
-          <Signature name={plan.noted_by_president} subtitle="President, RPsy, CSAP, PhD" label="Noted By" />
+          <Signature name={plan.prepared_by}       subtitle={plan.prepared_by_title}      label="Prepared By:" />
+          <Signature name={plan.noted_by_exec_dir}  subtitle="Executive Director"          label="Noted By:" />
+          <Signature name={plan.noted_by_president} subtitle="President, RPsy, CSAP, PhD"  label="Noted By:" />
         </div>
 
         {/* DOWNLOAD BUTTON */}
@@ -123,12 +126,23 @@ function loadDocxLib() {
   if (window.docx) return Promise.resolve(window.docx);
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    // v7.8.2 is the last version with a webpack UMD build that reliably sets window.docx
     script.src = "https://unpkg.com/docx@7.8.2/build/index.js";
     script.onload = () => window.docx ? resolve(window.docx) : reject(new Error("docx loaded but window.docx is undefined"));
     script.onerror = () => reject(new Error("Failed to load docx library from CDN"));
     document.head.appendChild(script);
   });
+}
+
+/* ─── FETCH LOGO AS UINT8ARRAY FOR DOCX ─── */
+async function fetchLogoBytes() {
+  try {
+    const res = await fetch("../imgs/psi.png");
+    if (!res.ok) throw new Error("logo not found");
+    const buf = await res.arrayBuffer();
+    return new Uint8Array(buf);
+  } catch {
+    return null; // logo unavailable — skip silently
+  }
 }
 
 /* ─── DOCX GENERATOR ─── */
@@ -140,35 +154,32 @@ async function generateDoc(plan) {
     WidthType, BorderStyle, AlignmentType,
     ShadingType, VerticalAlign,
     PageOrientation, LevelFormat,
+    ImageRun, Header,
   } = docxLib;
 
   // ── Layout constants ─────────────────────────────────────────────
-  // A4 landscape: pass portrait dims, docx-js swaps them
-  // Landscape content width = long edge − margins = 16838 − 720 − 720 = 15398 DXA
-  const PAGE_W   = 11906;
-  const PAGE_H   = 16838;
-  const MARGIN   = 720; // 0.5 inch
-  const CONTENT_W = PAGE_H - MARGIN * 2; // 15398 DXA (landscape content width)
+  const PAGE_W    = 11906;
+  const PAGE_H    = 16838;
+  const MARGIN    = 720;                    // 0.5 inch sides & bottom
+  const TOP_MARGIN = 1440;                  // 1 inch top — gives header room
+  const CONTENT_W = PAGE_H - MARGIN * 2;   // 15398 DXA landscape content width
 
-  // 6 columns — distribute content width
-  // Col 1 (Goals+Objectives) gets more space
-  const COL_WIDTHS = [3200, 3200, 1500, 1700, 2900, 2898];
-  // sum = 15398
+  const COL_WIDTHS = [3200, 3200, 1500, 1700, 2900, 2898]; // sum = 15398
 
-  // ── Shared border style ──────────────────────────────────────────
-  const border = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
-  const allBorders = { top: border, bottom: border, left: border, right: border };
-  const noBorders  = {
+  // ── Border helpers ───────────────────────────────────────────────
+  const solidBorder = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
+  const allBorders  = { top: solidBorder, bottom: solidBorder, left: solidBorder, right: solidBorder };
+  const noBorders   = {
     top:    { style: BorderStyle.NONE },
     bottom: { style: BorderStyle.NONE },
     left:   { style: BorderStyle.NONE },
     right:  { style: BorderStyle.NONE },
   };
+  const noTableBorders = { ...noBorders, insideH: { style: BorderStyle.NONE }, insideV: { style: BorderStyle.NONE } };
 
-  // ── Cell helpers ─────────────────────────────────────────────────
+  // ── Cell/paragraph helpers ───────────────────────────────────────
   const CELL_MARGINS = { top: 80, bottom: 80, left: 120, right: 120 };
 
-  // Plain text cell
   const makeCell = (children, colIdx, options = {}) =>
     new TableCell({
       borders: allBorders,
@@ -179,32 +190,28 @@ async function generateDoc(plan) {
       children,
     });
 
-  // Header cell (shaded)
   const makeHeaderCell = (text, colIdx) =>
     new TableCell({
       borders: allBorders,
       width: { size: COL_WIDTHS[colIdx], type: WidthType.DXA },
       margins: CELL_MARGINS,
-      shading: { fill: "1F3864", type: ShadingType.CLEAR },
+      shading: { fill: "FFFFFF", type: ShadingType.CLEAR },
       children: [new Paragraph({
         alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text, bold: true, color: "FFFFFF", size: 18 })],
+        children: [new TextRun({ text, bold: true, color: "000000", size: 18 })],
       })],
     });
 
-  // Text paragraph helper (size in half-points, e.g. 20 = 10pt)
   const p = (text, opts = {}) =>
     new Paragraph({ children: [new TextRun({ text: text || "", size: 20, ...opts })] });
 
-  // Numbered list paragraph using docx-js numbering
   const numP = (text, ref) =>
     new Paragraph({
       numbering: { reference: ref, level: 0 },
       children: [new TextRun({ text: text || "", size: 20 })],
     });
 
-  // ── Numbered list configs ─────────────────────────────────────────
-  // One unique reference per goal to reset numbering per cell
+  // ── Numbered list configs ────────────────────────────────────────
   const makeNumberingConfig = (goals) =>
     goals.flatMap((_, i) => [
       {
@@ -225,8 +232,8 @@ async function generateDoc(plan) {
       },
     ]);
 
-  // ── Build table rows ──────────────────────────────────────────────
-  const headerRow = new TableRow({
+  // ── Build data table rows ────────────────────────────────────────
+  const tableHeaderRow = new TableRow({
     tableHeader: true,
     children: headers.map((h, i) => makeHeaderCell(h, i)),
   });
@@ -239,24 +246,18 @@ async function generateDoc(plan) {
     const metLines  = splitLines(g.metric);
     const remLines  = splitLines(g.remarks);
 
-    // Col 0: Goal + Objectives
     const col0Children = [
       new Paragraph({ children: [new TextRun({ text: `Goal: ${g.goal || ""}`, bold: true, size: 20 })] }),
       new Paragraph({ children: [new TextRun({ text: "" })] }),
       new Paragraph({ children: [new TextRun({ text: "Objectives:", bold: true, size: 20 })] }),
-      ...(objLines.length
-        ? objLines.map(o => numP(o, `obj-${gi}`))
-        : [p("")]),
+      ...(objLines.length ? objLines.map(o => numP(o, `obj-${gi}`)) : [p("")]),
     ];
 
-    // Col 1: Detailed Plan (numbered)
     const col1Children = planLines.length
       ? planLines.map(pl => numP(pl, `plan-${gi}`))
       : [p("")];
 
-    // Col 2–5: simple line-by-line
-    const linesOrBlank = (lines) =>
-      lines.length ? lines.map(l => p(l)) : [p("")];
+    const linesOrBlank = (lines) => lines.length ? lines.map(l => p(l)) : [p("")];
 
     return new TableRow({
       children: [
@@ -270,65 +271,128 @@ async function generateDoc(plan) {
     });
   });
 
-  // ── Signature helper ─────────────────────────────────────────────
-  const signatureCell = (name, subtitle, label, colW) =>
+  // ── Signature block — NO visible table, plain paragraphs ─────────
+  // Three columns side by side using a borderless table so they align,
+  // but with all table/cell borders set to NONE so nothing is visible.
+  const SIG_COL = Math.round(CONTENT_W / 3);
+
+  const makeSigCell = (label, name, subtitle) =>
     new TableCell({
       borders: noBorders,
-      width: { size: colW, type: WidthType.DXA },
-      margins: CELL_MARGINS,
+      width: { size: SIG_COL, type: WidthType.DXA },
+      margins: { top: 0, bottom: 0, left: 200, right: 200 },
       children: [
-        // Signature underline via paragraph border
-        new Paragraph({
-          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 1 } },
-          children: [new TextRun({ text: " " })],
-        }),
+        // Label line (e.g. "Prepared By:")
         new Paragraph({
           alignment: AlignmentType.CENTER,
+          spacing: { before: 0, after: 560 },
+          children: [new TextRun({ text: label, size: 18 })],
+        }),
+        // Name with a top border as the signature line
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 0, after: 40 },
+          border: { top: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 1 } },
           children: [new TextRun({ text: name || "", bold: true, size: 20 })],
         }),
+        // Position/subtitle
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: subtitle || "", italics: true, size: 18 })],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: label, size: 18 })],
+          spacing: { before: 0, after: 0 },
+          children: [new TextRun({ text: subtitle || "", size: 18 })],
         }),
       ],
     });
 
-  // 3-column signature table with gaps
-  const SIG_W  = 4000;
-  const GAP_W  = (CONTENT_W - SIG_W * 3) / 2; // space between the 3 signature blocks
-
-  const sigGapCell = (w) =>
-    new TableCell({
-      borders: noBorders,
-      width: { size: Math.round(w), type: WidthType.DXA },
-      children: [new Paragraph("")],
-    });
-
   const sigTable = new Table({
     width: { size: CONTENT_W, type: WidthType.DXA },
-    columnWidths: [SIG_W, Math.round(GAP_W), SIG_W, Math.round(GAP_W), SIG_W],
+    columnWidths: [SIG_COL, SIG_COL, SIG_COL],
+    borders: noTableBorders,
     rows: [
       new TableRow({
         children: [
-          signatureCell(plan.prepared_by,       plan.prepared_by_title, "Prepared By",   SIG_W),
-          sigGapCell(GAP_W),
-          signatureCell(plan.noted_by_exec_dir, "Executive Director",   "Noted By",      SIG_W),
-          sigGapCell(GAP_W),
-          signatureCell(plan.noted_by_president,"President, RPsy, CSAP, PhD", "Noted By", SIG_W),
+          makeSigCell("Prepared By:",  plan.prepared_by,        plan.prepared_by_title || ""),
+          makeSigCell("Noted By:",     plan.noted_by_exec_dir,  "Executive Director"),
+          makeSigCell("Noted By:",     plan.noted_by_president, "President, RPsy, CSAP, PhD"),
         ],
       }),
     ],
   });
 
+  // ── Fetch logo ────────────────────────────────────────────────────
+  const logoBytes = await fetchLogoBytes();
+
+  // ── Page header — repeats on every page ──────────────────────────
+  // Logo + company name/tagline in a borderless 2-col table, then single red rule
+
+  const logoColW = 900;
+  const textColW = CONTENT_W - logoColW;
+
+  const logoCell = new TableCell({
+    borders: noBorders,
+    width: { size: logoColW, type: WidthType.DXA },
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 0, bottom: 0, left: 0, right: 160 },
+    children: [
+      logoBytes
+        ? new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new ImageRun({ data: logoBytes, transformation: { width: 55, height: 55 } })],
+          })
+        : new Paragraph(""),
+    ],
+  });
+
+  const nameCell = new TableCell({
+    borders: noBorders,
+    width: { size: textColW, type: WidthType.DXA },
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 0, bottom: 0, left: 0, right: 0 },
+    children: [
+      new Paragraph({
+        spacing: { before: 0, after: 20 },
+        children: [new TextRun({
+          text: "Psy Systems and Innovations, OPC",
+          font: "Matura MT Script Capitals",
+          size: 36,
+          color: "BB0000",
+          bold: true,
+        })],
+      }),
+      new Paragraph({
+        spacing: { before: 0, after: 0 },
+        children: [new TextRun({
+          text: "Your development is our achievement!",
+          font: "Harlow Solid Italic",
+          size: 22,
+          color: "BB0000",
+          italics: true,
+        })],
+      }),
+    ],
+  });
+
+  const letterheadTable = new Table({
+    width: { size: CONTENT_W, type: WidthType.DXA },
+    columnWidths: [logoColW, textColW],
+    borders: noTableBorders,
+    rows: [new TableRow({ children: [logoCell, nameCell] })],
+  });
+
+  // Single red rule paragraph
+  const redRule = new Paragraph({
+    border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: "BB0000", space: 1 } },
+    spacing: { before: 60, after: 0 },
+    children: [new TextRun({ text: "" })],
+  });
+
+  const pageHeader = new Header({
+    children: [letterheadTable, redRule],
+  });
+
   // ── Assemble document ────────────────────────────────────────────
   const doc = new Document({
-    numbering: {
-      config: makeNumberingConfig(plan.goals),
-    },
+    numbering: { config: makeNumberingConfig(plan.goals) },
     sections: [{
       properties: {
         page: {
@@ -337,63 +401,49 @@ async function generateDoc(plan) {
             height: PAGE_H,
             orientation: PageOrientation.LANDSCAPE,
           },
-          margin: { top: MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN },
+          margin: { top: TOP_MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN },
         },
       },
+      headers: { default: pageHeader },
       children: [
-        // Company name
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: "Psy Systems and Innovations, OPC", bold: true, size: 28, color: "BB0000" })],
-        }),
-        // Tagline
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: "Your development is our achievement!", italics: true, bold: true, size: 22, color: "09003F" })],
-        }),
-
-        new Paragraph(""),
-
         // Plan title
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: "Strategic Plan 2026", bold: true, size: 28 })],
+          spacing: { before: 160, after: 0 },
+          children: [new TextRun({ text: plan.plan_title || "Strategic Plan 2026", bold: true, size: 28 })],
         }),
         // Department
         new Paragraph({
           alignment: AlignmentType.CENTER,
+          spacing: { before: 0, after: 200 },
           children: [new TextRun({ text: plan.department || "", size: 24 })],
-          spacing: { after: 200 },
         }),
-
         // Vision
         new Paragraph({
+          spacing: { before: 0, after: 80 },
           children: [
             new TextRun({ text: "Vision: ", bold: true, size: 22 }),
             new TextRun({ text: plan.vision || "", size: 22 }),
           ],
-          spacing: { after: 80 },
         }),
         // Mission
         new Paragraph({
+          spacing: { before: 0, after: 200 },
           children: [
             new TextRun({ text: "Mission: ", bold: true, size: 22 }),
             new TextRun({ text: plan.mission || "", size: 22 }),
           ],
-          spacing: { after: 200 },
         }),
-
         // Main table
         new Table({
           width: { size: CONTENT_W, type: WidthType.DXA },
           columnWidths: COL_WIDTHS,
-          rows: [headerRow, ...dataRows],
+          rows: [tableHeaderRow, ...dataRows],
         }),
-
-        new Paragraph(""),
-        new Paragraph(""),
-
-        // Signature table
+        // Spacer
+        new Paragraph({ children: [new TextRun({ text: "" })] }),
+        new Paragraph({ children: [new TextRun({ text: "" })] }),
+        // Signatures
         sigTable,
       ],
     }],
@@ -432,10 +482,10 @@ const companyStyle = {
 };
 
 const taglineStyle = {
-  fontSize: 18,
+  fontSize: 14,
+  fontFamily: "'Harlow Solid Italic', 'Dancing Script', cursive",
   fontStyle: "italic",
-  fontWeight: "bold",
-  color: "#09003f",
+  color: "#bb0000",
 };
 
 const titleStyle = {
@@ -461,7 +511,7 @@ const thStyle = {
   border: "1px solid black",
   padding: 8,
   fontWeight: "bold",
-  textAlign: "center"
+  textAlign: "center",
 };
 
 const tdStyle = {
@@ -487,19 +537,23 @@ const btnStyle = {
   fontWeight: "bold",
 };
 
+/* ─── SIGNATURE COMPONENT — no visible box, label above, name+title below a line ─── */
 function Signature({ name, subtitle, label }) {
   return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ borderBottom: "1px solid black", width: 200, marginBottom: 5 }}></div>
-      <strong>{name}</strong>
-      <div>{subtitle}</div>
-      <div>{label}</div>
+    <div style={{ textAlign: "center", minWidth: 200 }}>
+      <div style={{ fontSize: 12, marginBottom: 44 }}>{label}</div>
+      <div style={{
+        borderTop: "1px solid black",
+        paddingTop: 5,
+        display: "inline-block",
+        minWidth: 200,
+      }}>
+        <strong>{name}</strong>
+        <div style={{ fontSize: 12 }}>{subtitle}</div>
+      </div>
     </div>
   );
 }
-
-/* ─── HELPERS ─── (redeclared below for module scope) ─── */
-// splitLines already declared above
 
 /* ─── MOUNT ─── */
 const root = ReactDOM.createRoot(document.getElementById("root"));
