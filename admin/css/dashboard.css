@@ -1,0 +1,718 @@
+:root {
+    --dash-bg: #f8fafc;
+    --dash-surface: #ffffff;
+    --dash-surface-soft: #fafbfc;
+    --dash-border: #e5e7eb;
+    --dash-text: #111827;
+    --dash-muted: #6b7280;
+    --dash-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+
+    --dash-green: #16a34a;
+    --dash-amber: #d97706;
+    --dash-red: #e11d48;
+}
+
+html[data-theme="dark"] {
+    --dash-bg: #111827;
+    --dash-surface: #18212f;
+    --dash-surface-soft: #1d2736;
+    --dash-border: rgba(255, 255, 255, 0.08);
+    --dash-text: #f3f4f6;
+    --dash-muted: #9ca3af;
+    --dash-shadow: none;
+}
+
+#root {
+    min-height: 100%;
+}
+
+.dash-page {
+    min-height: 100vh;
+    padding: 18px;
+    background: var(--dash-bg);
+    color: var(--dash-text);
+    font-family: "Nunito", sans-serif;
+}
+
+.dash-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dash-shell {
+    max-width: 1480px;
+    margin: 0 auto;
+}
+
+.dash-card {
+    background: var(--dash-surface);
+    border: 1px solid var(--dash-border);
+    border-radius: 20px;
+    box-shadow: var(--dash-shadow);
+    padding: 24px;
+    overflow: hidden;
+}
+
+.dash-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.dash-card-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.3;
+    color: var(--dash-text);
+}
+
+.dash-card-subtitle {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--dash-muted);
+}
+
+.dash-pill {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--dash-border);
+    border-radius: 999px;
+    background: var(--dash-surface);
+    color: var(--dash-muted);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 14px;
+    white-space: nowrap;
+}
+
+.dash-empty-box {
+    padding: 16px;
+    border: 1px dashed var(--dash-border);
+    border-radius: 16px;
+    background: var(--dash-surface-soft);
+    color: var(--dash-muted);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* =========================================================
+   ADMIN STAT CARDS
+========================================================= */
+
+.dash-admin-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.dash-admin-stat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--dash-border);
+    border-radius: 18px;
+    background: var(--dash-surface);
+    box-shadow: var(--dash-shadow);
+    overflow: hidden;
+}
+
+.dash-admin-stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.1rem;
+}
+
+.dash-admin-stat-copy {
+    min-width: 0;
+}
+
+.dash-admin-stat-label {
+    color: var(--dash-muted);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dash-admin-stat-value {
+    margin-top: 4px;
+    color: var(--dash-text);
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.dash-admin-stat.tone-blue .dash-admin-stat-icon {
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.1);
+}
+
+.dash-admin-stat.tone-red .dash-admin-stat-icon {
+    color: #e11d48;
+    background: rgba(225, 29, 72, 0.1);
+}
+
+.dash-admin-stat.tone-green .dash-admin-stat-icon {
+    color: #16a34a;
+    background: rgba(22, 163, 74, 0.1);
+}
+
+.dash-admin-stat.tone-purple .dash-admin-stat-icon {
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.1);
+}
+
+.dash-admin-stat.tone-teal .dash-admin-stat-icon {
+    color: #0891b2;
+    background: rgba(8, 145, 178, 0.1);
+}
+
+.dash-admin-stat.tone-orange .dash-admin-stat-icon {
+    color: #ea580c;
+    background: rgba(234, 88, 12, 0.1);
+}
+
+/* =========================================================
+   TOP TWO CHART CARDS - BALANCED LAYOUT
+========================================================= */
+
+.dash-admin-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-items: stretch;
+    margin-bottom: 18px;
+}
+
+.dash-admin-grid > .dash-card {
+    height: 100%;
+}
+
+.dash-admin-chart-card,
+.dash-admin-grid > .dash-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 430px;
+}
+
+.dash-admin-chart-card .dash-section-head,
+.dash-admin-grid > .dash-card .dash-section-head {
+    margin-bottom: 8px;
+}
+
+.dash-admin-chart-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 310px;
+    padding-top: 8px;
+}
+
+/* =========================================================
+   TASK STATUS RING
+========================================================= */
+
+.dash-ring-block {
+    display: grid;
+    grid-template-columns: minmax(230px, 280px) minmax(180px, 230px);
+    justify-content: center;
+    align-items: center;
+    gap: 34px;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.dash-ring-shell {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.dash-ring {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+}
+
+.dash-ring-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.dash-ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    text-align: center;
+}
+
+.dash-ring-kicker {
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--dash-text);
+}
+
+.dash-ring-value {
+    margin: 6px 0 4px;
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    color: var(--dash-text);
+}
+
+.dash-ring-sub {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--dash-muted);
+}
+
+.dash-ring-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+    max-width: 230px;
+}
+
+.dash-ring-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.dash-ring-legend-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    border: 5px solid currentColor;
+    background: transparent;
+    flex-shrink: 0;
+}
+
+.dash-ring-legend-copy {
+    min-width: 0;
+}
+
+.dash-ring-legend-title {
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--dash-text);
+}
+
+.dash-ring-legend-meta {
+    margin-top: 3px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--dash-muted);
+}
+
+.dash-ring-legend-meta strong {
+    color: var(--dash-text);
+    font-weight: 800;
+}
+
+/* =========================================================
+   USER ROLES - MATCH TASK STATUS ORIENTATION
+   Use this with the custom RolePie legend version.
+========================================================= */
+
+.dash-role-balance-block {
+    display: grid;
+    grid-template-columns: minmax(230px, 280px) minmax(180px, 230px);
+    justify-content: center;
+    align-items: center;
+    gap: 34px;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.dash-role-chart-shell {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.dash-role-chart-ring {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+}
+
+.dash-admin-role-chart {
+    width: 100%;
+    height: 100%;
+}
+
+/* Fallback for the old RolePie version with ECharts internal legend */
+.dash-admin-grid > .dash-card > .dash-admin-role-chart {
+    width: 100%;
+    height: 310px;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+/* =========================================================
+   TABLES
+========================================================= */
+
+.dash-admin-table-card {
+    margin-bottom: 18px;
+}
+
+.dash-action-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 8px 12px;
+    border: 1px solid var(--dash-border);
+    border-radius: 999px;
+    background: var(--dash-surface);
+    color: var(--dash-muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    transition:
+        background 0.16s ease,
+        color 0.16s ease,
+        border-color 0.16s ease;
+}
+
+.dash-action-link:hover,
+.dash-action-link:focus-visible {
+    color: var(--dash-text);
+    background: var(--dash-surface-soft);
+    border-color: var(--dash-border);
+    outline: none;
+}
+
+.dash-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.dash-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 820px;
+}
+
+.dash-table thead th {
+    padding: 0 14px 12px;
+    border-bottom: 1px solid var(--dash-border);
+    color: var(--dash-muted);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.dash-table tbody td {
+    padding: 16px 14px;
+    border-bottom: 1px solid var(--dash-border);
+    color: var(--dash-text);
+    font-size: 14px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.dash-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dash-muted-text {
+    color: var(--dash-muted) !important;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.dash-danger-text {
+    color: var(--dash-red) !important;
+    font-weight: 800 !important;
+}
+
+.dash-rate-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 180px;
+}
+
+.dash-rate-cell > span {
+    min-width: 42px;
+    color: var(--dash-text);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.dash-mini-progress {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(148, 163, 184, 0.16);
+}
+
+.dash-mini-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--dash-green);
+}
+
+/* =========================================================
+   BADGES AND STATUS
+========================================================= */
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: capitalize;
+}
+
+.role-admin {
+    color: #ea580c;
+    background: rgba(234, 88, 12, 0.1);
+}
+
+.role-supervisor {
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.1);
+}
+
+.role-staff {
+    color: #16a34a;
+    background: rgba(22, 163, 74, 0.1);
+}
+
+.role-president {
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.1);
+}
+
+.dash-user-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--dash-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.active-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+}
+
+.dot-active {
+    background: var(--dash-green);
+}
+
+.dot-inactive {
+    background: var(--dash-red);
+}
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+html[data-theme="dark"] .dash-pill {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+}
+
+html[data-theme="dark"] .dash-mini-progress {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .role-admin {
+    color: #fdba74;
+    background: rgba(251, 146, 60, 0.12);
+}
+
+html[data-theme="dark"] .role-supervisor {
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.12);
+}
+
+html[data-theme="dark"] .role-staff {
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.12);
+}
+
+html[data-theme="dark"] .role-president {
+    color: #c4b5fd;
+    background: rgba(139, 92, 246, 0.12);
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1399px) {
+    .dash-admin-stat-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .dash-ring-block,
+    .dash-role-balance-block {
+        grid-template-columns: minmax(210px, 250px) minmax(170px, 220px);
+        gap: 26px;
+    }
+
+    .dash-ring,
+    .dash-role-chart-ring {
+        width: 230px;
+        height: 230px;
+    }
+}
+
+@media (max-width: 1199px) {
+    .dash-admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-admin-grid > .dash-card {
+        min-height: auto;
+    }
+
+    .dash-ring-block,
+    .dash-role-balance-block {
+        grid-template-columns: minmax(230px, 280px) minmax(180px, 230px);
+        max-width: 600px;
+    }
+
+    .dash-ring,
+    .dash-role-chart-ring {
+        width: 250px;
+        height: 250px;
+    }
+}
+
+@media (max-width: 991px) {
+    .dash-admin-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dash-section-head {
+        flex-direction: column;
+    }
+
+    .dash-admin-chart-body {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 767px) {
+    .dash-page {
+        padding: 12px;
+    }
+
+    .dash-card {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .dash-ring-block,
+    .dash-role-balance-block {
+        grid-template-columns: 1fr;
+        gap: 22px;
+    }
+
+    .dash-ring-legend {
+        max-width: 260px;
+        margin: 0 auto;
+    }
+
+    .dash-ring,
+    .dash-role-chart-ring {
+        width: 220px;
+        height: 220px;
+    }
+
+    .dash-ring-value {
+        font-size: 2.55rem;
+    }
+}
+
+@media (max-width: 575px) {
+    .dash-admin-stat-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-admin-stat {
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    .dash-action-link {
+        width: 100%;
+    }
+
+    .dash-ring,
+    .dash-role-chart-ring {
+        width: 190px;
+        height: 190px;
+    }
+
+    .dash-ring-value {
+        font-size: 2.3rem;
+    }
+
+    .dash-ring-legend-title {
+        font-size: 12px;
+    }
+
+    .dash-ring-legend-meta {
+        font-size: 11px;
+    }
+}
