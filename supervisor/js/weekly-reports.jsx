@@ -88,24 +88,348 @@ function SummaryCard({ icon, title, value, tone, sub }) {
     );
 }
 
+
+function safeNum(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+}
+
+function formatDateTimePH(dateStr) {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return "";
+
+    return (
+        new Intl.DateTimeFormat("en-PH", {
+            timeZone: MANILA_TZ,
+            month: "short",
+            day: "numeric"
+        }).format(date) +
+        ", " +
+        new Intl.DateTimeFormat("en-PH", {
+            timeZone: MANILA_TZ,
+            hour: "numeric",
+            minute: "2-digit"
+        }).format(date)
+    );
+}
+
+function initials(name) {
+    return name
+        ? name.split(" ").map((word) => word[0]).slice(0, 2).join("").toUpperCase()
+        : "?";
+}
+
+function avatarColor(name) {
+    const hue = name
+        ? [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360
+        : 220;
+    return `hsl(${hue}, 55%, 86%)`;
+}
+
+function avatarTextColor(name) {
+    const hue = name
+        ? [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360
+        : 220;
+    return `hsl(${hue}, 45%, 30%)`;
+}
+
+function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
+    const [messages, setMessages] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [text, setText] = useState("");
+    const [files, setFiles] = useState([]);
+    const [sending, setSending] = useState(false);
+    const [sendError, setSendError] = useState("");
+    const fileRef = useRef(null);
+    const bottomRef = useRef(null);
+
+    useEffect(() => {
+        setLoading(true);
+        setError("");
+
+        fetch(`php/get_task_messages.php?task_id=${encodeURIComponent(task.id)}`)
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
+            })
+            .then((data) => {
+                if (data.error) throw new Error(data.error);
+                setMessages(Array.isArray(data.messages) ? data.messages : []);
+                setLoading(false);
+            })
+            .catch((err) => {
+                setError(`Could not load comments: ${err.message}`);
+                setLoading(false);
+            });
+    }, [task.id]);
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    useEffect(() => {
+        const onEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
+
+    function handleSend() {
+        const trimmed = text.trim();
+        if (!trimmed && files.length === 0) return;
+
+        setSending(true);
+        setSendError("");
+
+        const fd = new FormData();
+        fd.append("task_id", task.id);
+        fd.append("recipient_id", recipientId);
+        fd.append("message", trimmed);
+        files.forEach((file) => fd.append("attachments[]", file));
+
+        fetch("php/send_task_message.php", {
+            method: "POST",
+            body: fd
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
+            })
+            .then((data) => {
+                if (data.error) throw new Error(data.error);
+                setMessages((prev) => [...prev, data.message]);
+                setText("");
+                setFiles([]);
+                setSending(false);
+            })
+            .catch((err) => {
+                setSendError(err.message || "Failed to send comment.");
+                setSending(false);
+            });
+    }
+
+    function handleFileChange(e) {
+        const picked = Array.from(e.target.files || []);
+        setFiles((prev) => {
+            const existing = new Set(prev.map((f) => `${f.name}|${f.size}`));
+            const fresh = picked.filter((f) => !existing.has(`${f.name}|${f.size}`));
+            return [...prev, ...fresh];
+        });
+        e.target.value = "";
+    }
+
+    function removeFile(index) {
+        setFiles((prev) => prev.filter((_, i) => i !== index));
+    }
+
+    function fmtSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    const canSend = !sending && (text.trim().length > 0 || files.length > 0);
+
+    return (
+        <div className="wr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div
+                className="wr-modal-card wr-comment-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Comments for ${task.title}`}
+            >
+                <div className="wr-modal-head">
+                    <div>
+                        <h5 className="wr-modal-title">
+                            <i className="bi bi-chat-dots me-2"></i>
+                            {task.title || "Task Comments"}
+                        </h5>
+                        <div className="wr-modal-subtitle">
+                            {messages.length} comment{messages.length !== 1 ? "s" : ""}
+                        </div>
+                    </div>
+
+                    <button className="wr-icon-btn" onClick={onClose} aria-label="Close">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div className="wr-modal-body">
+                    {loading ? (
+                        <div className="wr-empty-state">
+                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading comments...
+                        </div>
+                    ) : error ? (
+                        <div className="alert alert-danger mb-0">{error}</div>
+                    ) : messages.length === 0 ? (
+                        <div className="wr-empty-state wr-chat-empty-state">
+                            <div className="wr-chat-empty-icon">
+                                <i className="bi bi-chat-quote-fill"></i>
+                            </div>
+                            <div className="wr-chat-empty-title">No comments yet</div>
+                            <div className="wr-chat-empty-subtitle">
+                                No comments yet. Be the first to reply.
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="wr-comment-stream">
+                            {messages.map((msg) => {
+                                const isOwn = safeNum(msg.sender_id) === safeNum(currentUserId);
+
+                                return (
+                                    <div key={msg.id} className={`wr-comment-row ${isOwn ? "is-own" : ""}`}>
+                                        <div
+                                            className="wr-comment-avatar"
+                                            style={{
+                                                background: avatarColor(msg.sender_name),
+                                                color: avatarTextColor(msg.sender_name)
+                                            }}
+                                        >
+                                            {initials(msg.sender_name)}
+                                        </div>
+
+                                        <div className="wr-comment-bubble-wrap">
+                                            <div className="wr-comment-meta">
+                                                <span className="wr-comment-author">
+                                                    {isOwn ? "You" : msg.sender_name}
+                                                </span>
+                                                <span className="wr-comment-time">
+                                                    {formatDateTimePH(msg.time_sent)}
+                                                </span>
+                                            </div>
+
+                                            {msg.message ? <div className="wr-comment-bubble">{msg.message}</div> : null}
+
+                                            {Array.isArray(msg.attachments) && msg.attachments.length > 0 ? (
+                                                <div className="wr-comment-attachments">
+                                                    {msg.attachments.map((att) => (
+                                                        <a
+                                                            key={att.id}
+                                                            href={att.file_path}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="wr-file-chip"
+                                                        >
+                                                            <i className="bi bi-paperclip"></i>
+                                                            <span>{att.file_name}</span>
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            <div ref={bottomRef}></div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="wr-modal-foot wr-comment-foot">
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        multiple
+                        style={{ display: "none" }}
+                        onChange={handleFileChange}
+                    />
+
+                    <div className="wr-comment-compose">
+                        {sendError ? <div className="wr-comment-error">{sendError}</div> : null}
+
+                        {files.length > 0 ? (
+                            <div className="wr-file-chip-row">
+                                {files.map((file, index) => (
+                                    <div className="wr-file-chip is-staged" key={`${file.name}-${index}`}>
+                                        <i className="bi bi-paperclip"></i>
+                                        <span className="wr-file-chip-name">{file.name}</span>
+                                        <span className="wr-file-chip-size">{fmtSize(file.size)}</span>
+                                        <button
+                                            type="button"
+                                            className="wr-file-chip-remove"
+                                            onClick={() => removeFile(index)}
+                                            aria-label={`Remove ${file.name}`}
+                                        >
+                                            <i className="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+
+                        <div className="wr-comment-compose-row">
+                            <button
+                                type="button"
+                                className="wr-icon-btn"
+                                onClick={() => fileRef.current?.click()}
+                                disabled={sending}
+                                title="Attach files"
+                            >
+                                <i className="bi bi-paperclip"></i>
+                            </button>
+
+                            <textarea
+                                className="wr-compose-textarea"
+                                rows="2"
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
+                                placeholder="Write a thoughtful reply..."
+                            />
+
+                            <button
+                                type="button"
+                                className="wr-ghost-btn wr-send-btn"
+                                onClick={handleSend}
+                                disabled={!canSend}
+                            >
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function EmployeeTaskModal({ emp, weekStart, weekEnd, onClose }) {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
-    const [query, setQuery] = useState("");
+    const [commentTask, setCommentTask] = useState(null);
+    const [currentUserId, setCurrentUserId] = useState(null);
+
+    useEffect(() => {
+        fetch("php/get_current_user.php")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.id) setCurrentUserId(data.id);
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         setLoading(true);
         setError("");
         setTasks([]);
         setActiveTab("all");
-        setQuery("");
 
         const start = formatDate(weekStart);
         const end = formatDate(weekEnd);
 
-        fetch(`php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${start}&week_end=${end}`)
+        fetch(`php/get_employee_tasks_report.php?employee_id=${encodeURIComponent(emp.id)}&week_start=${start}&week_end=${end}`)
             .then((r) => {
                 if (!r.ok) throw new Error(`Server returned ${r.status}`);
                 return r.json();
@@ -148,153 +472,149 @@ function EmployeeTaskModal({ emp, weekStart, weekEnd, onClose }) {
         [annotated]
     );
 
-    const filtered = useMemo(() => {
-        let base =
+    const filtered = useMemo(
+        () =>
             activeTab === "all"
                 ? annotated
-                : annotated.filter((t) => t.derivedStatus === activeTab);
-
-        const term = query.trim().toLowerCase();
-        if (!term) return base;
-
-        return base.filter((task) => {
-            const title = String(task.title || "").toLowerCase();
-            const desc = String(task.description || "").toLowerCase();
-            const status = String(task.derivedStatus || "").toLowerCase();
-            const priority = String(task.priority || "").toLowerCase();
-            return (
-                title.includes(term) ||
-                desc.includes(term) ||
-                status.includes(term) ||
-                priority.includes(term)
-            );
-        });
-    }, [annotated, activeTab, query]);
+                : annotated.filter((t) => t.derivedStatus === activeTab),
+        [annotated, activeTab]
+    );
 
     return (
-        <div className="wr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div className="wr-modal-card">
-                <div className="wr-modal-head">
-                    <div className="wr-modal-person">
-                        <img
-                            src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
-                            alt={`${emp.name} Profile`}
-                            className="wr-modal-avatar"
-                        />
-                        <div>
-                            <h5 className="wr-modal-title">{emp.name}</h5>
-                            <div className="wr-modal-subtitle">
-                                {emp.department} · Week of {formatDisplayDate(weekStart)} — {formatDisplayDate(weekEnd)}
+        <>
+            <div className="wr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+                <div
+                    className="wr-modal-card wr-employee-task-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={`${emp.name} tasks`}
+                >
+                    <div className="wr-modal-head">
+                        <div className="wr-modal-person">
+                            <img
+                                src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
+                                alt={`${emp.name} Profile`}
+                                className="wr-modal-avatar"
+                            />
+                            <div>
+                                <h5 className="wr-modal-title">{emp.name}</h5>
+                                <div className="wr-modal-subtitle">
+                                    {emp.department} · Week of {formatDisplayDate(weekStart)} — {formatDisplayDate(weekEnd)}
+                                </div>
                             </div>
                         </div>
+
+                        <button className="wr-icon-btn" onClick={onClose} aria-label="Close">
+                            <i className="bi bi-x-lg"></i>
+                        </button>
                     </div>
 
-                    <button className="wr-icon-btn" onClick={onClose} aria-label="Close">
-                        <i className="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <div className="wr-modal-toolbar">
-                    <div className="wr-pill-row">
-                        {[
-                            { key: "all", label: "All", count: counts.all, tone: "neutral" },
-                            { key: "Completed", label: "Completed", count: counts.Completed, tone: "success" },
-                            { key: "Ongoing", label: "Ongoing", count: counts.Ongoing, tone: "warning" },
-                            { key: "Overdue", label: "Overdue", count: counts.Overdue, tone: "danger" }
-                        ].map((tab) => (
-                            <button
-                                key={tab.key}
-                                type="button"
-                                className={`wr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`}
-                                onClick={() => setActiveTab(tab.key)}
-                            >
-                                {tab.label}
-                                <span className="wr-pill-count">{tab.count}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="wr-search-box">
-                        <i className="bi bi-search"></i>
-                        <input
-                            type="text"
-                            placeholder="Search tasks..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <div className="wr-modal-body">
-                    {loading ? (
-                        <div className="wr-empty-state">
-                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                            Loading tasks...
+                    <div className="wr-modal-toolbar wr-modal-toolbar--badges-only">
+                        <div className="wr-pill-row wr-pill-row--clean">
+                            {[
+                                { key: "all", label: "All", count: counts.all, tone: "neutral" },
+                                { key: "Completed", label: "Completed", count: counts.Completed, tone: "success" },
+                                { key: "Ongoing", label: "Ongoing", count: counts.Ongoing, tone: "warning" },
+                                { key: "Overdue", label: "Overdue", count: counts.Overdue, tone: "danger" }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    className={`wr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`}
+                                    onClick={() => setActiveTab(tab.key)}
+                                >
+                                    <span className="wr-pill-tab-label">{tab.label}</span>
+                                    <span className="wr-pill-count">{tab.count}</span>
+                                </button>
+                            ))}
                         </div>
-                    ) : error ? (
-                        <div className="alert alert-danger mb-0">{error}</div>
-                    ) : filtered.length === 0 ? (
-                        <div className="wr-empty-state">No matching tasks found for this week.</div>
-                    ) : (
-                        <div className="wr-task-list">
-                            {filtered.map((task, idx) => {
-                                const status = task.derivedStatus || "Other";
-                                const priority = task.priority || "Other";
-                                const days = task.days_until_deadline;
+                    </div>
 
-                                let deadlineText = task.deadline
-                                    ? new Date(task.deadline).toLocaleDateString("en-PH", {
-                                          month: "short",
-                                          day: "numeric",
-                                          year: "numeric"
-                                      })
-                                    : "No deadline";
+                    <div className="wr-modal-body">
+                        {loading ? (
+                            <div className="wr-empty-state">
+                                <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                                Loading tasks...
+                            </div>
+                        ) : error ? (
+                            <div className="alert alert-danger mb-0">{error}</div>
+                        ) : filtered.length === 0 ? (
+                            <div className="wr-empty-state">No matching tasks found for this week.</div>
+                        ) : (
+                            <div className="wr-task-list">
+                                {filtered.map((task, idx) => {
+                                    const status = task.derivedStatus || "Other";
+                                    const priority = task.priority || "Other";
+                                    const days = task.days_until_deadline;
 
-                                if (status === "Overdue" && days !== null && days !== undefined) {
-                                    deadlineText += ` · ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} overdue`;
-                                } else if (status === "Ongoing" && days !== null && days !== undefined) {
-                                    deadlineText += days === 0
-                                        ? " · Due today"
-                                        : ` · ${days} day${days !== 1 ? "s" : ""} left`;
-                                } else if (status === "Completed" && task.completed_at) {
-                                    deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", {
-                                        month: "short",
-                                        day: "numeric"
-                                    })}`;
-                                }
+                                    let deadlineText = task.deadline
+                                        ? new Date(task.deadline).toLocaleDateString("en-PH", {
+                                              month: "short",
+                                              day: "numeric",
+                                              year: "numeric"
+                                          })
+                                        : "No deadline";
 
-                                return (
-                                    <div className="wr-task-item" key={task.id ?? idx}>
-                                        <div className="wr-task-main">
-                                            <div className="wr-task-title">{task.title}</div>
-                                            {task.description && (
-                                                <div className="wr-task-desc">{task.description}</div>
-                                            )}
-                                            <div className="wr-task-meta">{deadlineText}</div>
-                                        </div>
+                                    if (status === "Overdue" && days !== null && days !== undefined) {
+                                        deadlineText += ` · ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} overdue`;
+                                    } else if (status === "Ongoing" && days !== null && days !== undefined) {
+                                        deadlineText += days === 0
+                                            ? " · Due today"
+                                            : ` · ${days} day${days !== 1 ? "s" : ""} left`;
+                                    } else if (status === "Completed" && task.completed_at) {
+                                        deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", {
+                                            month: "short",
+                                            day: "numeric"
+                                        })}`;
+                                    }
 
-                                        <div className="wr-task-side">
-                                            <span className={`wr-status-inline ${statusTone(status)}`}>{status}</span>
-                                            <span className={`wr-priority-inline ${priorityTone(priority)}`}>
-                                                <i className="bi bi-flag-fill"></i>
-                                                <span>{priority}</span>
-                                            </span>
-                                            <div className="wr-progress-mini">
-                                                <span>{task.progress ?? 0}%</span>
+                                    return (
+                                        <div className="wr-task-item" key={task.id ?? idx}>
+                                            <div className="wr-task-main">
+                                                <div className="wr-task-title">{task.title || "Untitled Task"}</div>
+                                                {task.description && (
+                                                    <div className="wr-task-desc">{task.description}</div>
+                                                )}
+                                                <div className="wr-task-meta">{deadlineText}</div>
+                                            </div>
+
+                                            <div className="wr-task-side">
+                                                <span className={`wr-status-inline ${statusTone(status)}`}>{status}</span>
+                                                <span className={`wr-priority-inline ${priorityTone(priority)}`}>
+                                                    <i className="bi bi-flag-fill"></i>
+                                                    <span>{priority}</span>
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className="wr-ghost-btn wr-comment-open-btn"
+                                                    onClick={() => setCommentTask(task)}
+                                                >
+                                                    <i className="bi bi-chat-dots"></i>
+                                                    <span>Comments</span>
+                                                </button>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
 
-                <div className="wr-modal-foot">
-                    <button className="wr-ghost-btn" onClick={onClose}>Close</button>
+                    <div className="wr-modal-foot">
+                        <button className="wr-ghost-btn" onClick={onClose}>Close</button>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {commentTask ? (
+                <TaskCommentModal
+                    task={commentTask}
+                    recipientId={emp.id}
+                    currentUserId={currentUserId}
+                    onClose={() => setCommentTask(null)}
+                />
+            ) : null}
+        </>
     );
 }
 
@@ -393,8 +713,8 @@ function SupervisorWeeklyReportPage() {
         const total = scopedSummary.total || 0;
         return [
             { label: "Completed", value: scopedSummary.completed, color: "#16a34a" },
-            { label: "Ongoing", value: scopedSummary.ongoing, color: "#f59e0b" },
-            { label: "Overdue", value: scopedSummary.overdue, color: "#ec4899" }
+            { label: "Ongoing", value: scopedSummary.ongoing, color: "#2563eb" },
+            { label: "Overdue", value: scopedSummary.overdue, color: "#e11d48" }
         ].map((item) => ({
             ...item,
             percent: total > 0 ? Math.round((item.value / total) * 100) : 0
@@ -419,7 +739,7 @@ function SupervisorWeeklyReportPage() {
             {
                 animationDuration: 650,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 26,
                     left: 18,
@@ -511,8 +831,8 @@ function SupervisorWeeklyReportPage() {
                         itemStyle: { borderWidth: 2, borderColor: isDark ? "#141b2d" : "#ffffff" },
                         areaStyle: {
                             color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: "rgba(245,158,11,0.12)" },
-                                { offset: 1, color: "rgba(245,158,11,0.01)" }
+                                { offset: 0, color: "rgba(37,99,235,0.12)" },
+                                { offset: 1, color: "rgba(37,99,235,0.01)" }
                             ])
                         },
                         data: lineOngoing
@@ -527,8 +847,8 @@ function SupervisorWeeklyReportPage() {
                         itemStyle: { borderWidth: 2, borderColor: isDark ? "#141b2d" : "#ffffff" },
                         areaStyle: {
                             color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: "rgba(236,72,153,0.12)" },
-                                { offset: 1, color: "rgba(236,72,153,0.01)" }
+                                { offset: 0, color: "rgba(225,29,72,0.12)" },
+                                { offset: 1, color: "rgba(225,29,72,0.01)" }
                             ])
                         },
                         data: lineOverdue
@@ -573,11 +893,12 @@ function SupervisorWeeklyReportPage() {
                 series: [
                     {
                         type: "pie",
-                        radius: ["63%", "84%"],
+                        radius: ["62%", "85%"],
                         center: ["50%", "50%"],
                         startAngle: 90,
                         clockwise: true,
-                        minAngle: 1,
+                        padAngle: 4,
+                        minAngle: 8,
                         label: { show: false },
                         labelLine: { show: false },
                         emphasis: {
@@ -585,19 +906,19 @@ function SupervisorWeeklyReportPage() {
                             scaleSize: 8,
                             itemStyle: {
                                 borderColor: separator,
-                                borderWidth: 5,
-                                borderRadius: 10
+                                borderWidth: 6,
+                                borderRadius: 14
                             }
                         },
                         itemStyle: {
                             borderColor: separator,
-                            borderWidth: 4,
-                            borderRadius: 10
+                            borderWidth: 6,
+                            borderRadius: 14
                         },
                         data: [
                             { value: scopedSummary.completed, name: "Completed", itemStyle: { color: "#16a34a" } },
-                            { value: scopedSummary.ongoing, name: "Ongoing", itemStyle: { color: "#f59e0b" } },
-                            { value: scopedSummary.overdue, name: "Overdue", itemStyle: { color: "#ec4899" } }
+                            { value: scopedSummary.ongoing, name: "Ongoing", itemStyle: { color: "#2563eb" } },
+                            { value: scopedSummary.overdue, name: "Overdue", itemStyle: { color: "#e11d48" } }
                         ]
                     }
                 ]
@@ -832,16 +1153,15 @@ function SupervisorWeeklyReportPage() {
                                             <td>
                                                 {total === 0 ? (
                                                     <span className="wr-empty-inline">No tasks yet</span>
-                                                ) : rate === 0 ? (
-                                                    <span className="wr-rate-danger">0% — None completed</span>
                                                 ) : (
-                                                    <div className="wr-progress">
-                                                        <div
-                                                            className="wr-progress-bar"
-                                                            style={{ width: `${rate}%` }}
-                                                        >
-                                                            {rate}%
+                                                    <div className="wr-performance-cell">
+                                                        <div className="wr-progress" title={`${rate}% completed`}>
+                                                            <div
+                                                                className="wr-progress-bar"
+                                                                style={{ width: `${rate}%` }}
+                                                            ></div>
                                                         </div>
+                                                        <span className="wr-performance-value">{rate}%</span>
                                                     </div>
                                                 )}
                                             </td>

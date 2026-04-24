@@ -1,0 +1,1838 @@
+/* =========================================================
+   Monthly Report - Clean Final UI
+   Consistent with Daily / Weekly / Quarterly / Annual reports
+========================================================= */
+
+:root {
+    --dr-bg: #f6f8fc;
+    --dr-card: #ffffff;
+    --dr-card-soft: #fbfcff;
+    --dr-card-mute: #f3f6fb;
+
+    --dr-border: #e6ebf3;
+    --dr-border-soft: #eef2f7;
+    --dr-border-strong: #d8e0ec;
+
+    --dr-text: #0f172a;
+    --dr-text-soft: #334155;
+    --dr-muted: #76839a;
+    --dr-subtle: #94a3b8;
+
+    --dr-blue: #2563eb;
+    --dr-green: #16a34a;
+    --dr-amber: #d97706;
+    --dr-pink: #ec4899;
+    --dr-red: #e11d48;
+    --dr-purple: #6d3df5;
+    --dr-purple-2: #8b5cf6;
+
+    --dr-blue-soft: rgba(37, 99, 235, 0.1);
+    --dr-green-soft: rgba(22, 163, 74, 0.1);
+    --dr-amber-soft: rgba(217, 119, 6, 0.1);
+    --dr-pink-soft: rgba(236, 72, 153, 0.1);
+    --dr-red-soft: rgba(225, 29, 72, 0.1);
+    --dr-purple-soft: rgba(109, 61, 245, 0.1);
+
+    --dr-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --dr-shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.05);
+    --dr-shadow-md: 0 16px 40px rgba(15, 23, 42, 0.08);
+    --dr-shadow-lg: 0 30px 72px rgba(15, 23, 42, 0.22);
+
+    --dr-radius-sm: 12px;
+    --dr-radius-md: 16px;
+    --dr-radius-lg: 20px;
+    --dr-radius-xl: 24px;
+    --dr-radius-pill: 999px;
+}
+
+[data-theme="dark"] {
+    --dr-bg: #0b1220;
+    --dr-card: #131c2f;
+    --dr-card-soft: #182235;
+    --dr-card-mute: #11192b;
+
+    --dr-border: rgba(255, 255, 255, 0.08);
+    --dr-border-soft: rgba(255, 255, 255, 0.06);
+    --dr-border-strong: rgba(255, 255, 255, 0.14);
+
+    --dr-text: #f8fafc;
+    --dr-text-soft: #dbe5f1;
+    --dr-muted: #a8b3c7;
+    --dr-subtle: #7f8aa1;
+
+    --dr-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
+    --dr-shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.24);
+    --dr-shadow-md: 0 18px 42px rgba(0, 0, 0, 0.28);
+    --dr-shadow-lg: 0 30px 72px rgba(0, 0, 0, 0.42);
+}
+
+/* =========================================================
+   Base
+========================================================= */
+
+#monthlyReportRoot,
+#monthlyReportRoot * {
+    box-sizing: border-box;
+}
+
+#monthlyReportRoot .dr-page {
+    padding: 14px 14px 24px;
+    color: var(--dr-text);
+    font-family: "Nunito", sans-serif;
+}
+
+/* =========================================================
+   Shared Buttons / Pills
+========================================================= */
+
+#monthlyReportRoot .dr-ghost-btn,
+#monthlyReportRoot .dr-filter-pill,
+#monthlyReportRoot .dr-icon-btn,
+#monthlyReportRoot .dr-eye-btn {
+    height: 42px;
+    border: 1px solid var(--dr-border);
+    border-radius: 14px;
+    background: var(--dr-card);
+    color: var(--dr-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 850;
+    font-family: "Nunito", sans-serif;
+    line-height: 1;
+    box-shadow: var(--dr-shadow-xs);
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        color 0.18s ease;
+}
+
+#monthlyReportRoot .dr-ghost-btn:hover,
+#monthlyReportRoot .dr-icon-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--dr-shadow-sm);
+}
+
+#monthlyReportRoot .dr-ghost-btn:disabled,
+#monthlyReportRoot .dr-icon-btn:disabled,
+#monthlyReportRoot .dr-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#monthlyReportRoot .dr-filter-pill {
+    min-height: 40px;
+    background: var(--dr-card-soft);
+    color: var(--dr-muted);
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+#monthlyReportRoot .dr-filter-pill--button {
+    cursor: pointer;
+}
+
+#monthlyReportRoot .dr-filter-pill--button:hover {
+    color: var(--dr-purple);
+    border-color: rgba(109, 61, 245, 0.24);
+    background: var(--dr-purple-soft);
+}
+
+#monthlyReportRoot .dr-icon-btn {
+    width: 42px;
+    padding: 0;
+}
+
+#monthlyReportRoot .dr-eye-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--dr-muted);
+    box-shadow: none;
+    cursor: pointer;
+}
+
+#monthlyReportRoot .dr-eye-btn:hover {
+    background: var(--dr-purple-soft);
+    color: var(--dr-purple);
+    transform: none;
+    box-shadow: none;
+}
+
+/* =========================================================
+   Cards
+========================================================= */
+
+#monthlyReportRoot .dr-card,
+#monthlyReportRoot .dr-summary-card {
+    border: 1px solid var(--dr-border);
+    border-radius: 20px;
+    background: linear-gradient(180deg, var(--dr-card) 0%, var(--dr-card-soft) 100%);
+    box-shadow: var(--dr-shadow-sm);
+}
+
+#monthlyReportRoot .dr-card {
+    padding: 18px 20px;
+}
+
+#monthlyReportRoot .dr-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+#monthlyReportRoot .dr-card-title {
+    margin: 0;
+    color: var(--dr-text);
+    font-size: 1.16rem;
+    font-weight: 950;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+}
+
+#monthlyReportRoot .dr-card-subtitle {
+    margin-top: 4px;
+    color: var(--dr-muted);
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.45;
+}
+
+/* =========================================================
+   Monthly Header / Toolbar
+========================================================= */
+
+#monthlyReportRoot .mr-toolbar-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 6px !important;
+    margin-bottom: 18px !important;
+}
+
+#monthlyReportRoot .mr-toolbar-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 18px !important;
+    flex-wrap: nowrap !important;
+    margin-bottom: 0 !important;
+}
+
+#monthlyReportRoot .mr-toolbar-row > div:first-child {
+    min-width: 300px;
+    flex: 1 1 auto;
+}
+
+#monthlyReportRoot .mr-toolbar-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    flex-wrap: nowrap !important;
+    flex: 0 0 auto;
+}
+
+#monthlyReportRoot .mr-period-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+}
+
+#monthlyReportRoot .mr-period-nav .dr-ghost-btn {
+    min-width: 88px;
+    height: 42px;
+    border-radius: 14px;
+    white-space: nowrap;
+}
+
+#monthlyReportRoot .mr-period-label {
+    height: 42px;
+    min-width: 136px;
+    padding: 0 18px;
+    border: 1px solid var(--dr-border);
+    border-radius: 14px;
+    background: var(--dr-card);
+    color: var(--dr-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 950;
+    box-shadow: var(--dr-shadow-xs);
+}
+
+#monthlyReportRoot .mr-select-shell {
+    height: 42px;
+    min-width: 280px;
+    border-radius: 14px;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   Select / Search Shell
+========================================================= */
+
+#monthlyReportRoot .dr-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    border: 1px solid var(--dr-border);
+    border-radius: 14px;
+    background: var(--dr-card);
+    padding: 0 14px;
+    box-shadow: var(--dr-shadow-xs);
+}
+
+#monthlyReportRoot .dr-search-box--select {
+    position: relative;
+}
+
+#monthlyReportRoot .dr-search-box i {
+    color: var(--dr-muted);
+}
+
+#monthlyReportRoot .dr-select {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--dr-text);
+    font-size: 13px;
+    font-weight: 850;
+    font-family: "Nunito", sans-serif;
+    appearance: none;
+    cursor: pointer;
+    padding-right: 18px;
+}
+
+#monthlyReportRoot .dr-select option {
+    color: #0f172a;
+}
+
+#monthlyReportRoot .dr-select-chevron {
+    pointer-events: none;
+    color: var(--dr-subtle);
+    font-size: 12px;
+}
+
+/* =========================================================
+   Summary Cards
+========================================================= */
+
+#monthlyReportRoot .dr-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+#monthlyReportRoot .dr-summary-card {
+    min-height: 126px;
+    padding: 14px 16px;
+}
+
+#monthlyReportRoot .dr-summary-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+#monthlyReportRoot .dr-summary-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+#monthlyReportRoot .dr-summary-chip {
+    padding: 5px 9px;
+    border-radius: var(--dr-radius-pill);
+    font-size: 11px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+#monthlyReportRoot .dr-summary-icon.success,
+#monthlyReportRoot .dr-summary-chip.success {
+    background: var(--dr-green-soft);
+    color: var(--dr-green);
+}
+
+#monthlyReportRoot .dr-summary-icon.warning,
+#monthlyReportRoot .dr-summary-chip.warning {
+    background: var(--dr-blue-soft);
+    color: var(--dr-blue);
+}
+
+#monthlyReportRoot .dr-summary-icon.danger,
+#monthlyReportRoot .dr-summary-chip.danger {
+    background: var(--dr-red-soft);
+    color: var(--dr-red);
+}
+
+#monthlyReportRoot .dr-summary-icon.primary,
+#monthlyReportRoot .dr-summary-chip.primary {
+    background: var(--dr-blue-soft);
+    color: var(--dr-blue);
+}
+
+#monthlyReportRoot .dr-summary-label {
+    margin-bottom: 4px;
+    color: var(--dr-muted);
+    font-size: 12px;
+    font-weight: 850;
+}
+
+#monthlyReportRoot .dr-summary-value-line {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+#monthlyReportRoot .dr-summary-value {
+    color: var(--dr-text);
+    font-size: 2rem;
+    font-weight: 950;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+}
+
+#monthlyReportRoot .dr-summary-subtext {
+    margin-top: 4px;
+    color: var(--dr-subtle);
+    font-size: 11px;
+    font-weight: 750;
+}
+
+/* =========================================================
+   Charts
+========================================================= */
+
+#monthlyReportRoot .mr-top-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+#monthlyReportRoot .mr-block-gap {
+    margin-bottom: 16px;
+}
+
+#monthlyReportRoot .mr-chart-lg,
+#monthlyReportRoot .mr-chart-md,
+#monthlyReportRoot .mr-chart-hbar,
+#monthlyReportRoot .mr-chart-line,
+#monthlyReportRoot .mr-chart-employee {
+    width: 100%;
+    border-radius: 16px;
+}
+
+#monthlyReportRoot .mr-chart-lg,
+#monthlyReportRoot .mr-chart-md,
+#monthlyReportRoot .mr-chart-line {
+    height: 340px;
+}
+
+#monthlyReportRoot .mr-chart-hbar,
+#monthlyReportRoot .mr-chart-employee {
+    min-height: 320px;
+}
+
+/* =========================================================
+   Tables
+========================================================= */
+
+#monthlyReportRoot .dr-card--table-full {
+    min-height: auto;
+    padding: 16px 18px 18px;
+    border-radius: 20px;
+    margin-bottom: 18px;
+}
+
+#monthlyReportRoot .dr-card--table-full .dr-card-head {
+    margin-bottom: 14px;
+}
+
+#monthlyReportRoot .dr-card--table-full .dr-card-title {
+    font-size: 16px;
+}
+
+#monthlyReportRoot .dr-card--table-full .dr-card-subtitle {
+    font-size: 12px;
+}
+
+#monthlyReportRoot .dr-card--table-full .dr-filter-pill {
+    min-width: 112px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 13px;
+    font-size: 12px;
+}
+
+#monthlyReportRoot .dr-table-shell {
+    max-height: 520px;
+    overflow: auto;
+    border: 1px solid var(--dr-border);
+    border-radius: 16px;
+    background: var(--dr-card);
+    scrollbar-width: thin;
+}
+
+#monthlyReportRoot .dr-table-shell::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    display: block;
+}
+
+#monthlyReportRoot .dr-table-shell::-webkit-scrollbar-thumb {
+    background: #d8deeb;
+    border-radius: 999px;
+}
+
+#monthlyReportRoot .dr-table-shell::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#monthlyReportRoot .dr-table {
+    width: 100%;
+    min-width: 1080px;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--dr-card);
+}
+
+#monthlyReportRoot .dr-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    height: 48px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--dr-border);
+    background: var(--dr-card-mute);
+    color: var(--dr-muted);
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+#monthlyReportRoot .dr-table thead th:first-child {
+    border-top-left-radius: 16px;
+}
+
+#monthlyReportRoot .dr-table thead th:last-child {
+    border-top-right-radius: 16px;
+}
+
+#monthlyReportRoot .dr-table tbody tr {
+    cursor: pointer;
+    transition:
+        background 0.18s ease,
+        box-shadow 0.18s ease,
+        opacity 0.18s ease;
+}
+
+#monthlyReportRoot .dr-table tbody td {
+    height: 54px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--dr-border-soft);
+    background: var(--dr-card);
+    color: var(--dr-text-soft);
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+#monthlyReportRoot .dr-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+#monthlyReportRoot .dr-table tbody tr:hover td {
+    background: rgba(109, 61, 245, 0.025);
+}
+
+#monthlyReportRoot .dr-table tbody tr.is-active td {
+    background: rgba(109, 61, 245, 0.045);
+    border-top: 1px solid rgba(109, 61, 245, 0.14);
+    border-bottom: 1px solid rgba(109, 61, 245, 0.14);
+}
+
+#monthlyReportRoot .dr-table tbody tr.is-active td:first-child {
+    border-left: 1px solid rgba(109, 61, 245, 0.14);
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+
+#monthlyReportRoot .dr-table tbody tr.is-active td:last-child {
+    border-right: 1px solid rgba(109, 61, 245, 0.14);
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+#monthlyReportRoot .dr-table tbody td:first-child {
+    color: var(--dr-text);
+    font-weight: 950;
+}
+
+#monthlyReportRoot .mr-dept-name,
+#monthlyReportRoot .mr-quarter-name {
+    color: var(--dr-text);
+    font-weight: 950;
+}
+
+#monthlyReportRoot .dr-table-empty {
+    text-align: center;
+    padding: 30px 16px !important;
+    color: var(--dr-muted) !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+}
+
+/* =========================================================
+   Assignee / Avatar
+========================================================= */
+
+#monthlyReportRoot .dr-assignee {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 220px;
+}
+
+#monthlyReportRoot .dr-assignee-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    border-radius: 999px;
+    object-fit: cover;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 1px var(--dr-border);
+}
+
+#monthlyReportRoot .dr-assignee-avatar--fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dr-text);
+    font-size: 12px;
+    font-weight: 950;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+#monthlyReportRoot .dr-assignee-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#monthlyReportRoot .dr-assignee-name {
+    max-width: 220px;
+    color: var(--dr-text);
+    font-size: 12px;
+    font-weight: 950;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+/* =========================================================
+   Progress / Status
+========================================================= */
+
+#monthlyReportRoot .dr-overdue-cell {
+    color: var(--dr-text-soft);
+    font-weight: 850;
+}
+
+#monthlyReportRoot .dr-performance-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 175px;
+}
+
+#monthlyReportRoot .dr-progress {
+    width: 100%;
+    max-width: 190px;
+    height: 7px;
+    border-radius: 999px;
+    background: #ececf2;
+    overflow: hidden;
+    position: relative;
+    flex: 1;
+}
+
+#monthlyReportRoot .dr-progress-bar {
+    height: 100%;
+    min-width: 7px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--dr-purple-2) 0%, var(--dr-purple) 100%);
+    box-shadow: 0 2px 8px rgba(109, 61, 245, 0.28);
+}
+
+#monthlyReportRoot .dr-performance-value {
+    min-width: 30px;
+    text-align: right;
+    color: var(--dr-muted);
+    font-size: 12px;
+    font-weight: 850;
+}
+
+#monthlyReportRoot .dr-empty-inline {
+    color: var(--dr-muted);
+    font-size: 11px;
+    font-weight: 850;
+}
+
+#monthlyReportRoot .dr-rate-danger {
+    color: var(--dr-red);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.35;
+}
+
+#monthlyReportRoot .dr-status-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 950;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+#monthlyReportRoot .dr-status-inline.completed {
+    color: var(--dr-green);
+}
+
+#monthlyReportRoot .dr-status-inline.ongoing {
+    color: var(--dr-blue);
+}
+
+#monthlyReportRoot .dr-status-inline.overdue {
+    color: var(--dr-red);
+}
+
+#monthlyReportRoot .dr-status-inline.other {
+    color: var(--dr-muted);
+}
+
+#monthlyReportRoot .dr-priority-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 950;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+#monthlyReportRoot .dr-priority-inline.high {
+    color: #ef4444;
+}
+
+#monthlyReportRoot .dr-priority-inline.medium {
+    color: var(--dr-amber);
+}
+
+#monthlyReportRoot .dr-priority-inline.low {
+    color: var(--dr-green);
+}
+
+#monthlyReportRoot .dr-priority-inline.other {
+    color: var(--dr-muted);
+}
+
+#monthlyReportRoot .dr-priority-inline i {
+    font-size: 13px;
+}
+
+/* =========================================================
+   Modal Foundation
+========================================================= */
+
+#monthlyReportRoot .dr-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: grid;
+    place-items: center;
+    padding: clamp(14px, 2vw, 28px);
+    background:
+        radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.18), transparent 26%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.58), rgba(15, 23, 42, 0.7));
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+}
+
+#monthlyReportRoot .dr-modal-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--dr-card);
+    border: 1px solid var(--dr-border);
+    box-shadow: var(--dr-shadow-lg);
+}
+
+#monthlyReportRoot .dr-modal-head,
+#monthlyReportRoot .dr-modal-toolbar,
+#monthlyReportRoot .dr-modal-foot {
+    padding: 22px 24px;
+}
+
+#monthlyReportRoot .dr-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--dr-border);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0)),
+        var(--dr-card);
+}
+
+#monthlyReportRoot .dr-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid var(--dr-border);
+    background: var(--dr-card);
+}
+
+#monthlyReportRoot .dr-modal-body {
+    min-height: 240px;
+    max-height: calc(90vh - 230px);
+    padding: 22px 24px 24px;
+    overflow: auto;
+    background: linear-gradient(180deg, var(--dr-card-soft) 0%, var(--dr-card) 100%);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+}
+
+#monthlyReportRoot .dr-modal-body::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+#monthlyReportRoot .dr-modal-body::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.7);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+#monthlyReportRoot .dr-modal-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#monthlyReportRoot .dr-modal-title {
+    margin: 0;
+    color: var(--dr-text);
+    font-size: 1.45rem;
+    font-weight: 950;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+}
+
+#monthlyReportRoot .dr-modal-subtitle {
+    margin-top: 6px;
+    color: var(--dr-muted);
+    font-size: 14px;
+    font-weight: 850;
+}
+
+#monthlyReportRoot .dr-modal-person {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#monthlyReportRoot .dr-modal-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 0 1px var(--dr-border), var(--dr-shadow-xs);
+}
+
+#monthlyReportRoot .dr-modal-head .dr-icon-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    flex-shrink: 0;
+    background: var(--dr-card-soft);
+    border: 1px solid var(--dr-border);
+    box-shadow: none;
+}
+
+#monthlyReportRoot .dr-empty-state {
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dr-muted);
+    font-size: 14px;
+    font-weight: 850;
+    text-align: center;
+}
+
+/* =========================================================
+   Employee / Department Task Modal
+========================================================= */
+
+#monthlyReportRoot .dr-employee-task-modal {
+    width: min(980px, calc(100vw - 72px));
+    max-height: min(84vh, 720px);
+    border-radius: 24px;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    box-shadow:
+        0 28px 72px rgba(15, 23, 42, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-head {
+    min-height: 84px;
+    padding: 18px 24px;
+    align-items: center;
+    border-bottom: 1px solid #e8edf5;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-person {
+    gap: 14px;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-avatar {
+    width: 54px;
+    height: 54px;
+    border-width: 3px;
+    border-color: #ffffff;
+    box-shadow:
+        0 0 0 1px #dfe6f1,
+        0 10px 26px rgba(15, 23, 42, 0.1);
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-title {
+    color: #0f172a;
+    font-size: 1.32rem;
+    font-weight: 950;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-subtitle {
+    margin-top: 5px;
+    color: #73819a;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-head .dr-icon-btn {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    background: #fbfcff;
+    color: #334155;
+    border: 1px solid #e3e9f3;
+    box-shadow:
+        0 8px 20px rgba(15, 23, 42, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Small simplified badge toolbar */
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-toolbar--badges-only,
+#monthlyReportRoot .dr-department-task-modal .dr-modal-toolbar--badges-only {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 10px 18px !important;
+    border-bottom: 1px solid #e8edf5 !important;
+    background: #f8fafc !important;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-pill-row--clean,
+#monthlyReportRoot .dr-department-task-modal .dr-pill-row--clean {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    width: 100% !important;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-pill-tab,
+#monthlyReportRoot .dr-department-task-modal .dr-pill-tab {
+    height: 34px !important;
+    min-width: auto !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    background: #ffffff !important;
+    border: 1px solid #dfe6f1 !important;
+    color: #64748b !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    line-height: 1 !important;
+    box-shadow: none !important;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-pill-tab:hover,
+#monthlyReportRoot .dr-department-task-modal .dr-pill-tab:hover {
+    transform: none !important;
+    border-color: #cfd8e8 !important;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-pill-tab-count,
+#monthlyReportRoot .dr-department-task-modal .dr-pill-tab-count {
+    min-width: 20px !important;
+    height: 20px !important;
+    padding: 0 6px !important;
+    border-radius: 999px !important;
+    background: #eef2f7 !important;
+    color: #64748b !important;
+    font-size: 11px !important;
+    font-weight: 950 !important;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-pill-tab.is-active,
+#monthlyReportRoot .dr-department-task-modal .dr-pill-tab.is-active {
+    background: #2f66ea !important;
+    border-color: #2f66ea !important;
+    color: #ffffff !important;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-pill-tab.is-active .dr-pill-tab-count,
+#monthlyReportRoot .dr-department-task-modal .dr-pill-tab.is-active .dr-pill-tab-count {
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-search-box--modal,
+#monthlyReportRoot .dr-department-task-modal .dr-search-box--modal {
+    display: none !important;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-body {
+    min-height: 320px;
+    max-height: calc(84vh - 218px);
+    padding: 18px 24px 20px;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    scrollbar-width: thin;
+    scrollbar-color: #b8c2d4 transparent;
+}
+
+#monthlyReportRoot .dr-task-list {
+    display: grid;
+    gap: 14px;
+}
+
+#monthlyReportRoot .dr-task-item {
+    min-height: 104px;
+    padding: 18px 20px;
+    border: 1px solid #e3eaf5;
+    border-radius: 20px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+    box-shadow:
+        0 12px 28px rgba(15, 23, 42, 0.045),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    align-items: center;
+    gap: 18px;
+}
+
+#monthlyReportRoot .dr-task-item-main {
+    min-width: 0;
+    padding-right: 8px;
+}
+
+#monthlyReportRoot .dr-task-item-title {
+    color: #0f172a;
+    font-size: 0.98rem;
+    font-weight: 950;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+}
+
+#monthlyReportRoot .dr-task-item-desc {
+    margin-top: 7px;
+    color: #718096;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.45;
+}
+
+#monthlyReportRoot .dr-task-item-meta,
+#monthlyReportRoot .mr-task-assignee {
+    margin-top: 9px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+#monthlyReportRoot .mr-task-assignee {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#monthlyReportRoot .dr-task-item-side {
+    display: grid;
+    justify-items: end;
+    align-content: center;
+    gap: 8px;
+}
+
+#monthlyReportRoot .dr-comment-open-btn {
+    height: 38px;
+    min-width: 118px;
+    padding: 0 16px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #e0e7f2;
+    color: #0f172a;
+    font-size: 12px;
+    font-weight: 950;
+    box-shadow:
+        0 8px 18px rgba(15, 23, 42, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+#monthlyReportRoot .dr-comment-open-btn:hover {
+    color: var(--dr-blue);
+    background: #f8fbff;
+    border-color: #cbd5e1;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-foot {
+    padding: 14px 24px;
+    border-top: 1px solid #e8edf5;
+    background: #ffffff;
+}
+
+#monthlyReportRoot .dr-employee-task-modal .dr-modal-foot .dr-ghost-btn {
+    height: 40px;
+    min-width: 86px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #e0e7f2;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 950;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+/* =========================================================
+   Comment Modal
+========================================================= */
+
+#monthlyReportRoot .dr-comment-modal {
+    width: min(640px, calc(100vw - 48px));
+    max-width: 640px;
+    height: min(500px, calc(100vh - 72px));
+    max-height: 500px;
+    border-radius: 24px;
+    background: #ffffff;
+    border: 1px solid #e3e9f3;
+    box-shadow:
+        0 28px 72px rgba(15, 23, 42, 0.26),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+#monthlyReportRoot .dr-comment-modal .dr-modal-head {
+    min-height: 106px;
+    padding: 22px 26px 18px;
+    align-items: flex-start;
+    border-bottom: 1px solid #e8edf5;
+    background:
+        radial-gradient(circle at 12% 0%, rgba(124, 92, 255, 0.08), transparent 32%),
+        #ffffff;
+}
+
+#monthlyReportRoot .dr-comment-modal .dr-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #0f172a;
+    font-size: 1.34rem;
+    font-weight: 950;
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+}
+
+#monthlyReportRoot .dr-comment-modal .dr-modal-title i {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0eaff;
+    color: #7c3aed;
+    font-size: 20px;
+}
+
+#monthlyReportRoot .dr-comment-modal .dr-modal-subtitle {
+    width: fit-content;
+    margin-top: 10px;
+    margin-left: 56px;
+    padding: 7px 13px;
+    border: 1px solid #dfe6f1;
+    border-radius: 999px;
+    background: #f7f9fd;
+    color: #718096;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+#monthlyReportRoot .dr-comment-modal .dr-modal-head .dr-icon-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 18px;
+    background: #fbfcff;
+    border: 1px solid #e0e7f2;
+    color: #64748b;
+    box-shadow: none;
+}
+
+#monthlyReportRoot .dr-comment-modal .dr-modal-body {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    padding: 24px 26px;
+    overflow-y: auto;
+    background:
+        radial-gradient(circle at right top, rgba(124, 92, 255, 0.055), transparent 34%),
+        linear-gradient(180deg, #fbfcff 0%, #ffffff 100%);
+    scrollbar-width: thin;
+}
+
+#monthlyReportRoot .dr-comment-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+#monthlyReportRoot .dr-comment-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+#monthlyReportRoot .dr-comment-row.is-own {
+    flex-direction: row-reverse;
+}
+
+#monthlyReportRoot .dr-comment-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+#monthlyReportRoot .dr-comment-bubble-wrap {
+    max-width: min(78%, 430px);
+}
+
+#monthlyReportRoot .dr-comment-row.is-own .dr-comment-bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+#monthlyReportRoot .dr-comment-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 7px;
+    flex-wrap: wrap;
+}
+
+#monthlyReportRoot .dr-comment-author {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+#monthlyReportRoot .dr-comment-time {
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+#monthlyReportRoot .dr-comment-bubble {
+    display: inline-block;
+    max-width: 100%;
+    padding: 13px 16px;
+    border-radius: 14px 20px 20px 20px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.5;
+    word-break: break-word;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.055);
+}
+
+#monthlyReportRoot .dr-comment-row.is-own .dr-comment-bubble {
+    border-radius: 20px 14px 20px 20px;
+    background: linear-gradient(135deg, #6d3df5 0%, #5b57d9 100%);
+    border-color: transparent;
+    color: #ffffff;
+}
+
+/* Empty comment state */
+#monthlyReportRoot .dr-chat-empty-state {
+    min-height: 260px;
+    height: 100%;
+    padding: 32px 20px;
+    border: none;
+    background:
+        radial-gradient(circle at center 32%, rgba(124, 92, 255, 0.12), transparent 28%),
+        transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+}
+
+#monthlyReportRoot .dr-chat-empty-icon {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 12px;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.9), transparent 34%),
+        linear-gradient(135deg, #efe7ff 0%, #e2d4ff 100%);
+    color: #7c3aed;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+        0 18px 40px rgba(124, 58, 237, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+#monthlyReportRoot .dr-chat-empty-icon i {
+    font-size: 26px;
+}
+
+#monthlyReportRoot .dr-chat-empty-title {
+    color: #1f2937;
+    font-size: 22px;
+    font-weight: 950;
+    line-height: 1.15;
+    letter-spacing: -0.035em;
+}
+
+#monthlyReportRoot .dr-chat-empty-subtitle {
+    color: #8a96aa;
+    font-size: 15px;
+    font-weight: 850;
+}
+
+/* Comment composer */
+#monthlyReportRoot .dr-comment-modal .dr-modal-foot.dr-comment-foot {
+    padding: 14px 18px 18px;
+    border-top: 1px solid #e8edf5;
+    background: #ffffff;
+}
+
+#monthlyReportRoot .dr-comment-compose {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#monthlyReportRoot .dr-comment-error {
+    color: #dc3545;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+#monthlyReportRoot .dr-comment-compose-row {
+    min-height: 72px;
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 82px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #dfe6f1;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow:
+        0 12px 30px rgba(15, 23, 42, 0.045),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+#monthlyReportRoot .dr-comment-compose-row > .dr-icon-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: #64748b;
+    box-shadow: none;
+}
+
+#monthlyReportRoot .dr-compose-textarea {
+    height: 44px;
+    min-height: 44px;
+    padding: 10px 4px;
+    border: none;
+    outline: none;
+    border-radius: 0;
+    background: transparent;
+    color: #0f172a;
+    resize: none;
+    font-size: 14px;
+    font-weight: 850;
+    line-height: 1.35;
+    font-family: "Nunito", sans-serif;
+}
+
+#monthlyReportRoot .dr-compose-textarea::placeholder {
+    color: #9aa6b8;
+}
+
+#monthlyReportRoot .dr-send-btn {
+    height: 42px;
+    min-width: 76px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: #9aa6f3;
+    box-shadow: none;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+#monthlyReportRoot .dr-send-btn:not(:disabled) {
+    color: #5b57d9;
+}
+
+#monthlyReportRoot .dr-send-btn:not(:disabled):hover {
+    background: #f0eaff;
+    transform: none;
+}
+
+/* File chips */
+#monthlyReportRoot .dr-file-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#monthlyReportRoot .dr-file-chip {
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid #dfe6f1;
+    border-radius: 999px;
+    background: #f7f9fd;
+    color: var(--dr-text);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+#monthlyReportRoot .dr-file-chip.is-staged {
+    background: rgba(91, 87, 217, 0.08);
+    border-color: rgba(91, 87, 217, 0.22);
+}
+
+#monthlyReportRoot .dr-file-chip-name {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#monthlyReportRoot .dr-file-chip-size {
+    color: var(--dr-subtle);
+    font-size: 11px;
+}
+
+#monthlyReportRoot .dr-file-chip-remove {
+    border: none;
+    background: transparent;
+    color: var(--dr-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+}
+
+#monthlyReportRoot .dr-comment-attachments {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* =========================================================
+   Loading / Error
+========================================================= */
+
+#monthlyReportRoot .dr-error-card,
+#monthlyReportRoot .dr-loading-card {
+    min-height: 60vh;
+    border: 1px solid var(--dr-border);
+    border-radius: 18px;
+    background: var(--dr-card);
+    box-shadow: var(--dr-shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+}
+
+#monthlyReportRoot .dr-error-card h5 {
+    margin-bottom: 8px;
+    font-weight: 950;
+}
+
+#monthlyReportRoot .dr-error-card p {
+    max-width: 520px;
+    margin: 0;
+    color: var(--dr-muted);
+}
+
+/* =========================================================
+   Dark Mode
+========================================================= */
+
+[data-theme="dark"] #monthlyReportRoot .dr-table-shell::-webkit-scrollbar-thumb,
+[data-theme="dark"] #monthlyReportRoot .dr-modal-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-progress {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-assignee-avatar,
+[data-theme="dark"] #monthlyReportRoot .dr-modal-avatar {
+    border-color: var(--dr-card);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal {
+    background: #111827;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.48);
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-modal-head,
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-modal-foot,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-modal-head,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-modal-foot.dr-comment-foot {
+    background: #111827;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-modal-toolbar--badges-only,
+[data-theme="dark"] #monthlyReportRoot .dr-department-task-modal .dr-modal-toolbar--badges-only,
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-modal-body,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-modal-body {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-modal-title,
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-task-item-title,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-modal-title,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-compose-textarea,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-chat-empty-title {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-task-item,
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-pill-tab,
+[data-theme="dark"] #monthlyReportRoot .dr-department-task-modal .dr-pill-tab,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-comment-compose-row,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-comment-bubble,
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-modal-head .dr-icon-btn {
+    background: #141f33 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-pill-tab,
+[data-theme="dark"] #monthlyReportRoot .dr-department-task-modal .dr-pill-tab {
+    color: #a8b3c7 !important;
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-employee-task-modal .dr-pill-tab.is-active,
+[data-theme="dark"] #monthlyReportRoot .dr-department-task-modal .dr-pill-tab.is-active {
+    background: #2f66ea !important;
+    border-color: #2f66ea !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] #monthlyReportRoot .dr-comment-modal .dr-modal-title i {
+    background: rgba(124, 92, 255, 0.18);
+    color: #c4b5fd;
+}
+
+/* =========================================================
+   Responsive
+========================================================= */
+
+@media (max-width: 1399px) {
+    #monthlyReportRoot .dr-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1199px) {
+    #monthlyReportRoot .mr-toolbar-row {
+        flex-wrap: wrap !important;
+    }
+
+    #monthlyReportRoot .mr-toolbar-actions {
+        width: 100%;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+
+    #monthlyReportRoot .mr-period-nav {
+        flex-wrap: wrap !important;
+    }
+
+    #monthlyReportRoot .mr-top-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #monthlyReportRoot .dr-table-shell {
+        max-height: 440px;
+    }
+}
+
+@media (max-width: 900px) {
+    #monthlyReportRoot .dr-employee-task-modal {
+        width: min(100%, calc(100vw - 24px));
+        max-height: 90vh;
+        border-radius: 22px;
+    }
+
+    #monthlyReportRoot .dr-task-item {
+        grid-template-columns: 1fr;
+    }
+
+    #monthlyReportRoot .dr-task-item-side {
+        justify-items: start;
+    }
+
+    #monthlyReportRoot .dr-comment-modal {
+        width: min(100%, calc(100vw - 24px));
+        height: min(520px, calc(100vh - 48px));
+    }
+}
+
+@media (max-width: 767px) {
+    #monthlyReportRoot .dr-page {
+        padding: 14px;
+    }
+
+    #monthlyReportRoot .dr-card {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    #monthlyReportRoot .dr-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #monthlyReportRoot .mr-toolbar-actions,
+    #monthlyReportRoot .mr-period-nav {
+        width: 100% !important;
+        align-items: stretch !important;
+    }
+
+    #monthlyReportRoot .mr-period-nav .dr-ghost-btn,
+    #monthlyReportRoot .mr-period-label,
+    #monthlyReportRoot .mr-select-shell {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+
+    #monthlyReportRoot .mr-chart-lg,
+    #monthlyReportRoot .mr-chart-md,
+    #monthlyReportRoot .mr-chart-line {
+        height: 300px;
+    }
+
+    #monthlyReportRoot .mr-chart-hbar,
+    #monthlyReportRoot .mr-chart-employee {
+        min-height: 360px;
+    }
+
+    #monthlyReportRoot .dr-card--table-full {
+        padding: 12px;
+    }
+
+    #monthlyReportRoot .dr-table {
+        min-width: 980px;
+    }
+
+    #monthlyReportRoot .dr-performance-cell {
+        min-width: 135px;
+    }
+
+    #monthlyReportRoot .dr-progress {
+        max-width: 120px;
+    }
+
+    #monthlyReportRoot .dr-modal-backdrop {
+        padding: 12px;
+    }
+
+    #monthlyReportRoot .dr-modal-card {
+        width: min(100%, calc(100vw - 12px));
+        max-height: 92vh;
+        border-radius: 22px;
+    }
+
+    #monthlyReportRoot .dr-modal-head,
+    #monthlyReportRoot .dr-modal-toolbar,
+    #monthlyReportRoot .dr-modal-foot,
+    #monthlyReportRoot .dr-modal-body {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    #monthlyReportRoot .dr-modal-body {
+        max-height: calc(92vh - 220px);
+    }
+
+    #monthlyReportRoot .dr-modal-person {
+        align-items: flex-start;
+    }
+
+    #monthlyReportRoot .dr-modal-avatar {
+        width: 48px;
+        height: 48px;
+    }
+
+    #monthlyReportRoot .dr-modal-title {
+        font-size: 1.18rem;
+    }
+
+    #monthlyReportRoot .dr-pill-row {
+        width: 100%;
+    }
+
+    #monthlyReportRoot .dr-comment-bubble-wrap {
+        max-width: 100%;
+    }
+
+    #monthlyReportRoot .dr-comment-compose-row {
+        grid-template-columns: 38px minmax(0, 1fr) 64px;
+        padding: 8px;
+    }
+
+    #monthlyReportRoot .dr-send-btn {
+        min-width: 58px;
+        padding: 0 8px;
+    }
+}
+
+@media (max-width: 560px) {
+    #monthlyReportRoot .dr-pill-tab {
+        height: 32px !important;
+        padding: 0 10px !important;
+        font-size: 11px !important;
+    }
+
+    #monthlyReportRoot .dr-pill-tab-count {
+        min-width: 18px !important;
+        height: 18px !important;
+        font-size: 10px !important;
+    }
+
+    #monthlyReportRoot .dr-comment-modal {
+        width: calc(100vw - 18px);
+        height: calc(100vh - 32px);
+        border-radius: 22px;
+    }
+
+    #monthlyReportRoot .dr-comment-modal .dr-modal-head {
+        min-height: 96px;
+        padding: 18px;
+    }
+
+    #monthlyReportRoot .dr-comment-modal .dr-modal-title {
+        font-size: 1.15rem;
+    }
+
+    #monthlyReportRoot .dr-comment-modal .dr-modal-title i {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+    }
+
+    #monthlyReportRoot .dr-comment-modal .dr-modal-subtitle {
+        margin-left: 50px;
+    }
+
+    #monthlyReportRoot .dr-comment-modal .dr-modal-body {
+        padding: 18px;
+    }
+}

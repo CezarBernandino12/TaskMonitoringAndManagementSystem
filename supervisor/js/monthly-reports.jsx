@@ -17,6 +17,54 @@ function buildAvatarFallbackUrl(name) {
     )}&background=f7c4d4&color=222&size=80`;
 }
 
+
+function safeNum(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+}
+
+const MANILA_TZ = "Asia/Manila";
+
+function formatDateTimePH(dateStr) {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return "";
+
+    return (
+        new Intl.DateTimeFormat("en-PH", {
+            timeZone: MANILA_TZ,
+            month: "short",
+            day: "numeric"
+        }).format(date) +
+        ", " +
+        new Intl.DateTimeFormat("en-PH", {
+            timeZone: MANILA_TZ,
+            hour: "numeric",
+            minute: "2-digit"
+        }).format(date)
+    );
+}
+
+function initials(name) {
+    return name
+        ? name.split(" ").map((word) => word[0]).slice(0, 2).join("").toUpperCase()
+        : "?";
+}
+
+function avatarColor(name) {
+    const hue = name
+        ? [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360
+        : 220;
+    return `hsl(${hue}, 55%, 86%)`;
+}
+
+function avatarTextColor(name) {
+    const hue = name
+        ? [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360
+        : 220;
+    return `hsl(${hue}, 45%, 30%)`;
+}
+
 function formatMonthDisplay(year, month) {
     return `${MONTH_NAMES[month - 1]} ${year}`;
 }
@@ -46,17 +94,15 @@ function renderCleanProgress(rate, total) {
         return <span className="mr-empty-inline">No tasks yet</span>;
     }
 
-    if (rate === 0) {
-        return <span className="mr-rate-danger">0% — None completed</span>;
-    }
-
     return (
-        <div className="mr-progress-clean">
-            <div className="mr-progress-clean-track">
-                <div
-                    className="mr-progress-clean-fill"
-                    style={{ width: `${rate}%` }}
-                ></div>
+        <div className="mr-performance-cell">
+            <div className="mr-progress-clean" title={`${rate}% completed`}>
+                <div className="mr-progress-clean-track">
+                    <div
+                        className="mr-progress-clean-fill"
+                        style={{ width: `${rate}%` }}
+                    ></div>
+                </div>
             </div>
             <span className="mr-progress-clean-value">{rate}%</span>
         </div>
@@ -79,21 +125,268 @@ function SummaryCard({ icon, title, value, tone, sub }) {
     );
 }
 
+
+function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
+    const [messages, setMessages] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [text, setText] = useState("");
+    const [files, setFiles] = useState([]);
+    const [sending, setSending] = useState(false);
+    const [sendError, setSendError] = useState("");
+    const fileRef = useRef(null);
+    const bottomRef = useRef(null);
+
+    useEffect(() => {
+        setLoading(true);
+        setError("");
+
+        fetch(`php/get_task_messages.php?task_id=${encodeURIComponent(task.id)}`)
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
+            })
+            .then((data) => {
+                if (data.error) throw new Error(data.error);
+                setMessages(Array.isArray(data.messages) ? data.messages : []);
+                setLoading(false);
+            })
+            .catch((err) => {
+                setError(`Could not load comments: ${err.message}`);
+                setLoading(false);
+            });
+    }, [task.id]);
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    useEffect(() => {
+        const onEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
+
+    function handleSend() {
+        const trimmed = text.trim();
+        if (!trimmed && files.length === 0) return;
+        if (!recipientId) {
+            setSendError("Could not identify the message recipient.");
+            return;
+        }
+
+        setSending(true);
+        setSendError("");
+
+        const fd = new FormData();
+        fd.append("task_id", task.id);
+        fd.append("recipient_id", recipientId);
+        fd.append("message", trimmed);
+        files.forEach((file) => fd.append("attachments[]", file));
+
+        fetch("php/send_task_message.php", {
+            method: "POST",
+            body: fd
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
+            })
+            .then((data) => {
+                if (data.error) throw new Error(data.error);
+                setMessages((prev) => [...prev, data.message]);
+                setText("");
+                setFiles([]);
+                setSending(false);
+            })
+            .catch((err) => {
+                setSendError(err.message || "Failed to send comment.");
+                setSending(false);
+            });
+    }
+
+    function handleFileChange(e) {
+        const picked = Array.from(e.target.files || []);
+        setFiles((prev) => {
+            const existing = new Set(prev.map((f) => `${f.name}|${f.size}`));
+            const fresh = picked.filter((f) => !existing.has(`${f.name}|${f.size}`));
+            return [...prev, ...fresh];
+        });
+        e.target.value = "";
+    }
+
+    function removeFile(index) {
+        setFiles((prev) => prev.filter((_, i) => i !== index));
+    }
+
+    function fmtSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    const canSend = !sending && Boolean(recipientId) && (text.trim().length > 0 || files.length > 0);
+
+    return (
+        <div className="mr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div
+                className="mr-modal-card mr-comment-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Comments for ${task.title}`}
+            >
+                <div className="mr-modal-head">
+                    <div>
+                        <h5 className="mr-modal-title">
+                            <i className="bi bi-chat-dots me-2"></i>
+                            {task.title || "Task Comments"}
+                        </h5>
+                        <div className="mr-modal-subtitle">
+                            {messages.length} comment{messages.length !== 1 ? "s" : ""}
+                        </div>
+                    </div>
+
+                    <button className="mr-icon-btn" onClick={onClose} aria-label="Close">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div className="mr-modal-body">
+                    {loading ? (
+                        <div className="mr-empty-state">
+                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading comments...
+                        </div>
+                    ) : error ? (
+                        <div className="alert alert-danger mb-0">{error}</div>
+                    ) : messages.length === 0 ? (
+                        <div className="mr-empty-state mr-chat-empty-state">
+                            <div className="mr-chat-empty-icon">
+                                <i className="bi bi-chat-quote-fill"></i>
+                            </div>
+                            <div className="mr-chat-empty-title">No comments yet</div>
+                            <div className="mr-chat-empty-subtitle">
+                                No comments yet. Be the first to reply.
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="mr-comment-stream">
+                            {messages.map((msg) => {
+                                const isOwn = safeNum(msg.sender_id) === safeNum(currentUserId);
+                                return (
+                                    <div key={msg.id} className={`mr-comment-row ${isOwn ? "is-own" : ""}`}>
+                                        <div
+                                            className="mr-comment-avatar"
+                                            style={{
+                                                background: avatarColor(msg.sender_name),
+                                                color: avatarTextColor(msg.sender_name)
+                                            }}
+                                        >
+                                            {initials(msg.sender_name)}
+                                        </div>
+                                        <div className="mr-comment-bubble-wrap">
+                                            <div className="mr-comment-meta">
+                                                <span className="mr-comment-author">
+                                                    {isOwn ? "You" : msg.sender_name}
+                                                </span>
+                                                <span className="mr-comment-time">
+                                                    {formatDateTimePH(msg.time_sent)}
+                                                </span>
+                                            </div>
+                                            {msg.message ? <div className="mr-comment-bubble">{msg.message}</div> : null}
+                                            {Array.isArray(msg.attachments) && msg.attachments.length > 0 ? (
+                                                <div className="mr-comment-attachments">
+                                                    {msg.attachments.map((att) => (
+                                                        <a key={att.id} href={att.file_path} target="_blank" rel="noopener noreferrer" className="mr-file-chip">
+                                                            <i className="bi bi-paperclip"></i>
+                                                            <span>{att.file_name}</span>
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            <div ref={bottomRef}></div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="mr-modal-foot mr-comment-foot">
+                    <input ref={fileRef} type="file" multiple style={{ display: "none" }} onChange={handleFileChange} />
+                    <div className="mr-comment-compose">
+                        {sendError ? <div className="mr-comment-error">{sendError}</div> : null}
+                        {files.length > 0 ? (
+                            <div className="mr-file-chip-row">
+                                {files.map((file, index) => (
+                                    <div className="mr-file-chip is-staged" key={`${file.name}-${index}`}>
+                                        <i className="bi bi-paperclip"></i>
+                                        <span className="mr-file-chip-name">{file.name}</span>
+                                        <span className="mr-file-chip-size">{fmtSize(file.size)}</span>
+                                        <button type="button" className="mr-file-chip-remove" onClick={() => removeFile(index)} aria-label={`Remove ${file.name}`}>
+                                            <i className="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+                        <div className="mr-comment-compose-row">
+                            <button type="button" className="mr-icon-btn" onClick={() => fileRef.current?.click()} disabled={sending} title="Attach files">
+                                <i className="bi bi-paperclip"></i>
+                            </button>
+                            <textarea
+                                className="mr-compose-textarea"
+                                rows="2"
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
+                                placeholder="Write a thoughtful reply..."
+                            />
+                            <button type="button" className="mr-ghost-btn mr-send-btn" onClick={handleSend} disabled={!canSend}>
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
 function EmployeeTaskModal({ emp, monthStart, monthEnd, onClose }) {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
-    const [query, setQuery] = useState("");
+    const [commentTask, setCommentTask] = useState(null);
+    const [currentUserId, setCurrentUserId] = useState(null);
+
+    useEffect(() => {
+        fetch("php/get_current_user.php")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.id) setCurrentUserId(data.id);
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         setLoading(true);
         setError("");
         setTasks([]);
         setActiveTab("all");
-        setQuery("");
 
-        fetch(`php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${monthStart}&week_end=${monthEnd}`)
+        fetch(`php/get_employee_tasks_report.php?employee_id=${encodeURIComponent(emp.id)}&week_start=${monthStart}&week_end=${monthEnd}`)
             .then((res) => {
                 if (!res.ok) throw new Error(`Server returned ${res.status}`);
                 return res.json();
@@ -117,190 +410,105 @@ function EmployeeTaskModal({ emp, monthStart, monthEnd, onClose }) {
         return () => window.removeEventListener("keydown", onEsc);
     }, [onClose]);
 
-    const annotated = useMemo(
-        () =>
-            tasks.map((t) => ({
-                ...t,
-                derivedStatus: t.derived_status ?? t.status
-            })),
-        [tasks]
-    );
-
-    const counts = useMemo(
-        () => ({
-            all: annotated.length,
-            Completed: annotated.filter((t) => t.derivedStatus === "Completed").length,
-            Ongoing: annotated.filter((t) => t.derivedStatus === "Ongoing").length,
-            Overdue: annotated.filter((t) => t.derivedStatus === "Overdue").length
-        }),
-        [annotated]
-    );
-
-    const filtered = useMemo(() => {
-        let base =
-            activeTab === "all"
-                ? annotated
-                : annotated.filter((t) => t.derivedStatus === activeTab);
-
-        const term = query.trim().toLowerCase();
-        if (!term) return base;
-
-        return base.filter((task) => {
-            const title = String(task.title || "").toLowerCase();
-            const desc = String(task.description || "").toLowerCase();
-            const status = String(task.derivedStatus || "").toLowerCase();
-            const priority = String(task.priority || "").toLowerCase();
-            return (
-                title.includes(term) ||
-                desc.includes(term) ||
-                status.includes(term) ||
-                priority.includes(term)
-            );
-        });
-    }, [annotated, activeTab, query]);
-
-    const monthLabel = new Date(`${monthStart}T00:00:00`).toLocaleDateString("en-PH", {
-        month: "long",
-        year: "numeric"
-    });
+    const annotated = useMemo(() => tasks.map((t) => ({ ...t, derivedStatus: t.derived_status ?? t.status ?? "Other" })), [tasks]);
+    const counts = useMemo(() => ({
+        all: annotated.length,
+        Completed: annotated.filter((t) => t.derivedStatus === "Completed").length,
+        Ongoing: annotated.filter((t) => t.derivedStatus === "Ongoing").length,
+        Overdue: annotated.filter((t) => t.derivedStatus === "Overdue").length
+    }), [annotated]);
+    const filtered = useMemo(() => activeTab === "all" ? annotated : annotated.filter((t) => t.derivedStatus === activeTab), [annotated, activeTab]);
+    const monthLabel = new Date(`${monthStart}T00:00:00`).toLocaleDateString("en-PH", { month: "long", year: "numeric" });
 
     return (
-        <div className="mr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div className="mr-modal-card">
-                <div className="mr-modal-head">
-                    <div className="mr-modal-person">
-                        <img
-                            src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
-                            alt={`${emp.name} Profile`}
-                            className="mr-modal-avatar"
-                        />
-                        <div>
-                            <h5 className="mr-modal-title">{emp.name}</h5>
-                            <div className="mr-modal-subtitle">
-                                {emp.department} · {monthLabel}
+        <>
+            <div className="mr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+                <div className="mr-modal-card mr-employee-task-modal" role="dialog" aria-modal="true" aria-label={`${emp.name} monthly tasks`}>
+                    <div className="mr-modal-head">
+                        <div className="mr-modal-person">
+                            <img src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)} alt={`${emp.name} Profile`} className="mr-modal-avatar" />
+                            <div>
+                                <h5 className="mr-modal-title">{emp.name}</h5>
+                                <div className="mr-modal-subtitle">{emp.department} · {monthLabel}</div>
                             </div>
                         </div>
+                        <button className="mr-icon-btn" onClick={onClose} aria-label="Close"><i className="bi bi-x-lg"></i></button>
                     </div>
-
-                    <button className="mr-icon-btn" onClick={onClose} aria-label="Close">
-                        <i className="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <div className="mr-modal-toolbar">
-                    <div className="mr-pill-row">
-                        {[
-                            { key: "all", label: "All", count: counts.all, tone: "neutral" },
-                            { key: "Completed", label: "Completed", count: counts.Completed, tone: "success" },
-                            { key: "Ongoing", label: "Ongoing", count: counts.Ongoing, tone: "warning" },
-                            { key: "Overdue", label: "Overdue", count: counts.Overdue, tone: "danger" }
-                        ].map((tab) => (
-                            <button
-                                key={tab.key}
-                                type="button"
-                                className={`mr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`}
-                                onClick={() => setActiveTab(tab.key)}
-                            >
-                                {tab.label}
-                                <span className="mr-pill-count">{tab.count}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="mr-search-box">
-                        <i className="bi bi-search"></i>
-                        <input
-                            type="text"
-                            placeholder="Search tasks..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <div className="mr-modal-body">
-                    {loading ? (
-                        <div className="mr-empty-state">
-                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                            Loading tasks...
+                    <div className="mr-modal-toolbar mr-modal-toolbar--badges-only">
+                        <div className="mr-pill-row mr-pill-row--clean">
+                            {[
+                                { key: "all", label: "All", count: counts.all, tone: "neutral" },
+                                { key: "Completed", label: "Completed", count: counts.Completed, tone: "success" },
+                                { key: "Ongoing", label: "Ongoing", count: counts.Ongoing, tone: "warning" },
+                                { key: "Overdue", label: "Overdue", count: counts.Overdue, tone: "danger" }
+                            ].map((tab) => (
+                                <button key={tab.key} type="button" className={`mr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`} onClick={() => setActiveTab(tab.key)}>
+                                    <span className="mr-pill-tab-label">{tab.label}</span>
+                                    <span className="mr-pill-count">{tab.count}</span>
+                                </button>
+                            ))}
                         </div>
-                    ) : error ? (
-                        <div className="alert alert-danger mb-0">{error}</div>
-                    ) : filtered.length === 0 ? (
-                        <div className="mr-empty-state">No matching tasks found for this month.</div>
-                    ) : (
-                        <div className="mr-task-list">
-                            {filtered.map((task, idx) => {
-                                const status = task.derivedStatus || "Other";
-                                const priority = task.priority || "Other";
-                                const days = task.days_until_deadline;
-
-                                let deadlineText = task.deadline
-                                    ? new Date(task.deadline).toLocaleDateString("en-PH", {
-                                          month: "short",
-                                          day: "numeric",
-                                          year: "numeric"
-                                      })
-                                    : "No deadline";
-
-                                if (status === "Overdue" && days !== null && days !== undefined) {
-                                    deadlineText += ` · ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} overdue`;
-                                } else if (status === "Ongoing" && days !== null && days !== undefined) {
-                                    deadlineText += days === 0
-                                        ? " · Due today"
-                                        : ` · ${days} day${days !== 1 ? "s" : ""} left`;
-                                } else if (status === "Completed" && task.completed_at) {
-                                    deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", {
-                                        month: "short",
-                                        day: "numeric"
-                                    })}`;
-                                }
-
-                                return (
-                                    <div className="mr-task-item" key={task.id ?? idx}>
-                                        <div className="mr-task-main">
-                                            <div className="mr-task-title">{task.title}</div>
-                                            {task.description && (
-                                                <div className="mr-task-desc">{task.description}</div>
-                                            )}
-                                            <div className="mr-task-meta">{deadlineText}</div>
+                    </div>
+                    <div className="mr-modal-body">
+                        {loading ? (
+                            <div className="mr-empty-state"><div className="spinner-border spinner-border-sm me-2" role="status"></div>Loading tasks...</div>
+                        ) : error ? (
+                            <div className="alert alert-danger mb-0">{error}</div>
+                        ) : filtered.length === 0 ? (
+                            <div className="mr-empty-state">No matching tasks found for this month.</div>
+                        ) : (
+                            <div className="mr-task-list">
+                                {filtered.map((task, idx) => {
+                                    const status = task.derivedStatus || "Other";
+                                    const priority = task.priority || "Other";
+                                    const days = task.days_until_deadline;
+                                    let deadlineText = task.deadline ? new Date(task.deadline).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "No deadline";
+                                    if (status === "Overdue" && days !== null && days !== undefined) {
+                                        deadlineText += ` · ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} overdue`;
+                                    } else if (status === "Ongoing" && days !== null && days !== undefined) {
+                                        deadlineText += days === 0 ? " · Due today" : ` · ${days} day${days !== 1 ? "s" : ""} left`;
+                                    } else if (status === "Completed" && task.completed_at) {
+                                        deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}`;
+                                    }
+                                    return (
+                                        <div className="mr-task-item" key={task.id ?? idx}>
+                                            <div className="mr-task-main">
+                                                <div className="mr-task-title">{task.title || "Untitled Task"}</div>
+                                                {task.description ? <div className="mr-task-desc">{task.description}</div> : null}
+                                                <div className="mr-task-meta">{deadlineText}</div>
+                                            </div>
+                                            <div className="mr-task-side">
+                                                <span className={`mr-status-inline ${statusTone(status)}`}>{status}</span>
+                                                <span className={`mr-priority-inline ${priorityTone(priority)}`}><i className="bi bi-flag-fill"></i><span>{priority}</span></span>
+                                                <button type="button" className="mr-ghost-btn mr-comment-open-btn" onClick={() => setCommentTask(task)}><i className="bi bi-chat-dots"></i><span>Comments</span></button>
+                                            </div>
                                         </div>
-
-                                        <div className="mr-task-side">
-                                            <span className={`mr-status-inline ${statusTone(status)}`}>{status}</span>
-                                            <span className={`mr-priority-inline ${priorityTone(priority)}`}>
-                                                <i className="bi bi-flag-fill"></i>
-                                                <span>{priority}</span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                <div className="mr-modal-foot">
-                    <button className="mr-ghost-btn" onClick={onClose}>Close</button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                    <div className="mr-modal-foot"><button className="mr-ghost-btn" onClick={onClose}>Close</button></div>
                 </div>
             </div>
-        </div>
+            {commentTask ? <TaskCommentModal task={commentTask} recipientId={emp.id} currentUserId={currentUserId} onClose={() => setCommentTask(null)} /> : null}
+        </>
     );
 }
+
+
 
 function DepartmentTaskModal({ dept, monthStart, monthEnd, onClose }) {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
-    const [query, setQuery] = useState("");
 
     useEffect(() => {
         setLoading(true);
         setError("");
         setTasks([]);
         setActiveTab("all");
-        setQuery("");
 
         fetch(`php/get_department_tasks_report.php?department_id=${dept.department_id}&week_start=${monthStart}&week_end=${monthEnd}`)
             .then((res) => {
@@ -326,109 +534,44 @@ function DepartmentTaskModal({ dept, monthStart, monthEnd, onClose }) {
         return () => window.removeEventListener("keydown", onEsc);
     }, [onClose]);
 
-    const annotated = useMemo(
-        () =>
-            tasks.map((t) => ({
-                ...t,
-                derivedStatus: t.derived_status ?? t.status
-            })),
-        [tasks]
-    );
-
-    const counts = useMemo(
-        () => ({
-            all: annotated.length,
-            Completed: annotated.filter((t) => t.derivedStatus === "Completed").length,
-            Ongoing: annotated.filter((t) => t.derivedStatus === "Ongoing").length,
-            Overdue: annotated.filter((t) => t.derivedStatus === "Overdue").length
-        }),
-        [annotated]
-    );
-
-    const filtered = useMemo(() => {
-        let base =
-            activeTab === "all"
-                ? annotated
-                : annotated.filter((t) => t.derivedStatus === activeTab);
-
-        const term = query.trim().toLowerCase();
-        if (!term) return base;
-
-        return base.filter((task) => {
-            const title = String(task.title || "").toLowerCase();
-            const desc = String(task.description || "").toLowerCase();
-            const assigned = String(task.assigned_to_name || "").toLowerCase();
-            const status = String(task.derivedStatus || "").toLowerCase();
-            return (
-                title.includes(term) ||
-                desc.includes(term) ||
-                assigned.includes(term) ||
-                status.includes(term)
-            );
-        });
-    }, [annotated, activeTab, query]);
-
-    const monthLabel = new Date(`${monthStart}T00:00:00`).toLocaleDateString("en-PH", {
-        month: "long",
-        year: "numeric"
-    });
+    const annotated = useMemo(() => tasks.map((t) => ({ ...t, derivedStatus: t.derived_status ?? t.status ?? "Other" })), [tasks]);
+    const counts = useMemo(() => ({
+        all: annotated.length,
+        Completed: annotated.filter((t) => t.derivedStatus === "Completed").length,
+        Ongoing: annotated.filter((t) => t.derivedStatus === "Ongoing").length,
+        Overdue: annotated.filter((t) => t.derivedStatus === "Overdue").length
+    }), [annotated]);
+    const filtered = useMemo(() => activeTab === "all" ? annotated : annotated.filter((t) => t.derivedStatus === activeTab), [annotated, activeTab]);
+    const monthLabel = new Date(`${monthStart}T00:00:00`).toLocaleDateString("en-PH", { month: "long", year: "numeric" });
 
     return (
         <div className="mr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div className="mr-modal-card mr-modal-card--wide">
+            <div className="mr-modal-card mr-modal-card--wide mr-employee-task-modal mr-department-task-modal" role="dialog" aria-modal="true" aria-label={`${dept.department} monthly tasks`}>
                 <div className="mr-modal-head">
                     <div className="mr-modal-person">
-                        <div className="mr-modal-avatar mr-modal-avatar--dept">
-                            <i className="bi bi-buildings"></i>
-                        </div>
-                        <div>
-                            <h5 className="mr-modal-title">{dept.department}</h5>
-                            <div className="mr-modal-subtitle">Department tasks · {monthLabel}</div>
-                        </div>
+                        <div className="mr-modal-avatar mr-modal-avatar--dept"><i className="bi bi-buildings"></i></div>
+                        <div><h5 className="mr-modal-title">{dept.department}</h5><div className="mr-modal-subtitle">Department tasks · {monthLabel}</div></div>
                     </div>
-
-                    <button className="mr-icon-btn" onClick={onClose} aria-label="Close">
-                        <i className="bi bi-x-lg"></i>
-                    </button>
+                    <button className="mr-icon-btn" onClick={onClose} aria-label="Close"><i className="bi bi-x-lg"></i></button>
                 </div>
-
-                <div className="mr-modal-toolbar">
-                    <div className="mr-pill-row">
+                <div className="mr-modal-toolbar mr-modal-toolbar--badges-only">
+                    <div className="mr-pill-row mr-pill-row--clean">
                         {[
                             { key: "all", label: "All", count: counts.all, tone: "neutral" },
                             { key: "Completed", label: "Completed", count: counts.Completed, tone: "success" },
                             { key: "Ongoing", label: "Ongoing", count: counts.Ongoing, tone: "warning" },
                             { key: "Overdue", label: "Overdue", count: counts.Overdue, tone: "danger" }
                         ].map((tab) => (
-                            <button
-                                key={tab.key}
-                                type="button"
-                                className={`mr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`}
-                                onClick={() => setActiveTab(tab.key)}
-                            >
-                                {tab.label}
+                            <button key={tab.key} type="button" className={`mr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`} onClick={() => setActiveTab(tab.key)}>
+                                <span className="mr-pill-tab-label">{tab.label}</span>
                                 <span className="mr-pill-count">{tab.count}</span>
                             </button>
                         ))}
                     </div>
-
-                    <div className="mr-search-box">
-                        <i className="bi bi-search"></i>
-                        <input
-                            type="text"
-                            placeholder="Search tasks..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                        />
-                    </div>
                 </div>
-
                 <div className="mr-modal-body">
                     {loading ? (
-                        <div className="mr-empty-state">
-                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                            Loading tasks...
-                        </div>
+                        <div className="mr-empty-state"><div className="spinner-border spinner-border-sm me-2" role="status"></div>Loading tasks...</div>
                     ) : error ? (
                         <div className="alert alert-danger mb-0">{error}</div>
                     ) : filtered.length === 0 ? (
@@ -439,47 +582,25 @@ function DepartmentTaskModal({ dept, monthStart, monthEnd, onClose }) {
                                 const status = task.derivedStatus || "Other";
                                 const priority = task.priority || "Other";
                                 const days = task.days_until_deadline;
-
-                                let deadlineText = task.deadline
-                                    ? new Date(task.deadline).toLocaleDateString("en-PH", {
-                                          month: "short",
-                                          day: "numeric",
-                                          year: "numeric"
-                                      })
-                                    : "No deadline";
-
+                                let deadlineText = task.deadline ? new Date(task.deadline).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "No deadline";
                                 if (status === "Overdue" && days !== null && days !== undefined) {
                                     deadlineText += ` · ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} overdue`;
                                 } else if (status === "Ongoing" && days !== null && days !== undefined) {
-                                    deadlineText += days === 0
-                                        ? " · Due today"
-                                        : ` · ${days} day${days !== 1 ? "s" : ""} left`;
+                                    deadlineText += days === 0 ? " · Due today" : ` · ${days} day${days !== 1 ? "s" : ""} left`;
                                 } else if (status === "Completed" && task.completed_at) {
-                                    deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", {
-                                        month: "short",
-                                        day: "numeric"
-                                    })}`;
+                                    deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}`;
                                 }
-
                                 return (
                                     <div className="mr-task-item" key={task.id ?? idx}>
                                         <div className="mr-task-main">
-                                            <div className="mr-task-title">{task.title}</div>
-                                            {task.description && (
-                                                <div className="mr-task-desc">{task.description}</div>
-                                            )}
-                                            <div className="mr-task-meta">
-                                                {task.assigned_to_name ? `Assigned to ${task.assigned_to_name} · ` : ""}
-                                                {deadlineText}
-                                            </div>
+                                            <div className="mr-task-title">{task.title || "Untitled Task"}</div>
+                                            {task.description ? <div className="mr-task-desc">{task.description}</div> : null}
+                                            <div className="mr-task-assignee"><i className="bi bi-person"></i><span>{task.assigned_to_name || "Unassigned"}</span></div>
+                                            <div className="mr-task-meta">{deadlineText}</div>
                                         </div>
-
                                         <div className="mr-task-side">
                                             <span className={`mr-status-inline ${statusTone(status)}`}>{status}</span>
-                                            <span className={`mr-priority-inline ${priorityTone(priority)}`}>
-                                                <i className="bi bi-flag-fill"></i>
-                                                <span>{priority}</span>
-                                            </span>
+                                            <span className={`mr-priority-inline ${priorityTone(priority)}`}><i className="bi bi-flag-fill"></i><span>{priority}</span></span>
                                         </div>
                                     </div>
                                 );
@@ -487,14 +608,12 @@ function DepartmentTaskModal({ dept, monthStart, monthEnd, onClose }) {
                         </div>
                     )}
                 </div>
-
-                <div className="mr-modal-foot">
-                    <button className="mr-ghost-btn" onClick={onClose}>Close</button>
-                </div>
+                <div className="mr-modal-foot"><button className="mr-ghost-btn" onClick={onClose}>Close</button></div>
             </div>
         </div>
     );
 }
+
 
 function MonthlyReportPage() {
     const now = new Date();
@@ -600,7 +719,7 @@ function MonthlyReportPage() {
             {
                 animationDuration: 650,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 26,
                     left: 20,
@@ -725,7 +844,7 @@ function MonthlyReportPage() {
             {
                 animationDuration: 650,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 26,
                     left: 20,
@@ -821,8 +940,8 @@ function MonthlyReportPage() {
                         itemStyle: { borderWidth: 2, borderColor: isDark ? "#141b2d" : "#ffffff" },
                         areaStyle: {
                             color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: "rgba(245,158,11,0.12)" },
-                                { offset: 1, color: "rgba(245,158,11,0.01)" }
+                                { offset: 0, color: "rgba(37,99,235,0.12)" },
+                                { offset: 1, color: "rgba(37,99,235,0.01)" }
                             ])
                         },
                         data: lineOngoing
@@ -837,8 +956,8 @@ function MonthlyReportPage() {
                         itemStyle: { borderWidth: 2, borderColor: isDark ? "#141b2d" : "#ffffff" },
                         areaStyle: {
                             color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: "rgba(236,72,153,0.12)" },
-                                { offset: 1, color: "rgba(236,72,153,0.01)" }
+                                { offset: 0, color: "rgba(225,29,72,0.12)" },
+                                { offset: 1, color: "rgba(225,29,72,0.01)" }
                             ])
                         },
                         data: lineOverdue
@@ -874,7 +993,7 @@ function MonthlyReportPage() {
             {
                 animationDuration: 650,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#ec4899"],
+                color: ["#16a34a", "#e11d48"],
                 grid: {
                     top: 26,
                     left: 92,

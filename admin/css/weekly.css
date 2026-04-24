@@ -1341,7 +1341,7 @@
 ========================================================= */
 
 /* Header should match Daily/Annual: no outer card border/background/shadow */
-#supervisorDailyReportRoot .wr-toolbar-card {
+#weeklyReportRoot .wr-toolbar-card {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -1350,12 +1350,12 @@
     margin-bottom: 18px !important;
 }
 
-#supervisorDailyReportRoot .wr-toolbar-row {
+#weeklyReportRoot .wr-toolbar-row {
     margin-bottom: 0 !important;
     align-items: center !important;
 }
 
-#supervisorDailyReportRoot .wr-toolbar-actions {
+#weeklyReportRoot .wr-toolbar-actions {
     display: flex !important;
     align-items: center !important;
     justify-content: flex-end !important;
@@ -1363,16 +1363,16 @@
     flex-wrap: wrap !important;
 }
 
-#supervisorDailyReportRoot .wr-period-nav {
+#weeklyReportRoot .wr-period-nav {
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
     flex-wrap: wrap !important;
 }
 
-#supervisorDailyReportRoot .wr-period-nav .dr-ghost-btn,
-#supervisorDailyReportRoot .wr-period-label,
-#supervisorDailyReportRoot .wr-select-shell {
+#weeklyReportRoot .wr-period-nav .dr-ghost-btn,
+#weeklyReportRoot .wr-period-label,
+#weeklyReportRoot .wr-select-shell {
     height: 42px !important;
     border-radius: 14px !important;
     background: var(--dr-card) !important;
@@ -1380,7 +1380,7 @@
     box-shadow: var(--dr-shadow-soft) !important;
 }
 
-#supervisorDailyReportRoot .wr-period-label {
+#weeklyReportRoot .wr-period-label {
     min-width: 196px !important;
     padding: 0 16px !important;
     color: var(--dr-text) !important;
@@ -1391,23 +1391,23 @@
     font-weight: 900 !important;
 }
 
-#supervisorDailyReportRoot .wr-select-shell {
+#weeklyReportRoot .wr-select-shell {
     min-width: 260px !important;
 }
 
-#supervisorDailyReportRoot .dr-summary-grid {
+#weeklyReportRoot .dr-summary-grid {
     gap: 16px !important;
     margin-bottom: 20px !important;
 }
 
-#supervisorDailyReportRoot .dr-summary-card,
-#supervisorDailyReportRoot .dr-card {
+#weeklyReportRoot .dr-summary-card,
+#weeklyReportRoot .dr-card {
     background: linear-gradient(180deg, var(--dr-card) 0%, var(--dr-card-soft) 100%) !important;
     border: 1px solid var(--dr-border) !important;
     box-shadow: var(--dr-shadow-soft) !important;
 }
 
-#supervisorDailyReportRoot .wr-toolbar-card {
+#weeklyReportRoot .wr-toolbar-card {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -1415,35 +1415,35 @@
 
 
 /* Chart/card spacing */
-#supervisorDailyReportRoot .wr-block-gap {
+#weeklyReportRoot .wr-block-gap {
     margin-bottom: 16px !important;
 }
 
-#supervisorDailyReportRoot .wr-top-grid {
+#weeklyReportRoot .wr-top-grid {
     display: grid !important;
     grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr) !important;
     gap: 16px !important;
     margin-bottom: 16px !important;
 }
 
-#supervisorDailyReportRoot .wr-chart-lg,
-#supervisorDailyReportRoot .wr-chart-md,
-#supervisorDailyReportRoot .wr-chart-hbar {
+#weeklyReportRoot .wr-chart-lg,
+#weeklyReportRoot .wr-chart-md,
+#weeklyReportRoot .wr-chart-hbar {
     width: 100% !important;
     border-radius: 16px !important;
 }
 
-#supervisorDailyReportRoot .wr-chart-lg,
-#supervisorDailyReportRoot .wr-chart-md {
+#weeklyReportRoot .wr-chart-lg,
+#weeklyReportRoot .wr-chart-md {
     height: 340px !important;
 }
 
-#supervisorDailyReportRoot .wr-chart-hbar {
+#weeklyReportRoot .wr-chart-hbar {
     min-height: 320px !important;
 }
 
 /* Donut consistency */
-#supervisorDailyReportRoot .dr-donut-stack {
+#weeklyReportRoot .dr-donut-stack {
     min-height: 340px !important;
     display: flex !important;
     flex-direction: column !important;
@@ -1452,13 +1452,13 @@
     gap: 18px !important;
 }
 
-#supervisorDailyReportRoot .dr-donut-shell,
-#supervisorDailyReportRoot .dr-donut-chart {
+#weeklyReportRoot .dr-donut-shell,
+#weeklyReportRoot .dr-donut-chart {
     width: 260px !important;
     height: 260px !important;
 }
 
-#supervisorDailyReportRoot .dr-donut-legend {
+#weeklyReportRoot .dr-donut-legend {
     display: flex !important;
     flex-wrap: wrap !important;
     justify-content: center !important;
@@ -1466,40 +1466,40 @@
 }
 
 /* Table/progress final consistency */
-#supervisorDailyReportRoot .dr-card--table-full {
+#weeklyReportRoot .dr-card--table-full {
     min-height: auto !important;
     padding: 16px 18px 18px !important;
     border-radius: 20px !important;
 }
 
-#supervisorDailyReportRoot .dr-table-shell {
+#weeklyReportRoot .dr-table-shell {
     max-height: 520px !important;
     border-radius: 16px !important;
     scrollbar-width: thin !important;
 }
 
-#supervisorDailyReportRoot .dr-table-shell::-webkit-scrollbar {
+#weeklyReportRoot .dr-table-shell::-webkit-scrollbar {
     width: 8px !important;
     height: 8px !important;
     display: block !important;
 }
 
-#supervisorDailyReportRoot .dr-table-shell::-webkit-scrollbar-thumb {
+#weeklyReportRoot .dr-table-shell::-webkit-scrollbar-thumb {
     background: #d8deeb !important;
     border-radius: 999px !important;
 }
 
-#supervisorDailyReportRoot .dr-table-shell::-webkit-scrollbar-track {
+#weeklyReportRoot .dr-table-shell::-webkit-scrollbar-track {
     background: transparent !important;
 }
 
-#supervisorDailyReportRoot .dr-table {
+#weeklyReportRoot .dr-table {
     min-width: 1080px !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
 }
 
-#supervisorDailyReportRoot .dr-table thead th {
+#weeklyReportRoot .dr-table thead th {
     height: 48px !important;
     padding: 0 20px !important;
     background: var(--dr-card-soft) !important;
@@ -1510,7 +1510,7 @@
     letter-spacing: 0.02em !important;
 }
 
-#supervisorDailyReportRoot .dr-table tbody td {
+#weeklyReportRoot .dr-table tbody td {
     height: 54px !important;
     padding: 0 20px !important;
     color: var(--dr-text) !important;
@@ -1518,17 +1518,17 @@
     font-weight: 700 !important;
 }
 
-#supervisorDailyReportRoot .dr-dept-name,
-#supervisorDailyReportRoot .wr-dept-name {
+#weeklyReportRoot .dr-dept-name,
+#weeklyReportRoot .wr-dept-name {
     font-weight: 900 !important;
     color: var(--dr-text) !important;
 }
 
-#supervisorDailyReportRoot .dr-assignee {
+#weeklyReportRoot .dr-assignee {
     min-width: 220px !important;
 }
 
-#supervisorDailyReportRoot .dr-assignee-avatar {
+#weeklyReportRoot .dr-assignee-avatar {
     width: 32px !important;
     height: 32px !important;
     min-width: 32px !important;
@@ -1541,7 +1541,7 @@
     object-fit: cover !important;
 }
 
-#supervisorDailyReportRoot .dr-assignee-avatar--fallback {
+#weeklyReportRoot .dr-assignee-avatar--fallback {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -1552,14 +1552,14 @@
     border: 1px solid var(--dr-border) !important;
 }
 
-#supervisorDailyReportRoot .dr-performance-cell {
+#weeklyReportRoot .dr-performance-cell {
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
     min-width: 170px !important;
 }
 
-#supervisorDailyReportRoot .dr-progress {
+#weeklyReportRoot .dr-progress {
     width: 100% !important;
     max-width: 190px !important;
     height: 7px !important;
@@ -1569,7 +1569,7 @@
     flex: 1 !important;
 }
 
-#supervisorDailyReportRoot .dr-progress-bar {
+#weeklyReportRoot .dr-progress-bar {
     height: 100% !important;
     min-width: 7px !important;
     border-radius: 999px !important;
@@ -1579,7 +1579,7 @@
     font-size: 0 !important;
 }
 
-#supervisorDailyReportRoot .dr-performance-value {
+#weeklyReportRoot .dr-performance-value {
     min-width: 30px !important;
     text-align: right !important;
     font-size: 12px !important;
@@ -1588,21 +1588,21 @@
 }
 
 /* Status color system matches Daily/Annual. */
-#supervisorDailyReportRoot .dr-status-inline.ongoing {
+#weeklyReportRoot .dr-status-inline.ongoing {
     color: #2563eb !important;
 }
 
-#supervisorDailyReportRoot .dr-status-inline.overdue,
-#supervisorDailyReportRoot .dr-overdue-cell {
+#weeklyReportRoot .dr-status-inline.overdue,
+#weeklyReportRoot .dr-overdue-cell {
     color: #e11d48 !important;
 }
 
-#supervisorDailyReportRoot .dr-priority-inline.medium {
+#weeklyReportRoot .dr-priority-inline.medium {
     color: #d97706 !important;
 }
 
 /* Premium compact employee / department task modals */
-#supervisorDailyReportRoot .dr-employee-task-modal {
+#weeklyReportRoot .dr-employee-task-modal {
     width: min(980px, calc(100vw - 72px)) !important;
     max-height: min(84vh, 720px) !important;
     border-radius: 24px !important;
@@ -1611,7 +1611,7 @@
     box-shadow: 0 28px 72px rgba(15, 23, 42, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-head {
+#weeklyReportRoot .dr-employee-task-modal .dr-modal-head {
     min-height: 84px !important;
     padding: 18px 24px !important;
     align-items: center !important;
@@ -1619,11 +1619,11 @@
     background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%) !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-person {
+#weeklyReportRoot .dr-employee-task-modal .dr-modal-person {
     gap: 14px !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-avatar {
+#weeklyReportRoot .dr-employee-task-modal .dr-modal-avatar {
     width: 54px !important;
     height: 54px !important;
     border-width: 3px !important;
@@ -1631,7 +1631,7 @@
     box-shadow: 0 0 0 1px #dfe6f1, 0 10px 26px rgba(15, 23, 42, 0.1) !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-title {
+#weeklyReportRoot .dr-employee-task-modal .dr-modal-title {
     font-size: 1.32rem !important;
     font-weight: 950 !important;
     line-height: 1.05 !important;
@@ -1639,14 +1639,14 @@
     color: #0f172a !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-subtitle {
+#weeklyReportRoot .dr-employee-task-modal .dr-modal-subtitle {
     margin-top: 5px !important;
     font-size: 13px !important;
     font-weight: 850 !important;
     color: #73819a !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-head .dr-icon-btn {
+#weeklyReportRoot .dr-employee-task-modal .dr-modal-head .dr-icon-btn {
     width: 46px !important;
     height: 46px !important;
     border-radius: 16px !important;
@@ -1657,8 +1657,8 @@
 }
 
 /* Badge toolbar: small, simple, and consistent */
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-toolbar--badges-only,
-#supervisorDailyReportRoot .dr-department-task-modal .dr-modal-toolbar--badges-only {
+#weeklyReportRoot .dr-employee-task-modal .dr-modal-toolbar--badges-only,
+#weeklyReportRoot .dr-department-task-modal .dr-modal-toolbar--badges-only {
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start !important;
@@ -1668,8 +1668,8 @@
     grid-template-columns: 1fr !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-pill-row--clean,
-#supervisorDailyReportRoot .dr-department-task-modal .dr-pill-row--clean {
+#weeklyReportRoot .dr-employee-task-modal .dr-pill-row--clean,
+#weeklyReportRoot .dr-department-task-modal .dr-pill-row--clean {
     display: flex !important;
     align-items: center !important;
     flex-wrap: wrap !important;
@@ -1677,8 +1677,8 @@
     width: 100% !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-pill-tab,
-#supervisorDailyReportRoot .dr-department-task-modal .dr-pill-tab {
+#weeklyReportRoot .dr-employee-task-modal .dr-pill-tab,
+#weeklyReportRoot .dr-department-task-modal .dr-pill-tab {
     height: 34px !important;
     min-width: auto !important;
     padding: 0 12px !important;
@@ -1696,8 +1696,8 @@
     box-shadow: none !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-pill-tab-count,
-#supervisorDailyReportRoot .dr-department-task-modal .dr-pill-tab-count {
+#weeklyReportRoot .dr-employee-task-modal .dr-pill-tab-count,
+#weeklyReportRoot .dr-department-task-modal .dr-pill-tab-count {
     min-width: 20px !important;
     height: 20px !important;
     padding: 0 6px !important;
@@ -1707,25 +1707,25 @@
     font-weight: 900 !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-pill-tab.is-active,
-#supervisorDailyReportRoot .dr-department-task-modal .dr-pill-tab.is-active {
+#weeklyReportRoot .dr-employee-task-modal .dr-pill-tab.is-active,
+#weeklyReportRoot .dr-department-task-modal .dr-pill-tab.is-active {
     background: #2f66ea !important;
     border-color: #2f66ea !important;
     color: #ffffff !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-pill-tab.is-active .dr-pill-tab-count,
-#supervisorDailyReportRoot .dr-department-task-modal .dr-pill-tab.is-active .dr-pill-tab-count {
+#weeklyReportRoot .dr-employee-task-modal .dr-pill-tab.is-active .dr-pill-tab-count,
+#weeklyReportRoot .dr-department-task-modal .dr-pill-tab.is-active .dr-pill-tab-count {
     background: rgba(255, 255, 255, 0.18) !important;
     color: #ffffff !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-search-box--modal,
-#supervisorDailyReportRoot .dr-department-task-modal .dr-search-box--modal {
+#weeklyReportRoot .dr-employee-task-modal .dr-search-box--modal,
+#weeklyReportRoot .dr-department-task-modal .dr-search-box--modal {
     display: none !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-body {
+#weeklyReportRoot .dr-employee-task-modal .dr-modal-body {
     padding: 18px 24px 20px !important;
     min-height: 320px !important;
     max-height: calc(84vh - 218px) !important;
@@ -1734,12 +1734,12 @@
     scrollbar-width: thin !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-task-list {
+#weeklyReportRoot .dr-employee-task-modal .dr-task-list {
     display: grid !important;
     gap: 14px !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-task-item {
+#weeklyReportRoot .dr-employee-task-modal .dr-task-item {
     min-height: 104px !important;
     padding: 18px 20px !important;
     border-radius: 20px !important;
@@ -1752,35 +1752,35 @@
     gap: 18px !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-task-item-title {
+#weeklyReportRoot .dr-employee-task-modal .dr-task-item-title {
     font-size: 0.98rem !important;
     font-weight: 950 !important;
     color: #0f172a !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-task-item-desc {
+#weeklyReportRoot .dr-employee-task-modal .dr-task-item-desc {
     margin-top: 7px !important;
     font-size: 13px !important;
     font-weight: 750 !important;
     color: #718096 !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-task-item-meta,
-#supervisorDailyReportRoot .wr-task-assignee {
+#weeklyReportRoot .dr-employee-task-modal .dr-task-item-meta,
+#weeklyReportRoot .wr-task-assignee {
     margin-top: 9px !important;
     font-size: 12px !important;
     font-weight: 850 !important;
     color: #94a3b8 !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-task-item-side {
+#weeklyReportRoot .dr-employee-task-modal .dr-task-item-side {
     display: grid !important;
     justify-items: end !important;
     align-content: center !important;
     gap: 8px !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-open-btn {
+#weeklyReportRoot .dr-comment-open-btn {
     height: 38px !important;
     min-width: 118px !important;
     padding: 0 16px !important;
@@ -1793,14 +1793,14 @@
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-foot {
+#weeklyReportRoot .dr-employee-task-modal .dr-modal-foot {
     padding: 14px 24px !important;
     border-top: 1px solid #e8edf5 !important;
     background: #ffffff !important;
 }
 
 /* Premium compact chat modal */
-#supervisorDailyReportRoot .dr-comment-modal {
+#weeklyReportRoot .dr-comment-modal {
     width: min(640px, calc(100vw - 48px)) !important;
     max-width: 640px !important;
     height: min(500px, calc(100vh - 72px)) !important;
@@ -1811,7 +1811,7 @@
     box-shadow: 0 28px 72px rgba(15, 23, 42, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-modal-head {
+#weeklyReportRoot .dr-comment-modal .dr-modal-head {
     min-height: 106px !important;
     padding: 22px 26px 18px !important;
     align-items: flex-start !important;
@@ -1819,7 +1819,7 @@
     background: radial-gradient(circle at 12% 0%, rgba(124, 92, 255, 0.08), transparent 32%), #ffffff !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-modal-title {
+#weeklyReportRoot .dr-comment-modal .dr-modal-title {
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
@@ -1828,7 +1828,7 @@
     font-weight: 950 !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-modal-title i {
+#weeklyReportRoot .dr-comment-modal .dr-modal-title i {
     width: 44px !important;
     height: 44px !important;
     border-radius: 16px !important;
@@ -1840,7 +1840,7 @@
     font-size: 20px !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-modal-subtitle {
+#weeklyReportRoot .dr-comment-modal .dr-modal-subtitle {
     width: fit-content !important;
     margin-top: 10px !important;
     margin-left: 56px !important;
@@ -1854,7 +1854,7 @@
     line-height: 1 !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-modal-body {
+#weeklyReportRoot .dr-comment-modal .dr-modal-body {
     flex: 1 !important;
     min-height: 0 !important;
     max-height: none !important;
@@ -1864,7 +1864,7 @@
     scrollbar-width: thin !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-chat-empty-state {
+#weeklyReportRoot .dr-comment-modal .dr-chat-empty-state {
     min-height: 260px !important;
     height: 100% !important;
     padding: 32px 20px !important;
@@ -1878,7 +1878,7 @@
     text-align: center !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-chat-empty-icon {
+#weeklyReportRoot .dr-comment-modal .dr-chat-empty-icon {
     width: 70px !important;
     height: 70px !important;
     margin-bottom: 12px !important;
@@ -1891,30 +1891,30 @@
     box-shadow: 0 18px 40px rgba(124, 58, 237, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.75) !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-chat-empty-icon i {
+#weeklyReportRoot .dr-comment-modal .dr-chat-empty-icon i {
     font-size: 26px !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-chat-empty-title {
+#weeklyReportRoot .dr-comment-modal .dr-chat-empty-title {
     color: #1f2937 !important;
     font-size: 22px !important;
     font-weight: 950 !important;
     letter-spacing: -0.035em !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-chat-empty-subtitle {
+#weeklyReportRoot .dr-comment-modal .dr-chat-empty-subtitle {
     color: #8a96aa !important;
     font-size: 15px !important;
     font-weight: 850 !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-modal-foot.dr-comment-foot {
+#weeklyReportRoot .dr-comment-modal .dr-modal-foot.dr-comment-foot {
     padding: 14px 18px 18px !important;
     border-top: 1px solid #e8edf5 !important;
     background: #ffffff !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-comment-compose-row {
+#weeklyReportRoot .dr-comment-modal .dr-comment-compose-row {
     min-height: 72px !important;
     display: grid !important;
     grid-template-columns: 42px minmax(0, 1fr) 82px !important;
@@ -1927,7 +1927,7 @@
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-comment-compose-row > .dr-icon-btn {
+#weeklyReportRoot .dr-comment-modal .dr-comment-compose-row > .dr-icon-btn {
     width: 42px !important;
     height: 42px !important;
     border-radius: 14px !important;
@@ -1937,7 +1937,7 @@
     color: #64748b !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-compose-textarea {
+#weeklyReportRoot .dr-comment-modal .dr-compose-textarea {
     min-height: 44px !important;
     height: 44px !important;
     padding: 10px 4px !important;
@@ -1951,7 +1951,7 @@
     font-weight: 850 !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-send-btn {
+#weeklyReportRoot .dr-comment-modal .dr-send-btn {
     height: 42px !important;
     min-width: 76px !important;
     border: none !important;
@@ -1963,63 +1963,63 @@
     font-weight: 950 !important;
 }
 
-#supervisorDailyReportRoot .dr-comment-modal .dr-send-btn:not(:disabled) {
+#weeklyReportRoot .dr-comment-modal .dr-send-btn:not(:disabled) {
     color: #5b57d9 !important;
 }
 
-[data-theme="dark"] #supervisorDailyReportRoot .wr-period-nav .dr-ghost-btn,
-[data-theme="dark"] #supervisorDailyReportRoot .wr-period-label,
-[data-theme="dark"] #supervisorDailyReportRoot .wr-select-shell {
+[data-theme="dark"] #weeklyReportRoot .wr-period-nav .dr-ghost-btn,
+[data-theme="dark"] #weeklyReportRoot .wr-period-label,
+[data-theme="dark"] #weeklyReportRoot .wr-select-shell {
     background: var(--dr-card) !important;
     border-color: var(--dr-border) !important;
 }
 
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-comment-modal {
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal,
+[data-theme="dark"] #weeklyReportRoot .dr-comment-modal {
     background: #111827 !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
     box-shadow: 0 34px 90px rgba(0, 0, 0, 0.48) !important;
 }
 
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-head,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-foot,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-comment-modal .dr-modal-head,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-comment-modal .dr-modal-foot.dr-comment-foot {
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal .dr-modal-head,
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal .dr-modal-foot,
+[data-theme="dark"] #weeklyReportRoot .dr-comment-modal .dr-modal-head,
+[data-theme="dark"] #weeklyReportRoot .dr-comment-modal .dr-modal-foot.dr-comment-foot {
     background: #111827 !important;
     border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-toolbar--badges-only,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-body,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-department-task-modal .dr-modal-toolbar--badges-only,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-comment-modal .dr-modal-body {
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal .dr-modal-toolbar--badges-only,
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal .dr-modal-body,
+[data-theme="dark"] #weeklyReportRoot .dr-department-task-modal .dr-modal-toolbar--badges-only,
+[data-theme="dark"] #weeklyReportRoot .dr-comment-modal .dr-modal-body {
     background: #0f172a !important;
     border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal .dr-modal-title,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal .dr-task-item-title,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-comment-modal .dr-modal-title,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-comment-modal .dr-compose-textarea,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-comment-modal .dr-chat-empty-title {
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal .dr-modal-title,
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal .dr-task-item-title,
+[data-theme="dark"] #weeklyReportRoot .dr-comment-modal .dr-modal-title,
+[data-theme="dark"] #weeklyReportRoot .dr-comment-modal .dr-compose-textarea,
+[data-theme="dark"] #weeklyReportRoot .dr-comment-modal .dr-chat-empty-title {
     color: #f8fafc !important;
 }
 
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal .dr-task-item,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal .dr-pill-tab,
-[data-theme="dark"] #supervisorDailyReportRoot .dr-comment-modal .dr-comment-compose-row {
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal .dr-task-item,
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal .dr-pill-tab,
+[data-theme="dark"] #weeklyReportRoot .dr-comment-modal .dr-comment-compose-row {
     background: #141f33 !important;
     border-color: rgba(255, 255, 255, 0.08) !important;
     box-shadow: none !important;
 }
 
-[data-theme="dark"] #supervisorDailyReportRoot .dr-employee-task-modal .dr-pill-tab.is-active {
+[data-theme="dark"] #weeklyReportRoot .dr-employee-task-modal .dr-pill-tab.is-active {
     background: #2f66ea !important;
     border-color: #2f66ea !important;
     color: #ffffff !important;
 }
 
-[data-theme="dark"] #supervisorDailyReportRoot .dr-progress {
+[data-theme="dark"] #weeklyReportRoot .dr-progress {
     background: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -2027,40 +2027,40 @@
 }
 
 @media (max-width: 1199px) {
-    #supervisorDailyReportRoot .wr-top-grid {
+    #weeklyReportRoot .wr-top-grid {
         grid-template-columns: 1fr !important;
     }
 }
 
 @media (max-width: 900px) {
-    #supervisorDailyReportRoot .dr-employee-task-modal {
+    #weeklyReportRoot .dr-employee-task-modal {
         width: min(100%, calc(100vw - 24px)) !important;
         max-height: 90vh !important;
     }
 
-    #supervisorDailyReportRoot .dr-employee-task-modal .dr-task-item {
+    #weeklyReportRoot .dr-employee-task-modal .dr-task-item {
         grid-template-columns: 1fr !important;
     }
 
-    #supervisorDailyReportRoot .dr-employee-task-modal .dr-task-item-side {
+    #weeklyReportRoot .dr-employee-task-modal .dr-task-item-side {
         justify-items: start !important;
     }
 }
 
 @media (max-width: 767px) {
-    #supervisorDailyReportRoot .wr-toolbar-actions,
-    #supervisorDailyReportRoot .wr-period-nav {
+    #weeklyReportRoot .wr-toolbar-actions,
+    #weeklyReportRoot .wr-period-nav {
         width: 100% !important;
     }
 
-    #supervisorDailyReportRoot .wr-period-label,
-    #supervisorDailyReportRoot .wr-select-shell {
+    #weeklyReportRoot .wr-period-label,
+    #weeklyReportRoot .wr-select-shell {
         min-width: 100% !important;
         width: 100% !important;
     }
 
-    #supervisorDailyReportRoot .wr-chart-lg,
-    #supervisorDailyReportRoot .wr-chart-md {
+    #weeklyReportRoot .wr-chart-lg,
+    #weeklyReportRoot .wr-chart-md {
         height: 300px !important;
     }
 }
@@ -2071,7 +2071,7 @@
    Matches the finalized Daily / Annual / Monthly report UI
 ========================================================= */
 
-#supervisorDailyReportRoot .wr-toolbar-card {
+#weeklyReportRoot .wr-toolbar-card {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -2080,19 +2080,19 @@
     margin-bottom: 18px;
 }
 
-#supervisorDailyReportRoot .wr-toolbar-row {
+#weeklyReportRoot .wr-toolbar-row {
     margin-bottom: 0;
     align-items: center;
 }
 
-#supervisorDailyReportRoot .wr-toolbar-actions {
+#weeklyReportRoot .wr-toolbar-actions {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 10px;
 }
 
-#supervisorDailyReportRoot .wr-period-nav {
+#weeklyReportRoot .wr-period-nav {
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -2100,9 +2100,9 @@
     flex-wrap: wrap;
 }
 
-#supervisorDailyReportRoot .wr-period-nav .dr-ghost-btn,
-#supervisorDailyReportRoot .wr-period-label,
-#supervisorDailyReportRoot .wr-select-shell {
+#weeklyReportRoot .wr-period-nav .dr-ghost-btn,
+#weeklyReportRoot .wr-period-label,
+#weeklyReportRoot .wr-select-shell {
     height: 48px;
     border-radius: 16px;
     border: 1px solid #e0e7f2;
@@ -2110,7 +2110,7 @@
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
 }
 
-#supervisorDailyReportRoot .wr-period-label {
+#weeklyReportRoot .wr-period-label {
     min-width: 260px;
     padding: 0 18px;
     display: inline-flex;
@@ -2121,80 +2121,80 @@
     font-weight: 950;
 }
 
-#supervisorDailyReportRoot .wr-select-shell {
+#weeklyReportRoot .wr-select-shell {
     min-width: 300px;
     padding: 0 16px;
 }
 
-#supervisorDailyReportRoot .wr-top-grid {
+#weeklyReportRoot .wr-top-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.75fr);
     gap: 20px;
     margin-bottom: 20px;
 }
 
-#supervisorDailyReportRoot .wr-chart-lg,
-#supervisorDailyReportRoot .wr-chart-md {
+#weeklyReportRoot .wr-chart-lg,
+#weeklyReportRoot .wr-chart-md {
     width: 100%;
     height: 360px;
     border-radius: 16px;
 }
 
-#supervisorDailyReportRoot .wr-block-gap {
+#weeklyReportRoot .wr-block-gap {
     margin-bottom: 20px;
 }
 
-#supervisorDailyReportRoot .dr-summary-grid {
+#weeklyReportRoot .dr-summary-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-#supervisorDailyReportRoot .dr-summary-icon.warning,
-#supervisorDailyReportRoot .dr-summary-chip.warning {
+#weeklyReportRoot .dr-summary-icon.warning,
+#weeklyReportRoot .dr-summary-chip.warning {
     background: rgba(37, 99, 235, 0.10);
     color: #2563eb;
 }
 
-#supervisorDailyReportRoot .dr-summary-icon.danger,
-#supervisorDailyReportRoot .dr-summary-chip.danger,
-#supervisorDailyReportRoot .dr-overdue-cell,
-#supervisorDailyReportRoot .dr-status-inline.overdue {
+#weeklyReportRoot .dr-summary-icon.danger,
+#weeklyReportRoot .dr-summary-chip.danger,
+#weeklyReportRoot .dr-overdue-cell,
+#weeklyReportRoot .dr-status-inline.overdue {
     color: #e11d48;
 }
 
-#supervisorDailyReportRoot .dr-summary-icon.danger,
-#supervisorDailyReportRoot .dr-summary-chip.danger {
+#weeklyReportRoot .dr-summary-icon.danger,
+#weeklyReportRoot .dr-summary-chip.danger {
     background: rgba(225, 29, 72, 0.10);
 }
 
-#supervisorDailyReportRoot .dr-status-inline.ongoing {
+#weeklyReportRoot .dr-status-inline.ongoing {
     color: #2563eb;
 }
 
-#supervisorDailyReportRoot .dr-donut-shell,
-#supervisorDailyReportRoot .dr-donut-chart {
+#weeklyReportRoot .dr-donut-shell,
+#weeklyReportRoot .dr-donut-chart {
     width: 260px;
     height: 260px;
 }
 
-#supervisorDailyReportRoot .dr-table-shell {
+#weeklyReportRoot .dr-table-shell {
     scrollbar-width: thin;
     max-height: 520px;
 }
 
-#supervisorDailyReportRoot .dr-table-shell::-webkit-scrollbar,
-#supervisorDailyReportRoot .dr-modal-body::-webkit-scrollbar {
+#weeklyReportRoot .dr-table-shell::-webkit-scrollbar,
+#weeklyReportRoot .dr-modal-body::-webkit-scrollbar {
     width: 8px;
     height: 8px;
     display: block;
 }
 
-#supervisorDailyReportRoot .dr-table-shell::-webkit-scrollbar-thumb,
-#supervisorDailyReportRoot .dr-modal-body::-webkit-scrollbar-thumb {
+#weeklyReportRoot .dr-table-shell::-webkit-scrollbar-thumb,
+#weeklyReportRoot .dr-modal-body::-webkit-scrollbar-thumb {
     background: #d8deeb;
     border-radius: 999px;
 }
 
-#supervisorDailyReportRoot .dr-progress {
+#weeklyReportRoot .dr-progress {
     width: 100%;
     max-width: 190px;
     height: 7px;
@@ -2205,7 +2205,7 @@
     flex: 1;
 }
 
-#supervisorDailyReportRoot .dr-progress-bar {
+#weeklyReportRoot .dr-progress-bar {
     height: 100%;
     min-width: 7px;
     border-radius: 999px;
@@ -2215,14 +2215,14 @@
     font-size: 0;
 }
 
-#supervisorDailyReportRoot .dr-performance-cell {
+#weeklyReportRoot .dr-performance-cell {
     display: flex;
     align-items: center;
     gap: 12px;
     min-width: 175px;
 }
 
-#supervisorDailyReportRoot .dr-performance-value {
+#weeklyReportRoot .dr-performance-value {
     min-width: 30px;
     text-align: right;
     font-size: 12px;
@@ -2230,114 +2230,35 @@
     color: #76839a;
 }
 
-#supervisorDailyReportRoot .dr-employee-task-modal .dr-search-box--modal,
-#supervisorDailyReportRoot .dr-department-task-modal .dr-search-box--modal {
+#weeklyReportRoot .dr-employee-task-modal .dr-search-box--modal,
+#weeklyReportRoot .dr-department-task-modal .dr-search-box--modal {
     display: none !important;
 }
 
 @media (max-width: 1199px) {
-    #supervisorDailyReportRoot .wr-top-grid {
+    #weeklyReportRoot .wr-top-grid {
         grid-template-columns: 1fr;
     }
 
-    #supervisorDailyReportRoot .dr-summary-grid {
+    #weeklyReportRoot .dr-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 767px) {
-    #supervisorDailyReportRoot .wr-toolbar-actions,
-    #supervisorDailyReportRoot .wr-period-nav {
+    #weeklyReportRoot .wr-toolbar-actions,
+    #weeklyReportRoot .wr-period-nav {
         width: 100%;
         align-items: stretch;
     }
 
-    #supervisorDailyReportRoot .wr-period-label,
-    #supervisorDailyReportRoot .wr-select-shell {
+    #weeklyReportRoot .wr-period-label,
+    #weeklyReportRoot .wr-select-shell {
         min-width: 100%;
         width: 100%;
     }
 
-    #supervisorDailyReportRoot .dr-summary-grid {
+    #weeklyReportRoot .dr-summary-grid {
         grid-template-columns: 1fr;
-    }
-}
-
-
-/* =========================================================
-   Supervisor Daily Report final consistency overrides
-========================================================= */
-#supervisorDailyReportRoot .dr-summary-icon.warning,
-#supervisorDailyReportRoot .dr-summary-chip.warning {
-    background: var(--dr-blue-bg) !important;
-    color: var(--dr-blue) !important;
-}
-
-#supervisorDailyReportRoot .dr-summary-icon.danger,
-#supervisorDailyReportRoot .dr-summary-chip.danger {
-    background: rgba(225, 29, 72, 0.1) !important;
-    color: #e11d48 !important;
-}
-
-#supervisorDailyReportRoot .dr-card--donut,
-#supervisorDailyReportRoot .dr-card--trend {
-    min-height: 395px !important;
-}
-
-#supervisorDailyReportRoot .dr-donut-shell,
-#supervisorDailyReportRoot .dr-donut-chart {
-    width: 260px !important;
-    height: 260px !important;
-}
-
-#supervisorDailyReportRoot .dr-status-inline.ongoing {
-    color: #2563eb !important;
-}
-
-#supervisorDailyReportRoot .dr-status-inline.overdue,
-#supervisorDailyReportRoot .dr-overdue-cell {
-    color: #e11d48 !important;
-}
-
-#supervisorDailyReportRoot .dr-pill-tab.warning.is-active,
-#supervisorDailyReportRoot .dr-pill-tab.neutral.is-active {
-    background: #2f66ea !important;
-    border-color: #2f66ea !important;
-    color: #ffffff !important;
-}
-
-#supervisorDailyReportRoot .dr-pill-tab.danger.is-active {
-    background: #e11d48 !important;
-    border-color: #e11d48 !important;
-    color: #ffffff !important;
-}
-
-#supervisorDailyReportRoot .dr-table-shell {
-    max-height: 520px !important;
-    scrollbar-width: thin !important;
-}
-
-#supervisorDailyReportRoot .dr-table-shell::-webkit-scrollbar {
-    width: 7px !important;
-    height: 7px !important;
-    display: block !important;
-}
-
-#supervisorDailyReportRoot .dr-table-shell::-webkit-scrollbar-thumb {
-    background: #d8deeb !important;
-    border-radius: 999px !important;
-}
-
-#supervisorDailyReportRoot .dr-comment-modal .dr-modal-body:has(.dr-chat-empty-state) {
-    display: flex !important;
-    align-items: stretch !important;
-    justify-content: center !important;
-}
-
-@media (max-width: 767px) {
-    #supervisorDailyReportRoot .dr-donut-shell,
-    #supervisorDailyReportRoot .dr-donut-chart {
-        width: 236px !important;
-        height: 236px !important;
     }
 }

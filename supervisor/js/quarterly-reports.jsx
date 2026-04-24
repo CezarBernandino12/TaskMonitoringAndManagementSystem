@@ -23,6 +23,54 @@ function buildAvatarFallbackUrl(name) {
     )}&background=f7c4d4&color=222&size=80`;
 }
 
+
+function safeNum(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+}
+
+const MANILA_TZ = "Asia/Manila";
+
+function formatDateTimePH(dateStr) {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return "";
+
+    return (
+        new Intl.DateTimeFormat("en-PH", {
+            timeZone: MANILA_TZ,
+            month: "short",
+            day: "numeric"
+        }).format(date) +
+        ", " +
+        new Intl.DateTimeFormat("en-PH", {
+            timeZone: MANILA_TZ,
+            hour: "numeric",
+            minute: "2-digit"
+        }).format(date)
+    );
+}
+
+function initials(name) {
+    return name
+        ? name.split(" ").map((word) => word[0]).slice(0, 2).join("").toUpperCase()
+        : "?";
+}
+
+function avatarColor(name) {
+    const hue = name
+        ? [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360
+        : 220;
+    return `hsl(${hue}, 55%, 86%)`;
+}
+
+function avatarTextColor(name) {
+    const hue = name
+        ? [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360
+        : 220;
+    return `hsl(${hue}, 45%, 30%)`;
+}
+
 function statusTone(status) {
     return (
         {
@@ -48,17 +96,15 @@ function renderCleanProgress(rate, total) {
         return <span className="qr-empty-inline">No tasks yet</span>;
     }
 
-    if (rate === 0) {
-        return <span className="qr-rate-danger">0% — None completed</span>;
-    }
-
     return (
-        <div className="qr-progress-clean">
-            <div className="qr-progress-clean-track">
-                <div
-                    className="qr-progress-clean-fill"
-                    style={{ width: `${rate}%` }}
-                ></div>
+        <div className="qr-performance-cell">
+            <div className="qr-progress-clean" title={`${rate}% completed`}>
+                <div className="qr-progress-clean-track">
+                    <div
+                        className="qr-progress-clean-fill"
+                        style={{ width: `${rate}%` }}
+                    ></div>
+                </div>
             </div>
             <span className="qr-progress-clean-value">{rate}%</span>
         </div>
@@ -81,21 +127,303 @@ function SummaryCard({ icon, title, value, tone, sub }) {
     );
 }
 
+function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
+    const [messages, setMessages] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [text, setText] = useState("");
+    const [files, setFiles] = useState([]);
+    const [sending, setSending] = useState(false);
+    const [sendError, setSendError] = useState("");
+    const fileRef = useRef(null);
+    const bottomRef = useRef(null);
+
+    useEffect(() => {
+        setLoading(true);
+        setError("");
+
+        fetch(`php/get_task_messages.php?task_id=${encodeURIComponent(task.id)}`)
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
+            })
+            .then((data) => {
+                if (data.error) throw new Error(data.error);
+                setMessages(Array.isArray(data.messages) ? data.messages : []);
+                setLoading(false);
+            })
+            .catch((err) => {
+                setError(`Could not load comments: ${err.message}`);
+                setLoading(false);
+            });
+    }, [task.id]);
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    useEffect(() => {
+        const onEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
+
+    function handleSend() {
+        const trimmed = text.trim();
+        if (!trimmed && files.length === 0) return;
+        if (!recipientId) {
+            setSendError("Could not identify the message recipient.");
+            return;
+        }
+
+        setSending(true);
+        setSendError("");
+
+        const fd = new FormData();
+        fd.append("task_id", task.id);
+        fd.append("recipient_id", recipientId);
+        fd.append("message", trimmed);
+        files.forEach((file) => fd.append("attachments[]", file));
+
+        fetch("php/send_task_message.php", {
+            method: "POST",
+            body: fd
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                return res.json();
+            })
+            .then((data) => {
+                if (data.error) throw new Error(data.error);
+                setMessages((prev) => [...prev, data.message]);
+                setText("");
+                setFiles([]);
+                setSending(false);
+            })
+            .catch((err) => {
+                setSendError(err.message || "Failed to send comment.");
+                setSending(false);
+            });
+    }
+
+    function handleFileChange(e) {
+        const picked = Array.from(e.target.files || []);
+        setFiles((prev) => {
+            const existing = new Set(prev.map((f) => `${f.name}|${f.size}`));
+            const fresh = picked.filter((f) => !existing.has(`${f.name}|${f.size}`));
+            return [...prev, ...fresh];
+        });
+        e.target.value = "";
+    }
+
+    function removeFile(index) {
+        setFiles((prev) => prev.filter((_, i) => i !== index));
+    }
+
+    function fmtSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    const canSend = !sending && Boolean(recipientId) && (text.trim().length > 0 || files.length > 0);
+
+    return (
+        <div className="qr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div
+                className="qr-modal-card qr-comment-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Comments for ${task.title}`}
+            >
+                <div className="qr-modal-head">
+                    <div>
+                        <h5 className="qr-modal-title">
+                            <i className="bi bi-chat-dots"></i>
+                            {task.title || "Task Comments"}
+                        </h5>
+                        <div className="qr-modal-subtitle">
+                            {messages.length} comment{messages.length !== 1 ? "s" : ""}
+                        </div>
+                    </div>
+
+                    <button className="qr-icon-btn" onClick={onClose} aria-label="Close">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div className="qr-modal-body">
+                    {loading ? (
+                        <div className="qr-empty-state">
+                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading comments...
+                        </div>
+                    ) : error ? (
+                        <div className="alert alert-danger mb-0">{error}</div>
+                    ) : messages.length === 0 ? (
+                        <div className="qr-empty-state qr-chat-empty-state">
+                            <div className="qr-chat-empty-icon">
+                                <i className="bi bi-chat-quote-fill"></i>
+                            </div>
+                            <div className="qr-chat-empty-title">No comments yet</div>
+                            <div className="qr-chat-empty-subtitle">
+                                No comments yet. Be the first to reply.
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="qr-comment-stream">
+                            {messages.map((msg) => {
+                                const isOwn = safeNum(msg.sender_id) === safeNum(currentUserId);
+
+                                return (
+                                    <div key={msg.id} className={`qr-comment-row ${isOwn ? "is-own" : ""}`}>
+                                        <div
+                                            className="qr-comment-avatar"
+                                            style={{
+                                                background: avatarColor(msg.sender_name),
+                                                color: avatarTextColor(msg.sender_name)
+                                            }}
+                                        >
+                                            {initials(msg.sender_name)}
+                                        </div>
+
+                                        <div className="qr-comment-bubble-wrap">
+                                            <div className="qr-comment-meta">
+                                                <span className="qr-comment-author">
+                                                    {isOwn ? "You" : msg.sender_name}
+                                                </span>
+                                                <span className="qr-comment-time">
+                                                    {formatDateTimePH(msg.time_sent)}
+                                                </span>
+                                            </div>
+
+                                            {msg.message ? <div className="qr-comment-bubble">{msg.message}</div> : null}
+
+                                            {Array.isArray(msg.attachments) && msg.attachments.length > 0 ? (
+                                                <div className="qr-comment-attachments">
+                                                    {msg.attachments.map((att) => (
+                                                        <a
+                                                            key={att.id}
+                                                            href={att.file_path}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="qr-file-chip"
+                                                        >
+                                                            <i className="bi bi-paperclip"></i>
+                                                            <span>{att.file_name}</span>
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            <div ref={bottomRef}></div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="qr-modal-foot qr-comment-foot">
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        multiple
+                        style={{ display: "none" }}
+                        onChange={handleFileChange}
+                    />
+
+                    <div className="qr-comment-compose">
+                        {sendError ? <div className="qr-comment-error">{sendError}</div> : null}
+
+                        {files.length > 0 ? (
+                            <div className="qr-file-chip-row">
+                                {files.map((file, index) => (
+                                    <div className="qr-file-chip is-staged" key={`${file.name}-${index}`}>
+                                        <i className="bi bi-paperclip"></i>
+                                        <span className="qr-file-chip-name">{file.name}</span>
+                                        <span className="qr-file-chip-size">{fmtSize(file.size)}</span>
+                                        <button
+                                            type="button"
+                                            className="qr-file-chip-remove"
+                                            onClick={() => removeFile(index)}
+                                            aria-label={`Remove ${file.name}`}
+                                        >
+                                            <i className="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+
+                        <div className="qr-comment-compose-row">
+                            <button
+                                type="button"
+                                className="qr-icon-btn"
+                                onClick={() => fileRef.current?.click()}
+                                disabled={sending}
+                                title="Attach files"
+                            >
+                                <i className="bi bi-paperclip"></i>
+                            </button>
+
+                            <textarea
+                                className="qr-compose-textarea"
+                                rows="2"
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
+                                placeholder="Write a thoughtful reply..."
+                            />
+
+                            <button
+                                type="button"
+                                className="qr-ghost-btn qr-send-btn"
+                                onClick={handleSend}
+                                disabled={!canSend}
+                            >
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
-    const [query, setQuery] = useState("");
+    const [commentTask, setCommentTask] = useState(null);
+    const [currentUserId, setCurrentUserId] = useState(null);
+
+    useEffect(() => {
+        fetch("php/get_current_user.php")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.id) setCurrentUserId(data.id);
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         setLoading(true);
         setError("");
         setTasks([]);
         setActiveTab("all");
-        setQuery("");
 
-        fetch(`php/get_employee_tasks_report.php?employee_id=${emp.id}&week_start=${quarterStart}&week_end=${quarterEnd}`)
+        fetch(`php/get_employee_tasks_report.php?employee_id=${encodeURIComponent(emp.id)}&week_start=${quarterStart}&week_end=${quarterEnd}`)
             .then((r) => {
                 if (!r.ok) throw new Error(`Server returned ${r.status}`);
                 return r.json();
@@ -123,7 +451,7 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
         () =>
             tasks.map((t) => ({
                 ...t,
-                derivedStatus: t.derived_status ?? t.status
+                derivedStatus: t.derived_status ?? t.status ?? "Other"
             })),
         [tasks]
     );
@@ -138,155 +466,154 @@ function EmployeeTaskModal({ emp, quarterStart, quarterEnd, onClose }) {
         [annotated]
     );
 
-    const filtered = useMemo(() => {
-        let base =
+    const filtered = useMemo(
+        () =>
             activeTab === "all"
                 ? annotated
-                : annotated.filter((t) => t.derivedStatus === activeTab);
-
-        const term = query.trim().toLowerCase();
-        if (!term) return base;
-
-        return base.filter((task) => {
-            const title = String(task.title || "").toLowerCase();
-            const desc = String(task.description || "").toLowerCase();
-            const status = String(task.derivedStatus || "").toLowerCase();
-            const priority = String(task.priority || "").toLowerCase();
-            return (
-                title.includes(term) ||
-                desc.includes(term) ||
-                status.includes(term) ||
-                priority.includes(term)
-            );
-        });
-    }, [annotated, activeTab, query]);
+                : annotated.filter((t) => t.derivedStatus === activeTab),
+        [annotated, activeTab]
+    );
 
     const quarterLabel = `${quarterStart} — ${quarterEnd}`;
 
     return (
-        <div className="qr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div className="qr-modal-card">
-                <div className="qr-modal-head">
-                    <div className="qr-modal-person">
-                        <img
-                            src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
-                            alt={`${emp.name} Profile`}
-                            className="qr-modal-avatar"
-                        />
-                        <div>
-                            <h5 className="qr-modal-title">{emp.name}</h5>
-                            <div className="qr-modal-subtitle">
-                                {emp.department} · {quarterLabel}
+        <>
+            <div className="qr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+                <div
+                    className="qr-modal-card qr-employee-task-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={`${emp.name} quarterly tasks`}
+                >
+                    <div className="qr-modal-head">
+                        <div className="qr-modal-person">
+                            <img
+                                src={emp.profile_image_url || buildAvatarFallbackUrl(emp.name)}
+                                alt={`${emp.name} Profile`}
+                                className="qr-modal-avatar"
+                            />
+                            <div>
+                                <h5 className="qr-modal-title">{emp.name}</h5>
+                                <div className="qr-modal-subtitle">
+                                    {emp.department} · {quarterLabel}
+                                </div>
                             </div>
                         </div>
+
+                        <button className="qr-icon-btn" onClick={onClose} aria-label="Close">
+                            <i className="bi bi-x-lg"></i>
+                        </button>
                     </div>
 
-                    <button className="qr-icon-btn" onClick={onClose} aria-label="Close">
-                        <i className="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <div className="qr-modal-toolbar">
-                    <div className="qr-pill-row">
-                        {[
-                            { key: "all", label: "All", count: counts.all, tone: "neutral" },
-                            { key: "Completed", label: "Completed", count: counts.Completed, tone: "success" },
-                            { key: "Ongoing", label: "Ongoing", count: counts.Ongoing, tone: "warning" },
-                            { key: "Overdue", label: "Overdue", count: counts.Overdue, tone: "danger" }
-                        ].map((tab) => (
-                            <button
-                                key={tab.key}
-                                type="button"
-                                className={`qr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`}
-                                onClick={() => setActiveTab(tab.key)}
-                            >
-                                {tab.label}
-                                <span className="qr-pill-count">{tab.count}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="qr-search-box">
-                        <i className="bi bi-search"></i>
-                        <input
-                            type="text"
-                            placeholder="Search tasks..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <div className="qr-modal-body">
-                    {loading ? (
-                        <div className="qr-empty-state">
-                            <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                            Loading tasks...
+                    <div className="qr-modal-toolbar qr-modal-toolbar--badges-only">
+                        <div className="qr-pill-row qr-pill-row--clean">
+                            {[
+                                { key: "all", label: "All", count: counts.all, tone: "neutral" },
+                                { key: "Completed", label: "Completed", count: counts.Completed, tone: "success" },
+                                { key: "Ongoing", label: "Ongoing", count: counts.Ongoing, tone: "warning" },
+                                { key: "Overdue", label: "Overdue", count: counts.Overdue, tone: "danger" }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    className={`qr-pill-tab ${tab.tone} ${activeTab === tab.key ? "is-active" : ""}`}
+                                    onClick={() => setActiveTab(tab.key)}
+                                >
+                                    <span className="qr-pill-tab-label">{tab.label}</span>
+                                    <span className="qr-pill-count">{tab.count}</span>
+                                </button>
+                            ))}
                         </div>
-                    ) : error ? (
-                        <div className="alert alert-danger mb-0">{error}</div>
-                    ) : filtered.length === 0 ? (
-                        <div className="qr-empty-state">No matching tasks found for this quarter.</div>
-                    ) : (
-                        <div className="qr-task-list">
-                            {filtered.map((task, idx) => {
-                                const status = task.derivedStatus || "Other";
-                                const priority = task.priority || "Other";
-                                const days = task.days_until_deadline;
+                    </div>
 
-                                let deadlineText = task.deadline
-                                    ? new Date(task.deadline).toLocaleDateString("en-PH", {
-                                          month: "short",
-                                          day: "numeric",
-                                          year: "numeric"
-                                      })
-                                    : "No deadline";
+                    <div className="qr-modal-body">
+                        {loading ? (
+                            <div className="qr-empty-state">
+                                <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                                Loading tasks...
+                            </div>
+                        ) : error ? (
+                            <div className="alert alert-danger mb-0">{error}</div>
+                        ) : filtered.length === 0 ? (
+                            <div className="qr-empty-state">No matching tasks found for this quarter.</div>
+                        ) : (
+                            <div className="qr-task-list">
+                                {filtered.map((task, idx) => {
+                                    const status = task.derivedStatus || "Other";
+                                    const priority = task.priority || "Other";
+                                    const days = task.days_until_deadline;
 
-                                if (status === "Overdue" && days !== null && days !== undefined) {
-                                    deadlineText += ` · ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} overdue`;
-                                } else if (status === "Ongoing" && days !== null && days !== undefined) {
-                                    deadlineText += days === 0
-                                        ? " · Due today"
-                                        : ` · ${days} day${days !== 1 ? "s" : ""} left`;
-                                } else if (status === "Completed" && task.completed_at) {
-                                    deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", {
-                                        month: "short",
-                                        day: "numeric"
-                                    })}`;
-                                }
+                                    let deadlineText = task.deadline
+                                        ? new Date(task.deadline).toLocaleDateString("en-PH", {
+                                              month: "short",
+                                              day: "numeric",
+                                              year: "numeric"
+                                          })
+                                        : "No deadline";
 
-                                return (
-                                    <div className="qr-task-item" key={task.id ?? idx}>
-                                        <div className="qr-task-main">
-                                            <div className="qr-task-title">{task.title}</div>
-                                            {task.description && (
-                                                <div className="qr-task-desc">{task.description}</div>
-                                            )}
-                                            <div className="qr-task-meta">{deadlineText}</div>
+                                    if (status === "Overdue" && days !== null && days !== undefined) {
+                                        deadlineText += ` · ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} overdue`;
+                                    } else if (status === "Ongoing" && days !== null && days !== undefined) {
+                                        deadlineText += days === 0
+                                            ? " · Due today"
+                                            : ` · ${days} day${days !== 1 ? "s" : ""} left`;
+                                    } else if (status === "Completed" && task.completed_at) {
+                                        deadlineText += ` · Done ${new Date(task.completed_at).toLocaleDateString("en-PH", {
+                                            month: "short",
+                                            day: "numeric"
+                                        })}`;
+                                    }
+
+                                    return (
+                                        <div className="qr-task-item" key={task.id ?? idx}>
+                                            <div className="qr-task-main">
+                                                <div className="qr-task-title">{task.title || "Untitled Task"}</div>
+                                                {task.description ? (
+                                                    <div className="qr-task-desc">{task.description}</div>
+                                                ) : null}
+                                                <div className="qr-task-meta">{deadlineText}</div>
+                                            </div>
+
+                                            <div className="qr-task-side">
+                                                <span className={`qr-status-inline ${statusTone(status)}`}>{status}</span>
+                                                <span className={`qr-priority-inline ${priorityTone(priority)}`}>
+                                                    <i className="bi bi-flag-fill"></i>
+                                                    <span>{priority}</span>
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className="qr-ghost-btn qr-comment-open-btn"
+                                                    onClick={() => setCommentTask(task)}
+                                                >
+                                                    <i className="bi bi-chat-dots"></i>
+                                                    <span>Comments</span>
+                                                </button>
+                                            </div>
                                         </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
 
-                                        <div className="qr-task-side">
-                                            <span className={`qr-status-inline ${statusTone(status)}`}>{status}</span>
-                                            <span className={`qr-priority-inline ${priorityTone(priority)}`}>
-                                                <i className="bi bi-flag-fill"></i>
-                                                <span>{priority}</span>
-                                            </span>
-                                            <div className="qr-progress-mini">{task.progress ?? 0}%</div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                <div className="qr-modal-foot">
-                    <button className="qr-ghost-btn" onClick={onClose}>Close</button>
+                    <div className="qr-modal-foot">
+                        <button className="qr-ghost-btn" onClick={onClose}>Close</button>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {commentTask ? (
+                <TaskCommentModal
+                    task={commentTask}
+                    recipientId={emp.id}
+                    currentUserId={currentUserId}
+                    onClose={() => setCommentTask(null)}
+                />
+            ) : null}
+        </>
     );
 }
+
 
 function SupervisorQuarterlyReportPage() {
     const now = new Date();
@@ -366,8 +693,8 @@ function SupervisorQuarterlyReportPage() {
     const donutData = useMemo(
         () => [
             { label: "Completed", value: summary.completed, color: "#16a34a" },
-            { label: "Ongoing", value: summary.ongoing, color: "#f59e0b" },
-            { label: "Overdue", value: summary.overdue, color: "#ec4899" }
+            { label: "Ongoing", value: summary.ongoing, color: "#2563eb" },
+            { label: "Overdue", value: summary.overdue, color: "#e11d48" }
         ].map((item) => ({
             ...item,
             percent: summary.total > 0 ? Math.round((item.value / summary.total) * 100) : 0
@@ -401,7 +728,7 @@ function SupervisorQuarterlyReportPage() {
             {
                 animationDuration: 650,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#f59e0b", "#ec4899"],
+                color: ["#16a34a", "#2563eb", "#e11d48"],
                 grid: {
                     top: 34,
                     left: 20,
@@ -537,11 +864,12 @@ function SupervisorQuarterlyReportPage() {
                 series: [
                     {
                         type: "pie",
-                        radius: ["63%", "84%"],
+                        radius: ["62%", "85%"],
                         center: ["50%", "50%"],
                         startAngle: 90,
                         clockwise: true,
-                        minAngle: 1,
+                        padAngle: 4,
+                        minAngle: 8,
                         label: { show: false },
                         labelLine: { show: false },
                         emphasis: {
@@ -549,14 +877,14 @@ function SupervisorQuarterlyReportPage() {
                             scaleSize: 8,
                             itemStyle: {
                                 borderColor: separator,
-                                borderWidth: 5,
-                                borderRadius: 10
+                                borderWidth: 6,
+                                borderRadius: 14
                             }
                         },
                         itemStyle: {
                             borderColor: separator,
-                            borderWidth: 4,
-                            borderRadius: 10
+                            borderWidth: 6,
+                            borderRadius: 14
                         },
                         data: donutData.map((item) => ({
                             value: item.value,
@@ -595,7 +923,7 @@ function SupervisorQuarterlyReportPage() {
             {
                 animationDuration: 650,
                 animationEasing: "cubicOut",
-                color: ["#16a34a", "#ec4899"],
+                color: ["#16a34a", "#e11d48"],
                 grid: {
                     top: 34,
                     left: 92,
