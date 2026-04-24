@@ -133,7 +133,7 @@ chartRef.current.setOption(
         series: [
             {
                 type: "pie",
-                radius: ["62%", "79%"],
+                radius: ["57%", "82%"],
                 center: ["50%", "50%"],
                 startAngle: 90,
                 clockwise: true,
@@ -519,7 +519,7 @@ function TopPerformersTable({ rows, monthLabel }) {
     );
 }   
 
-function SnapshotLinks({ snapshots }) {
+function SnapshotLinks({ snapshots = [] }) {
     if (!snapshots.length) {
         return <div className="dash-empty-box">No report snapshots available.</div>;
     }
@@ -534,28 +534,40 @@ function SnapshotLinks({ snapshots }) {
 
                 return (
                     <a key={snap.label} href={snap.href} className="dash-snapshot-card">
-                        <div className="dash-snapshot-top">
-                            <div>
+                        <div className="dash-snapshot-main">
+                            <div className="dash-snapshot-copy">
                                 <div className="dash-snapshot-title">{snap.label}</div>
                                 <div className="dash-snapshot-sub">{snap.sub}</div>
                             </div>
 
                             <div className="dash-snapshot-score">
                                 <div className="dash-snapshot-rate">{rate}%</div>
-                                <div className="dash-snapshot-rate-label">completion</div>
+                                <div className="dash-snapshot-rate-label">Completion</div>
                             </div>
                         </div>
 
-                        <div className="dash-snapshot-meta">
-                            <span>
-                                <strong>{total}</strong> total
-                            </span>
-                            <span>
-                                <strong>{completed}</strong> completed
-                            </span>
-                            <span>
-                                <strong>{overdue}</strong> overdue
-                            </span>
+                        <div className="dash-snapshot-progress">
+                            <span
+                                className="dash-snapshot-progress-fill"
+                                style={{ width: `${rate}%` }}
+                            ></span>
+                        </div>
+
+                        <div className="dash-snapshot-stats">
+                            <div className="dash-snapshot-stat">
+                                <span>Total</span>
+                                <strong>{total}</strong>
+                            </div>
+
+                            <div className="dash-snapshot-stat">
+                                <span>Completed</span>
+                                <strong>{completed}</strong>
+                            </div>
+
+                            <div className="dash-snapshot-stat">
+                                <span>Overdue</span>
+                                <strong>{overdue}</strong>
+                            </div>
                         </div>
                     </a>
                 );
@@ -660,7 +672,6 @@ function Dashboard() {
                                     A cleaner overview of the same live task metrics.
                                 </div>
                             </div>
-                            <div className="dash-pill">{overallRate}% rate</div>
                         </div>
 
                         <div className="dash-health-layout">
