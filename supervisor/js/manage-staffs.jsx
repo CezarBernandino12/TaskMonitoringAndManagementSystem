@@ -573,14 +573,6 @@ function StaffManagementPage() {
                     </div>
 
                     <div className="employee-actions-bar">
-                        <button type="button" className="btn employee-toolbar-btn" onClick={handleImportClick}>
-                            <i className="bi bi-arrow-clockwise me-2"></i>
-                            Import
-                        </button>
-                        <button type="button" className="btn employee-toolbar-btn" onClick={handleExport}>
-                            <i className="bi bi-box-arrow-up-right me-2"></i>
-                            Export
-                        </button>
                         <button
                             type="button"
                             className="btn employee-toolbar-add-btn"
@@ -589,33 +581,6 @@ function StaffManagementPage() {
                             <i className="bi bi-plus-lg me-2"></i>
                             Add Employee
                         </button>
-                    </div>
-                </div>
-
-                <div className="employee-toolbar-panel">
-                    <div className="employee-toolbar-grid">
-                        <div className="employee-toolbar-field flex-grow-1">
-                            <i className="bi bi-search"></i>
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                placeholder="Search employee, email, or department"
-                            />
-                        </div>
-
-                        <select
-                            className="form-select employee-filter-select"
-                            value={selectedDepartment}
-                            onChange={(event) => setSelectedDepartment(event.target.value)}
-                        >
-                            <option value="all">All Departments</option>
-                            {departmentOptions.map((department) => (
-                                <option key={department.department_id} value={department.department_id}>
-                                    {department.department_name}
-                                </option>
-                            ))}
-                        </select>
                     </div>
                 </div>
 
