@@ -635,7 +635,8 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                             ></textarea>
 
                             <button className="ar-ghost-btn ar-send-btn" onClick={handleSend} disabled={!canSend}>
-                                {sending ? "..." : "Send"}
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
                             </button>
                         </div>
                     </div>

@@ -255,7 +255,15 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                     ) : error ? (
                         <div className="alert alert-danger mb-0">{error}</div>
                     ) : messages.length === 0 ? (
-                        <div className="dr-empty-state">No comments yet.</div>
+                       <div className="dr-empty-state dr-chat-empty-state">
+                            <div className="dr-chat-empty-icon">
+                                <i className="bi bi-chat-quote-fill"></i>
+                            </div>
+                            <div className="dr-chat-empty-title">No comments yet</div>
+                            <div className="dr-chat-empty-subtitle">
+                                No comments yet. Be the first to reply.
+                            </div>
+                        </div>
                     ) : (
                         <div className="dr-comment-stream">
                             {messages.map((msg) => {
@@ -371,7 +379,7 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                         handleSend();
                                     }
                                 }}
-                                placeholder="Write a comment... (Ctrl+Enter to send)"
+                                placeholder="Write a thoughtful reply..."
                             />
 
                             <button
@@ -380,7 +388,8 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                 onClick={handleSend}
                                 disabled={!canSend}
                             >
-                                {sending ? "Sending..." : "Send"}
+                               <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
                             </button>
                         </div>
                     </div>

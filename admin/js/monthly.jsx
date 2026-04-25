@@ -650,7 +650,8 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                 onClick={handleSend}
                                 disabled={!canSend}
                             >
-                                {sending ? "Sending..." : "Send"}
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
                             </button>
                         </div>
                     </div>
