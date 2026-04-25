@@ -1054,11 +1054,7 @@ function SupervisorQuarterlyReportPage() {
         <div className="qr-page">
             <div className="qr-page-head">
                 <div>
-                    <h2 className="qr-page-title">Quarterly Report</h2>
-                    <div className="qr-page-meta">
-                        {department && <span className="qr-filter-pill">{department.name}</span>}
-                        {supervisor && <span className="qr-page-sub">Supervisor: {supervisor.name}</span>}
-                    </div>
+                    <h2 className="qr-page-title">Quarterly Task Report</h2>
                 </div>
 
                 <div className="qr-quarter-nav">

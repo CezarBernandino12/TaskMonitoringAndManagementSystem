@@ -1,152 +1,557 @@
 const { useState, useEffect, useRef } = React;
 
-// ====================================================================
-// TASK RING — doughnut of completed / ongoing / overdue
-// ====================================================================
-function TaskRing({ completed, ongoing, overdue, rate }) {
-    const ref = useRef(null);
-    const chartInst = useRef(null);
+const ADMIN_COLORS = {
+    completed: "#16a34a",
+    ongoing: "#d97706",
+    overdue: "#e11d48",
+    blue: "#2563eb",
+    purple: "#7c3aed",
+    teal: "#0891b2",
+    orange: "#ea580c"
+};
+
+function safeNumber(value, fallback = 0) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function percent(part, total) {
+    if (!total) return 0;
+    return Math.round((safeNumber(part) / safeNumber(total)) * 100);
+}
+
+function getChartTheme() {
+    const root = document.documentElement;
+    const styles = getComputedStyle(root);
+    const dark = root.getAttribute("data-theme") === "dark";
+
+    return {
+        dark,
+        text: styles.getPropertyValue("--dash-text").trim() || (dark ? "#f3f4f6" : "#111827"),
+        muted: styles.getPropertyValue("--dash-muted").trim() || (dark ? "#9ca3af" : "#6b7280"),
+        panel: styles.getPropertyValue("--dash-surface").trim() || (dark ? "#18212f" : "#ffffff"),
+        surfaceSoft:
+            styles.getPropertyValue("--dash-surface-soft").trim() ||
+            (dark ? "#1d2736" : "#fafbfc"),
+        grid: dark ? "rgba(255,255,255,0.08)" : "#eceff3",
+        tooltipBg: dark ? "rgba(15,23,42,0.96)" : "rgba(17,24,39,0.92)"
+    };
+}
+
+function useThemeVersion() {
+    const [themeVersion, setThemeVersion] = useState(0);
 
     useEffect(() => {
-        if (chartInst.current) chartInst.current.destroy();
+        const root = document.documentElement;
 
-        chartInst.current = new Chart(ref.current, {
-            type: 'doughnut',
-            data: {
-                labels: ['Completed', 'Ongoing', 'Overdue'],
-                datasets: [{
-                    data: [completed, ongoing, overdue],
-                    backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
-                    borderWidth: 2,
-                    borderColor: '#fff'
-                }]
-            },
-            options: {
-                cutout: '72%',
-                responsive: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => ` ${ctx.label}: ${ctx.parsed}`
-                        }
-                    }
-                }
-            }
+        const observer = new MutationObserver(() => {
+            setThemeVersion((prev) => prev + 1);
         });
 
-        return () => {
-            if (chartInst.current) chartInst.current.destroy();
-        };
-    }, [completed, ongoing, overdue]);
+        observer.observe(root, {
+            attributes: true,
+            attributeFilter: ["data-theme"]
+        });
 
+        return () => observer.disconnect();
+    }, []);
+
+    return themeVersion;
+}
+
+function titleCase(value) {
+    return String(value || "")
+        .replace(/_/g, " ")
+        .replace(/\w\S*/g, (text) => text.charAt(0).toUpperCase() + text.slice(1).toLowerCase());
+}
+
+function timeAgo(dateStr) {
+    const date = new Date(dateStr);
+
+    if (Number.isNaN(date.getTime())) return "Unknown";
+
+    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+
+    if (diff < 60) return "just now";
+    if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+    if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+
+    return Math.floor(diff / 86400) + "d ago";
+}
+
+function roleBadge(role) {
+    const normalized = String(role || "staff").toLowerCase();
+
+    const cls = {
+        admin: "role-admin",
+        supervisor: "role-supervisor",
+        staff: "role-staff",
+        president: "role-president"
+    }[normalized] || "role-staff";
+
+    return <span className={`role-badge ${cls}`}>{titleCase(normalized)}</span>;
+}
+
+function StatusDot({ active }) {
     return (
-        <div className="ring-wrap">
-            <canvas ref={ref} width="140" height="140"></canvas>
-            <div className="ring-label">
-                <span style={{ fontSize: 24, fontWeight: 700 }}>{rate}%</span>
-                <span style={{ fontSize: 10, color: '#888' }}>completion</span>
+        <span className="dash-user-status">
+            <span className={`active-dot ${active ? "dot-active" : "dot-inactive"}`}></span>
+            <span>{active ? "Active" : "Inactive"}</span>
+        </span>
+    );
+}
+
+function AdminStatCard({ label, value, icon, tone }) {
+    return (
+        <div className={`dash-admin-stat tone-${tone}`}>
+            <div className="dash-admin-stat-icon">
+                <i className={`bi ${icon}`}></i>
+            </div>
+
+            <div className="dash-admin-stat-copy">
+                <div className="dash-admin-stat-label">{label}</div>
+                <div className="dash-admin-stat-value">{safeNumber(value)}</div>
             </div>
         </div>
     );
 }
 
-// ====================================================================
-// ROLE PIE — shows user count by role
-// ====================================================================
-function RolePie({ roles }) {
+function AdminTaskRing({ completed, ongoing, overdue, rate }) {
     const ref = useRef(null);
-    const chartInst = useRef(null);
-    const COLORS = ['#ff9900', '#0d6efd', '#28a745', '#6f42c1', '#0dcaf0'];
+    const chartRef = useRef(null);
+    const themeVersion = useThemeVersion();
+
+    const completedValue = safeNumber(completed);
+    const ongoingValue = safeNumber(ongoing);
+    const overdueValue = safeNumber(overdue);
+    const total = completedValue + ongoingValue + overdueValue;
+
+    const legendItems = [
+        {
+            label: "Completed",
+            value: completedValue,
+            percent: percent(completedValue, total),
+            color: ADMIN_COLORS.completed
+        },
+        {
+            label: "Ongoing",
+            value: ongoingValue,
+            percent: percent(ongoingValue, total),
+            color: ADMIN_COLORS.ongoing
+        },
+        {
+            label: "Overdue",
+            value: overdueValue,
+            percent: percent(overdueValue, total),
+            color: ADMIN_COLORS.overdue
+        }
+    ];
 
     useEffect(() => {
-        if (!roles.length) return;
+        if (!ref.current) return;
 
-        if (chartInst.current) chartInst.current.destroy();
+        chartRef.current = echarts.init(ref.current);
 
-        chartInst.current = new Chart(ref.current, {
-            type: 'pie',
-            data: {
-                labels: roles.map(r => r.role.charAt(0).toUpperCase() + r.role.slice(1)),
-                datasets: [{
-                    data: roles.map(r => r.count),
-                    backgroundColor: COLORS.slice(0, roles.length),
-                    borderWidth: 2,
-                    borderColor: '#fff'
-                }]
-            },
-            options: {
-                responsive: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { font: { size: 11 }, padding: 8 }
-                    }
-                }
-            }
-        });
+        const handleResize = () => {
+            if (chartRef.current) chartRef.current.resize();
+        };
+
+        window.addEventListener("resize", handleResize);
 
         return () => {
-            if (chartInst.current) chartInst.current.destroy();
+            window.removeEventListener("resize", handleResize);
+
+            if (chartRef.current) {
+                chartRef.current.dispose();
+                chartRef.current = null;
+            }
         };
-    }, [roles]);
+    }, []);
 
-    return <canvas ref={ref} width="200" height="200"></canvas>;
+    useEffect(() => {
+        if (!chartRef.current) return;
+
+        const theme = getChartTheme();
+
+        const data = legendItems
+            .filter((item) => item.value > 0)
+            .map((item) => ({
+                value: item.value,
+                name: item.label,
+                itemStyle: { color: item.color }
+            }));
+
+        chartRef.current.setOption(
+            {
+                animationDuration: 350,
+                animationEasing: "cubicOut",
+                tooltip: {
+                    trigger: "item",
+                    backgroundColor: theme.tooltipBg,
+                    borderWidth: 0,
+                    padding: [8, 10],
+                    textStyle: {
+                        color: "#fff",
+                        fontSize: 12
+                    },
+                    formatter: ({ name, value }) => `${name}: ${value}`
+                },
+                series: [
+                    {
+                        type: "pie",
+                        radius: ["57%", "82%"],
+                        center: ["50%", "50%"],
+                        startAngle: 90,
+                        clockwise: true,
+                        padAngle: 2,
+                        minAngle: 4,
+                        avoidLabelOverlap: true,
+                        label: { show: false },
+                        labelLine: { show: false },
+                        emphasis: { scale: false },
+                        itemStyle: {
+                            borderColor: theme.panel,
+                            borderWidth: 5,
+                            borderRadius: 9
+                        },
+                        data:
+                            data.length > 0
+                                ? data
+                                : [
+                                      {
+                                          value: 1,
+                                          name: "No data",
+                                          itemStyle: {
+                                              color: theme.dark ? "#334155" : "#e5e7eb"
+                                          }
+                                      }
+                                  ]
+                    }
+                ]
+            },
+            true
+        );
+    }, [completed, ongoing, overdue, themeVersion]);
+
+    return (
+        <div className="dash-ring-block">
+            <div className="dash-ring-shell">
+                <div className="dash-ring">
+                    <div ref={ref} className="dash-ring-canvas"></div>
+
+                    <div className="dash-ring-center">
+                        <div className="dash-ring-kicker">Completion</div>
+                        <div className="dash-ring-value">{safeNumber(rate)}%</div>
+                        <div className="dash-ring-sub">all tasks</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="dash-ring-legend">
+                {legendItems.map((item) => (
+                    <div className="dash-ring-legend-item" key={item.label}>
+                        <span
+                            className="dash-ring-legend-dot"
+                            style={{ color: item.color }}
+                        ></span>
+
+                        <div className="dash-ring-legend-copy">
+                            <div className="dash-ring-legend-title">{item.label}</div>
+                            <div className="dash-ring-legend-meta">
+                                Tasks <strong>{item.value}</strong> · {item.percent}%
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 }
 
-// ====================================================================
-// HELPERS
-// ====================================================================
-function roleBadge(role) {
-    const cls = {
-        admin: 'role-admin',
-        supervisor: 'role-supervisor',
-        staff: 'role-staff',
-        president: 'role-president'
-    }[role] ?? 'role-staff';
+function RolePie({ roles }) {
+    const ref = useRef(null);
+    const chartRef = useRef(null);
+    const themeVersion = useThemeVersion();
 
-    return <span className={`role-badge ${cls}`}>{role}</span>;
+    const safeRoles = Array.isArray(roles) ? roles : [];
+
+    const colors = [
+        ADMIN_COLORS.orange,
+        ADMIN_COLORS.blue,
+        ADMIN_COLORS.completed,
+        ADMIN_COLORS.purple,
+        ADMIN_COLORS.teal
+    ];
+
+    const legendItems = safeRoles.map((role, index) => ({
+        label: titleCase(role.role),
+        value: safeNumber(role.count),
+        color: colors[index % colors.length]
+    }));
+
+    useEffect(() => {
+        if (!ref.current) return;
+
+        chartRef.current = echarts.init(ref.current);
+
+        const handleResize = () => {
+            if (chartRef.current) chartRef.current.resize();
+        };
+
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+
+            if (chartRef.current) {
+                chartRef.current.dispose();
+                chartRef.current = null;
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!chartRef.current) return;
+
+        const theme = getChartTheme();
+
+        if (!safeRoles.length) {
+            chartRef.current.clear();
+            return;
+        }
+
+        chartRef.current.setOption(
+            {
+                animationDuration: 450,
+                animationEasing: "cubicOut",
+                color: colors,
+                tooltip: {
+                    trigger: "item",
+                    backgroundColor: theme.tooltipBg,
+                    borderWidth: 0,
+                    padding: [8, 10],
+                    textStyle: {
+                        color: "#fff",
+                        fontSize: 12
+                    },
+                    formatter: ({ name, value, percent }) =>
+                        `${name}: ${value} (${percent}%)`
+                },
+                legend: {
+                    show: false
+                },
+                series: [
+                    {
+                        type: "pie",
+                        radius: ["52%", "80%"],
+                        center: ["50%", "50%"],
+                        avoidLabelOverlap: true,
+                        label: { show: false },
+                        labelLine: { show: false },
+                        emphasis: { scale: false },
+                        itemStyle: {
+                            borderColor: theme.panel,
+                            borderWidth: 5,
+                            borderRadius: 8
+                        },
+                        data: safeRoles.map((role) => ({
+                            name: titleCase(role.role),
+                            value: safeNumber(role.count)
+                        }))
+                    }
+                ]
+            },
+            true
+        );
+    }, [roles, themeVersion]);
+
+    if (!safeRoles.length) {
+        return <div className="dash-empty-box">No role data available.</div>;
+    }
+
+    return (
+        <div className="dash-role-balance-block">
+            <div className="dash-role-chart-shell">
+                <div className="dash-role-chart-ring">
+                    <div ref={ref} className="dash-admin-role-chart"></div>
+                </div>
+            </div>
+
+            <div className="dash-ring-legend">
+                {legendItems.map((item) => (
+                    <div className="dash-ring-legend-item" key={item.label}>
+                        <span
+                            className="dash-ring-legend-dot"
+                            style={{ color: item.color }}
+                        ></span>
+
+                        <div className="dash-ring-legend-copy">
+                            <div className="dash-ring-legend-title">{item.label}</div>
+                            <div className="dash-ring-legend-meta">
+                                Users <strong>{item.value}</strong>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+function DepartmentSummary({ rows }) {
+    const departments = Array.isArray(rows) ? rows : [];
+
+    return (
+        <div className="dash-table-wrap">
+            <table className="dash-table">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Staff</th>
+                        <th>Total Tasks</th>
+                        <th>Completed</th>
+                        <th>Overdue</th>
+                        <th>Completion Rate</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {!departments.length ? (
+                        <tr>
+                            <td colSpan="6">
+                                <div className="dash-empty-box">No departments found.</div>
+                            </td>
+                        </tr>
+                    ) : (
+                        departments.map((dept) => {
+                            const rate = clamp(safeNumber(dept.completion_rate), 0, 100);
+
+                            return (
+                                <tr key={dept.id || dept.department}>
+                                    <td>
+                                        <strong>{dept.department || "Unassigned"}</strong>
+                                    </td>
+                                    <td>{safeNumber(dept.staff_count)}</td>
+                                    <td>{safeNumber(dept.total_tasks)}</td>
+                                    <td>{safeNumber(dept.completed)}</td>
+                                    <td className={safeNumber(dept.overdue) > 0 ? "dash-danger-text" : ""}>
+                                        {safeNumber(dept.overdue)}
+                                    </td>
+                                    <td>
+                                        {safeNumber(dept.total_tasks) === 0 ? (
+                                            <span className="dash-muted-text">No tasks yet</span>
+                                        ) : (
+                                            <div className="dash-rate-cell">
+                                                <span>{rate}%</span>
+                                                <div className="dash-mini-progress">
+                                                    <div
+                                                        className="dash-mini-progress-fill"
+                                                        style={{ width: `${rate}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
 }
 
-function timeAgo(dateStr) {
-    const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+function RecentUsers({ rows }) {
+    const users = Array.isArray(rows) ? rows : [];
 
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    return Math.floor(diff / 86400) + 'd ago';
+    return (
+        <div className="dash-table-wrap">
+            <table className="dash-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Registered</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {!users.length ? (
+                        <tr>
+                            <td colSpan="6">
+                                <div className="dash-empty-box">No users found.</div>
+                            </td>
+                        </tr>
+                    ) : (
+                        users.map((user) => (
+                            <tr key={user.id || user.email}>
+                                <td>
+                                    <strong>{user.name || "Unnamed User"}</strong>
+                                </td>
+                                <td className="dash-muted-text">{user.email || "No email"}</td>
+                                <td>{roleBadge(user.role)}</td>
+                                <td>{user.department || "Unassigned"}</td>
+                                <td>
+                                    <StatusDot active={Boolean(user.is_active)} />
+                                </td>
+                                <td className="dash-muted-text">{timeAgo(user.created_at)}</td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
 }
 
-// ====================================================================
-// ADMIN DASHBOARD
-// ====================================================================
 function AdminDashboard() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState("");
 
     useEffect(() => {
-        fetch('php/get_admin_dashboard.php')
-            .then(r => r.json())
-            .then(d => {
-                if (d.error) throw new Error(d.error);
-                setData(d);
-                setLoading(false);
+        const controller = new AbortController();
+
+        fetch("php/get_admin_dashboard.php", { signal: controller.signal })
+            .then(async (response) => {
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(text || `HTTP ${response.status}`);
+                }
+
+                return response.json();
             })
-            .catch(err => {
-                setError(err.message);
-                setLoading(false);
+            .then((payload) => {
+                if (payload?.error) throw new Error(payload.error);
+                setData(payload);
+            })
+            .catch((err) => {
+                if (err.name !== "AbortError") {
+                    setError(err.message || "Unable to load admin dashboard data.");
+                }
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
             });
+
+        return () => controller.abort();
     }, []);
 
     if (loading) {
         return (
-            <div className="container-fluid py-4">
-                <div className="d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
-                    <div className="text-center text-muted">
-                        <div className="spinner-border mb-3" role="status"></div>
-                        <div>Loading dashboard…</div>
-                    </div>
+            <div className="dash-page dash-loading">
+                <div className="text-center text-muted">
+                    <div className="spinner-border mb-3" role="status"></div>
+                    <div>Loading dashboard...</div>
                 </div>
             </div>
         );
@@ -154,184 +559,154 @@ function AdminDashboard() {
 
     if (error) {
         return (
-            <div className="container-fluid py-4">
-                <div className="alert alert-danger mt-2">Error: {error}</div>
+            <div className="dash-page">
+                <div className="alert alert-danger mb-0">Error: {error}</div>
             </div>
         );
     }
 
-    const { overview, task_snapshot, recent_users, departments, roles } = data;
+    const overview = data?.overview ?? {};
+    const taskSnapshot = data?.task_snapshot ?? {};
+    const recentUsers = Array.isArray(data?.recent_users) ? data.recent_users : [];
+    const departments = Array.isArray(data?.departments) ? data.departments : [];
+    const roles = Array.isArray(data?.roles) ? data.roles : [];
+
+    const todayLabel = new Date().toLocaleDateString("en-PH", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+    });
+
+    const stats = [
+        {
+            label: "Active Users",
+            value: overview.total_active_users,
+            icon: "bi-person-check",
+            tone: "blue"
+        },
+        {
+            label: "Inactive Users",
+            value: overview.total_inactive_users,
+            icon: "bi-person-x",
+            tone: "red"
+        },
+        {
+            label: "Staff",
+            value: overview.total_staff,
+            icon: "bi-people",
+            tone: "green"
+        },
+        {
+            label: "Supervisors",
+            value: overview.total_supervisors,
+            icon: "bi-person-badge",
+            tone: "purple"
+        },
+        {
+            label: "Departments",
+            value: overview.total_departments,
+            icon: "bi-diagram-3",
+            tone: "teal"
+        },
+        {
+            label: "Total Tasks",
+            value: overview.total_tasks,
+            icon: "bi-list-task",
+            tone: "orange"
+        }
+    ];
 
     return (
-        <div className="container-fluid py-4">
-            <div className="mb-4">
-                <h3 className="mb-0">Admin Dashboard</h3>
-                <p className="text-muted mb-0">
-                    System overview · {new Date().toLocaleDateString('en-PH', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    })}
-                </p>
-            </div>
-
-            <div className="row mb-4 g-3">
-                {[
-                    { label: 'Active Users', value: overview.total_active_users, cls: 'blue' },
-                    { label: 'Inactive Users', value: overview.total_inactive_users, cls: 'red' },
-                    { label: 'Staff', value: overview.total_staff, cls: 'green' },
-                    { label: 'Supervisors', value: overview.total_supervisors, cls: 'purple' },
-                    { label: 'Departments', value: overview.total_departments, cls: 'teal' },
-                    { label: 'Total Tasks', value: overview.total_tasks, cls: 'orange' },
-                ].map(s => (
-                    <div className="col-md-2" key={s.label}>
-                        <div className={`card stat-card ${s.cls} p-3 text-center`}>
-                            <div className="text-muted mb-1" style={{ fontSize: 12 }}>{s.label}</div>
-                            <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value}</div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="row mb-4 g-3">
-                <div className="col-md-3">
-                    <div className="card p-3 h-100 text-center">
-                        <h6 className="fw-semibold mb-3">Task Status (All Time)</h6>
-                        <TaskRing
-                            completed={task_snapshot.completed}
-                            ongoing={task_snapshot.ongoing}
-                            overdue={task_snapshot.overdue}
-                            rate={task_snapshot.overall_rate}
+        <div className="dash-page">
+            <div className="dash-shell">
+                <section className="dash-admin-stat-grid">
+                    {stats.map((stat) => (
+                        <AdminStatCard
+                            key={stat.label}
+                            label={stat.label}
+                            value={stat.value}
+                            icon={stat.icon}
+                            tone={stat.tone}
                         />
-                        <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap" style={{ fontSize: 12 }}>
-                            <span><span className="active-dot dot-active"></span>Done: <strong>{task_snapshot.completed}</strong></span>
-                            <span style={{ color: '#cc8400' }}>●<strong> {task_snapshot.ongoing}</strong> ongoing</span>
-                            <span className="text-danger">●<strong> {task_snapshot.overdue}</strong> overdue</span>
+                    ))}
+                </section>
+
+                <div className="dash-admin-grid">
+                    <section className="dash-card dash-admin-chart-card">
+                        <div className="dash-section-head">
+                            <div>
+                                <div className="dash-card-title">Task Status</div>
+                                <div className="dash-card-subtitle">
+                                    All-time task completion, ongoing, and overdue distribution.
+                                </div>
+                            </div>
+                            <div className="dash-pill">All Time</div>
                         </div>
+
+                        <div className="dash-admin-chart-body">
+                            <AdminTaskRing
+                                completed={taskSnapshot.completed}
+                                ongoing={taskSnapshot.ongoing}
+                                overdue={taskSnapshot.overdue}
+                                rate={taskSnapshot.overall_rate}
+                            />
+                        </div>
+                    </section>
+
+                    <section className="dash-card dash-admin-chart-card">
+                        <div className="dash-section-head">
+                            <div>
+                                <div className="dash-card-title">User Roles</div>
+                                <div className="dash-card-subtitle">
+                                    Active account distribution by role.
+                                </div>
+                            </div>
+                            <div className="dash-pill">Active Only</div>
+                        </div>
+
+                        <div className="dash-admin-chart-body">
+                            <RolePie roles={roles} />
+                        </div>
+                    </section>
+                </div>
+
+                <section className="dash-card dash-admin-table-card">
+                    <div className="dash-section-head">
+                        <div>
+                            <div className="dash-card-title">Department Summary</div>
+                            <div className="dash-card-subtitle">
+                                Compare task completion and overdue work by department.
+                            </div>
+                        </div>
+
+                        <a href="departments.html" className="dash-action-link">
+                            Manage Departments
+                        </a>
                     </div>
-                </div>
 
-                <div className="col-md-3">
-                    <div className="card p-3 h-100 text-center">
-                        <h6 className="fw-semibold mb-2">User Roles</h6>
-                        <p className="text-muted mb-3" style={{ fontSize: 12 }}>Active accounts only</p>
-                        <RolePie roles={roles} />
+                    <DepartmentSummary rows={departments} />
+                </section>
+
+                <section className="dash-card dash-admin-table-card">
+                    <div className="dash-section-head">
+                        <div>
+                            <div className="dash-card-title">Recently Registered Users</div>
+                            <div className="dash-card-subtitle">
+                                Latest accounts created in the system.
+                            </div>
+                        </div>
+
+                        <a href="users.html" className="dash-action-link">
+                            View All Users
+                        </a>
                     </div>
-                </div>
-            </div>
 
-            <div className="card p-3 mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h6 className="fw-semibold mb-0">Department Summary</h6>
-                    <a href="departments.html" className="btn btn-sm btn-outline-warning" style={{ fontSize: 12 }}>
-                        Manage Departments
-                    </a>
-                </div>
-
-                <div className="table-responsive">
-                    <table className="table table-bordered table-hover align-middle mb-0">
-                        <thead className="table-light">
-                            <tr>
-                                <th>Department</th>
-                                <th>Staff</th>
-                                <th>Total Tasks</th>
-                                <th>Completed</th>
-                                <th>Overdue</th>
-                                <th>Completion Rate</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {departments.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="text-center text-muted">No departments found.</td>
-                                </tr>
-                            ) : departments.map(dept => {
-                                const rate = dept.completion_rate;
-
-                                return (
-                                    <tr key={dept.id}>
-                                        <td style={{ fontWeight: 500 }}>{dept.department}</td>
-                                        <td>{dept.staff_count}</td>
-                                        <td>{dept.total_tasks}</td>
-                                        <td>{dept.completed}</td>
-                                        <td className={dept.overdue > 0 ? 'text-danger fw-bold' : ''}>{dept.overdue}</td>
-                                        <td>
-                                            {dept.total_tasks === 0 ? (
-                                                <span className="text-muted" style={{ fontSize: '0.9em' }}>No tasks yet</span>
-                                            ) : rate === 0 ? (
-                                                <span className="text-danger" style={{ fontSize: '0.9em', fontWeight: 500 }}>
-                                                    0% — None completed
-                                                </span>
-                                            ) : (
-                                                <div className="d-flex align-items-center gap-2">
-                                                    <span style={{ minWidth: 36, fontSize: 13 }}>{rate}%</span>
-                                                    <div className="progress flex-grow-1" style={{ height: 16 }}>
-                                                        <div
-                                                            className="progress-bar bg-success"
-                                                            style={{ width: `${rate}%` }}
-                                                            aria-valuenow={rate}
-                                                            aria-valuemin="0"
-                                                            aria-valuemax="100"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div className="card p-3">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h6 className="fw-semibold mb-0">Recently Registered Users</h6>
-                    <a href="users.html" className="btn btn-sm btn-outline-warning" style={{ fontSize: 12 }}>
-                        View All Users
-                    </a>
-                </div>
-
-                <div className="table-responsive">
-                    <table className="table table-bordered table-hover align-middle mb-0">
-                        <thead className="table-light">
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Department</th>
-                                <th>Status</th>
-                                <th>Registered</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {recent_users.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="text-center text-muted">No users found.</td>
-                                </tr>
-                            ) : recent_users.map(u => (
-                                <tr key={u.id}>
-                                    <td style={{ fontWeight: 500 }}>{u.name}</td>
-                                    <td style={{ fontSize: 13, color: '#555' }}>{u.email}</td>
-                                    <td>{roleBadge(u.role)}</td>
-                                    <td style={{ fontSize: 13 }}>{u.department}</td>
-                                    <td>
-                                        <span>
-                                            <span className={`active-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}`}></span>
-                                            <span style={{ fontSize: 12 }}>{u.is_active ? 'Active' : 'Inactive'}</span>
-                                        </span>
-                                    </td>
-                                    <td style={{ fontSize: 12, color: '#888' }}>{timeAgo(u.created_at)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                    <RecentUsers rows={recentUsers} />
+                </section>
             </div>
         </div>
     );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<AdminDashboard />);
+ReactDOM.createRoot(document.getElementById("root")).render(<AdminDashboard />);

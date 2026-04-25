@@ -680,7 +680,8 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                 onClick={handleSend}
                                 disabled={!canSend}
                             >
-                                {sending ? "Sending..." : "Send"}
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
                             </button>
                         </div>
                     </div>
@@ -1180,6 +1181,7 @@ function AnnualReportPage() {
     const [monthlyTrend, setMonthlyTrend] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [departmentFilter, setDepartmentFilter] = useState("all");
+    const [deptOpen, setDeptOpen] = useState(false);
     const [year, setYear] = useState(now.getFullYear());
     const [selectedDept, setSelectedDept] = useState(null);
     const [modalEmp, setModalEmp] = useState(null);
@@ -1193,6 +1195,7 @@ function AnnualReportPage() {
     const quarterChartRef = useRef(null);
     const donutChartRef = useRef(null);
     const employeeChartRef = useRef(null);
+    const deptDropdownRef = useRef(null);
 
     const deptChart = useRef(null);
     const lineChart = useRef(null);
@@ -1249,6 +1252,26 @@ function AnnualReportPage() {
         });
 
         return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        function handlePointerDown(event) {
+            if (!deptDropdownRef.current) return;
+            if (deptDropdownRef.current.contains(event.target)) return;
+            setDeptOpen(false);
+        }
+
+        function handleEscape(event) {
+            if (event.key === "Escape") setDeptOpen(false);
+        }
+
+        document.addEventListener("mousedown", handlePointerDown);
+        window.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("mousedown", handlePointerDown);
+            window.removeEventListener("keydown", handleEscape);
+        };
     }, []);
 
     const departmentFilterLabel = useMemo(() => {
@@ -1702,6 +1725,12 @@ function AnnualReportPage() {
         setYear(now.getFullYear());
     }
 
+    function chooseDepartment(value) {
+        setDepartmentFilter(value);
+        setSelectedDept(null);
+        setDeptOpen(false);
+    }
+
     if (error) {
         return (
             <div className="dr-page">
@@ -1730,9 +1759,6 @@ function AnnualReportPage() {
                 <div className="dr-card-head ar-toolbar-row">
                     <div>
                         <h5 className="dr-card-title">Annual Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            Year-wide department and employee performance overview
-                        </div>
                     </div>
 
                     <div className="ar-toolbar-actions">
@@ -1760,24 +1786,47 @@ function AnnualReportPage() {
                             ) : null}
                         </div>
 
-                        <div className="dr-search-box dr-search-box--select ar-select-shell">
-                            <i className="bi bi-buildings"></i>
-                            <select
-                                className="dr-select"
-                                value={departmentFilter}
-                                onChange={(e) => {
-                                    setDepartmentFilter(e.target.value);
-                                    setSelectedDept(null);
-                                }}
+                        <div className="ar-dept-dropdown" ref={deptDropdownRef}>
+                            <button
+                                type="button"
+                                className={`ar-dept-trigger ${deptOpen ? "is-open" : ""}`}
+                                onClick={() => setDeptOpen((prev) => !prev)}
+                                aria-haspopup="listbox"
+                                aria-expanded={deptOpen}
                             >
-                                <option value="all">All Departments</option>
-                                {allDepartments.map((dep) => (
-                                    <option key={dep.id} value={dep.id}>
-                                        {dep.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <i className="bi bi-chevron-down dr-select-chevron"></i>
+                                <span className="ar-dept-trigger-left">
+                                    <i className="bi bi-buildings"></i>
+                                    <span>{departmentFilterLabel}</span>
+                                </span>
+                                <i className="bi bi-chevron-down ar-dept-chevron"></i>
+                            </button>
+
+                            {deptOpen ? (
+                                <div className="ar-dept-menu" role="listbox">
+                                    <button
+                                        type="button"
+                                        className={`ar-dept-option ${departmentFilter === "all" ? "is-selected" : ""}`}
+                                        onClick={() => chooseDepartment("all")}
+                                        role="option"
+                                        aria-selected={departmentFilter === "all"}
+                                    >
+                                        All Departments
+                                    </button>
+
+                                    {allDepartments.map((dep) => (
+                                        <button
+                                            key={dep.id}
+                                            type="button"
+                                            className={`ar-dept-option ${String(departmentFilter) === String(dep.id) ? "is-selected" : ""}`}
+                                            onClick={() => chooseDepartment(dep.id)}
+                                            role="option"
+                                            aria-selected={String(departmentFilter) === String(dep.id)}
+                                        >
+                                            {dep.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>

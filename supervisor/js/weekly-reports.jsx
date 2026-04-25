@@ -938,11 +938,7 @@ function SupervisorWeeklyReportPage() {
         <div className="wr-page">
             <div className="wr-page-head">
                 <div>
-                    <h2 className="wr-page-title">Weekly Report</h2>
-                    <div className="wr-page-meta">
-                        {department && <span className="wr-filter-pill">{department.name}</span>}
-                        {supervisor && <span className="wr-page-sub">Supervisor: {supervisor.name}</span>}
-                    </div>
+                    <h2 className="wr-page-title">Weekly Task Report</h2>
                 </div>
 
                 <div className="wr-week-nav">
@@ -965,7 +961,7 @@ function SupervisorWeeklyReportPage() {
                     </button>
 
                     {weekOffset !== 0 && (
-                        <button className="wr-ghost-btn wr-ghost-btn--primary" onClick={() => setWeekOffset(0)}>
+                        <button className="wr-ghost-btn" onClick={() => setWeekOffset(0)}>
                             This Week
                         </button>
                     )}

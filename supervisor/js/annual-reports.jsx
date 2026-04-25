@@ -1310,16 +1310,10 @@ function AnnualReportPage() {
             <div className="ar-page-head">
                 <div>
                     <h2 className="ar-page-title">Annual Task Report</h2>
-                    <div className="ar-page-subtitle">
-                        Year-wide department and employee performance overview
-                    </div>
-                    <div className="ar-page-meta">
-                        {deptName && <span className="ar-filter-pill">{deptName}</span>}
-                    </div>
                 </div>
 
                 <div className="ar-year-nav">
-                    <button className="ar-ghost-btn" onClick={goToPrevYear}>
+                    <button type="button" className="ar-ghost-btn" onClick={goToPrevYear}>
                         <i className="bi bi-chevron-left"></i>
                         Prev
                     </button>
@@ -1327,6 +1321,7 @@ function AnnualReportPage() {
                     <div className="ar-year-range">{year}</div>
 
                     <button
+                        type="button"
                         className="ar-ghost-btn"
                         onClick={goToNextYear}
                         disabled={isCurrentYear}
@@ -1336,7 +1331,7 @@ function AnnualReportPage() {
                     </button>
 
                     {!isCurrentYear && (
-                        <button className="ar-ghost-btn ar-ghost-btn--primary" onClick={goToCurrentYear}>
+                        <button type="button" className="ar-filter-pill ar-filter-pill--button" onClick={goToCurrentYear}>
                             This Year
                         </button>
                     )}

@@ -635,7 +635,8 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                             ></textarea>
 
                             <button className="ar-ghost-btn ar-send-btn" onClick={handleSend} disabled={!canSend}>
-                                {sending ? "..." : "Send"}
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
                             </button>
                         </div>
                     </div>
@@ -965,7 +966,9 @@ function AnnualReportPage() {
     const [modalEmp, setModalEmp] = useState(null);
     const [modalDept, setModalDept] = useState(null);
     const [themeMode, setThemeMode] = useState(getThemeMode());
+    const [deptOpen, setDeptOpen] = useState(false);
 
+    const deptDropdownRef = useRef(null);
     const groupedBarRef = useRef(null);
     const lineRef = useRef(null);
     const quarterBarRef = useRef(null);
@@ -986,6 +989,28 @@ function AnnualReportPage() {
         const observer = new MutationObserver(() => setThemeMode(getThemeMode()));
         observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
         return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (deptDropdownRef.current && !deptDropdownRef.current.contains(e.target)) {
+                setDeptOpen(false);
+            }
+        }
+
+        function handleEscape(e) {
+            if (e.key === "Escape") {
+                setDeptOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+        window.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            window.removeEventListener("keydown", handleEscape);
+        };
     }, []);
 
     useEffect(() => {
@@ -1053,6 +1078,18 @@ function AnnualReportPage() {
         { label: "Ongoing", value: safeNum(summary.ongoing), color: STATUS_COLORS.Ongoing },
         { label: "Overdue", value: safeNum(summary.overdue), color: STATUS_COLORS.Overdue }
     ].map((item) => ({ ...item, percent: pct(item.value, summaryTotal) })), [summary, summaryTotal]);
+
+    const departmentFilterLabel = useMemo(() => {
+        if (departmentFilter === "all") return "All Departments";
+        const found = allDepartments.find((dep) => String(dep.id) === String(departmentFilter));
+        return found?.name || "Selected Department";
+    }, [departmentFilter, allDepartments]);
+
+    function chooseDepartment(value) {
+        setDepartmentFilter(String(value));
+        setSelectedDept(null);
+        setDeptOpen(false);
+    }
 
     useEffect(() => {
         if (!window.Chart || !groupedBarRef.current) return;
@@ -1338,45 +1375,51 @@ function AnnualReportPage() {
                         ) : null}
                     </div>
 
-                    <div className="ar-search-box ar-search-box--select ar-head-select">
-                        <i className="bi bi-buildings"></i>
-                        <select
-                            className="ar-select"
-                            value={departmentFilter}
-                            onChange={(e) => {
-                                setDepartmentFilter(e.target.value);
-                                setSelectedDept(null);
-                            }}
+                    <div className="ar-dept-dropdown" ref={deptDropdownRef}>
+                        <button
+                            type="button"
+                            className={`ar-dept-trigger ${deptOpen ? "is-open" : ""}`}
+                            onClick={() => setDeptOpen((prev) => !prev)}
+                            aria-haspopup="listbox"
+                            aria-expanded={deptOpen}
                         >
-                            <option value="all">All Departments</option>
-                            {allDepartments.map((dep) => (
-                                <option key={dep.id} value={dep.id}>
-                                    {dep.name}
-                                </option>
-                            ))}
-                        </select>
-                        <i className="bi bi-chevron-down ar-select-chevron"></i>
-                    </div>
-                </div>
-            </div>
+                            <span className="ar-dept-trigger-left">
+                                <i className="bi bi-buildings"></i>
+                                <span>{departmentFilterLabel}</span>
+                            </span>
 
-            <div className="ar-toolbar-row">
-                <div className="ar-search-box ar-search-box--select">
-                    <i className="bi bi-buildings"></i>
-                    <select
-                        className="ar-select"
-                        value={departmentFilter}
-                        onChange={(e) => {
-                            setDepartmentFilter(e.target.value);
-                            setSelectedDept(null);
-                        }}
-                    >
-                        <option value="all">All Departments</option>
-                        {allDepartments.map((dep) => (
-                            <option key={dep.id} value={dep.id}>{dep.name}</option>
-                        ))}
-                    </select>
-                    <i className="bi bi-chevron-down ar-select-chevron"></i>
+                            <i className="bi bi-chevron-down ar-dept-chevron"></i>
+                        </button>
+
+                        {deptOpen ? (
+                            <div className="ar-dept-menu" role="listbox">
+                                <button
+                                    type="button"
+                                    className={`ar-dept-option ${departmentFilter === "all" ? "is-selected" : ""}`}
+                                    onClick={() => chooseDepartment("all")}
+                                    role="option"
+                                    aria-selected={departmentFilter === "all"}
+                                >
+                                    All Departments
+                                </button>
+
+                                {allDepartments.map((dep) => (
+                                    <button
+                                        key={dep.id}
+                                        type="button"
+                                        className={`ar-dept-option ${
+                                            String(departmentFilter) === String(dep.id) ? "is-selected" : ""
+                                        }`}
+                                        onClick={() => chooseDepartment(dep.id)}
+                                        role="option"
+                                        aria-selected={String(departmentFilter) === String(dep.id)}
+                                    >
+                                        {dep.name}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
             </div>
 

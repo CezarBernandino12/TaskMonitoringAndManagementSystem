@@ -677,7 +677,8 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                 onClick={handleSend}
                                 disabled={!canSend}
                             >
-                                {sending ? "Sending..." : "Send"}
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
                             </button>
                         </div>
                     </div>
@@ -1186,7 +1187,9 @@ function WeeklyReportPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [themeMode, setThemeMode] = useState(getThemeMode());
+    const [deptOpen, setDeptOpen] = useState(false);
 
+    const deptDropdownRef = useRef(null);
     const trendChartRef = useRef(null);
     const donutChartRef = useRef(null);
     const deptChartRef = useRef(null);
@@ -1251,6 +1254,31 @@ function WeeklyReportPage() {
         });
 
         return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (
+                deptDropdownRef.current &&
+                !deptDropdownRef.current.contains(e.target)
+            ) {
+                setDeptOpen(false);
+            }
+        }
+
+        function handleEscape(e) {
+            if (e.key === "Escape") {
+                setDeptOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+        window.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            window.removeEventListener("keydown", handleEscape);
+        };
     }, []);
 
     const weekLabel = `${formatDisplayDate(weekStart)} — ${formatDisplayDate(weekEnd)}`;
@@ -1572,9 +1600,6 @@ function WeeklyReportPage() {
                 <div className="dr-card-head wr-toolbar-row">
                     <div>
                         <h5 className="dr-card-title">Weekly Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            Weekly overview of task completion, progress, delays, and assignee performance
-                        </div>
                     </div>
 
                     <div className="wr-toolbar-actions">
@@ -1602,21 +1627,62 @@ function WeeklyReportPage() {
                             ) : null}
                         </div>
 
-                        <div className="dr-search-box dr-search-box--select wr-select-shell">
-                            <i className="bi bi-buildings"></i>
-                            <select
-                                className="dr-select"
-                                value={departmentFilter}
-                                onChange={(e) => setDepartmentFilter(e.target.value)}
+                        <div className="wr-dept-dropdown" ref={deptDropdownRef}>
+                            <button
+                                type="button"
+                                className={`wr-dept-trigger ${deptOpen ? "is-open" : ""}`}
+                                onClick={() => setDeptOpen((prev) => !prev)}
+                                aria-haspopup="listbox"
+                                aria-expanded={deptOpen}
                             >
-                                <option value="all">All Departments</option>
-                                {allDepartments.map((dep) => (
-                                    <option key={dep.id} value={dep.id}>
-                                        {dep.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <i className="bi bi-chevron-down dr-select-chevron"></i>
+                                <span className="wr-dept-trigger-left">
+                                    <i className="bi bi-buildings"></i>
+                                    <span>{departmentFilterLabel}</span>
+                                </span>
+
+                                <i className="bi bi-chevron-down wr-dept-chevron"></i>
+                            </button>
+
+                            {deptOpen ? (
+                                <div className="wr-dept-menu" role="listbox">
+                                    <button
+                                        type="button"
+                                        className={`wr-dept-option ${
+                                            departmentFilter === "all" ? "is-selected" : ""
+                                        }`}
+                                        onClick={() => {
+                                            setDepartmentFilter("all");
+                                            setDeptOpen(false);
+                                        }}
+                                        role="option"
+                                        aria-selected={departmentFilter === "all"}
+                                    >
+                                        All Departments
+                                    </button>
+
+                                    {allDepartments.map((dep) => (
+                                        <button
+                                            key={dep.id}
+                                            type="button"
+                                            className={`wr-dept-option ${
+                                                String(departmentFilter) === String(dep.id)
+                                                    ? "is-selected"
+                                                    : ""
+                                            }`}
+                                            onClick={() => {
+                                                setDepartmentFilter(String(dep.id));
+                                                setDeptOpen(false);
+                                            }}
+                                            role="option"
+                                            aria-selected={
+                                                String(departmentFilter) === String(dep.id)
+                                            }
+                                        >
+                                            {dep.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>

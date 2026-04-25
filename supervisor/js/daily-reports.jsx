@@ -967,14 +967,7 @@ function SupervisorDailyReportPage() {
             <div className="dr-card dr-page-intro-card">
                 <div className="dr-card-head">
                     <div>
-                        <h5 className="dr-card-title">Supervisor Daily Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            Department-wide staff task completion, progress, and overdue work
-                        </div>
-                    </div>
-
-                    <div className="dr-filter-pill">
-                        {supervisor?.department_name || supervisor?.department || "My Department"}
+                        <h5 className="dr-page-title">Supervisor Daily Task Report</h5>
                     </div>
                 </div>
             </div>

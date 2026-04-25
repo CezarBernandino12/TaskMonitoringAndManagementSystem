@@ -1134,10 +1134,6 @@ function MonthlyReportPage() {
             <div className="mr-page-head">
                 <div>
                     <h2 className="mr-page-title">Monthly Task Report</h2>
-                    <div className="mr-page-meta">
-                        {deptName && <span className="mr-filter-pill">{deptName}</span>}
-                        <span className="mr-page-sub">{formatMonthDisplay(year, month)}</span>
-                    </div>
                 </div>
 
                 <div className="mr-month-nav">
@@ -1158,7 +1154,7 @@ function MonthlyReportPage() {
                     </button>
 
                     {!isCurrentMonth && (
-                        <button className="mr-ghost-btn mr-ghost-btn--primary" onClick={goToCurrentMonth}>
+                        <button className="mr-filter-pill mr-filter-pill--button" onClick={goToCurrentMonth}>
                             This Month
                         </button>
                     )}
