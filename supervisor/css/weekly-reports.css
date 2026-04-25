@@ -1825,19 +1825,27 @@
 }
 
 #supervisorWeeklyRoot .wr-summary-icon.warning,
-#supervisorWeeklyRoot .wr-summary-chip.warning,
-#supervisorWeeklyRoot .wr-summary-value.warning,
-#supervisorWeeklyRoot .wr-status-inline.ongoing {
+#supervisorWeeklyRoot .wr-summary-chip.warning {
     background: var(--wr-blue-bg) !important;
     color: var(--wr-blue) !important;
 }
 
+#supervisorWeeklyRoot .wr-summary-value.warning,
+#supervisorWeeklyRoot .wr-status-inline.ongoing {
+    background: transparent !important;
+    color: var(--wr-blue) !important;
+}
+
 #supervisorWeeklyRoot .wr-summary-icon.danger,
-#supervisorWeeklyRoot .wr-summary-chip.danger,
+#supervisorWeeklyRoot .wr-summary-chip.danger {
+    background: var(--wr-red-bg) !important;
+    color: var(--wr-red) !important;
+}
+
 #supervisorWeeklyRoot .wr-summary-value.danger,
 #supervisorWeeklyRoot .wr-status-inline.overdue,
 #supervisorWeeklyRoot .wr-overdue-cell {
-    background: var(--wr-red-bg) !important;
+    background: transparent !important;
     color: var(--wr-red) !important;
 }
 
@@ -2697,4 +2705,67 @@
         height: calc(100vh - 32px) !important;
         border-radius: 22px !important;
     }
+}
+
+
+/* =========================================================
+   FINAL COLOR CLEANUP
+   Removes the colored rectangular backgrounds behind summary numbers
+   and Overdue table cells while keeping icon/chip colors intact.
+========================================================= */
+
+#supervisorWeeklyRoot .wr-summary-value,
+#supervisorWeeklyRoot .wr-summary-value.warning,
+#supervisorWeeklyRoot .wr-summary-value.danger,
+#supervisorWeeklyRoot .wr-summary-value.success,
+#supervisorWeeklyRoot .wr-summary-value.primary,
+#supervisorWeeklyRoot .wr-status-inline,
+#supervisorWeeklyRoot .wr-status-inline.ongoing,
+#supervisorWeeklyRoot .wr-status-inline.overdue,
+#supervisorWeeklyRoot .wr-table tbody td.wr-overdue-cell {
+    background: transparent !important;
+    background-image: none !important;
+}
+
+#supervisorWeeklyRoot .wr-summary-value.warning,
+#supervisorWeeklyRoot .wr-status-inline.ongoing {
+    color: var(--wr-blue) !important;
+}
+
+#supervisorWeeklyRoot .wr-summary-value.danger,
+#supervisorWeeklyRoot .wr-status-inline.overdue,
+#supervisorWeeklyRoot .wr-table tbody td.wr-overdue-cell {
+    color: var(--wr-red, #e11d48) !important;
+}
+
+#supervisorWeeklyRoot .wr-summary-value.success {
+    color: var(--wr-green) !important;
+}
+
+#supervisorWeeklyRoot .wr-summary-value.primary {
+    color: var(--wr-blue) !important;
+}
+
+#supervisorWeeklyRoot .wr-table tbody td.wr-overdue-cell {
+    background-color: var(--wr-card) !important;
+}
+
+#supervisorWeeklyRoot .wr-table tbody tr:hover td.wr-overdue-cell {
+    background-color: rgba(79, 115, 255, 0.04) !important;
+}
+
+#supervisorWeeklyRoot .wr-table tbody tr.is-active td.wr-overdue-cell {
+    background-color: rgba(79, 115, 255, 0.08) !important;
+}
+
+[data-theme="dark"] #supervisorWeeklyRoot .wr-table tbody td.wr-overdue-cell {
+    background-color: var(--wr-card) !important;
+}
+
+[data-theme="dark"] #supervisorWeeklyRoot .wr-table tbody tr:hover td.wr-overdue-cell {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+[data-theme="dark"] #supervisorWeeklyRoot .wr-table tbody tr.is-active td.wr-overdue-cell {
+    background-color: rgba(255, 255, 255, 0.06) !important;
 }

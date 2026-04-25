@@ -285,6 +285,91 @@ function Field({ label, name, form, errors, set, required = false, full = false,
     );
 }
 
+function CustomSelect({
+    value,
+    onChange,
+    options,
+    placeholder = 'Select',
+    invalid = false,
+    ariaLabel = 'Select option'
+}) {
+    const [open, setOpen] = useState(false);
+    const selectRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+
+        const handleClickOutside = event => {
+            if (selectRef.current && !selectRef.current.contains(event.target)) {
+                setOpen(false);
+            }
+        };
+
+        const handleEscape = event => {
+            if (event.key === 'Escape') {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscape);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [open]);
+
+    const selected = options.find(option => String(option.value) === String(value ?? ''));
+    const selectedLabel = selected?.label ?? placeholder;
+
+    const handleSelect = option => {
+        onChange(option.value);
+        setOpen(false);
+    };
+
+    return (
+        <div className={`um-custom-select ${open ? 'is-open' : ''}`} ref={selectRef}>
+            <button
+                type="button"
+                className={`um-select-trigger ${invalid ? 'invalid' : ''}`}
+                aria-label={ariaLabel}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                onClick={event => {
+                    event.stopPropagation();
+                    setOpen(current => !current);
+                }}
+            >
+                <span className="um-select-value">{selectedLabel}</span>
+                <span className="um-select-chevron">⌄</span>
+            </button>
+
+            {open && (
+                <div className="um-select-menu" role="listbox" onClick={event => event.stopPropagation()}>
+                    {options.map(option => {
+                        const active = String(option.value) === String(value ?? '');
+
+                        return (
+                            <button
+                                key={String(option.value)}
+                                type="button"
+                                role="option"
+                                aria-selected={active}
+                                className={`um-select-option ${active ? 'is-selected' : ''}`}
+                                onClick={() => handleSelect(option)}
+                            >
+                                {option.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+
 function UserFormModal({ user, departments, onSave, onClose }) {
     const isEdit = !!user?.id;
 
@@ -404,14 +489,16 @@ function UserFormModal({ user, departments, onSave, onClose }) {
                                 <Field label="Employee ID" name="employee_id" {...fieldProps} />
 
                                 <Field label="Gender" name="gender" {...fieldProps}>
-                                    <select
-                                        className="um-control"
+                                    <CustomSelect
                                         value={form.gender ?? ''}
-                                        onChange={e => set('gender', e.target.value)}
-                                    >
-                                        <option value="">— Select —</option>
-                                        {GENDERS.map(gender => <option key={gender}>{gender}</option>)}
-                                    </select>
+                                        onChange={value => set('gender', value)}
+                                        placeholder="— Select —"
+                                        ariaLabel="Select gender"
+                                        options={[
+                                            { value: '', label: '— Select —' },
+                                            ...GENDERS.map(gender => ({ value: gender, label: gender }))
+                                        ]}
+                                    />
                                 </Field>
 
                                 <Field label="Date of Birth" name="date_of_birth" {...fieldProps}>
@@ -453,40 +540,42 @@ function UserFormModal({ user, departments, onSave, onClose }) {
                         {tab === 'access' && (
                             <div className="um-form-grid">
                                 <Field label="Role" name="role" required {...fieldProps}>
-                                    <select
-                                        className={`um-control ${errors.role ? 'invalid' : ''}`}
+                                    <CustomSelect
                                         value={form.role}
-                                        onChange={e => set('role', e.target.value)}
-                                    >
-                                        {ROLES.map(role => (
-                                            <option key={role} value={role}>{formatRole(role)}</option>
-                                        ))}
-                                    </select>
+                                        onChange={value => set('role', value)}
+                                        invalid={!!errors.role}
+                                        ariaLabel="Select role"
+                                        options={ROLES.map(role => ({ value: role, label: formatRole(role) }))}
+                                    />
                                     {errors.role && <div className="um-error-text">{errors.role}</div>}
                                 </Field>
 
                                 <Field label="Department" name="department_id" {...fieldProps}>
-                                    <select
-                                        className="um-control"
+                                    <CustomSelect
                                         value={form.department_id ?? ''}
-                                        onChange={e => set('department_id', e.target.value)}
-                                    >
-                                        <option value="">— None —</option>
-                                        {departments.map(department => (
-                                            <option key={department.id} value={department.id}>{department.name}</option>
-                                        ))}
-                                    </select>
+                                        onChange={value => set('department_id', value)}
+                                        placeholder="— None —"
+                                        ariaLabel="Select department"
+                                        options={[
+                                            { value: '', label: '— None —' },
+                                            ...departments.map(department => ({
+                                                value: String(department.id),
+                                                label: department.name
+                                            }))
+                                        ]}
+                                    />
                                 </Field>
 
                                 <Field label="Status" name="is_active" {...fieldProps}>
-                                    <select
-                                        className="um-control"
+                                    <CustomSelect
                                         value={form.is_active}
-                                        onChange={e => set('is_active', parseInt(e.target.value, 10))}
-                                    >
-                                        <option value={1}>Active</option>
-                                        <option value={0}>Inactive</option>
-                                    </select>
+                                        onChange={value => set('is_active', parseInt(value, 10))}
+                                        ariaLabel="Select status"
+                                        options={[
+                                            { value: 1, label: 'Active' },
+                                            { value: 0, label: 'Inactive' }
+                                        ]}
+                                    />
                                 </Field>
 
                                 <Field
@@ -878,50 +967,54 @@ function UserManagementPage() {
                             <div className={`um-filter-panel ${filterOpen ? 'show' : ''}`}>
                                 <div className="um-filter-group">
                                     <label className="um-filter-label">Role</label>
-                                    <select
-                                        className="um-filter-control"
+                                    <CustomSelect
                                         value={filterRole}
-                                        onChange={event => {
-                                            setFilterRole(event.target.value);
+                                        onChange={value => {
+                                            setFilterRole(value);
                                             setPage(1);
                                         }}
-                                    >
-                                        <option value="all">All Roles</option>
-                                        {ROLES.map(role => <option key={role} value={role}>{formatRole(role)}</option>)}
-                                    </select>
+                                        ariaLabel="Filter by role"
+                                        options={[
+                                            { value: 'all', label: 'All Roles' },
+                                            ...ROLES.map(role => ({ value: role, label: formatRole(role) }))
+                                        ]}
+                                    />
                                 </div>
 
                                 <div className="um-filter-group">
                                     <label className="um-filter-label">Department</label>
-                                    <select
-                                        className="um-filter-control"
+                                    <CustomSelect
                                         value={filterDept}
-                                        onChange={event => {
-                                            setFilterDept(event.target.value);
+                                        onChange={value => {
+                                            setFilterDept(value);
                                             setPage(1);
                                         }}
-                                    >
-                                        <option value="all">All Departments</option>
-                                        {departments.map(department => (
-                                            <option key={department.id} value={String(department.id)}>{department.name}</option>
-                                        ))}
-                                    </select>
+                                        ariaLabel="Filter by department"
+                                        options={[
+                                            { value: 'all', label: 'All Departments' },
+                                            ...departments.map(department => ({
+                                                value: String(department.id),
+                                                label: department.name
+                                            }))
+                                        ]}
+                                    />
                                 </div>
 
                                 <div className="um-filter-group">
                                     <label className="um-filter-label">Status</label>
-                                    <select
-                                        className="um-filter-control"
+                                    <CustomSelect
                                         value={filterStatus}
-                                        onChange={event => {
-                                            setFilterStatus(event.target.value);
+                                        onChange={value => {
+                                            setFilterStatus(value);
                                             setPage(1);
                                         }}
-                                    >
-                                        <option value="all">All Status</option>
-                                        <option value="1">Active</option>
-                                        <option value="0">Inactive</option>
-                                    </select>
+                                        ariaLabel="Filter by status"
+                                        options={[
+                                            { value: 'all', label: 'All Status' },
+                                            { value: '1', label: 'Active' },
+                                            { value: '0', label: 'Inactive' }
+                                        ]}
+                                    />
                                 </div>
 
                                 <button type="button" className="um-filter-clear" onClick={clearFilters}>Clear filters</button>

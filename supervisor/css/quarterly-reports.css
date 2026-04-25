@@ -2121,3 +2121,55 @@
         grid-column: 1 / -1 !important;
     }
 }
+
+/* =========================================================
+   FINAL FIX: remove colored rectangular backgrounds
+   Keeps the text/status colors but removes the blue/red fills
+   from summary values and overdue table cells.
+========================================================= */
+
+/* Remove colored background behind summary numbers */
+#supervisorQuarterlyRoot .qr-summary-value,
+#supervisorQuarterlyRoot .qr-summary-value.warning,
+#supervisorQuarterlyRoot .qr-summary-value.danger,
+#supervisorQuarterlyRoot .qr-summary-value.success,
+#supervisorQuarterlyRoot .qr-summary-value.primary {
+    background: transparent !important;
+}
+
+/* Keep the intended text colors only */
+#supervisorQuarterlyRoot .qr-summary-value.warning {
+    color: var(--qr-blue) !important;
+}
+
+#supervisorQuarterlyRoot .qr-summary-value.danger {
+    color: var(--qr-red, #e11d48) !important;
+}
+
+#supervisorQuarterlyRoot .qr-summary-value.success {
+    color: var(--qr-green) !important;
+}
+
+#supervisorQuarterlyRoot .qr-summary-value.primary {
+    color: var(--qr-blue) !important;
+}
+
+/* Remove any pink/red fill from Overdue table cells */
+#supervisorQuarterlyRoot .qr-table tbody td.qr-overdue-cell {
+    background: var(--qr-card) !important;
+    color: var(--qr-red, #e11d48) !important;
+}
+
+#supervisorQuarterlyRoot .qr-table tbody tr:hover td.qr-overdue-cell {
+    background: rgba(79, 115, 255, 0.04) !important;
+}
+
+[data-theme="dark"] #supervisorQuarterlyRoot .qr-table tbody td.qr-overdue-cell {
+    background: var(--qr-card) !important;
+    color: var(--qr-red, #e11d48) !important;
+}
+
+[data-theme="dark"] #supervisorQuarterlyRoot .qr-table tbody tr:hover td.qr-overdue-cell {
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
