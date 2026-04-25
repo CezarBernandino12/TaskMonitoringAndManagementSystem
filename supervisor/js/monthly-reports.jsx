@@ -1135,7 +1135,6 @@ function MonthlyReportPage() {
                 <div>
                     <h2 className="mr-page-title">Monthly Task Report</h2>
                     <div className="mr-page-meta">
-                        {deptName && <span className="mr-filter-pill">{deptName}</span>}
                         <span className="mr-page-sub">{formatMonthDisplay(year, month)}</span>
                     </div>
                 </div>

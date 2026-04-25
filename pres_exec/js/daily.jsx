@@ -390,7 +390,8 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                 onClick={handleSend}
                                 disabled={!canSend}
                             >
-                                {sending ? "Sending..." : "Send"}
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
                             </button>
                         </div>
                     </div>
@@ -1131,9 +1132,6 @@ const donutData = [
                 <div className="dr-card-head">
                     <div>
                         <h5 className="dr-card-title">Daily Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            President overview of staff task completion, progress, and overdue work
-                        </div>
                     </div>
 
                     <div className="dr-search-box dr-search-box--select">

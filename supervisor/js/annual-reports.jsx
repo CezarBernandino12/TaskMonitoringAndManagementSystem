@@ -1310,12 +1310,6 @@ function AnnualReportPage() {
             <div className="ar-page-head">
                 <div>
                     <h2 className="ar-page-title">Annual Task Report</h2>
-                    <div className="ar-page-subtitle">
-                        Year-wide department and employee performance overview
-                    </div>
-                    <div className="ar-page-meta">
-                        {deptName && <span className="ar-filter-pill">{deptName}</span>}
-                    </div>
                 </div>
 
                 <div className="ar-year-nav">

@@ -1703,9 +1703,6 @@ function QuarterlyReportPage() {
                 <div className="dr-card-head qr-toolbar-row">
                     <div>
                         <h5 className="dr-card-title">Quarterly Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            Quarter-wide department and employee performance overview
-                        </div>
                     </div>
 
                     <div className="qr-toolbar-actions">

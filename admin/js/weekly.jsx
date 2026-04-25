@@ -1571,9 +1571,6 @@ function WeeklyReportPage() {
                 <div className="dr-card-head wr-toolbar-row">
                     <div>
                         <h5 className="dr-card-title">Weekly Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            Weekly overview of task completion, progress, delays, and assignee performance
-                        </div>
                     </div>
 
                     <div className="wr-toolbar-actions">

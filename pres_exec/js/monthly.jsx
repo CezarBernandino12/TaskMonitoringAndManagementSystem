@@ -652,7 +652,8 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                 onClick={handleSend}
                                 disabled={!canSend}
                             >
-                                {sending ? "Sending..." : "Send"}
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
                             </button>
                         </div>
                     </div>
@@ -1565,9 +1566,6 @@ function MonthlyReportPage() {
                 <div className="dr-card-head mr-toolbar-row">
                     <div>
                         <h5 className="dr-card-title">Monthly Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            Month-wide department and employee performance overview
-                        </div>
                     </div>
 
                     <div className="mr-toolbar-actions">

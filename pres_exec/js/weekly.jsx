@@ -677,7 +677,8 @@ function TaskCommentModal({ task, recipientId, currentUserId, onClose }) {
                                 onClick={handleSend}
                                 disabled={!canSend}
                             >
-                                {sending ? "Sending..." : "Send"}
+                                <i className="bi bi-send-fill"></i>
+                                <span>{sending ? "Sending..." : "Send"}</span>
                             </button>
                         </div>
                     </div>
@@ -1572,9 +1573,6 @@ function WeeklyReportPage() {
                 <div className="dr-card-head wr-toolbar-row">
                     <div>
                         <h5 className="dr-card-title">Weekly Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            Weekly overview of task completion, progress, delays, and assignee performance
-                        </div>
                     </div>
 
                     <div className="wr-toolbar-actions">

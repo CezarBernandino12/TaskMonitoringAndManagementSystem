@@ -1564,9 +1564,6 @@ function MonthlyReportPage() {
                 <div className="dr-card-head mr-toolbar-row">
                     <div>
                         <h5 className="dr-card-title">Monthly Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            Month-wide department and employee performance overview
-                        </div>
                     </div>
 
                     <div className="mr-toolbar-actions">

@@ -1109,9 +1109,6 @@ const donutData = [
                 <div className="dr-card-head">
                     <div>
                         <h5 className="dr-card-title">Daily Task Report</h5>
-                        <div className="dr-card-subtitle">
-                            Daily overview of staff task completion, progress, and overdue work
-                        </div>
                     </div>
 
                     <div className="dr-search-box dr-search-box--select">
