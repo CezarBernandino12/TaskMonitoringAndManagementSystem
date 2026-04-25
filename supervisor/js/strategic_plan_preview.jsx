@@ -34,8 +34,8 @@ function StrategicPlanPreview() {
         {/* HEADER WITH LOGO */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 15, marginBottom: 6 }}>
           <img src="../imgs/psi.png" style={{ width: 60 }} />
-          <div style={{ textAlign: "left" }}>
-            <div style={companyStyle}>Psi Systems and Innovations, OPC</div>
+          <div style={{ textAlign: "center" }}>
+            <div style={companyStyle}>Psy Systems and Innovations, OPC</div>
             <div style={taglineStyle}>Your development is our achievement!</div>
           </div>
         </div>
@@ -198,17 +198,17 @@ async function generateDoc(plan) {
       shading: { fill: "FFFFFF", type: ShadingType.CLEAR },
       children: [new Paragraph({
         alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text, bold: true, color: "000000", size: 18 })],
+        children: [new TextRun({ text, bold: true, color: "000000", size: 20, font: "Times New Roman" })],
       })],
     });
 
   const p = (text, opts = {}) =>
-    new Paragraph({ children: [new TextRun({ text: text || "", size: 20, ...opts })] });
+    new Paragraph({ children: [new TextRun({ text: text || "", size: 20, font: "Times New Roman", ...opts })] });
 
   const numP = (text, ref) =>
     new Paragraph({
       numbering: { reference: ref, level: 0 },
-      children: [new TextRun({ text: text || "", size: 20 })],
+      children: [new TextRun({ text: text || "", size: 20, font: "Times New Roman" })],
     });
 
   // ── Numbered list configs ────────────────────────────────────────
@@ -247,9 +247,9 @@ async function generateDoc(plan) {
     const remLines  = splitLines(g.remarks);
 
     const col0Children = [
-      new Paragraph({ children: [new TextRun({ text: `Goal: ${g.goal || ""}`, bold: true, size: 20 })] }),
+      new Paragraph({ children: [new TextRun({ text: `Goal: ${g.goal || ""}`, bold: true, size: 20, font: "Times New Roman" })] }),
       new Paragraph({ children: [new TextRun({ text: "" })] }),
-      new Paragraph({ children: [new TextRun({ text: "Objectives:", bold: true, size: 20 })] }),
+      new Paragraph({ children: [new TextRun({ text: "Objectives:", bold: true, size: 20, font: "Times New Roman" })] }),
       ...(objLines.length ? objLines.map(o => numP(o, `obj-${gi}`)) : [p("")]),
     ];
 
@@ -286,20 +286,20 @@ async function generateDoc(plan) {
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { before: 0, after: 560 },
-          children: [new TextRun({ text: label, size: 18 })],
+          children: [new TextRun({ text: label, size: 20, font: "Times New Roman" })],
         }),
         // Name with a top border as the signature line
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { before: 0, after: 40 },
           border: { top: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 1 } },
-          children: [new TextRun({ text: name || "", bold: true, size: 20 })],
+          children: [new TextRun({ text: name || "", bold: true, size: 20, font: "Times New Roman" })],
         }),
         // Position/subtitle
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { before: 0, after: 0 },
-          children: [new TextRun({ text: subtitle || "", size: 18 })],
+          children: [new TextRun({ text: subtitle || "", size: 20, font: "Times New Roman" })],
         }),
       ],
     });
@@ -322,66 +322,58 @@ async function generateDoc(plan) {
   // ── Fetch logo ────────────────────────────────────────────────────
   const logoBytes = await fetchLogoBytes();
 
-  // ── Page header — repeats on every page ──────────────────────────
-  // Logo + company name/tagline in a borderless 2-col table, then single red rule
-
-  const logoColW = 900;
-  const textColW = CONTENT_W - logoColW;
-
-  const logoCell = new TableCell({
-    borders: noBorders,
-    width: { size: logoColW, type: WidthType.DXA },
-    verticalAlign: VerticalAlign.CENTER,
-    margins: { top: 0, bottom: 0, left: 0, right: 160 },
-    children: [
-      logoBytes
-        ? new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [new ImageRun({ data: logoBytes, transformation: { width: 55, height: 55 } })],
-          })
-        : new Paragraph(""),
-    ],
-  });
-
-  const nameCell = new TableCell({
-    borders: noBorders,
-    width: { size: textColW, type: WidthType.DXA },
-    verticalAlign: VerticalAlign.CENTER,
-    margins: { top: 0, bottom: 0, left: 0, right: 0 },
-    children: [
-      new Paragraph({
-        spacing: { before: 0, after: 20 },
-        children: [new TextRun({
-          text: "Psy Systems and Innovations, OPC",
-          font: "Matura MT Script Capitals",
-          size: 36,
-          color: "BB0000",
-          bold: true,
-        })],
-      }),
-      new Paragraph({
-        spacing: { before: 0, after: 0 },
-        children: [new TextRun({
-          text: "Your development is our achievement!",
-          font: "Harlow Solid Italic",
-          size: 22,
-          color: "BB0000",
-          italics: true,
-        })],
-      }),
-    ],
-  });
+  // ── Page header — match HTML preview ─────────────────────────────
+  // Logo + company name + tagline all centered, red line below
 
   const letterheadTable = new Table({
     width: { size: CONTENT_W, type: WidthType.DXA },
-    columnWidths: [logoColW, textColW],
+    columnWidths: [CONTENT_W],
     borders: noTableBorders,
-    rows: [new TableRow({ children: [logoCell, nameCell] })],
+    rows: [new TableRow({
+      children: [
+        new TableCell({
+          borders: noBorders,
+          width: { size: CONTENT_W, type: WidthType.DXA },
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 0, bottom: 0, left: 0, right: 0 },
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 0, after: 0 },
+              children: [
+                ...(logoBytes ? [new ImageRun({ data: logoBytes, transformation: { width: 60, height: 60 } })] : []),
+                new TextRun({ text: "  ", size: 50 }),
+                new TextRun({
+                  text: "Psy Systems and Innovations, OPC",
+                  font: "Matura MT Script Capitals",
+                  size: 50,
+                  color: "bb0000",
+                  bold: true,
+                }),
+              ],
+            }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 0, after: 0 },
+              children: [
+                new TextRun({
+                  text: "Your development is our achievement!",
+                  font: "Harlow Solid Italic",
+                  size: 28,
+                  color: "0000bb",
+                  italics: true,
+                }),
+              ],
+            }),
+          ],
+        })
+      ]
+    })],
   });
 
-  // Single red rule paragraph
+  // Single red rule paragraph (thicker, matches HTML)
   const redRule = new Paragraph({
-    border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: "BB0000", space: 1 } },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 16, color: "bb0000", space: 1 } },
     spacing: { before: 60, after: 0 },
     children: [new TextRun({ text: "" })],
   });
@@ -410,28 +402,28 @@ async function generateDoc(plan) {
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { before: 160, after: 0 },
-          children: [new TextRun({ text: plan.plan_title || "Strategic Plan 2026", bold: true, size: 28 })],
+          children: [new TextRun({ text: plan.plan_title || "Strategic Plan 2026", bold: true, size: 20, font: "Times New Roman" })],
         }),
         // Department
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { before: 0, after: 200 },
-          children: [new TextRun({ text: plan.department || "", size: 24 })],
+          children: [new TextRun({ text: plan.department || "", size: 20, font: "Times New Roman" })],
         }),
         // Vision
         new Paragraph({
           spacing: { before: 0, after: 80 },
           children: [
-            new TextRun({ text: "Vision: ", bold: true, size: 22 }),
-            new TextRun({ text: plan.vision || "", size: 22 }),
+            new TextRun({ text: "Vision: ", bold: true, size: 20, font: "Times New Roman" }),
+            new TextRun({ text: plan.vision || "", size: 20, font: "Times New Roman" }),
           ],
         }),
         // Mission
         new Paragraph({
           spacing: { before: 0, after: 200 },
           children: [
-            new TextRun({ text: "Mission: ", bold: true, size: 22 }),
-            new TextRun({ text: plan.mission || "", size: 22 }),
+            new TextRun({ text: "Mission: ", bold: true, size: 20, font: "Times New Roman" }),
+            new TextRun({ text: plan.mission || "", size: 20, font: "Times New Roman" }),
           ],
         }),
         // Main table
@@ -485,7 +477,7 @@ const taglineStyle = {
   fontSize: 14,
   fontFamily: "'Harlow Solid Italic', 'Dancing Script', cursive",
   fontStyle: "italic",
-  color: "#bb0000",
+  color: "#0000bb",
 };
 
 const titleStyle = {
