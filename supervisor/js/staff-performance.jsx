@@ -1,4 +1,5 @@
 /* ---------------- Staff Performance ---------------- */
+
 function StaffPerformance() {
     const [staffs, setStaffs] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
@@ -8,10 +9,63 @@ function StaffPerformance() {
         if (Array.isArray(payload)) return payload;
 
         for (const key of keys) {
-            if (Array.isArray(payload?.[key])) return payload[key];
+            if (Array.isArray(payload?.[key])) {
+                return payload[key];
+            }
         }
 
         return [];
+    }
+
+    function toNumber(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : 0;
+    }
+
+    function getTotalTasks(staff) {
+        const givenTotal = toNumber(staff.total);
+
+        const calculatedTotal =
+            toNumber(staff.completed) +
+            toNumber(staff.ongoing) +
+            toNumber(staff.overdue);
+
+        return givenTotal > 0 ? givenTotal : calculatedTotal;
+    }
+
+    function getPerformancePercentage(staff) {
+        const total = getTotalTasks(staff);
+        const completed = toNumber(staff.completed);
+
+        if (total <= 0) return 0;
+
+        const percentage = Math.round((completed / total) * 100);
+
+        return Math.min(100, Math.max(0, percentage));
+    }
+
+    function getInitials(name) {
+        if (!name) return "?";
+
+        return name
+            .trim()
+            .split(/\s+/)
+            .map((word) => word.charAt(0))
+            .join("")
+            .substring(0, 2)
+            .toUpperCase();
+    }
+
+    function getAvatarSource(staff) {
+        return (
+            staff.avatar ||
+            staff.image ||
+            staff.photo ||
+            staff.profile_image ||
+            staff.profileImage ||
+            staff.avatar_url ||
+            ""
+        );
     }
 
     React.useEffect(() => {
@@ -21,19 +75,21 @@ function StaffPerformance() {
                 setError("");
 
                 const res = await fetch("php/get_staff_performance.php", {
-                    headers: { Accept: "application/json" }
+                    headers: {
+                        Accept: "application/json"
+                    }
                 });
 
-                const json = await res.json().catch(() => []);
+                if (!res.ok) {
+                    throw new Error("Failed to load staff performance.");
+                }
+
+                const json = await res.json();
                 const safeStaffs = extractArray(json, ["staffs", "data", "results"]);
 
                 setStaffs(safeStaffs);
-
-                if (!res.ok) {
-                    setError("Failed to load staff performance.");
-                }
             } catch (err) {
-                console.error("Failed to load staff performance", err);
+                console.error("Failed to load staff performance:", err);
                 setStaffs([]);
                 setError("Failed to load staff performance.");
             } finally {
@@ -45,68 +101,109 @@ function StaffPerformance() {
     }, []);
 
     return (
-        <>
+        <section className="staff-performance-page">
+            <div className="staff-performance-title-wrap">
+                <h3>Staff Performance</h3>
+            </div>
+
             {error && (
-                <div className="alert alert-warning" role="alert">
-                    {error}
+                <div className="staff-performance-alert" role="alert">
+                    <i className="bi bi-exclamation-triangle-fill"></i>
+                    <span>{error}</span>
                 </div>
             )}
 
-            <div className="card p-3" style={{ borderColor: "#ffb366" }}>
-                <h5>Staff Performance</h5>
+            <div className="staff-performance-table-card">
+                {loading ? (
+                    <div className="staff-performance-state">
+                        Loading staff performance...
+                    </div>
+                ) : staffs.length === 0 ? (
+                    <div className="staff-performance-state text-danger">
+                        No staff found.
+                    </div>
+                ) : (
+                    <div className="staff-performance-table-scroll">
+                        <table className="staff-performance-table">
+                            <thead>
+                                <tr>
+                                    <th>Staff member</th>
+                                    <th>Total Tasks</th>
+                                    <th>Completed</th>
+                                    <th>Ongoing</th>
+                                    <th>Overdue</th>
+                                    <th>Performance</th>
+                                </tr>
+                            </thead>
 
-                <div
-                    style={{
-                        minHeight: "300px",
-                        background: "#fff3e0",
-                        borderRadius: "8px",
-                        padding: "20px"
-                    }}
-                >
-                    {loading ? (
-                        <div className="text-center text-warning">
-                            Loading staff performance...
-                        </div>
-                    ) : staffs.length === 0 ? (
-                        <div className="text-center text-danger">
-                            No staff found.
-                        </div>
-                    ) : (
-                        <div className="table-responsive">
-                            <table className="table table-hover align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Total Tasks</th>
-                                        <th>Completed</th>
-                                        <th>Ongoing</th>
-                                        <th>Overdue</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {staffs.map((s) => (
+                            <tbody>
+                                {staffs.map((staff, index) => {
+                                    const avatarSource = getAvatarSource(staff);
+                                    const total = getTotalTasks(staff);
+                                    const completed = toNumber(staff.completed);
+                                    const ongoing = toNumber(staff.ongoing);
+                                    const overdue = toNumber(staff.overdue);
+                                    const performance = getPerformancePercentage(staff);
+
+                                    return (
                                         <tr
-                                            key={s.id || s.email || s.name}
-                                            className={(s.overdue || 0) > 0 ? "overdue" : ""}
+                                            key={staff.id || staff.email || `${staff.name || "staff"}-${index}`}
+                                            className={overdue > 0 ? "staff-row-overdue" : ""}
                                         >
-                                            <td>{s.name || "-"}</td>
-                                            <td>{s.total ?? 0}</td>
-                                            <td>{s.completed ?? 0}</td>
-                                            <td>{s.ongoing ?? 0}</td>
-                                            <td>{s.overdue ?? 0}</td>
+
+                                            <td>
+                                                <div className="staff-member">
+                                                    {avatarSource ? (
+                                                        <img
+                                                            src={avatarSource}
+                                                            alt={staff.name || "Staff"}
+                                                            className="staff-avatar"
+                                                        />
+                                                    ) : (
+                                                        <div className="staff-avatar staff-avatar-fallback">
+                                                            {getInitials(staff.name)}
+                                                        </div>
+                                                    )}
+
+                                                    <span className="staff-name">
+                                                        {staff.name || "-"}
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            <td>{total}</td>
+                                            <td>{completed}</td>
+                                            <td>{ongoing}</td>
+                                            <td>{overdue}</td>
+
+                                            <td>
+                                                <div className="staff-performance-bar-wrap">
+                                                    <div className="staff-performance-track">
+                                                        <div
+                                                            className="staff-performance-fill"
+                                                            style={{ width: `${performance}%` }}
+                                                        ></div>
+                                                    </div>
+
+                                                    <span className="staff-performance-percent">
+                                                        {performance}%
+                                                    </span>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
-        </>
+        </section>
     );
 }
 
-/* ---------------- Render the Staff Performance ---------------- */
+/* ---------------- Render Staff Performance ---------------- */
+
 const staffPerformanceRoot = document.getElementById("staff-performance-root");
 
 if (staffPerformanceRoot) {
