@@ -1973,3 +1973,338 @@
         font-size: 12px;
     }
 }
+
+/* =========================================================
+   Annual Report - Custom Department Dropdown + Final Compact Toolbar
+   Keeps all report contents intact; replaces native select styling.
+========================================================= */
+
+#annualReportRoot .ar-toolbar-card,
+#annualReportRoot .ar-toolbar-card.dr-card,
+#annualReportRoot .dr-page-intro-card.ar-toolbar-card {
+    margin-bottom: 14px !important;
+    padding: 0 2px 6px !important;
+    border: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#annualReportRoot .ar-toolbar-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 14px !important;
+    flex-wrap: nowrap !important;
+    margin-bottom: 0 !important;
+}
+
+#annualReportRoot .ar-toolbar-row > div:first-child {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+}
+
+#annualReportRoot .ar-toolbar-card .dr-card-title {
+    font-size: 1.85rem !important;
+    font-weight: 950 !important;
+    letter-spacing: -0.04em !important;
+    line-height: 1.05 !important;
+}
+
+#annualReportRoot .ar-toolbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+}
+
+#annualReportRoot .ar-period-nav {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 7px !important;
+    flex-wrap: nowrap !important;
+}
+
+#annualReportRoot .ar-period-nav .dr-ghost-btn,
+#annualReportRoot .ar-period-label,
+#annualReportRoot .ar-dept-trigger,
+#annualReportRoot .ar-period-nav .dr-filter-pill {
+    height: 36px !important;
+    border-radius: 13px !important;
+}
+
+#annualReportRoot .ar-period-nav .dr-ghost-btn,
+#annualReportRoot .ar-period-nav .dr-filter-pill {
+    min-width: auto !important;
+    padding: 0 11px !important;
+    font-size: 12px !important;
+    font-weight: 850 !important;
+    gap: 5px !important;
+}
+
+#annualReportRoot .ar-period-label {
+    min-width: 86px !important;
+    padding: 0 13px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid var(--dr-border) !important;
+    background: var(--dr-card) !important;
+    color: var(--dr-text) !important;
+    box-shadow: var(--dr-shadow-xs) !important;
+    font-size: 12.5px !important;
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+}
+
+#annualReportRoot .ar-select-shell,
+#annualReportRoot .dr-search-box--select.ar-select-shell {
+    display: none !important;
+}
+
+#annualReportRoot .ar-dept-dropdown {
+    position: relative !important;
+    display: inline-flex !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    font-family: "Nunito", sans-serif !important;
+}
+
+#annualReportRoot .ar-dept-trigger {
+    min-width: 0 !important;
+    width: auto !important;
+    padding: 0 10px !important;
+    border: 1px solid #dde5f0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    font-family: "Nunito", sans-serif !important;
+    font-size: 12.5px !important;
+    font-weight: 850 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease !important;
+}
+
+#annualReportRoot .ar-dept-trigger:hover,
+#annualReportRoot .ar-dept-trigger.is-open {
+    border-color: #d7e0ee !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07) !important;
+}
+
+#annualReportRoot .ar-dept-trigger:focus {
+    outline: none !important;
+}
+
+#annualReportRoot .ar-dept-trigger:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14),
+        0 4px 14px rgba(15, 23, 42, 0.07) !important;
+}
+
+#annualReportRoot .ar-dept-trigger-left {
+    min-width: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+}
+
+#annualReportRoot .ar-dept-trigger-left i {
+    color: #0f172a !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+}
+
+#annualReportRoot .ar-dept-trigger-left span {
+    white-space: nowrap !important;
+}
+
+#annualReportRoot .ar-dept-chevron {
+    margin-left: 0 !important;
+    color: #97a3b7 !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+    transition: transform 0.18s ease !important;
+}
+
+#annualReportRoot .ar-dept-trigger.is-open .ar-dept-chevron {
+    transform: rotate(180deg) !important;
+}
+
+#annualReportRoot .ar-dept-menu {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    right: 0 !important;
+    left: auto !important;
+    z-index: 5000 !important;
+    width: 210px !important;
+    min-width: 210px !important;
+    max-width: 210px !important;
+    padding: 6px !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12) !important;
+    overflow: hidden !important;
+}
+
+#annualReportRoot .ar-dept-option {
+    width: 100% !important;
+    height: 34px !important;
+    padding: 0 11px !important;
+    border: none !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    color: #2f343d !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    font-family: "Nunito", sans-serif !important;
+    font-size: 12.5px !important;
+    font-weight: 650 !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    transition: background 0.14s ease, color 0.14s ease !important;
+}
+
+#annualReportRoot .ar-dept-option + .ar-dept-option {
+    margin-top: 1px !important;
+}
+
+#annualReportRoot .ar-dept-option:hover,
+#annualReportRoot .ar-dept-option:focus-visible {
+    outline: none !important;
+    background: #f3f6fa !important;
+    color: #111827 !important;
+}
+
+#annualReportRoot .ar-dept-option.is-selected {
+    background: #f7f9fc !important;
+    color: #111827 !important;
+    font-weight: 750 !important;
+}
+
+[data-theme="dark"] #annualReportRoot .ar-dept-trigger {
+    background: var(--dr-card) !important;
+    border-color: var(--dr-border) !important;
+    color: var(--dr-text) !important;
+}
+
+[data-theme="dark"] #annualReportRoot .ar-dept-trigger-left i {
+    color: var(--dr-text) !important;
+}
+
+[data-theme="dark"] #annualReportRoot .ar-dept-menu {
+    background: #141f33 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.42) !important;
+}
+
+[data-theme="dark"] #annualReportRoot .ar-dept-option {
+    color: #dbe5f1 !important;
+}
+
+[data-theme="dark"] #annualReportRoot .ar-dept-option:hover,
+[data-theme="dark"] #annualReportRoot .ar-dept-option:focus-visible,
+[data-theme="dark"] #annualReportRoot .ar-dept-option.is-selected {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #f8fafc !important;
+}
+
+@media (max-width: 1200px) {
+    #annualReportRoot .ar-toolbar-row {
+        flex-wrap: wrap !important;
+    }
+
+    #annualReportRoot .ar-toolbar-actions {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+        margin-left: 0 !important;
+    }
+
+    #annualReportRoot .ar-period-nav {
+        flex-wrap: wrap !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #annualReportRoot .ar-toolbar-card .dr-card-title {
+        font-size: 1.55rem !important;
+    }
+
+    #annualReportRoot .ar-toolbar-actions {
+        display: grid !important;
+        grid-template-columns: minmax(74px, 0.72fr) minmax(0, 1.28fr) !important;
+        gap: 8px !important;
+        width: 100% !important;
+        align-items: stretch !important;
+    }
+
+    #annualReportRoot .ar-period-nav {
+        display: contents !important;
+    }
+
+    #annualReportRoot .ar-period-nav .dr-ghost-btn,
+    #annualReportRoot .ar-period-label,
+    #annualReportRoot .ar-dept-dropdown,
+    #annualReportRoot .ar-dept-trigger,
+    #annualReportRoot .ar-period-nav .dr-filter-pill {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    #annualReportRoot .ar-period-label {
+        padding: 0 10px !important;
+        font-size: 12px !important;
+    }
+
+    #annualReportRoot .ar-dept-dropdown {
+        grid-column: 2 !important;
+    }
+
+    #annualReportRoot .ar-dept-trigger {
+        justify-content: space-between !important;
+    }
+
+    #annualReportRoot .ar-dept-trigger-left {
+        overflow: hidden !important;
+    }
+
+    #annualReportRoot .ar-dept-trigger-left span {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    #annualReportRoot .ar-dept-menu {
+        right: 0 !important;
+        left: auto !important;
+        width: min(210px, calc(100vw - 28px)) !important;
+        min-width: min(210px, calc(100vw - 28px)) !important;
+        max-width: min(210px, calc(100vw - 28px)) !important;
+    }
+}
+
+@media (max-width: 430px) {
+    #annualReportRoot .ar-toolbar-actions {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    #annualReportRoot .ar-period-nav .dr-filter-pill {
+        grid-column: 1 / -1 !important;
+    }
+}
+

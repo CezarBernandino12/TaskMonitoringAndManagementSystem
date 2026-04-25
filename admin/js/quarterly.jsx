@@ -1206,7 +1206,9 @@ function QuarterlyReportPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [themeMode, setThemeMode] = useState(getThemeMode());
+    const [deptOpen, setDeptOpen] = useState(false);
 
+    const deptDropdownRef = useRef(null);
     const deptChartRef = useRef(null);
     const monthlyChartRef = useRef(null);
     const donutChartRef = useRef(null);
@@ -1271,6 +1273,31 @@ function QuarterlyReportPage() {
         });
 
         return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (
+                deptDropdownRef.current &&
+                !deptDropdownRef.current.contains(e.target)
+            ) {
+                setDeptOpen(false);
+            }
+        }
+
+        function handleEscape(e) {
+            if (e.key === "Escape") {
+                setDeptOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+        window.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            window.removeEventListener("keydown", handleEscape);
+        };
     }, []);
 
     const departmentFilterLabel = useMemo(() => {
@@ -1730,24 +1757,64 @@ function QuarterlyReportPage() {
                             ) : null}
                         </div>
 
-                        <div className="dr-search-box dr-search-box--select qr-select-shell">
-                            <i className="bi bi-buildings"></i>
-                            <select
-                                className="dr-select"
-                                value={departmentFilter}
-                                onChange={(e) => {
-                                    setDepartmentFilter(e.target.value);
-                                    setSelectedDept(null);
-                                }}
+                        <div className="qr-dept-dropdown" ref={deptDropdownRef}>
+                            <button
+                                type="button"
+                                className={`qr-dept-trigger ${deptOpen ? "is-open" : ""}`}
+                                onClick={() => setDeptOpen((prev) => !prev)}
+                                aria-haspopup="listbox"
+                                aria-expanded={deptOpen}
                             >
-                                <option value="all">All Departments</option>
-                                {allDepartments.map((dep) => (
-                                    <option key={dep.id} value={dep.id}>
-                                        {dep.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <i className="bi bi-chevron-down dr-select-chevron"></i>
+                                <span className="qr-dept-trigger-left">
+                                    <i className="bi bi-buildings"></i>
+                                    <span>{departmentFilterLabel}</span>
+                                </span>
+
+                                <i className="bi bi-chevron-down qr-dept-chevron"></i>
+                            </button>
+
+                            {deptOpen ? (
+                                <div className="qr-dept-menu" role="listbox">
+                                    <button
+                                        type="button"
+                                        className={`qr-dept-option ${
+                                            departmentFilter === "all" ? "is-selected" : ""
+                                        }`}
+                                        onClick={() => {
+                                            setDepartmentFilter("all");
+                                            setSelectedDept(null);
+                                            setDeptOpen(false);
+                                        }}
+                                        role="option"
+                                        aria-selected={departmentFilter === "all"}
+                                    >
+                                        All Departments
+                                    </button>
+
+                                    {allDepartments.map((dep) => (
+                                        <button
+                                            key={dep.id}
+                                            type="button"
+                                            className={`qr-dept-option ${
+                                                String(departmentFilter) === String(dep.id)
+                                                    ? "is-selected"
+                                                    : ""
+                                            }`}
+                                            onClick={() => {
+                                                setDepartmentFilter(String(dep.id));
+                                                setSelectedDept(null);
+                                                setDeptOpen(false);
+                                            }}
+                                            role="option"
+                                            aria-selected={
+                                                String(departmentFilter) === String(dep.id)
+                                            }
+                                        >
+                                            {dep.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>

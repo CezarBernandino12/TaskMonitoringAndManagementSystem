@@ -2008,3 +2008,228 @@
         padding: 0 8px;
     }
 }
+
+/* =========================================================
+   SAME UI DESIGN FINAL OVERRIDES
+   Compact annual toolbar + responsive alignment
+========================================================= */
+
+.ar-page {
+    padding: 14px 14px 20px;
+}
+
+.ar-page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 0 2px 6px;
+}
+
+.ar-page-head > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.ar-page-title {
+    margin: 0;
+    color: var(--ar-text);
+    font-size: 1.45rem;
+    font-weight: 950;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
+}
+
+.ar-year-nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    margin-left: auto;
+}
+
+.ar-year-nav .ar-ghost-btn,
+.ar-year-nav .ar-filter-pill,
+.ar-year-range {
+    height: 36px;
+    border-radius: 13px;
+    border: 1px solid var(--ar-border);
+    background: var(--ar-card);
+    color: var(--ar-text);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    line-height: 1;
+}
+
+.ar-year-nav .ar-ghost-btn {
+    padding: 0 11px;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ar-year-nav .ar-filter-pill {
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ar-muted);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.ar-year-range {
+    min-width: 78px;
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ar-text);
+    font-size: 12.5px;
+    font-weight: 900;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.ar-year-nav .ar-ghost-btn:hover,
+.ar-year-nav .ar-filter-pill:hover {
+    transform: none;
+    border-color: #d7e0ee;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
+}
+
+.ar-year-nav .ar-ghost-btn:disabled {
+    opacity: 0.52;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.ar-year-nav .ar-ghost-btn:focus-visible,
+.ar-year-nav .ar-filter-pill:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.14),
+        0 4px 14px rgba(15, 23, 42, 0.07);
+}
+
+.ar-card {
+    border-radius: 20px;
+}
+
+.ar-card-head {
+    gap: 12px;
+}
+
+.ar-card-title {
+    font-weight: 950;
+}
+
+.ar-card-subtitle {
+    font-weight: 750;
+}
+
+/* keep annual controls compact but balanced with report cards */
+.ar-summary-grid {
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.ar-mid-grid,
+.ar-bottom-grid {
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+/* Dark mode polish for the compact annual toolbar */
+[data-theme="dark"] .ar-year-nav .ar-ghost-btn,
+[data-theme="dark"] .ar-year-nav .ar-filter-pill,
+[data-theme="dark"] .ar-year-range {
+    background: var(--ar-card);
+    border-color: var(--ar-border);
+    color: var(--ar-text);
+}
+
+[data-theme="dark"] .ar-year-nav .ar-filter-pill {
+    color: var(--ar-muted);
+}
+
+[data-theme="dark"] .ar-year-nav .ar-ghost-btn:hover,
+[data-theme="dark"] .ar-year-nav .ar-filter-pill:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: none;
+}
+
+/* Responsive header orientation */
+@media (max-width: 1200px) {
+    .ar-page-head {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .ar-year-nav {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 767px) {
+    .ar-page {
+        padding: 14px;
+    }
+
+    .ar-page-head {
+        align-items: stretch;
+        margin-bottom: 12px;
+        padding: 0;
+    }
+
+    .ar-page-title {
+        font-size: 1.35rem;
+    }
+
+    .ar-year-nav {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 8px;
+        width: 100%;
+    }
+
+    .ar-year-nav .ar-ghost-btn,
+    .ar-year-nav .ar-filter-pill,
+    .ar-year-range {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+    }
+
+    .ar-card {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .ar-line-chart,
+    .ar-grouped-chart,
+    .ar-quarter-chart {
+        height: 290px;
+    }
+}
+
+@media (max-width: 420px) {
+    .ar-year-nav {
+        grid-template-columns: 1fr;
+    }
+
+    .ar-year-nav .ar-ghost-btn,
+    .ar-year-nav .ar-filter-pill,
+    .ar-year-range {
+        height: 35px;
+    }
+}
+

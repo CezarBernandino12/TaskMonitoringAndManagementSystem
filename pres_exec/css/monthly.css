@@ -1998,3 +1998,384 @@
         font-size: 12px;
     }
 }
+
+/* =========================================================
+   SAME UI UPDATE: compact monthly toolbar + custom dropdown
+========================================================= */
+
+#monthlyReportRoot .mr-toolbar-card,
+#monthlyReportRoot .mr-toolbar-card.dr-card {
+    margin-bottom: 10px !important;
+    padding: 0 2px 6px !important;
+    border: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#monthlyReportRoot .mr-toolbar-row {
+    align-items: center !important;
+    gap: 12px !important;
+    margin-bottom: 0 !important;
+}
+
+#monthlyReportRoot .mr-toolbar-row > div:first-child {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+}
+
+#monthlyReportRoot .mr-toolbar-row > div:first-child .dr-card-title {
+    font-size: 1.45rem !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.035em !important;
+    line-height: 1.1 !important;
+}
+
+#monthlyReportRoot .mr-toolbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+    margin-left: auto !important;
+}
+
+#monthlyReportRoot .mr-period-nav {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 7px !important;
+    flex-wrap: nowrap !important;
+}
+
+#monthlyReportRoot .mr-period-nav .dr-ghost-btn,
+#monthlyReportRoot .mr-period-nav .dr-filter-pill,
+#monthlyReportRoot .mr-period-label,
+#monthlyReportRoot .mr-dept-trigger {
+    height: 36px !important;
+    min-height: 36px !important;
+    border-radius: 13px !important;
+    border: 1px solid var(--dr-border) !important;
+    background: var(--dr-card) !important;
+    color: var(--dr-text) !important;
+    box-shadow: var(--dr-shadow-xs) !important;
+}
+
+#monthlyReportRoot .mr-period-nav .dr-ghost-btn,
+#monthlyReportRoot .mr-period-nav .dr-filter-pill {
+    padding: 0 11px !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    gap: 5px !important;
+}
+
+#monthlyReportRoot .mr-period-label {
+    min-width: 146px !important;
+    padding: 0 13px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12.5px !important;
+    font-weight: 850 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+}
+
+#monthlyReportRoot .mr-dept-dropdown {
+    position: relative !important;
+    display: inline-flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    z-index: 60 !important;
+}
+
+#monthlyReportRoot .mr-dept-trigger {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 260px !important;
+    padding: 0 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 9px !important;
+    font-family: "Nunito", sans-serif !important;
+    font-size: 12.5px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    transition: background 0.16s ease, border-color 0.16s ease,
+        box-shadow 0.16s ease, transform 0.16s ease !important;
+}
+
+#monthlyReportRoot .mr-dept-trigger:hover,
+#monthlyReportRoot .mr-dept-trigger.is-open {
+    transform: none !important;
+    border-color: var(--dr-border-strong) !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07) !important;
+}
+
+#monthlyReportRoot .mr-dept-trigger:focus {
+    outline: none !important;
+}
+
+#monthlyReportRoot .mr-dept-trigger:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14),
+        0 4px 14px rgba(15, 23, 42, 0.07) !important;
+}
+
+#monthlyReportRoot .mr-dept-trigger-left {
+    min-width: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+}
+
+#monthlyReportRoot .mr-dept-trigger-left i {
+    flex: 0 0 auto !important;
+    color: var(--dr-muted) !important;
+    font-size: 13px !important;
+}
+
+#monthlyReportRoot .mr-dept-trigger-left span {
+    display: block !important;
+    min-width: 0 !important;
+    max-width: 190px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#monthlyReportRoot .mr-dept-chevron {
+    flex: 0 0 auto !important;
+    margin-left: 2px !important;
+    color: var(--dr-subtle) !important;
+    font-size: 9px !important;
+    transition: transform 0.16s ease !important;
+}
+
+#monthlyReportRoot .mr-dept-trigger.is-open .mr-dept-chevron {
+    transform: rotate(180deg) !important;
+}
+
+#monthlyReportRoot .mr-dept-menu {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    right: 0 !important;
+    left: auto !important;
+    z-index: 5000 !important;
+
+    width: max(100%, 218px) !important;
+    min-width: 218px !important;
+    max-width: 270px !important;
+
+    padding: 6px !important;
+    border: 1px solid rgba(226, 232, 240, 0.92) !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12) !important;
+    overflow: hidden !important;
+}
+
+#monthlyReportRoot .mr-dept-option {
+    width: 100% !important;
+    height: 34px !important;
+    padding: 0 11px !important;
+    border: none !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    color: #2f343d !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+
+    font-family: "Nunito", sans-serif !important;
+    font-size: 12.5px !important;
+    font-weight: 650 !important;
+    line-height: 1 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+
+    transition: background 0.14s ease, color 0.14s ease !important;
+}
+
+#monthlyReportRoot .mr-dept-option + .mr-dept-option {
+    margin-top: 1px !important;
+}
+
+#monthlyReportRoot .mr-dept-option:hover,
+#monthlyReportRoot .mr-dept-option:focus-visible {
+    outline: none !important;
+    background: #f3f6fa !important;
+    color: #111827 !important;
+}
+
+#monthlyReportRoot .mr-dept-option.is-selected {
+    background: #f7f9fc !important;
+    color: #111827 !important;
+    font-weight: 750 !important;
+}
+
+#monthlyReportRoot .mr-dept-option.is-selected:hover,
+#monthlyReportRoot .mr-dept-option.is-selected:focus-visible {
+    background: #f1f5f9 !important;
+}
+
+/* Keep old select styles harmless if any old markup remains elsewhere */
+#monthlyReportRoot .mr-select-shell {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}
+
+/* Dark mode for the custom dropdown */
+[data-theme="dark"] #monthlyReportRoot .mr-dept-trigger {
+    background: var(--dr-card) !important;
+    border-color: var(--dr-border) !important;
+    color: var(--dr-text) !important;
+    box-shadow: var(--dr-shadow-xs) !important;
+}
+
+[data-theme="dark"] #monthlyReportRoot .mr-dept-trigger:hover,
+[data-theme="dark"] #monthlyReportRoot .mr-dept-trigger.is-open {
+    border-color: var(--dr-border-strong) !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24) !important;
+}
+
+[data-theme="dark"] #monthlyReportRoot .mr-dept-menu {
+    background: #111827 !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34) !important;
+}
+
+[data-theme="dark"] #monthlyReportRoot .mr-dept-option {
+    color: #dbe5f1 !important;
+}
+
+[data-theme="dark"] #monthlyReportRoot .mr-dept-option:hover,
+[data-theme="dark"] #monthlyReportRoot .mr-dept-option:focus-visible {
+    background: rgba(255, 255, 255, 0.07) !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] #monthlyReportRoot .mr-dept-option.is-selected {
+    background: rgba(37, 99, 235, 0.16) !important;
+    color: #f8fafc !important;
+}
+
+/* Responsive toolbar orientation */
+@media (max-width: 1200px) {
+    #monthlyReportRoot .mr-toolbar-row {
+        align-items: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+
+    #monthlyReportRoot .mr-toolbar-actions {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+        margin-left: 0 !important;
+    }
+
+    #monthlyReportRoot .mr-period-nav {
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #monthlyReportRoot .mr-toolbar-card,
+    #monthlyReportRoot .mr-toolbar-card.dr-card {
+        padding: 0 0 6px !important;
+    }
+
+    #monthlyReportRoot .mr-toolbar-row {
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    #monthlyReportRoot .mr-toolbar-actions {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+
+    #monthlyReportRoot .mr-period-nav {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: auto minmax(0, 1fr) auto !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+
+    #monthlyReportRoot .mr-period-nav .dr-ghost-btn {
+        width: auto !important;
+        min-width: 72px !important;
+    }
+
+    #monthlyReportRoot .mr-period-nav .dr-filter-pill {
+        grid-column: 1 / -1 !important;
+        width: max-content !important;
+        max-width: 100% !important;
+    }
+
+    #monthlyReportRoot .mr-period-label {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    #monthlyReportRoot .mr-dept-dropdown {
+        width: 100% !important;
+    }
+
+    #monthlyReportRoot .mr-dept-trigger {
+        width: 100% !important;
+        max-width: none !important;
+        justify-content: space-between !important;
+    }
+
+    #monthlyReportRoot .mr-dept-trigger-left span {
+        max-width: none !important;
+    }
+
+    #monthlyReportRoot .mr-dept-menu {
+        right: 0 !important;
+        left: auto !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #monthlyReportRoot .mr-toolbar-row > div:first-child .dr-card-title {
+        font-size: 1.28rem !important;
+    }
+
+    #monthlyReportRoot .mr-period-nav {
+        grid-template-columns: 1fr 1.35fr 1fr !important;
+    }
+
+    #monthlyReportRoot .mr-period-nav .dr-ghost-btn,
+    #monthlyReportRoot .mr-period-label,
+    #monthlyReportRoot .mr-dept-trigger {
+        height: 35px !important;
+        min-height: 35px !important;
+        font-size: 12px !important;
+    }
+
+    #monthlyReportRoot .mr-period-nav .dr-ghost-btn {
+        min-width: 0 !important;
+        padding: 0 9px !important;
+    }
+
+    #monthlyReportRoot .mr-period-label {
+        padding: 0 9px !important;
+        font-size: 12px !important;
+    }
+}
+

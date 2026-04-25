@@ -961,7 +961,7 @@ function SupervisorWeeklyReportPage() {
                     </button>
 
                     {weekOffset !== 0 && (
-                        <button className="wr-ghost-btn wr-ghost-btn--primary" onClick={() => setWeekOffset(0)}>
+                        <button className="wr-ghost-btn" onClick={() => setWeekOffset(0)}>
                             This Week
                         </button>
                     )}

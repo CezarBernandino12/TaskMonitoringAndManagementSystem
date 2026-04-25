@@ -1313,7 +1313,7 @@ function AnnualReportPage() {
                 </div>
 
                 <div className="ar-year-nav">
-                    <button className="ar-ghost-btn" onClick={goToPrevYear}>
+                    <button type="button" className="ar-ghost-btn" onClick={goToPrevYear}>
                         <i className="bi bi-chevron-left"></i>
                         Prev
                     </button>
@@ -1321,6 +1321,7 @@ function AnnualReportPage() {
                     <div className="ar-year-range">{year}</div>
 
                     <button
+                        type="button"
                         className="ar-ghost-btn"
                         onClick={goToNextYear}
                         disabled={isCurrentYear}
@@ -1330,7 +1331,7 @@ function AnnualReportPage() {
                     </button>
 
                     {!isCurrentYear && (
-                        <button className="ar-ghost-btn ar-ghost-btn--primary" onClick={goToCurrentYear}>
+                        <button type="button" className="ar-filter-pill ar-filter-pill--button" onClick={goToCurrentYear}>
                             This Year
                         </button>
                     )}

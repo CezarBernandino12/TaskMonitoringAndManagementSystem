@@ -1181,7 +1181,9 @@ function MonthlyReportPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [themeMode, setThemeMode] = useState(getThemeMode());
+    const [deptOpen, setDeptOpen] = useState(false);
 
+    const deptDropdownRef = useRef(null);
     const deptChartRef = useRef(null);
     const trendChartRef = useRef(null);
     const employeeChartRef = useRef(null);
@@ -1247,6 +1249,31 @@ function MonthlyReportPage() {
         const found = allDepartments.find((dep) => String(dep.id) === String(departmentFilter));
         return found?.name || "Selected Department";
     }, [departmentFilter, allDepartments]);
+
+    useEffect(() => {
+        function handleOutsideClick(event) {
+            if (
+                deptDropdownRef.current &&
+                !deptDropdownRef.current.contains(event.target)
+            ) {
+                setDeptOpen(false);
+            }
+        }
+
+        function handleDropdownEscape(event) {
+            if (event.key === "Escape") {
+                setDeptOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleOutsideClick);
+        document.addEventListener("keydown", handleDropdownEscape);
+
+        return () => {
+            document.removeEventListener("mousedown", handleOutsideClick);
+            document.removeEventListener("keydown", handleDropdownEscape);
+        };
+    }, []);
 
     const departmentRows = useMemo(
         () =>
@@ -1593,24 +1620,66 @@ function MonthlyReportPage() {
                             ) : null}
                         </div>
 
-                        <div className="dr-search-box dr-search-box--select mr-select-shell">
-                            <i className="bi bi-buildings"></i>
-                            <select
-                                className="dr-select"
-                                value={departmentFilter}
-                                onChange={(e) => {
-                                    setDepartmentFilter(e.target.value);
-                                    setSelectedDept(null);
-                                }}
+                        <div className="mr-dept-dropdown" ref={deptDropdownRef}>
+                            <button
+                                type="button"
+                                className={`mr-dept-trigger ${deptOpen ? "is-open" : ""}`}
+                                onClick={() => setDeptOpen((open) => !open)}
+                                aria-haspopup="listbox"
+                                aria-expanded={deptOpen}
+                                aria-label="Filter by department"
                             >
-                                <option value="all">All Departments</option>
-                                {allDepartments.map((dep) => (
-                                    <option key={dep.id} value={dep.id}>
-                                        {dep.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <i className="bi bi-chevron-down dr-select-chevron"></i>
+                                <span className="mr-dept-trigger-left">
+                                    <i className="bi bi-buildings"></i>
+                                    <span>{departmentFilterLabel}</span>
+                                </span>
+                                <i className="bi bi-chevron-down mr-dept-chevron"></i>
+                            </button>
+
+                            {deptOpen ? (
+                                <div
+                                    className="mr-dept-menu"
+                                    role="listbox"
+                                    aria-label="Department filter"
+                                >
+                                    <button
+                                        type="button"
+                                        role="option"
+                                        aria-selected={departmentFilter === "all"}
+                                        className={`mr-dept-option ${
+                                            departmentFilter === "all" ? "is-selected" : ""
+                                        }`}
+                                        onClick={() => {
+                                            setDepartmentFilter("all");
+                                            setSelectedDept(null);
+                                            setDeptOpen(false);
+                                        }}
+                                    >
+                                        All Departments
+                                    </button>
+
+                                    {allDepartments.map((dep) => (
+                                        <button
+                                            key={dep.id}
+                                            type="button"
+                                            role="option"
+                                            aria-selected={String(departmentFilter) === String(dep.id)}
+                                            className={`mr-dept-option ${
+                                                String(departmentFilter) === String(dep.id)
+                                                    ? "is-selected"
+                                                    : ""
+                                            }`}
+                                            onClick={() => {
+                                                setDepartmentFilter(dep.id);
+                                                setSelectedDept(null);
+                                                setDeptOpen(false);
+                                            }}
+                                        >
+                                            {dep.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>

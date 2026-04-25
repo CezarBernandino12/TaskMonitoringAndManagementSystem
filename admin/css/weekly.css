@@ -69,7 +69,7 @@
 ========================================================= */
 
 .dr-page {
-    padding: 14px 14px 20px;
+    padding: 10px 12px 18px;
     color: var(--dr-text);
     font-family: "Nunito", sans-serif;
 }
@@ -171,25 +171,22 @@
     outline-offset: 2px;
 }
 
-/* =========================================================
-   Header / toolbar
-========================================================= */
-
-
-.wr-toolbar-card {
-    margin-bottom: 18px;
-    padding: 0 6px;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+.wr-toolbar-card,
+.wr-toolbar-card.dr-card {
+    margin-bottom: 10px !important;
+    padding: 0 2px 6px !important;
+    border: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 .wr-toolbar-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 10px;
     margin-bottom: 0;
 }
 
@@ -202,7 +199,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
+    gap: 7px;
     flex-wrap: nowrap;
     flex: 0 0 auto;
     margin-left: auto;
@@ -212,29 +209,33 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 7px;
     flex-wrap: nowrap;
 }
 
 .wr-period-nav .dr-ghost-btn,
 .wr-period-label,
 .wr-select-shell {
-    height: 48px;
-    border-radius: var(--dr-radius-md);
-    border: 1px solid var(--dr-border);
-    background: var(--dr-card);
-    box-shadow: var(--dr-shadow-xs);
-    flex-shrink: 0;
+    width: auto;
+    min-width: 0;
+    padding: 0 11px;
+}
+
+.wr-period-nav .dr-ghost-btn {
+    padding: 0 11px;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 900;
 }
 
 .wr-period-label {
-    min-width: 290px;
-    padding: 0 18px;
+    min-width: 226px;
+    padding: 0 13px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--dr-text);
-    font-size: 14px;
+    font-size: 12.5px;
     font-weight: 950;
     white-space: nowrap;
     text-align: center;
@@ -263,7 +264,7 @@
 }
 
 .dr-search-box--select {
-    min-width: 280px;
+    min-width: 0;
     position: relative;
 }
 
@@ -340,6 +341,13 @@
     font-weight: 950;
     letter-spacing: -0.02em;
     line-height: 1.2;
+}
+
+.wr-toolbar-card .dr-card-title {
+    font-size: 1.45rem;
+    font-weight: 950;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
 }
 
 .dr-card-subtitle {
@@ -1683,8 +1691,8 @@
     }
 
     .wr-select-shell {
-        width: 280px;
-        min-width: 280px;
+        width: auto;
+        min-width: 0;
     }
 }
 
@@ -1745,11 +1753,15 @@
         flex-wrap: wrap;
     }
 
-    .wr-period-label,
+    .wr-period-label {
+        width: auto;
+        min-width: 204px;
+    }
+
     .wr-select-shell,
     .dr-search-box--select {
-        width: 100%;
-        min-width: 100%;
+        width: auto;
+        min-width: 0;
     }
 
     .dr-card {
@@ -1859,5 +1871,403 @@
         min-width: 58px;
         padding: 0 8px;
         font-size: 12px;
+    }
+}
+
+/* =========================================================
+   Custom department dropdown
+========================================================= */
+
+.wr-dept-dropdown {
+    position: relative;
+    display: inline-flex;
+    width: auto;
+    flex: 0 0 auto;
+    font-family: "Nunito", sans-serif;
+}
+
+.wr-dept-trigger {
+    height: 36px;
+    width: auto;
+    min-width: 0;
+    padding: 0 11px;
+    border: 1px solid #dde5f0;
+    border-radius: 13px;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    font-family: "Nunito", sans-serif;
+    font-size: 12.5px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.wr-dept-trigger:hover,
+.wr-dept-trigger.is-open {
+    border-color: #d7e0ee;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
+}
+
+.wr-dept-trigger:focus {
+    outline: none;
+}
+
+.wr-dept-trigger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14), 0 4px 14px rgba(15, 23, 42, 0.07);
+}
+
+.wr-dept-trigger-left {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.wr-dept-trigger-left i {
+    color: #0f172a;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.wr-dept-trigger-left span {
+    white-space: nowrap;
+}
+
+.wr-dept-chevron {
+    margin-left: 2px;
+    color: #97a3b7;
+    font-size: 10px;
+    line-height: 1;
+    transition: transform 0.16s ease;
+}
+
+.wr-dept-trigger.is-open .wr-dept-chevron {
+    transform: rotate(180deg);
+}
+
+.wr-dept-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    left: auto;
+    z-index: 5000;
+    width: 210px;
+    min-width: 210px;
+    max-width: 210px;
+    padding: 6px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+    transform: translateX(-40px);
+}
+
+.wr-dept-option {
+    width: 100%;
+    height: 34px;
+    padding: 0 11px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #2f343d;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    font-family: "Nunito", sans-serif;
+    font-size: 12.5px;
+    font-weight: 650;
+    line-height: 1;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.14s ease, color 0.14s ease;
+}
+
+.wr-dept-option + .wr-dept-option {
+    margin-top: 1px;
+}
+
+.wr-dept-option:hover,
+.wr-dept-option:focus-visible {
+    outline: none;
+    background: #f3f6fa;
+    color: #111827;
+}
+
+.wr-dept-option.is-selected {
+    background: #f7f9fc;
+    color: #111827;
+    font-weight: 750;
+}
+
+/* Dark mode for custom dropdown */
+[data-theme="dark"] .wr-dept-trigger {
+    background: #141f33;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    box-shadow: none;
+}
+
+[data-theme="dark"] .wr-dept-trigger:hover,
+[data-theme="dark"] .wr-dept-trigger.is-open {
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: none;
+}
+
+[data-theme="dark"] .wr-dept-trigger-left i,
+[data-theme="dark"] .wr-dept-chevron {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .wr-dept-menu {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: #141f33;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+}
+
+[data-theme="dark"] .wr-dept-option {
+    color: #e5e7eb;
+}
+
+[data-theme="dark"] .wr-dept-option:hover,
+[data-theme="dark"] .wr-dept-option:focus-visible {
+    background: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+}
+
+[data-theme="dark"] .wr-dept-option.is-selected {
+    background: rgba(255, 255, 255, 0.055);
+    color: #ffffff;
+}
+
+/* Responsive dropdown */
+@media (max-width: 767px) {
+    .wr-dept-dropdown {
+        max-width: 100%;
+    }
+
+    .wr-dept-menu {
+        right: 0;
+        transform: translateX(0);
+        width: min(210px, calc(100vw - 32px));
+        min-width: 190px;
+        max-width: calc(100vw - 32px);
+    }
+}
+
+@media (max-width: 560px) {
+    .wr-toolbar-card .dr-card-title {
+        font-size: 1.3rem;
+    }
+
+    .wr-period-nav .dr-ghost-btn,
+    .wr-period-label,
+    .wr-dept-trigger {
+        height: 35px;
+    }
+
+    .wr-period-label {
+        min-width: 196px;
+        font-size: 12px;
+    }
+
+    .wr-dept-trigger {
+        font-size: 12px;
+    }
+
+    .wr-dept-option {
+        height: 34px;
+        font-size: 12px;
+    }
+}
+
+/* =========================================================
+   FINAL RESPONSIVE TOOLBAR + RIGHT-ALIGNED DROPDOWN FIX
+   Put at the very bottom if merging into an existing file.
+========================================================= */
+
+/* Desktop/tablet: dropdown menu opens from the right edge of the trigger */
+.wr-dept-dropdown {
+    position: relative !important;
+    display: inline-flex !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+}
+
+.wr-dept-menu {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    right: 0 !important;
+    left: auto !important;
+    transform: none !important;
+
+    width: 210px !important;
+    min-width: 210px !important;
+    max-width: 210px !important;
+
+    padding: 6px !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12) !important;
+    overflow: hidden !important;
+    z-index: 5000 !important;
+}
+
+.wr-dept-option {
+    height: 34px !important;
+    padding: 0 11px !important;
+    border-radius: 10px !important;
+    font-size: 12.5px !important;
+    font-weight: 650 !important;
+    color: #2f343d !important;
+}
+
+.wr-dept-option.is-selected {
+    background: #f7f9fc !important;
+    color: #111827 !important;
+    font-weight: 750 !important;
+}
+
+/* Small screens: balanced two-column toolbar */
+@media (max-width: 767px) {
+    .wr-toolbar-card,
+    .wr-toolbar-card.dr-card {
+        padding: 0 4px 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .wr-toolbar-row {
+        display: block !important;
+    }
+
+    .wr-toolbar-row > div:first-child {
+        margin-bottom: 14px !important;
+    }
+
+    .wr-toolbar-card .dr-card-title {
+        font-size: 1.45rem !important;
+        line-height: 1.08 !important;
+    }
+
+    .wr-toolbar-actions {
+        width: 100% !important;
+        margin-left: 0 !important;
+        display: grid !important;
+        grid-template-columns: auto minmax(205px, max-content) !important;
+        align-items: center !important;
+        justify-content: start !important;
+        gap: 8px 10px !important;
+    }
+
+    /* Let Prev / Date / Next participate directly in the grid */
+    .wr-period-nav {
+        display: contents !important;
+    }
+
+    .wr-period-nav > .dr-ghost-btn:first-child {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        justify-self: start !important;
+    }
+
+    .wr-period-label {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        padding: 0 12px !important;
+        font-size: 12.25px !important;
+        justify-self: start !important;
+    }
+
+    .wr-period-nav > button.dr-ghost-btn:nth-of-type(2) {
+        grid-column: 1 !important;
+        grid-row: 2 !important;
+        justify-self: start !important;
+    }
+
+    .wr-dept-dropdown {
+        grid-column: 2 !important;
+        grid-row: 2 !important;
+        justify-self: start !important;
+        width: auto !important;
+        max-width: 100% !important;
+    }
+
+    .wr-dept-trigger {
+        height: 36px !important;
+        max-width: 100% !important;
+    }
+
+    /* Dropdown menu right edge aligns with trigger right edge */
+    .wr-dept-menu {
+        right: 0 !important;
+        left: auto !important;
+        transform: none !important;
+        width: 210px !important;
+        min-width: 210px !important;
+        max-width: min(210px, calc(100vw - 28px)) !important;
+    }
+
+    .wr-period-nav > .dr-filter-pill {
+        grid-column: 1 / -1 !important;
+        grid-row: 3 !important;
+        justify-self: start !important;
+    }
+}
+
+/* Very small screens: avoid overflow while keeping the same orientation */
+@media (max-width: 430px) {
+    .dr-page {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .wr-toolbar-actions {
+        grid-template-columns: auto minmax(178px, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .wr-period-nav .dr-ghost-btn,
+    .wr-period-label,
+    .wr-dept-trigger {
+        height: 35px !important;
+    }
+
+    .wr-period-nav .dr-ghost-btn {
+        padding: 0 10px !important;
+        font-size: 11.5px !important;
+    }
+
+    .wr-period-label {
+        padding: 0 9px !important;
+        font-size: 11.3px !important;
+    }
+
+    .wr-dept-trigger {
+        padding: 0 10px !important;
+        font-size: 11.8px !important;
+    }
+
+    .wr-dept-menu {
+        width: 200px !important;
+        min-width: 200px !important;
+        max-width: calc(100vw - 28px) !important;
+    }
+
+    .wr-dept-option {
+        height: 33px !important;
+        font-size: 12px !important;
     }
 }

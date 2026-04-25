@@ -1873,3 +1873,264 @@
         font-size: 12px;
     }
 }
+
+/* =========================================================
+   FINAL UI UPDATE: compact header + custom department dropdown
+   Matches the finalized report dropdown system while preserving content.
+========================================================= */
+
+.dr-page-intro-card,
+.dr-page-intro-card.dr-card {
+    margin-bottom: 14px !important;
+    padding: 0 4px 6px !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.dr-page-intro-card .dr-card-head {
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    flex-wrap: nowrap !important;
+    margin-bottom: 0 !important;
+}
+
+.dr-page-intro-card .dr-card-title {
+    font-size: 1.85rem !important;
+    font-weight: 950 !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.04em !important;
+}
+
+.dr-dept-dropdown {
+    position: relative !important;
+    display: inline-flex !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+}
+
+.dr-dept-trigger {
+    height: 36px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0 11px !important;
+    border: 1px solid #dde5f0 !important;
+    border-radius: 13px !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    font-family: "Nunito", sans-serif !important;
+    font-size: 12.5px !important;
+    font-weight: 850 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease !important;
+}
+
+.dr-dept-trigger:hover,
+.dr-dept-trigger.is-open {
+    border-color: #d7e0ee !important;
+    background: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07) !important;
+}
+
+.dr-dept-trigger:focus {
+    outline: none !important;
+}
+
+.dr-dept-trigger:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14), 0 4px 14px rgba(15, 23, 42, 0.07) !important;
+}
+
+.dr-dept-trigger-left {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    min-width: 0 !important;
+}
+
+.dr-dept-trigger-left i {
+    color: #76839a !important;
+    font-size: 12px !important;
+}
+
+.dr-dept-trigger-left span {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.dr-dept-chevron {
+    margin-left: 0 !important;
+    color: #97a3b7 !important;
+    font-size: 9px !important;
+    transition: transform 0.16s ease !important;
+}
+
+.dr-dept-trigger.is-open .dr-dept-chevron {
+    transform: rotate(180deg) !important;
+}
+
+.dr-dept-menu {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    right: 0 !important;
+    left: auto !important;
+    z-index: 5000 !important;
+    width: 218px !important;
+    min-width: 218px !important;
+    max-width: 218px !important;
+    padding: 6px !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12) !important;
+    overflow: hidden !important;
+}
+
+.dr-dept-option {
+    width: 100% !important;
+    height: 34px !important;
+    padding: 0 11px !important;
+    border: none !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    color: #2f343d !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    font-family: "Nunito", sans-serif !important;
+    font-size: 12.5px !important;
+    font-weight: 650 !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+    text-align: left !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    transition: background 0.14s ease, color 0.14s ease !important;
+}
+
+.dr-dept-option + .dr-dept-option {
+    margin-top: 1px !important;
+}
+
+.dr-dept-option:hover,
+.dr-dept-option:focus-visible {
+    outline: none !important;
+    background: #f3f6fa !important;
+    color: #111827 !important;
+}
+
+.dr-dept-option.is-selected {
+    background: #f7f9fc !important;
+    color: #111827 !important;
+    font-weight: 750 !important;
+}
+
+[data-theme="dark"] .dr-dept-trigger {
+    background: var(--dr-card) !important;
+    border-color: var(--dr-border) !important;
+    color: var(--dr-text) !important;
+    box-shadow: var(--dr-shadow-xs) !important;
+}
+
+[data-theme="dark"] .dr-dept-trigger:hover,
+[data-theme="dark"] .dr-dept-trigger.is-open {
+    background: var(--dr-card-soft) !important;
+    border-color: var(--dr-border-strong) !important;
+}
+
+[data-theme="dark"] .dr-dept-trigger-left i,
+[data-theme="dark"] .dr-dept-chevron {
+    color: var(--dr-muted) !important;
+}
+
+[data-theme="dark"] .dr-dept-menu {
+    background: #141f33 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38) !important;
+}
+
+[data-theme="dark"] .dr-dept-option {
+    color: #dbe5f1 !important;
+}
+
+[data-theme="dark"] .dr-dept-option:hover,
+[data-theme="dark"] .dr-dept-option:focus-visible {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .dr-dept-option.is-selected {
+    background: rgba(37, 99, 235, 0.16) !important;
+    color: #ffffff !important;
+}
+
+@media (max-width: 767px) {
+    .dr-page-intro-card .dr-card-head {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+
+    .dr-page-intro-card .dr-card-title {
+        font-size: 1.45rem !important;
+        line-height: 1.08 !important;
+    }
+
+    .dr-dept-dropdown {
+        justify-self: end !important;
+        max-width: min(52vw, 240px) !important;
+    }
+
+    .dr-dept-trigger {
+        max-width: min(52vw, 240px) !important;
+        height: 35px !important;
+        padding: 0 10px !important;
+    }
+
+    .dr-dept-menu {
+        right: 0 !important;
+        left: auto !important;
+        width: min(218px, calc(100vw - 28px)) !important;
+        min-width: min(218px, calc(100vw - 28px)) !important;
+        max-width: min(218px, calc(100vw - 28px)) !important;
+    }
+}
+
+@media (max-width: 560px) {
+    .dr-page-intro-card .dr-card-head {
+        grid-template-columns: 1fr !important;
+        align-items: stretch !important;
+    }
+
+    .dr-dept-dropdown {
+        width: 100% !important;
+        max-width: 100% !important;
+        justify-self: stretch !important;
+        margin-left: 0 !important;
+    }
+
+    .dr-dept-trigger {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .dr-dept-menu {
+        right: 0 !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+

@@ -1677,3 +1677,80 @@
         padding: 0 8px;
     }
 }
+
+
+/* =========================================================
+   FINAL CLEAN UI OVERRIDES - Monthly Supervisor Report
+========================================================= */
+#monthlyReportRoot .mr-page{padding:14px 14px 20px!important;}
+#monthlyReportRoot .mr-page-head{padding:0 6px!important;margin-bottom:18px!important;align-items:center!important;gap:14px!important;}
+#monthlyReportRoot .mr-page-title{font-size:1.35rem!important;font-weight:950!important;line-height:1.15!important;letter-spacing:-.035em!important;}
+#monthlyReportRoot .mr-page-meta{margin-top:6px!important;}
+#monthlyReportRoot .mr-page-sub{font-size:12.5px!important;font-weight:800!important;color:var(--mr-muted)!important;}
+#monthlyReportRoot .mr-month-nav{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;flex-wrap:nowrap!important;}
+#monthlyReportRoot .mr-month-nav .mr-ghost-btn,#monthlyReportRoot .mr-month-range,#monthlyReportRoot .mr-filter-pill{height:38px!important;border-radius:13px!important;border:1px solid var(--mr-border)!important;background:var(--mr-card)!important;color:var(--mr-text)!important;box-shadow:0 2px 8px rgba(15,23,42,.035)!important;font-size:12px!important;font-weight:850!important;line-height:1!important;}
+#monthlyReportRoot .mr-month-nav .mr-ghost-btn{padding:0 12px!important;gap:6px!important;}
+#monthlyReportRoot .mr-month-range{min-width:178px!important;padding:0 14px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:12.5px!important;font-weight:950!important;white-space:nowrap!important;}
+#monthlyReportRoot .mr-filter-pill{padding:0 12px!important;background:var(--mr-card-soft)!important;color:var(--mr-muted)!important;}
+#monthlyReportRoot .mr-filter-pill--button{cursor:pointer!important;}
+#monthlyReportRoot .mr-ghost-btn--primary{background:var(--mr-card-soft)!important;border-color:var(--mr-border)!important;color:var(--mr-muted)!important;}
+#monthlyReportRoot .mr-summary-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:16px!important;margin-bottom:20px!important;}
+#monthlyReportRoot .mr-summary-card,#monthlyReportRoot .mr-card{border-radius:20px!important;border:1px solid var(--mr-border)!important;background:linear-gradient(180deg,var(--mr-card) 0%,var(--mr-card-soft) 100%)!important;box-shadow:var(--mr-shadow-soft)!important;}
+#monthlyReportRoot .mr-card{padding:16px 18px!important;margin-bottom:18px!important;}
+#monthlyReportRoot .mr-card-head{margin-bottom:10px!important;}
+#monthlyReportRoot .mr-card-title{font-size:1.05rem!important;font-weight:950!important;letter-spacing:-.025em!important;}
+#monthlyReportRoot .mr-card-subtitle{font-size:12px!important;font-weight:750!important;}
+#monthlyReportRoot .mr-summary-icon.warning,#monthlyReportRoot .mr-summary-chip.warning,#monthlyReportRoot .mr-summary-value.warning,#monthlyReportRoot .mr-status-inline.ongoing{color:#2563eb!important;}
+#monthlyReportRoot .mr-summary-icon.warning,#monthlyReportRoot .mr-summary-chip.warning{background:rgba(37,99,235,.1)!important;}
+#monthlyReportRoot .mr-summary-icon.danger,#monthlyReportRoot .mr-summary-chip.danger,#monthlyReportRoot .mr-summary-value.danger,#monthlyReportRoot .mr-status-inline.overdue,#monthlyReportRoot .mr-overdue-cell{color:#e11d48!important;}
+#monthlyReportRoot .mr-summary-icon.danger,#monthlyReportRoot .mr-summary-chip.danger{background:rgba(225,29,72,.1)!important;}
+#monthlyReportRoot .mr-two-grid{grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr)!important;gap:18px!important;margin-bottom:18px!important;}
+#monthlyReportRoot .mr-card--trend,#monthlyReportRoot .mr-card--dept,#monthlyReportRoot .mr-card--employee-chart{min-height:380px!important;}
+#monthlyReportRoot .mr-line-chart,#monthlyReportRoot .mr-bar-chart,#monthlyReportRoot .mr-hbar-chart{border-radius:16px!important;width:100%!important;}
+#monthlyReportRoot .mr-line-chart,#monthlyReportRoot .mr-bar-chart{height:320px!important;}
+#monthlyReportRoot .mr-hbar-chart{min-height:320px!important;}
+#monthlyReportRoot .mr-card--table{min-height:auto!important;padding:16px 18px 18px!important;}
+#monthlyReportRoot .mr-table-shell{max-height:520px!important;border-radius:16px!important;scrollbar-width:thin!important;-ms-overflow-style:auto!important;}
+#monthlyReportRoot .mr-table-shell::-webkit-scrollbar{width:8px!important;height:8px!important;display:block!important;}
+#monthlyReportRoot .mr-table-shell::-webkit-scrollbar-thumb{background:#d8deeb!important;border-radius:999px!important;}
+#monthlyReportRoot .mr-table{min-width:980px!important;border-collapse:separate!important;border-spacing:0!important;}
+#monthlyReportRoot .mr-table thead th{height:48px!important;padding:0 20px!important;background:var(--mr-card-soft)!important;color:var(--mr-muted)!important;font-size:11px!important;font-weight:900!important;text-transform:uppercase!important;letter-spacing:.02em!important;vertical-align:middle!important;}
+#monthlyReportRoot .mr-table tbody td{height:54px!important;padding:0 20px!important;color:#334155!important;font-size:12px!important;font-weight:700!important;vertical-align:middle!important;}
+#monthlyReportRoot .mr-assignee{min-width:220px!important;gap:12px!important;}
+#monthlyReportRoot .mr-assignee-avatar{width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;border:2px solid #fff!important;box-shadow:0 0 0 1px var(--mr-border)!important;}
+#monthlyReportRoot .mr-assignee-name{max-width:220px!important;font-size:12px!important;font-weight:950!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+#monthlyReportRoot .mr-performance-cell{display:flex!important;align-items:center!important;gap:12px!important;min-width:175px!important;}
+#monthlyReportRoot .mr-progress-clean{width:100%!important;max-width:190px!important;flex:1!important;}
+#monthlyReportRoot .mr-progress-clean-track{height:7px!important;border-radius:999px!important;background:#ececf2!important;}
+#monthlyReportRoot .mr-progress-clean-fill{height:100%!important;min-width:7px!important;border-radius:999px!important;background:linear-gradient(90deg,#8b5cf6 0%,#6d3df5 100%)!important;box-shadow:0 2px 8px rgba(109,61,245,.28)!important;}
+#monthlyReportRoot .mr-progress-clean-value{min-width:30px!important;text-align:right!important;font-size:12px!important;font-weight:800!important;color:var(--mr-muted)!important;}
+#monthlyReportRoot .mr-eye-btn{width:30px!important;height:30px!important;padding:0!important;border:none!important;border-radius:10px!important;background:transparent!important;color:var(--mr-muted)!important;box-shadow:none!important;justify-content:center!important;}
+#monthlyReportRoot .mr-eye-btn:hover{background:rgba(109,61,245,.08)!important;color:#6d3df5!important;transform:none!important;box-shadow:none!important;}
+#monthlyReportRoot .mr-employee-task-modal,#monthlyReportRoot .mr-department-task-modal{width:min(980px,calc(100vw - 72px))!important;max-height:min(84vh,720px)!important;border-radius:24px!important;}
+#monthlyReportRoot .mr-employee-task-modal .mr-modal-head,#monthlyReportRoot .mr-department-task-modal .mr-modal-head{min-height:84px!important;padding:18px 24px!important;align-items:center!important;background:linear-gradient(180deg,var(--mr-card) 0%,var(--mr-card-soft) 100%)!important;}
+#monthlyReportRoot .mr-employee-task-modal .mr-modal-avatar,#monthlyReportRoot .mr-department-task-modal .mr-modal-avatar{width:54px!important;height:54px!important;border:3px solid #fff!important;box-shadow:0 0 0 1px var(--mr-border),0 10px 26px rgba(15,23,42,.1)!important;}
+#monthlyReportRoot .mr-employee-task-modal .mr-modal-title,#monthlyReportRoot .mr-department-task-modal .mr-modal-title{font-size:1.32rem!important;font-weight:950!important;letter-spacing:-.035em!important;}
+#monthlyReportRoot .mr-modal-toolbar--badges-only{display:flex!important;align-items:center!important;justify-content:flex-start!important;padding:10px 18px!important;background:#f8fafc!important;}
+#monthlyReportRoot .mr-pill-row--clean{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:10px!important;width:100%!important;}
+#monthlyReportRoot .mr-employee-task-modal .mr-pill-tab,#monthlyReportRoot .mr-department-task-modal .mr-pill-tab{height:34px!important;padding:0 12px!important;border-radius:999px!important;background:#fff!important;border:1px solid #dfe6f1!important;color:#64748b!important;font-size:12px!important;font-weight:800!important;box-shadow:none!important;}
+#monthlyReportRoot .mr-employee-task-modal .mr-pill-tab.is-active,#monthlyReportRoot .mr-department-task-modal .mr-pill-tab.is-active{background:#2f66ea!important;border-color:#2f66ea!important;color:#fff!important;}
+#monthlyReportRoot .mr-employee-task-modal .mr-modal-body,#monthlyReportRoot .mr-department-task-modal .mr-modal-body{min-height:320px!important;max-height:calc(84vh - 218px)!important;padding:18px 24px 20px!important;background:linear-gradient(180deg,#f8fafc 0%,#fff 100%)!important;overflow-y:auto!important;scrollbar-width:thin!important;}
+#monthlyReportRoot .mr-employee-task-modal .mr-task-item,#monthlyReportRoot .mr-department-task-modal .mr-task-item{min-height:104px!important;padding:18px 20px!important;border-radius:20px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 150px!important;align-items:center!important;gap:18px!important;}
+#monthlyReportRoot .mr-task-side{display:grid!important;justify-items:end!important;align-content:center!important;gap:8px!important;}
+#monthlyReportRoot .mr-comment-open-btn{height:38px!important;min-width:118px!important;padding:0 16px!important;border-radius:14px!important;background:#fff!important;border:1px solid #e0e7f2!important;color:#0f172a!important;font-size:12px!important;font-weight:950!important;}
+#monthlyReportRoot .mr-comment-modal{width:min(640px,calc(100vw - 48px))!important;max-width:640px!important;height:min(560px,calc(100vh - 72px))!important;max-height:560px!important;border-radius:24px!important;}
+#monthlyReportRoot .mr-comment-modal .mr-modal-head{min-height:106px!important;padding:22px 26px 18px!important;align-items:flex-start!important;background:radial-gradient(circle at 12% 0%,rgba(124,92,255,.08),transparent 32%),var(--mr-card)!important;}
+#monthlyReportRoot .mr-comment-modal .mr-modal-title{display:flex!important;align-items:center!important;gap:12px!important;font-size:1.34rem!important;font-weight:950!important;letter-spacing:-.035em!important;}
+#monthlyReportRoot .mr-comment-modal .mr-modal-title i{width:44px!important;height:44px!important;border-radius:16px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;background:#f0eaff!important;color:#7c3aed!important;font-size:20px!important;}
+#monthlyReportRoot .mr-comment-modal .mr-modal-body{padding:24px 26px!important;background:radial-gradient(circle at right top,rgba(124,92,255,.055),transparent 34%),linear-gradient(180deg,var(--mr-card-soft) 0%,var(--mr-card) 100%)!important;overflow-y:auto!important;scrollbar-width:thin!important;}
+#monthlyReportRoot .mr-comment-compose-row{min-height:72px!important;display:grid!important;grid-template-columns:42px minmax(0,1fr) 82px!important;align-items:center!important;gap:10px!important;padding:10px 12px!important;border-radius:20px!important;}
+#monthlyReportRoot .mr-compose-textarea{min-height:44px!important;height:44px!important;padding:10px 4px!important;border:none!important;background:transparent!important;resize:none!important;font-size:14px!important;font-weight:850!important;}
+#monthlyReportRoot .mr-send-btn{height:42px!important;min-width:76px!important;border:none!important;background:transparent!important;color:#9aa6f3!important;box-shadow:none!important;font-size:13px!important;font-weight:950!important;}
+#monthlyReportRoot .mr-send-btn:not(:disabled){color:#5b57d9!important;}
+[data-theme="dark"] #monthlyReportRoot .mr-table tbody td{color:var(--mr-text)!important;}
+[data-theme="dark"] #monthlyReportRoot .mr-modal-toolbar--badges-only,[data-theme="dark"] #monthlyReportRoot .mr-employee-task-modal .mr-modal-body,[data-theme="dark"] #monthlyReportRoot .mr-department-task-modal .mr-modal-body,[data-theme="dark"] #monthlyReportRoot .mr-comment-modal .mr-modal-body{background:#0f172a!important;}
+[data-theme="dark"] #monthlyReportRoot .mr-employee-task-modal .mr-task-item,[data-theme="dark"] #monthlyReportRoot .mr-department-task-modal .mr-task-item,[data-theme="dark"] #monthlyReportRoot .mr-pill-tab,[data-theme="dark"] #monthlyReportRoot .mr-comment-compose-row{background:#141f33!important;border-color:rgba(255,255,255,.08)!important;box-shadow:none!important;}
+@media(max-width:1199px){#monthlyReportRoot .mr-two-grid{grid-template-columns:1fr!important;}#monthlyReportRoot .mr-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
+@media(max-width:900px){#monthlyReportRoot .mr-page-head{align-items:flex-start!important;flex-wrap:wrap!important;}#monthlyReportRoot .mr-month-nav{width:100%!important;justify-content:flex-start!important;flex-wrap:wrap!important;}#monthlyReportRoot .mr-employee-task-modal,#monthlyReportRoot .mr-department-task-modal{width:min(100%,calc(100vw - 24px))!important;max-height:90vh!important;}#monthlyReportRoot .mr-employee-task-modal .mr-task-item,#monthlyReportRoot .mr-department-task-modal .mr-task-item{grid-template-columns:1fr!important;}#monthlyReportRoot .mr-task-side{justify-items:start!important;align-items:flex-start!important;}}
+@media(max-width:767px){#monthlyReportRoot .mr-page{padding:14px!important;}#monthlyReportRoot .mr-page-head{padding:0!important;gap:12px!important;}#monthlyReportRoot .mr-page-title{font-size:1.25rem!important;}#monthlyReportRoot .mr-month-nav{display:grid!important;grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr)!important;gap:8px!important;width:100%!important;}#monthlyReportRoot .mr-month-nav>*{width:100%!important;min-width:0!important;justify-content:center!important;}#monthlyReportRoot .mr-month-range{padding:0 10px!important;font-size:12px!important;}#monthlyReportRoot .mr-summary-grid{grid-template-columns:1fr!important;}#monthlyReportRoot .mr-card{padding:16px!important;border-radius:18px!important;}#monthlyReportRoot .mr-line-chart,#monthlyReportRoot .mr-bar-chart{height:300px!important;}#monthlyReportRoot .mr-hbar-chart{min-height:300px!important;}#monthlyReportRoot .mr-card--table{padding:12px!important;}#monthlyReportRoot .mr-table{min-width:900px!important;}#monthlyReportRoot .mr-comment-compose-row{grid-template-columns:38px minmax(0,1fr) 64px!important;padding:8px!important;}#monthlyReportRoot .mr-send-btn{min-width:58px!important;padding:0 8px!important;font-size:12px!important;}}
+@media(max-width:520px){#monthlyReportRoot .mr-month-nav{grid-template-columns:1fr!important;}#monthlyReportRoot .mr-month-nav .mr-ghost-btn,#monthlyReportRoot .mr-month-range,#monthlyReportRoot .mr-filter-pill{height:36px!important;}#monthlyReportRoot .mr-comment-modal{width:calc(100vw - 18px)!important;height:calc(100vh - 32px)!important;border-radius:22px!important;}}
