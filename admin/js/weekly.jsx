@@ -1570,7 +1570,7 @@ function WeeklyReportPage() {
             <div className="dr-card wr-toolbar-card">
                 <div className="dr-card-head wr-toolbar-row">
                     <div>
-                        <h5 className="dr-card-title">Weekly Task Report</h5>
+                        <h5 className="dr-card-title">Weekly Task Report</h5>   
                     </div>
 
                     <div className="wr-toolbar-actions">
