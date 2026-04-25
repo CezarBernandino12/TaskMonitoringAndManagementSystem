@@ -85,18 +85,27 @@ body {
     border-color: #d7dce2;
 }
 
+/* BLACK ADD EMPLOYEE BUTTONS */
 .employee-toolbar-add-btn,
 .employee-add-submit {
-    background: #f97316;
-    color: #fff;
-    border-color: #f97316;
+    background: #000 !important;
+    color: #fff !important;
+    border-color: #000 !important;
 }
 
 .employee-toolbar-add-btn:hover,
 .employee-add-submit:hover {
-    background: #ea6a0f;
-    border-color: #ea6a0f;
-    color: #fff;
+    background: #111 !important;
+    border-color: #111 !important;
+    color: #fff !important;
+}
+
+.employee-toolbar-add-btn:focus,
+.employee-add-submit:focus {
+    background: #111 !important;
+    border-color: #111 !important;
+    color: #fff !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.18) !important;
 }
 
 .employee-toolbar-panel,
@@ -379,21 +388,35 @@ body {
     opacity: 0.55;
 }
 
+/* FIXED MODAL POSITION */
 .employee-modal-backdrop {
-    position: fixed;
-    inset: 0;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding: 24px !important;
+    box-sizing: border-box !important;
     background: rgba(17, 24, 39, 0.45);
-    z-index: 1080;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
 }
 
 .employee-modal-card {
-    width: min(520px, 100%);
-    max-height: calc(100vh - 2rem);
-    overflow: auto;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+
+    width: min(650px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+
     background: #fff;
     border-radius: 18px;
     padding: 1rem;
@@ -431,6 +454,11 @@ body {
     border-radius: 10px;
     background: #f3f4f6;
     color: #4b5563;
+}
+
+.employee-modal-close:hover {
+    background: #e5e7eb;
+    color: #111827;
 }
 
 .employee-password-wrap {
@@ -512,6 +540,15 @@ body {
     .employee-page-btn {
         flex: 1;
     }
+
+    .employee-modal-backdrop {
+        padding: 16px !important;
+    }
+
+    .employee-modal-card {
+        width: min(520px, calc(100vw - 32px));
+        max-height: calc(100vh - 32px);
+    }
 }
 
 @media (max-width: 575px) {
@@ -535,5 +572,14 @@ body {
 
     .employee-name {
         font-size: 0.98rem;
+    }
+
+    .employee-modal-card {
+        border-radius: 16px;
+        padding: 0.9rem;
+    }
+
+    .employee-modal-header {
+        margin-bottom: 0.75rem;
     }
 }
