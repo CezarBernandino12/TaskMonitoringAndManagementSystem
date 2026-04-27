@@ -96,11 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	}
 }
 
-// If error, show error and link back to login
 if (isset($error)) {
-	echo '<!DOCTYPE html><html><head><title>Login Error</title></head><body>';
-	echo '<h3 style="color:red;">' . htmlspecialchars($error) . '</h3>';
-	echo '<a href="../login.html">Back to Login</a>';
-	echo '</body></html>';
+	header('Location: ../login.html?error=invalid');
 	exit();
 }
