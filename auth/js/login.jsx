@@ -174,8 +174,8 @@ function LoginPage() {
 
 			<section className="form-panel">
 				<div className="company-header">
-					<div className="company-brand">
-						<img src="../imgs/PSI.png" alt="PSI Logo" />
+					<div className="company-brand" style={{ filter: 'blur(4px)' }}>
+						<img src="../imgs/PSI.png" alt="PSI Logo"/>
 						<span>Psy Systems and Innovations, OPC</span>
 					</div>
 				</div>
