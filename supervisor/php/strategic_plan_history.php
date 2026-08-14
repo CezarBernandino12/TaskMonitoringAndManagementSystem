@@ -1,12 +1,12 @@
 <?php
+declare(strict_types=1);
+require_once __DIR__ . '/_auth.php';
 /**
  * strategic_plan_history.php
  *
  * Returns all strategic plans whose creator belongs to the same department
  * as the currently logged-in user.
  */
-
-declare(strict_types=1);
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

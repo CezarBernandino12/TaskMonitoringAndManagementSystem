@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 /**
  * admin/php/create_announcement.php
  *

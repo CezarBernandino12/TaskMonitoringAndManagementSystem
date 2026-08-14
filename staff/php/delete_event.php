@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // ====================================================================
 // delete_event.php
 // Deletes an event and its employee tags.

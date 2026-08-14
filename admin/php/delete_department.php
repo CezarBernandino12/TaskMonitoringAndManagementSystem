@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 require_once '../../config/db.php';
 require_once '../../config/log_activity.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // ====================================================================
 // delete_user.php
 // Permanently deletes a user record.

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 /**
  * pres_exec/php/get_notifications.php
  *

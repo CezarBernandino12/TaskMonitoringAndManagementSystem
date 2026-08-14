@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // ====================================================================
 // get_users.php
 // Returns all users joined with their department name.

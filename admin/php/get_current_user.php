@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // ====================================================================
 // get_current_user.php
 // Returns the currently logged-in user's profile.

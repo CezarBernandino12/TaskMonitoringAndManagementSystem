@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 /**
  * staff/php/mark_notification_read.php
  *

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 require '../../config/db.php';
 date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // Get staff personal info by ID
 require_once '../../config/db.php';
 header('Content-Type: application/json');

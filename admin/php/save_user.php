@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // ====================================================================
 // save_user.php
 // Creates a new user or updates an existing one.

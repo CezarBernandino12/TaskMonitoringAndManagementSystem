@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // ====================================================================
 // toggle_user_status.php
 // Activates or deactivates a user account.

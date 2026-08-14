@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // Ensure Philippine time
 date_default_timezone_set('Asia/Manila');
 

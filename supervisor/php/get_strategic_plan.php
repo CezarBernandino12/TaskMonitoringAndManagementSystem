@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 /**
  * GET /php/get_strategic_plan.php?id=<planId>
  *

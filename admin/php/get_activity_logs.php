@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // ====================================================================
 // get_activity_logs.php  –  Admin: paginated + filtered activity log
 //

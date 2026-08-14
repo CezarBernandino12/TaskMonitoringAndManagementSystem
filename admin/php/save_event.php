@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_auth.php';
 // ====================================================================
 // save_event.php
 // Creates a new event or updates an existing one.
